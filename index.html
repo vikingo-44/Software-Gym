@@ -1,0 +1,1183 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
+    <!-- Iconos Lucide para una interfaz moderna y profesional -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <title>Vikingo Strength Hub - Admin Panel</title>
+    <style>
+        /**
+         * ESTILOS CORE Y CONFIGURACIÓN VISUAL
+         * Desarrollado por Gonzalo Luongo para Vikingo Strength Hub.
+         * Enfoque: Estética Dark Premium con efectos Glassmorphism.
+         */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #000000;
+            /* Fondo de pantalla con overlay oscuro para maximizar contraste */
+            background-image: linear-gradient(rgba(0, 0, 0, 0.88), rgba(0, 0, 0, 0.88)), url('https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=2070&auto=format&fit=crop');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            color: #ffffff;
+            overflow: hidden;
+            text-align: left;
+        }
+        
+        /* Paleta de colores institucional */
+        .viking-red { color: #FF0000; }
+        .viking-bg-red { background-color: #FF0000; }
+        .viking-border-red { border-color: #FF0000; }
+        
+        /* Efecto de cristal para la barra lateral */
+        .glass-sidebar {
+            background: rgba(8, 8, 8, 0.9);
+            backdrop-filter: blur(45px);
+            border-right: 1px solid rgba(255, 0, 0, 0.15);
+            transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        /* Efecto de cristal para tarjetas y contenedores - SEMI TRANSPARENTE */
+        .glass-card {
+            background: rgba(255, 255, 255, 0.06); /* Glassmorphism sutil */
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        /* Efecto hover refinado */
+        .glass-card:hover {
+            border-color: rgba(255, 0, 0, 0.3);
+            background: rgba(255, 255, 255, 0.1);
+            box-shadow: 0 10px 40px rgba(0,0,0,0.4);
+        }
+        
+        /* Navegación lateral SPA con indicadores dinámicos */
+        .nav-item {
+            position: relative;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+        }
+        
+        .nav-item::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 0;
+            height: 0;
+            background-color: #FF0000;
+            transition: all 0.3s ease;
+            box-shadow: 0 0 15px #FF0000;
+        }
+        
+        .nav-item:hover {
+            color: #FF0000;
+            background: linear-gradient(90deg, rgba(255, 0, 0, 0.1) 0%, transparent 100%);
+        }
+        
+        .nav-item:hover::before, .nav-item.active::before {
+            width: 4px;
+            height: 60%;
+        }
+
+        .nav-item.active {
+            color: #FF0000;
+            background: linear-gradient(90deg, rgba(255, 0, 0, 0.2) 0%, transparent 100%);
+        }
+
+        /* Submenú tipo Árbol para Facturación */
+        .submenu-container {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.4s ease-out;
+            background: rgba(255, 255, 255, 0.02);
+            margin: 0 10px;
+            border-radius: 12px;
+        }
+        .submenu-container.open {
+            max-height: 200px; 
+            margin-top: 4px;
+            margin-bottom: 8px;
+            padding-bottom: 4px;
+        }
+
+        /* Sidebar Colapsable */
+        .sidebar-collapsed { width: 90px !important; }
+        .sidebar-collapsed .nav-text, 
+        .sidebar-collapsed .brand-text, 
+        .sidebar-collapsed .user-details,
+        .sidebar-collapsed .section-label,
+        .sidebar-collapsed .chevron-icon { 
+            display: none; 
+        }
+        .sidebar-collapsed .p-10, .sidebar-collapsed .px-8 { padding-left: 1.5rem; padding-right: 1.5rem; }
+
+        /* Contenedores de vista para SPA */
+        .view-content { 
+            display: none; 
+            flex-direction: column;
+            width: 100%;
+            height: 100%;
+        }
+        .view-content.active { 
+            display: flex; 
+        }
+
+        /* Resplandor de texto tipo Neón */
+        .text-glow {
+            text-shadow: 0 0 20px rgba(255, 0, 0, 0.6);
+        }
+
+        /* Estilos para inputs de perfil */
+        .profile-input {
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            color: white;
+            padding: 14px 18px;
+            border-radius: 16px;
+            width: 100%;
+            outline: none;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            text-align: left;
+            font-size: 13px;
+        }
+        .profile-input:focus {
+            border-color: #FF0000;
+            background: rgba(255, 0, 0, 0.05);
+        }
+
+        /* Personalización de scrollbars */
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #1a1a1a; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #FF0000; }
+
+        /* Filas de tabla */
+        .viking-table-row {
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            transition: all 0.2s ease;
+        }
+        .viking-table-row:hover {
+            background: rgba(255, 0, 0, 0.04);
+        }
+
+        /* Calendario Operativo Semanal */
+        .calendar-container {
+            display: grid;
+            grid-template-columns: 80px 1fr;
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(15px);
+            border-radius: 2.5rem;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+        }
+        .time-col {
+            display: grid;
+            grid-template-rows: 50px repeat(14, 100px);
+            background: rgba(0, 0, 0, 0.2);
+            border-right: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .week-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            grid-template-rows: 50px repeat(14, 100px);
+        }
+        .cal-header-cell {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255, 255, 255, 0.02);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            border-right: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .time-cell {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            font-weight: 900;
+            color: #4b5563;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.02);
+        }
+        .calendar-cell {
+            background: transparent;
+            border-right: 1px solid rgba(255, 255, 255, 0.03);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+            padding: 8px;
+            position: relative;
+            transition: background 0.2s ease;
+        }
+
+        .calendar-cell.closed {
+            background: repeating-linear-gradient(
+                45deg, 
+                rgba(128, 0, 0, 0.15), 
+                rgba(128, 0, 0, 0.15) 10px, 
+                transparent 10px, 
+                transparent 20px
+            );
+        }
+
+        .class-item {
+            cursor: grab;
+            transition: all 0.2s ease;
+            height: 100%;
+        }
+        .drag-over {
+            background: rgba(255, 0, 0, 0.1) !important;
+        }
+
+        .month-select {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 14px;
+            font-size: 10px;
+            font-weight: 900;
+            text-transform: uppercase;
+            outline: none;
+            cursor: pointer;
+        }
+
+        .planes-nav-container {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 6px;
+            border-radius: 1.5rem;
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .plan-period-btn {
+            padding: 0.8rem 1.6rem;
+            border-radius: 1rem;
+            font-size: 11px;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            font-style: italic;
+            transition: all 0.3s ease;
+            color: #6b7280;
+        }
+
+        .plan-period-btn.active {
+            background-color: #FF0000;
+            color: #ffffff;
+            box-shadow: 0 0 15px rgba(255,0,0,0.3);
+        }
+
+        .plan-period-btn:not(.active):hover {
+            color: #ffffff;
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .viking-shadow {
+            box-shadow: 0 12px 40px -12px rgba(0, 0, 0, 0.5);
+        }
+    </style>
+</head>
+<body class="flex h-screen w-screen overflow-hidden">
+
+    <!-- BARRA LATERAL (SIDEBAR) -->
+    <aside id="sidebar" class="w-80 h-full glass-sidebar flex flex-col z-50">
+        <div class="p-10 flex items-center justify-between">
+            <h1 class="brand-text text-3xl font-black italic tracking-tighter uppercase leading-none text-left">
+                <span class="viking-red text-glow">VIKINGO</span>
+                <span class="block text-white text-[10px] tracking-[0.4em] font-bold mt-1">STRENGTH HUB</span>
+            </h1>
+            <button onclick="toggleSidebar()" class="p-2 hover:bg-white/5 rounded-xl transition-colors">
+                <i id="toggle-icon" data-lucide="chevron-left" class="w-5 h-5 text-gray-500"></i>
+            </button>
+        </div>
+
+        <!-- Identificación del Usuario Activo -->
+        <div class="px-8 mb-6">
+            <div class="glass-card p-4 rounded-3xl flex items-center gap-4 border-red-600/10">
+                <div class="w-12 h-12 rounded-2xl viking-bg-red flex items-center justify-center font-black text-black italic shadow-lg shrink-0">GL</div>
+                <div class="user-details min-w-0 text-left">
+                    <p class="text-[11px] font-black uppercase truncate text-white">G. Luongo</p>
+                    <p class="text-[8px] text-red-600 font-bold uppercase tracking-widest">Master Admin</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Navegación por Módulos -->
+        <nav class="flex-1 px-4 space-y-1 overflow-y-auto custom-scrollbar pb-4">
+            <p class="section-label text-[9px] font-black text-gray-600 uppercase tracking-[0.3em] px-6 mb-2 mt-4 text-left">Administración</p>
+            <button onclick="switchView('dashboard')" id="btn-dashboard" class="nav-btn w-full nav-item active flex items-center gap-6 px-8 py-4 rounded-2xl font-black uppercase text-[10px] tracking-widest italic">
+                <i data-lucide="layout-grid" class="w-5 h-5 shrink-0"></i>
+                <span class="nav-text text-left">Dashboard</span>
+            </button>
+            <button onclick="switchView('perfil')" id="btn-perfil" class="nav-btn w-full nav-item flex items-center gap-6 px-8 py-4 rounded-2xl font-black uppercase text-[10px] tracking-widest italic text-gray-400">
+                <i data-lucide="user-cog" class="w-5 h-5 shrink-0"></i>
+                <span class="nav-text text-left">Mi Perfil</span>
+            </button>
+            <button onclick="switchView('alumnos')" id="btn-alumnos" class="nav-btn w-full nav-item flex items-center gap-6 px-8 py-4 rounded-2xl font-black uppercase text-[10px] tracking-widest italic text-gray-400">
+                <i data-lucide="users" class="w-5 h-5 shrink-0"></i>
+                <span class="nav-text text-left">Alumnos</span>
+            </button>
+            
+            <p class="section-label text-[9px] font-black text-gray-600 uppercase tracking-[0.3em] px-6 mb-2 mt-6 text-left">Operativa</p>
+            <button onclick="switchView('musculacion')" id="btn-musculacion" class="nav-btn w-full nav-item flex items-center gap-6 px-8 py-4 rounded-2xl font-black uppercase text-[10px] tracking-widest italic text-gray-400">
+                <i data-lucide="dumbbell" class="w-5 h-5 shrink-0"></i>
+                <span class="nav-text text-left">Musculación</span>
+            </button>
+
+            <div class="relative">
+                <button onclick="toggleSubmenu('sub-fact')" id="btn-facturacion" class="nav-btn w-full nav-item flex items-center justify-between px-8 py-4 rounded-2xl font-black uppercase text-[10px] tracking-widest italic text-gray-400">
+                    <div class="flex items-center gap-6">
+                        <i data-lucide="banknote" class="w-5 h-5 shrink-0"></i>
+                        <span class="nav-text text-left">Facturación</span>
+                    </div>
+                    <i id="sub-fact-chevron" data-lucide="chevron-down" class="w-3 h-3 transition-transform chevron-icon"></i>
+                </button>
+                <div id="sub-fact" class="submenu-container">
+                    <button onclick="switchView('caja')" id="btn-caja" class="w-full pl-16 py-3 text-[9px] font-black uppercase italic text-gray-500 hover:text-red-600 text-left transition-colors flex items-center gap-3">
+                        <i data-lucide="wallet" class="w-3 h-3"></i> Caja
+                    </button>
+                    <button onclick="switchView('stock')" id="btn-stock" class="w-full pl-16 py-3 text-[9px] font-black uppercase italic text-gray-500 hover:text-red-600 text-left transition-colors flex items-center gap-3">
+                        <i data-lucide="package" class="w-3 h-3"></i> Stock
+                    </button>
+                </div>
+            </div>
+
+            <button onclick="switchView('ingreso')" id="btn-ingreso" class="nav-btn w-full nav-item flex items-center gap-6 px-8 py-4 rounded-2xl font-black uppercase text-[10px] tracking-widest italic text-gray-400">
+                <i data-lucide="smartphone" class="w-5 h-5 shrink-0"></i>
+                <span class="nav-text text-left">Ingreso Virtual</span>
+            </button>
+
+            <p class="section-label text-[9px] font-black text-gray-600 uppercase tracking-[0.3em] px-6 mb-2 mt-6 text-left">Gestión</p>
+            <button onclick="switchView('planes')" id="btn-planes" class="nav-btn w-full nav-item flex items-center gap-6 px-8 py-4 rounded-2xl font-black uppercase text-[10px] tracking-widest italic text-gray-400">
+                <i data-lucide="clipboard-list" class="w-5 h-5 shrink-0"></i>
+                <span class="nav-text text-left">Planes</span>
+            </button>
+            <button onclick="switchView('clases')" id="btn-clases" class="nav-btn w-full nav-item flex items-center gap-6 px-8 py-4 rounded-2xl font-black uppercase text-[10px] tracking-widest italic text-gray-400">
+                <i data-lucide="presentation" class="w-5 h-5 shrink-0"></i>
+                <span class="nav-text text-left">Clases</span>
+            </button>
+            <button onclick="switchView('calendario')" id="btn-calendario" class="nav-btn w-full nav-item flex items-center gap-6 px-8 py-4 rounded-2xl font-black uppercase text-[10px] tracking-widest italic text-gray-400">
+                <i data-lucide="calendar" class="w-5 h-5 shrink-0"></i>
+                <span class="nav-text text-left">Calendario</span>
+            </button>
+        </nav>
+
+        <div class="p-8">
+            <button class="w-full flex items-center justify-center gap-6 py-4 rounded-2xl border border-gray-900 text-gray-600 hover:text-red-600 transition-all font-black uppercase text-[10px] tracking-widest italic">
+                <i data-lucide="log-out" class="w-4 h-4 shrink-0"></i>
+                <span class="nav-text">Salir</span>
+            </button>
+        </div>
+    </aside>
+
+    <!-- PANEL PRINCIPAL DE CONTENIDO -->
+    <main class="flex-1 h-full overflow-y-auto relative flex flex-col">
+        <header class="h-24 w-full border-b border-white/5 px-12 flex items-center justify-between sticky top-0 z-40 bg-black/40 backdrop-blur-xl">
+            <div class="text-left">
+                <p id="breadcrumb" class="text-[9px] font-black text-red-600 uppercase tracking-[0.5em] mb-1 italic">Vikingo Strength Hub</p>
+                <h2 id="view-title" class="text-xl font-black uppercase italic tracking-tighter text-white">Dashboard General</h2>
+            </div>
+            <div class="flex items-center gap-4">
+                <div class="hidden md:flex items-center gap-3 bg-red-600/10 px-4 py-2 rounded-xl border border-red-600/20 text-white">
+                    <span class="w-2 h-2 rounded-full bg-red-600 animate-pulse"></span>
+                    <span class="text-[10px] font-black uppercase tracking-widest italic">Sync Active</span>
+                </div>
+                <button class="p-3 bg-white/5 rounded-xl text-gray-400 hover:text-red-600 transition-colors">
+                    <i data-lucide="bell" class="w-5 h-5"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- VISTA: DASHBOARD GENERAL -->
+        <div id="view-dashboard" class="view-content active p-8 md:p-12 animate-in fade-in duration-500">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-10">
+                
+                <div class="glass-card p-8 rounded-[2.5rem] flex flex-col h-[400px]">
+                    <div class="flex justify-between items-center mb-6">
+                        <h4 class="text-xs font-black uppercase tracking-widest italic text-red-600">Check-in Recientes</h4>
+                        <i data-lucide="history" class="w-4 h-4 text-gray-600"></i>
+                    </div>
+                    <div class="space-y-2 text-left flex-1 overflow-y-auto pr-2 custom-scrollbar">
+                        <div class="flex items-center justify-between p-3 bg-white/5 rounded-xl border border-white/5"><span class="text-[10px] font-bold uppercase italic text-white">Ricardo López</span><span class="text-[8px] text-gray-500 font-black">15:42</span></div>
+                        <div class="flex items-center justify-between p-3 bg-white/5 rounded-xl border border-white/5"><span class="text-[10px] font-bold uppercase italic text-white">Marta Aranda</span><span class="text-[8px] text-gray-500 font-black">15:38</span></div>
+                        <div class="flex items-center justify-between p-3 bg-white/5 rounded-xl border border-white/5"><span class="text-[10px] font-bold uppercase italic text-white">Juan Gómez</span><span class="text-[8px] text-gray-500 font-black">15:30</span></div>
+                        <div class="flex items-center justify-between p-3 bg-white/5 rounded-xl border border-white/5"><span class="text-[10px] font-bold uppercase italic text-white">Facundo Pérez</span><span class="text-[8px] text-gray-500 font-black">15:15</span></div>
+                        <div class="flex items-center justify-between p-3 bg-white/5 rounded-xl border border-white/5"><span class="text-[10px] font-bold uppercase italic text-white">Sonia Torres</span><span class="text-[8px] text-gray-500 font-black">15:02</span></div>
+                        <div class="flex items-center justify-between p-3 bg-white/5 rounded-xl border border-white/5"><span class="text-[10px] font-bold uppercase italic text-white">Esteban Quito</span><span class="text-[8px] text-gray-500 font-black">14:50</span></div>
+                    </div>
+                    <button class="mt-4 w-full py-3 bg-white/5 text-white hover:bg-red-600 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all italic border border-white/5">Ver Todo</button>
+                </div>
+
+                <div class="glass-card p-8 rounded-[2.5rem] flex flex-col h-[400px]">
+                    <div class="flex justify-between items-center mb-8 text-left">
+                        <h4 class="text-xs font-black uppercase tracking-widest italic text-red-600">Actividad 24hs</h4>
+                        <div class="flex gap-2">
+                            <div class="w-2 h-2 bg-red-600 rounded-full animate-pulse"></div>
+                        </div>
+                    </div>
+                    <div class="flex-1 flex items-end justify-between gap-3 px-2 border-b border-white/10 pb-6 relative mb-4">
+                        <div class="w-full bg-red-600/30 rounded-t-lg relative" style="height: 40%">
+                            <span class="absolute -bottom-6 left-1/2 -translate-x-1/2 text-[8px] font-black text-gray-500 uppercase">08h</span>
+                        </div>
+                        <div class="w-full bg-red-600/50 rounded-t-lg relative" style="height: 70%">
+                            <span class="absolute -bottom-6 left-1/2 -translate-x-1/2 text-[8px] font-black text-gray-500 uppercase">12h</span>
+                        </div>
+                        <div class="w-full bg-red-600 rounded-t-lg relative" style="height: 95%">
+                            <span class="absolute -bottom-6 left-1/2 -translate-x-1/2 text-[8px] font-black text-white uppercase">19h</span>
+                        </div>
+                        <div class="w-full bg-red-600/40 rounded-t-lg relative" style="height: 50%">
+                            <span class="absolute -bottom-6 left-1/2 -translate-x-1/2 text-[8px] font-black text-gray-500 uppercase">22h</span>
+                        </div>
+                    </div>
+                    <p class="text-[10px] font-black uppercase tracking-widest italic text-center opacity-40 text-gray-300">Pico de asistencia: 19:00 - 21:00</p>
+                </div>
+
+                <div class="glass-card p-8 rounded-[2.5rem] flex flex-col h-[400px]">
+                    <div class="flex justify-between items-center mb-6">
+                        <h4 class="text-xs font-black uppercase tracking-widest italic text-red-600">Top 5 Clases Reservadas</h4>
+                        <i data-lucide="star" class="w-4 h-4 text-gray-600"></i>
+                    </div>
+                    <div class="space-y-3 text-left flex-1 overflow-y-auto pr-2 custom-scrollbar">
+                        <div class="group">
+                            <div class="flex justify-between mb-1.5 px-1">
+                                <span class="text-[10px] font-black uppercase italic text-white">Powerlifting Elite</span>
+                                <span class="text-[9px] font-bold text-red-600">42 Reservas</span>
+                            </div>
+                            <div class="w-full h-1 bg-white/5 rounded-full overflow-hidden">
+                                <div class="h-full viking-bg-red" style="width: 95%"></div>
+                            </div>
+                        </div>
+                        <div class="group">
+                            <div class="flex justify-between mb-1.5 px-1">
+                                <span class="text-[10px] font-black uppercase italic text-white">Strongman Basics</span>
+                                <span class="text-[9px] font-bold text-red-600">38 Reservas</span>
+                            </div>
+                            <div class="w-full h-1 bg-white/5 rounded-full overflow-hidden">
+                                <div class="h-full viking-bg-red" style="width: 85%"></div>
+                            </div>
+                        </div>
+                        <div class="group">
+                            <div class="flex justify-between mb-1.5 px-1">
+                                <span class="text-[10px] font-black uppercase italic text-white">Olympic Lifting</span>
+                                <span class="text-[9px] font-bold text-red-600">31 Reservas</span>
+                            </div>
+                            <div class="w-full h-1 bg-white/5 rounded-full overflow-hidden">
+                                <div class="h-full viking-bg-red" style="width: 70%"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <button class="mt-4 w-full py-3 border border-red-600/20 hover:bg-red-600/10 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all italic text-white">Reporte de Asistencia</button>
+                </div>
+            </div>
+
+            <div class="glass-card p-10 rounded-[2.5rem] space-y-8 text-left">
+                <div class="flex justify-between items-center">
+                    <h4 class="text-sm font-black uppercase italic tracking-widest border-l-4 border-red-600 pl-4 text-white">Directorio de Alumnos (A-Z)</h4>
+                    <div class="flex gap-4">
+                        <div class="relative">
+                            <i data-lucide="search" class="w-3 h-3 absolute left-3 top-1/2 -translate-y-1/2 text-gray-500"></i>
+                            <input type="text" placeholder="BUSCAR..." class="bg-black/40 border border-white/10 text-[9px] pl-8 pr-4 py-2 rounded-lg outline-none focus:border-red-600 transition-all font-black uppercase tracking-widest text-white">
+                        </div>
+                        <button onclick="switchView('alumnos')" class="text-[10px] font-black uppercase text-red-600 hover:text-white transition-colors italic tracking-widest">Ver Todos</button>
+                    </div>
+                </div>
+                
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left min-w-[1000px]">
+                        <thead class="border-b border-white/5">
+                            <tr>
+                                <th class="pb-4 text-[9px] font-black text-gray-500 uppercase tracking-[0.2em] italic">Nombre / Correo</th>
+                                <th class="pb-4 text-[9px] font-black text-gray-500 uppercase tracking-[0.2em] italic">DNI Socio</th>
+                                <th class="pb-4 text-[9px] font-black text-gray-500 uppercase tracking-[0.2em] italic text-center">Estado</th>
+                                <th class="pb-4 text-[9px] font-black text-gray-500 uppercase tracking-[0.2em] italic text-center">Vencimiento</th>
+                                <th class="pb-4 text-[9px] font-black text-gray-500 uppercase tracking-[0.2em] italic text-right">Acción rápida</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-white/5" id="dashboard-students-body">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- VISTA: GESTIÓN MAESTRA DE ALUMNOS -->
+        <div id="view-alumnos" class="view-content p-8 md:p-12 animate-in fade-in duration-500">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-10 text-left">
+                <div>
+                    <h4 class="text-sm font-black uppercase italic tracking-widest text-red-600 mb-1">Directorio Maestro</h4>
+                    <h3 class="text-3xl font-black uppercase italic tracking-tighter text-white">Administración de Alumnos</h3>
+                </div>
+                <div class="flex gap-4">
+                    <button class="bg-white/5 border border-white/10 hover:border-red-600 text-white px-6 py-4 rounded-2xl font-black uppercase italic text-[10px] tracking-widest transition-all">Exportar CSV</button>
+                    <button class="viking-bg-red text-black px-8 py-4 rounded-2xl font-black uppercase italic text-[11px] tracking-widest hover:bg-white transition-all shadow-xl flex items-center gap-3">
+                        <i data-lucide="user-plus" class="w-4 h-4"></i>
+                        Nuevo Alumno
+                    </button>
+                </div>
+            </div>
+
+            <div class="glass-card p-10 rounded-[3rem] space-y-8">
+                <div class="flex flex-col lg:flex-row justify-between gap-6">
+                    <div class="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
+                        <button class="px-5 py-2.5 bg-red-600 text-white rounded-xl text-[9px] font-black uppercase italic tracking-widest">Todos (124)</button>
+                        <button class="px-5 py-2.5 bg-white/5 text-gray-400 hover:text-white rounded-xl text-[9px] font-black uppercase italic tracking-widest border border-white/10">Activos</button>
+                    </div>
+                    <div class="relative min-w-[300px]">
+                        <i data-lucide="search" class="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-gray-500"></i>
+                        <input type="text" placeholder="BUSCAR POR NOMBRE O DNI..." class="w-full bg-black/40 border border-white/10 text-[10px] pl-12 pr-6 py-4 rounded-2xl outline-none focus:border-red-600 transition-all font-black uppercase tracking-widest text-white">
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left min-w-[1200px]">
+                        <thead class="border-b border-white/5">
+                            <tr>
+                                <th class="pb-5 text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] italic">Nombre Completo</th>
+                                <th class="pb-5 text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] italic">Email</th>
+                                <th class="pb-5 text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] italic">DNI</th>
+                                <th class="pb-5 text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] italic">Estado</th>
+                                <th class="pb-5 text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] italic">Plan</th>
+                                <th class="pb-5 text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] italic text-center">Renovación</th>
+                                <th class="pb-5 text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] italic text-center">Vencimiento</th>
+                                <th class="pb-5 text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] italic text-right">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-white/5" id="full-students-body">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- VISTA: MUSCULACIÓN -->
+        <div id="view-musculacion" class="view-content p-8 md:p-12 animate-in fade-in duration-500">
+            <div class="flex-1 flex items-center justify-center">
+                <div class="text-center">
+                    <i data-lucide="dumbbell" class="w-20 h-20 text-red-600 mx-auto mb-6 opacity-20"></i>
+                    <h3 class="text-4xl font-black uppercase italic tracking-tighter opacity-40 text-white">Musculación</h3>
+                </div>
+            </div>
+        </div>
+
+        <!-- VISTA: INGRESO VIRTUAL -->
+        <div id="view-ingreso" class="view-content p-8 md:p-12 animate-in fade-in duration-500">
+            <div class="flex-1 flex items-center justify-center">
+                <div class="text-center">
+                    <i data-lucide="smartphone" class="w-20 h-20 text-red-600 mx-auto mb-6 opacity-20"></i>
+                    <h3 class="text-4xl font-black uppercase italic tracking-tighter opacity-40 text-white">Ingreso Virtual</h3>
+                </div>
+            </div>
+        </div>
+
+        <!-- VISTA: CAJA -->
+        <div id="view-caja" class="view-content p-8 md:p-12 animate-in fade-in duration-500">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-10 text-left">
+                <div>
+                    <h4 class="text-sm font-black uppercase italic tracking-widest text-red-600 mb-1">Módulo Operativo</h4>
+                    <h3 class="text-3xl font-black uppercase italic tracking-tighter text-white">Control de Caja</h3>
+                </div>
+                <div class="flex gap-4">
+                    <button class="viking-bg-red text-black px-8 py-4 rounded-2xl font-black uppercase italic text-[11px] tracking-widest hover:bg-white transition-all shadow-xl flex items-center gap-3">
+                        <i data-lucide="plus-circle" class="w-4 h-4"></i>
+                        Nuevo Movimiento
+                    </button>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+                <div class="glass-card p-6 rounded-3xl text-left">
+                    <p class="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-2 italic">Saldo Efectivo</p>
+                    <h4 class="text-2xl font-black italic text-white">$ 124.500,00</h4>
+                </div>
+                <div class="glass-card p-6 rounded-3xl text-left">
+                    <p class="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-2 italic">Saldo Digital</p>
+                    <h4 class="text-2xl font-black italic text-white">$ 342.100,00</h4>
+                </div>
+                <div class="glass-card p-6 rounded-3xl text-left">
+                    <p class="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-2 italic">Total del Día</p>
+                    <h4 class="text-2xl font-black italic text-red-600">$ 466.600,00</h4>
+                </div>
+            </div>
+
+            <div class="glass-card p-10 rounded-[3rem]">
+                <h4 class="text-sm font-black uppercase italic tracking-widest text-white mb-8 border-l-4 border-red-600 pl-4">Últimos Movimientos</h4>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left">
+                        <thead class="border-b border-white/5">
+                            <tr>
+                                <th class="pb-4 text-[9px] font-black text-gray-500 uppercase italic">Fecha/Hora</th>
+                                <th class="pb-4 text-[9px] font-black text-gray-500 uppercase italic">Descripción</th>
+                                <th class="pb-4 text-[9px] font-black text-gray-500 uppercase italic">Categoría</th>
+                                <th class="pb-4 text-[9px] font-black text-gray-500 uppercase italic text-right">Monto</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-white/5" id="caja-movements-body">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- VISTA: STOCK -->
+        <div id="view-stock" class="view-content p-8 md:p-12 animate-in fade-in duration-500">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-10 text-left">
+                <div>
+                    <h4 class="text-sm font-black uppercase italic tracking-widest text-red-600 mb-1">Inventario</h4>
+                    <h3 class="text-3xl font-black uppercase italic tracking-tighter text-white">Gestión de Stock</h3>
+                </div>
+                <div class="flex gap-4">
+                    <button class="viking-bg-red text-black px-8 py-4 rounded-2xl font-black uppercase italic text-[11px] tracking-widest hover:bg-white transition-all shadow-xl flex items-center gap-3">
+                        <i data-lucide="package-plus" class="w-4 h-4"></i>
+                        Cargar Producto
+                    </button>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 text-left" id="stock-grid">
+            </div>
+        </div>
+
+        <!-- VISTA: GESTIÓN DE PLANES -->
+        <div id="view-planes" class="view-content p-8 md:p-12 animate-in fade-in duration-500">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-10 text-left">
+                <div>
+                    <h4 class="text-sm font-black uppercase italic tracking-widest text-red-600 mb-1">Catálogo de Oferta</h4>
+                    <h3 class="text-3xl font-black uppercase italic tracking-tighter text-white">Gestión de Planes</h3>
+                </div>
+                <div class="planes-nav-container">
+                    <button onclick="filterPlanes('mensual')" class="plan-period-btn active" id="btn-period-mensual">Mensual</button>
+                    <button onclick="filterPlanes('trimestral')" class="plan-period-btn" id="btn-period-trimestral">Trimestral</button>
+                    <button onclick="filterPlanes('semestral')" class="plan-period-btn" id="btn-period-semestral">Semestral</button>
+                    <button onclick="filterPlanes('anual')" class="plan-period-btn" id="btn-period-anual">Anual</button>
+                </div>
+            </div>
+            <div id="planes-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 text-left"></div>
+        </div>
+
+        <!-- VISTA: CLASES -->
+        <div id="view-clases" class="view-content p-8 md:p-12 animate-in fade-in duration-500">
+             <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-10 text-left">
+                <div>
+                    <h4 class="text-sm font-black uppercase italic tracking-widest text-red-600 mb-1">Configuración</h4>
+                    <h3 class="text-3xl font-black uppercase italic tracking-tighter text-white">Administración de Clases</h3>
+                </div>
+                <button class="viking-bg-red text-black px-8 py-4 rounded-2xl font-black uppercase italic text-[11px] tracking-widest hover:bg-white transition-all shadow-xl flex items-center gap-3">
+                    <i data-lucide="plus" class="w-4 h-4"></i>
+                    Añadir Clase
+                </button>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 text-left" id="clases-config-list">
+            </div>
+        </div>
+
+        <!-- VISTA: CALENDARIO DE CLASES -->
+        <div id="view-calendario" class="view-content p-8 md:p-12 animate-in slide-in-from-right duration-500">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-10 text-left">
+                <div class="flex items-center gap-6">
+                    <div>
+                        <h4 class="text-sm font-black uppercase italic tracking-widest text-red-600 mb-1">Agenda Vikinga</h4>
+                        <h3 class="text-3xl font-black uppercase italic tracking-tighter text-white" id="calendar-week-range">Semana del 12 al 18 de Enero</h3>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="prevWeek()" class="p-3 bg-white/5 hover:bg-red-600 rounded-xl transition-all text-white"><i data-lucide="chevron-left" class="w-4 h-4"></i></button>
+                        <button onclick="nextWeek()" class="p-3 bg-white/5 hover:bg-red-600 rounded-xl transition-all text-white"><i data-lucide="chevron-right" class="w-4 h-4"></i></button>
+                    </div>
+                </div>
+                <select id="month-selector" onchange="jumpToMonth(this.value)" class="month-select">
+                    <option value="0">Enero</option><option value="1">Febrero</option><option value="2">Marzo</option><option value="3">Abril</option><option value="4">Mayo</option><option value="5">Junio</option><option value="6">Julio</option><option value="7">Agosto</option><option value="8">Septiembre</option><option value="9">Octubre</option><option value="10">Noviembre</option><option value="11">Diciembre</option>
+                </select>
+            </div>
+            <div class="calendar-container h-[700px] overflow-y-auto">
+                <div class="time-col">
+                    <div class="cal-header-cell"><i data-lucide="clock" class="w-4 h-4 text-gray-500"></i></div>
+                    <div class="time-cell">07:00</div><div class="time-cell">08:00</div><div class="time-cell">09:00</div><div class="time-cell">10:00</div><div class="time-cell">11:00</div><div class="time-cell">12:00</div><div class="time-cell">13:00</div><div class="time-cell">14:00</div><div class="time-cell">15:00</div><div class="time-cell">16:00</div><div class="time-cell">17:00</div><div class="time-cell">18:00</div><div class="time-cell">19:00</div><div class="time-cell">20:00</div>
+                </div>
+                <div id="week-grid" class="week-grid"></div>
+            </div>
+        </div>
+
+        <!-- VISTA: PERFIL -->
+        <div id="view-perfil" class="view-content p-8 md:p-12 animate-in slide-in-from-bottom duration-500">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-10 text-left">
+                <div><h4 class="text-sm font-black uppercase italic tracking-widest text-red-600 mb-1">Centro de Control</h4><h3 class="text-3xl font-black uppercase italic tracking-tighter text-white">Mi Perfil Administrativo</h3></div>
+                <button class="viking-bg-red text-black px-8 py-4 rounded-2xl font-black uppercase italic text-[11px] tracking-widest hover:bg-white transition-all shadow-xl flex items-center gap-3"><i data-lucide="save" class="w-4 h-4"></i>Guardar Todo</button>
+            </div>
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-10 text-left">
+                <div class="space-y-8">
+                    <div class="glass-card p-10 rounded-[3rem] text-center border-red-600/20">
+                        <div class="w-32 h-32 rounded-[2.5rem] viking-bg-red mx-auto mb-6 flex items-center justify-center font-black text-black italic text-5xl shadow-[0_0_40px_rgba(255,0,0,0.4)] relative group">
+                            GL<div class="absolute inset-0 bg-black/60 rounded-[2.5rem] opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer"><i data-lucide="camera" class="w-8 h-8 text-white"></i></div>
+                        </div>
+                        <h3 class="text-2xl font-black uppercase italic tracking-tighter text-white">Gonzalo F. Luongo</h3>
+                        <p class="text-[10px] font-black text-red-600 uppercase tracking-[0.3em] mt-2 italic">Desarrollador & Master Admin</p>
+                    </div>
+                    <div class="glass-card p-10 rounded-[3rem]">
+                        <div class="flex items-center gap-3 mb-8"><i data-lucide="shield-check" class="w-5 h-5 text-red-600"></i><h4 class="text-sm font-black uppercase italic tracking-widest text-white">Seguridad</h4></div>
+                        <div class="space-y-6">
+                            <div><label class="text-[9px] font-black text-gray-600 uppercase tracking-widest mb-3 block ml-2 italic">Clave Actual</label><input type="password" class="profile-input" placeholder="••••••••••••"></div>
+                            <div><label class="text-[9px] font-black text-gray-600 uppercase tracking-widest mb-3 block ml-2 italic">Nueva Clave</label><input type="password" class="profile-input" placeholder="Nueva clave"></div>
+                            <button class="w-full py-4 bg-white/5 hover:bg-red-600 hover:text-black rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all italic mt-4 border border-white/10 text-white">Actualizar Clave</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="lg:col-span-2 space-y-8">
+                    <div class="glass-card p-10 rounded-[3rem]">
+                        <h4 class="text-sm font-black uppercase italic tracking-widest text-white mb-8 border-l-4 border-red-600 pl-4">Información Personal</h4>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <div><label class="text-[9px] font-black text-gray-600 uppercase tracking-widest mb-3 block ml-2 italic">Nombre Completo</label><input type="text" class="profile-input" value="Gonzalo Federico Luongo"></div>
+                            <div><label class="text-[9px] font-black text-gray-600 uppercase tracking-widest mb-3 block ml-2 italic">Email de Sistema</label><input type="email" class="profile-input" value="gonzalo.luongo@vikingostrength.com"></div>
+                            <div><label class="text-[9px] font-black text-gray-600 uppercase tracking-widest mb-3 block ml-2 italic">Teléfono / WhatsApp</label><input type="text" class="profile-input" value="+54 9 11 5555-4444"></div>
+                            <div><label class="text-[9px] font-black text-gray-600 uppercase tracking-widest mb-3 block ml-2 italic">DNI / ID Identificación</label><input type="text" class="profile-input" value="33.444.555"></div>
+                        </div>
+                    </div>
+                    <div class="glass-card p-10 rounded-[3rem]">
+                        <h4 class="text-sm font-black uppercase italic tracking-widest text-white mb-8 border-l-4 border-red-600 pl-4">Información para Profesores</h4>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <div><label class="text-[9px] font-black text-gray-600 uppercase tracking-widest mb-3 block ml-2 italic">Especialidad Principal</label><input type="text" class="profile-input" value="Powerlifting & Weightlifting"></div>
+                            <div><label class="text-[9px] font-black text-gray-600 uppercase tracking-widest mb-3 block ml-2 italic">Título Habilitante</label><input type="text" class="profile-input" value="Lic. Alto Rendimiento Deportivo"></div>
+                            <div><label class="text-[9px] font-black text-gray-600 uppercase tracking-widest mb-3 block ml-2 italic">Horarios de Atención</label><input type="text" class="profile-input" value="Lun a Vie: 08:00 - 20:00"></div>
+                            <div><label class="text-[9px] font-black text-gray-600 uppercase tracking-widest mb-3 block ml-2 italic">Años de Trayectoria</label><input type="text" class="profile-input" value="12 años"></div>
+                            <div class="md:col-span-2"><label class="text-[9px] font-black text-gray-600 uppercase tracking-widest mb-3 block ml-2 italic">Bio Profesional Corta</label><textarea class="profile-input h-24" readonly>Experto en técnicas de fuerza máxima y preparación física de élite. Fundador de Vikingo Strength Hub y responsable del sistema de gestión operativa.</textarea></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <footer class="p-10 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-4 opacity-30 mt-auto bg-black/20 text-white">
+            <p class="text-[9px] font-black uppercase tracking-[0.5em]">Vikingo Strength Hub &bull; Gonzalo Luongo Systems &copy; 2026</p>
+        </footer>
+    </main>
+
+    <script>
+        /**
+         * LÓGICA DE APLICACIÓN - VIKINGO STRENGTH HUB
+         */
+
+        let currentDate = new Date(2026, 0, 12); 
+
+        const students = [
+            { id: 1, name: "Abelardo Quintana", email: "abelardo.q@email.com", dni: "35489621", status: "Activo", plan: "Powerlifting Elite", origin: "Admin", lastRenewal: "15/01/2026", expiry: "15/02/2026" },
+            { id: 2, name: "Adriana Beltrán", email: "adriana.b@email.com", dni: "28445123", status: "Activo", plan: "Strongman Basics", origin: "Prof. Luongo", lastRenewal: "10/01/2026", expiry: "10/02/2026" },
+            { id: 3, name: "Bautista Méndez", email: "bau.mendez@email.com", dni: "42115689", status: "Vencido", plan: "Olympic Lifting", origin: "Web", lastRenewal: "20/12/2025", expiry: "20/01/2026" },
+            { id: 4, name: "Camila Duarte", email: "cami.duarte@email.com", dni: "38994512", status: "Activo", plan: "Conditioning HIIT", origin: "Admin", lastRenewal: "05/01/2026", expiry: "05/02/2026" },
+            { id: 5, name: "Cristian Rossi", email: "cristian.r@email.com", dni: "33125478", status: "Activo", plan: "Mobility & Core", origin: "Prof. Odin", lastRenewal: "02/01/2026", expiry: "02/02/2026" },
+            { id: 6, name: "Daniel Ortega", email: "daniel.o@email.com", dni: "40125874", status: "Activo", plan: "Powerlifting Elite", origin: "Admin", lastRenewal: "28/12/2025", expiry: "28/01/2026" },
+            { id: 7, name: "Elena García", email: "elena.g@email.com", dni: "36254128", status: "Activo", plan: "Olympic Lifting", origin: "Web", lastRenewal: "12/01/2026", expiry: "12/02/2026" },
+            { id: 8, name: "Facundo Gómez", email: "facu.g@email.com", dni: "44558899", status: "Activo", plan: "HIIT Plus", origin: "Prof. Luongo", lastRenewal: "08/01/2026", expiry: "08/02/2026" },
+            { id: 9, name: "Gerónimo Islas", email: "gero.islas@email.com", dni: "31224556", status: "Activo", plan: "Strongman Basics", origin: "Admin", lastRenewal: "14/01/2026", expiry: "14/02/2026" },
+            { id: 10, name: "Héctor Luna", email: "hector.l@email.com", dni: "30145258", status: "Vencido", plan: "Mobility & Core", origin: "Web", lastRenewal: "15/12/2025", expiry: "15/01/2026" },
+            { id: 11, name: "Ignacio Pérez", email: "ignacio.p@email.com", dni: "42336554", status: "Activo", plan: "Powerlifting Elite", origin: "Admin", lastRenewal: "10/01/2026", expiry: "10/02/2026" },
+            { id: 12, name: "Julieta Sosa", email: "juli.sosa@email.com", dni: "39112233", status: "Activo", plan: "Yoga Strength", origin: "Prof. Thor", lastRenewal: "02/01/2026", expiry: "02/02/2026" },
+            { id: 13, name: "Kevin Blanco", email: "kevin.b@email.com", dni: "33665544", status: "Vencido", plan: "Conditioning HIIT", origin: "Admin", lastRenewal: "10/12/2025", expiry: "10/01/2026" },
+            { id: 14, name: "Laura Méndez", email: "lau.m@email.com", dni: "35442211", status: "Activo", plan: "Full Access", origin: "Web", lastRenewal: "12/01/2026", expiry: "12/02/2026" },
+            { id: 15, name: "Marcos Torres", email: "marcos.t@email.com", dni: "30112244", status: "Activo", plan: "Strongman Basics", origin: "Admin", lastRenewal: "15/01/2026", expiry: "15/02/2026" },
+            { id: 16, name: "Natalia Ruiz", email: "nata.ruiz@email.com", dni: "29887766", status: "Activo", plan: "Conditioning HIIT", origin: "Prof. Odin", lastRenewal: "18/01/2026", expiry: "18/02/2026" },
+            { id: 17, name: "Oscar Vaca", email: "oscar.v@email.com", dni: "27665544", status: "Activo", plan: "Olympic Lifting", origin: "Admin", lastRenewal: "20/01/2026", expiry: "20/02/2026" },
+            { id: 18, name: "Patricia Rey", email: "patri.rey@email.com", dni: "34112233", status: "Activo", plan: "Mobility & Core", origin: "Web", lastRenewal: "05/01/2026", expiry: "05/02/2026" },
+            { id: 19, name: "Quique Domínguez", email: "quique.d@email.com", dni: "40112233", status: "Vencido", plan: "Powerlifting Elite", origin: "Admin", lastRenewal: "10/12/2025", expiry: "10/01/2026" },
+            { id: 20, name: "Ramiro Funes", email: "ramiro.f@email.com", dni: "38112233", status: "Activo", plan: "Strongman Basics", origin: "Prof. Luongo", lastRenewal: "14/01/2026", expiry: "14/02/2026" },
+            { id: 21, name: "Sonia Paz", email: "sonia.paz@email.com", dni: "33445566", status: "Activo", plan: "Yoga Strength", origin: "Admin", lastRenewal: "10/01/2026", expiry: "10/02/2026" },
+            { id: 22, name: "Tomás Alva", email: "tomas.alva@email.com", dni: "42112233", status: "Activo", plan: "Full Access", origin: "Web", lastRenewal: "12/01/2026", expiry: "12/02/2026" },
+            { id: 23, name: "Úrsula Cortéz", email: "ursula.c@email.com", dni: "31112233", status: "Activo", plan: "Powerlifting Elite", origin: "Admin", lastRenewal: "15/01/2026", expiry: "15/02/2026" },
+            { id: 24, name: "Víctor Hugo", email: "victor.h@email.com", dni: "25112233", status: "Vencido", plan: "Strongman Basics", origin: "Prof. Thor", lastRenewal: "15/12/2025", expiry: "15/01/2026" },
+            { id: 25, name: "Walter White", email: "heisenberg@email.com", dni: "20112233", status: "Activo", plan: "Chemical Strength", origin: "Admin", lastRenewal: "01/01/2026", expiry: "01/02/2026" },
+            { id: 26, name: "Ximena López", email: "ximena.l@email.com", dni: "36112233", status: "Activo", plan: "Olympic Lifting", origin: "Web", lastRenewal: "08/01/2026", expiry: "08/02/2026" },
+            { id: 27, name: "Yago García", email: "yago.g@email.com", dni: "38221144", status: "Activo", plan: "HIIT Plus", origin: "Prof. Luongo", lastRenewal: "10/01/2026", expiry: "10/02/2026" },
+            { id: 28, name: "Zulema Torres", email: "zule.t@email.com", dni: "44112233", status: "Activo", plan: "Mobility & Core", origin: "Admin", lastRenewal: "12/01/2026", expiry: "12/02/2026" },
+            { id: 29, name: "Anibal Troilo", email: "anibal@email.com", dni: "22333444", status: "Activo", plan: "Full Access", origin: "Admin", lastRenewal: "05/01/2026", expiry: "05/02/2026" },
+            { id: 30, name: "Bernardo Houssay", email: "berni@email.com", dni: "25666777", status: "Activo", plan: "Olympic Lifting", origin: "Web", lastRenewal: "10/01/2026", expiry: "10/02/2026" },
+            { id: 31, name: "Cesar Milstein", email: "cesar@email.com", dni: "33444111", status: "Activo", plan: "Powerlifting Elite", origin: "Prof. Luongo", lastRenewal: "15/01/2026", expiry: "15/02/2026" },
+            { id: 32, name: "Dante Alighieri", email: "dante@email.com", dni: "28777888", status: "Vencido", plan: "Mobility & Core", origin: "Admin", lastRenewal: "10/12/2025", expiry: "10/01/2026" },
+            { id: 33, name: "Esteban Echeverria", email: "esteban@email.com", dni: "30111222", status: "Activo", plan: "Strongman Basics", origin: "Web", lastRenewal: "14/01/2026", expiry: "14/02/2026" },
+            { id: 34, name: "Federico Garcia Lorca", email: "federico@email.com", dni: "29444555", status: "Activo", plan: "Yoga Strength", origin: "Admin", lastRenewal: "10/01/2026", expiry: "10/02/2026" },
+            { id: 35, name: "Gabriela Mistral", email: "gabri@email.com", dni: "32555666", status: "Activo", plan: "Full Access", origin: "Web", lastRenewal: "12/01/2026", expiry: "12/02/2026" },
+            { id: 36, name: "Hernán Cortés", email: "hernan@email.com", dni: "15444333", status: "Activo", plan: "Powerlifting Elite", origin: "Admin", lastRenewal: "01/01/2026", expiry: "01/02/2026" },
+            { id: 37, name: "Isabel la Católica", email: "isabel@email.com", dni: "12555666", status: "Activo", plan: "Yoga Strength", origin: "Prof. Odin", lastRenewal: "02/01/2026", expiry: "02/02/2026" },
+            { id: 38, name: "Juana de Arco", email: "juana.arco@email.com", dni: "10222333", status: "Activo", plan: "Strongman Basics", origin: "Web", lastRenewal: "10/01/2026", expiry: "10/02/2026" },
+            { id: 39, name: "Karl Marx", email: "karl@email.com", dni: "18555444", status: "Vencido", plan: "Olympic Lifting", origin: "Admin", lastRenewal: "15/12/2025", expiry: "15/01/2026" },
+            { id: 40, name: "Leonel Messi", email: "leo@email.com", dni: "10101010", status: "Activo", plan: "GOAT Access", origin: "Prof. Luongo", lastRenewal: "18/01/2026", expiry: "18/02/2026" },
+            { id: 41, name: "Mariano Moreno", email: "mariano@email.com", dni: "25666777", status: "Activo", plan: "Powerlifting Elite", origin: "Web", lastRenewal: "12/01/2026", expiry: "12/02/2026" },
+            { id: 42, name: "Napoleon Bonaparte", email: "napoleon@email.com", dni: "18121812", status: "Activo", plan: "Conqueror Plan", origin: "Admin", lastRenewal: "05/01/2026", expiry: "05/02/2026" },
+            { id: 43, name: "Oscar Wilde", email: "oscar.w@email.com", dni: "22333222", status: "Vencido", plan: "Mobility & Core", origin: "Web", lastRenewal: "10/12/2025", expiry: "10/01/2026" },
+            { id: 44, name: "Platón Atenas", email: "platon@email.com", dni: "00000001", status: "Activo", plan: "Olympic Lifting", origin: "Prof. Thor", lastRenewal: "14/01/2026", expiry: "14/02/2026" },
+            { id: 45, name: "Quetzalcóatl Mex", email: "serpiente@email.com", dni: "99999999", status: "Activo", plan: "Yoga Strength", origin: "Admin", lastRenewal: "10/01/2026", expiry: "10/02/2026" },
+            { id: 46, name: "Rosa Luxemburgo", email: "rosa@email.com", dni: "30444555", status: "Activo", plan: "Powerlifting Elite", origin: "Web", lastRenewal: "12/01/2026", expiry: "12/02/2026" },
+            { id: 47, name: "San Martín José", email: "jose@email.com", dni: "17781850", status: "Activo", plan: "Libertador Access", origin: "Prof. Luongo", lastRenewal: "15/01/2026", expiry: "15/02/2026" },
+            { id: 48, name: "Teresa de Calcuta", email: "teresa@email.com", dni: "33222111", status: "Activo", plan: "Mobility & Flow", origin: "Admin", lastRenewal: "10/01/2026", expiry: "10/02/2026" },
+            { id: 49, name: "Ubaldo Fillol", email: "pato@email.com", dni: "22111000", status: "Vencido", plan: "Strongman Basics", origin: "Web", lastRenewal: "05/12/2025", expiry: "05/01/2026" },
+            { id: 50, name: "Victor Hugo", email: "victor@email.com", dni: "25444333", status: "Activo", plan: "Olympic Lifting", origin: "Prof. Odin", lastRenewal: "14/01/2026", expiry: "14/02/2026" }
+        ];
+
+        const cajaMovements = [
+            { date: "12/01/2026 18:24", desc: "Pago Cuota - Ricardo López", cat: "Ingreso Cuota", amount: 15500, type: 'in' },
+            { date: "12/01/2026 17:10", desc: "Venta Creatina 300g", cat: "Venta Stock", amount: 8200, type: 'in' },
+            { date: "12/01/2026 16:05", desc: "Pago Servicio Electricidad", cat: "Gasto Fijo", amount: -22400, type: 'out' },
+            { date: "12/01/2026 14:30", desc: "Pago Cuota - Marta Aranda", cat: "Ingreso Cuota", amount: 12000, type: 'in' },
+            { date: "12/01/2026 12:15", desc: "Compra de Insumos Limpieza", cat: "Gastos Varios", amount: -4500, type: 'out' },
+            { date: "12/01/2026 10:00", desc: "Apertura de Caja", cat: "Apertura", amount: 5000, type: 'in' }
+        ];
+
+        const stockProducts = [
+            { id: 1, name: "Proteína Whey 1kg", cat: "Suplementos", stock: 24, price: 18500 },
+            { id: 2, name: "Creatina Monohidrato 300g", cat: "Suplementos", stock: 12, price: 9200 },
+            { id: 3, name: "BCAAs Evolution", cat: "Suplementos", stock: 8, price: 7400 },
+            { id: 4, name: "Remera Vikingo Hub XL", cat: "Indumentaria", stock: 15, price: 6500 },
+            { id: 5, name: "Gorras Trucker Red", cat: "Indumentaria", stock: 5, price: 4200 },
+            { id: 6, name: "Shaker 700ml Black", cat: "Accesorios", stock: 30, price: 2800 },
+            { id: 7, name: "Cinturón Cuero L", cat: "Accesorios", stock: 3, price: 15500 },
+            { id: 8, name: "Magnesio en Polvo 500g", cat: "Accesorios", stock: 20, price: 3200 }
+        ];
+
+        const classConfig = [
+            { id: 1, name: "Powerlifting Elite", coach: "Prof. Luongo", dur: "90 min", capacity: 12 },
+            { id: 2, name: "Strongman Basics", coach: "Prof. Thor", dur: "120 min", capacity: 8 },
+            { id: 3, name: "Olympic Weightlifting", coach: "Prof. Odin", dur: "90 min", capacity: 10 },
+            { id: 4, name: "Conditioning HIIT", coach: "Prof. Freya", dur: "60 min", capacity: 20 },
+            { id: 5, name: "Mobility & Flow", coach: "Prof. Tyr", dur: "45 min", capacity: 15 }
+        ];
+
+        let calendarClasses = [
+            { id: 101, title: "Powerlifting", coach: "Prof. Luongo", hour: 9, date: "2026-01-12" },
+            { id: 102, title: "Strongman", coach: "Prof. Thor", hour: 11, date: "2026-01-14" },
+            { id: 103, title: "Olympic", coach: "Prof. Freya", hour: 18, date: "2026-01-12" },
+            { id: 104, title: "HIIT", coach: "Prof. Odin", hour: 11, date: "2026-01-17" },
+            { id: 105, title: "Mobility", coach: "Prof. Tyr", hour: 8, date: "2026-01-13" },
+            { id: 106, title: "Recovery", coach: "Prof. Frigg", hour: 15, date: "2026-01-15" }
+        ];
+
+        const planesData = [
+            { nombre: "6 Clases", tag: "Basico", desc: "Mantenimiento esencial." },
+            { nombre: "6 Clases + Musculacion", tag: "Hibrido", desc: "Fuerza combinada básica." },
+            { nombre: "8 Clases", tag: "Recomendado", desc: "Progreso garantizado." },
+            { nombre: "8 Clases + Musculacion", tag: "Hibrido Plus", desc: "Entrenamiento integral." },
+            { nombre: "12 Clases", tag: "Intenso", desc: "Alto rendimiento técnico." },
+            { nombre: "12 Clases + Musculacion", tag: "Elite", desc: "Potencial máximo vikingo." },
+            { nombre: "Full Access", tag: "Libre", desc: "Sin límites de asistencia." },
+            { nombre: "Premium VIP", tag: "VIP", desc: "Clases libres + Musculación." }
+        ];
+
+        function getStartOfWeek(date) {
+            const temp = new Date(date);
+            const day = temp.getDay();
+            const diff = temp.getDate() - day + (day === 0 ? -6 : 1); 
+            return new Date(temp.setDate(diff));
+        }
+
+        function formatLocalDate(date) {
+            return date.toISOString().split('T')[0];
+        }
+
+        function prevWeek() {
+            currentDate.setDate(currentDate.getDate() - 7);
+            renderCalendar();
+        }
+
+        function nextWeek() {
+            currentDate.setDate(currentDate.getDate() + 7);
+            renderCalendar();
+        }
+
+        function jumpToMonth(month) {
+            currentDate = new Date(2026, month, 1);
+            renderCalendar();
+        }
+
+        function handleDragStart(e, classId) {
+            e.dataTransfer.setData('text/plain', classId);
+            e.currentTarget.style.opacity = '0.5';
+        }
+
+        function handleDragEnd(e) {
+            e.currentTarget.style.opacity = '1';
+        }
+
+        function handleDragOver(e) {
+            e.preventDefault();
+            if (!e.currentTarget.classList.contains('closed')) {
+                e.currentTarget.classList.add('drag-over');
+            }
+        }
+
+        function handleDragLeave(e) {
+            e.currentTarget.classList.remove('drag-over');
+        }
+
+        function handleDrop(e, targetDate, targetHour) {
+            e.preventDefault();
+            e.currentTarget.classList.remove('drag-over');
+            
+            if (e.currentTarget.classList.contains('closed')) return;
+
+            const classId = parseInt(e.dataTransfer.getData('text/plain'));
+            const clsIndex = calendarClasses.findIndex(c => c.id === classId);
+
+            if (clsIndex !== -1) {
+                calendarClasses[clsIndex].date = targetDate;
+                calendarClasses[clsIndex].hour = targetHour;
+                renderCalendar();
+            }
+        }
+
+        function renderCalendar() {
+            const grid = document.getElementById('week-grid');
+            if (!grid) return;
+            grid.innerHTML = '';
+            const startOfWeek = getStartOfWeek(new Date(currentDate));
+            const weekDays = [];
+            for (let i = 0; i < 7; i++) {
+                const day = new Date(startOfWeek);
+                day.setDate(startOfWeek.getDate() + i);
+                weekDays.push(day);
+            }
+            const months = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+            document.getElementById('calendar-week-range').innerText = `Semana del ${weekDays[0].getDate()} al ${weekDays[6].getDate()} de ${months[weekDays[0].getMonth()]}`;
+            document.getElementById('month-selector').value = weekDays[0].getMonth();
+
+            const daysNames = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
+            weekDays.forEach((day, i) => {
+                const header = document.createElement('div');
+                header.className = `cal-header-cell ${i === 6 ? 'text-red-600' : ''}`;
+                header.innerHTML = `<span class="text-[8px] font-black uppercase text-gray-400">${daysNames[i]}</span><span class="text-[12px] font-black italic text-white">${day.getDate()}</span>`;
+                grid.appendChild(header);
+            });
+
+            for (let h = 7; h <= 20; h++) {
+                weekDays.forEach((day, dIndex) => {
+                    const dateStr = formatLocalDate(day);
+                    const cell = document.createElement('div');
+                    let isOpen = !(dIndex === 6 || (dIndex === 5 && (h < 10 || h > 12)));
+                    
+                    cell.className = `calendar-cell ${!isOpen ? 'closed' : ''}`;
+                    
+                    if (isOpen) {
+                        cell.addEventListener('dragover', handleDragOver);
+                        cell.addEventListener('dragleave', handleDragLeave);
+                        cell.addEventListener('drop', (e) => handleDrop(e, dateStr, h));
+
+                        const cls = calendarClasses.find(c => c.date === dateStr && c.hour === h);
+                        if (cls) {
+                            const clsDiv = document.createElement('div');
+                            clsDiv.className = "class-item p-2 bg-red-600 text-white border border-red-700 rounded-xl flex flex-col justify-center h-full viking-shadow";
+                            clsDiv.draggable = true;
+                            clsDiv.addEventListener('dragstart', (e) => handleDragStart(e, cls.id));
+                            clsDiv.addEventListener('dragend', handleDragEnd);
+                            clsDiv.innerHTML = `
+                                <p class="text-[8px] font-black uppercase italic text-white leading-tight pointer-events-none">${cls.title}</p>
+                                <p class="text-[7px] font-bold text-red-100 uppercase mt-1 pointer-events-none">${cls.coach}</p>
+                            `;
+                            cell.appendChild(clsDiv);
+                        }
+                    }
+                    grid.appendChild(cell);
+                });
+            }
+            lucide.createIcons();
+        }
+
+        function renderStudents() {
+            const dashBody = document.getElementById('dashboard-students-body');
+            const fullBody = document.getElementById('full-students-body');
+            
+            if (dashBody) {
+                dashBody.innerHTML = students.slice(0, 10).map(s => `
+                    <tr class="viking-table-row group">
+                        <td class="py-5"><div class="flex items-center gap-3"><div><p class="text-[11px] font-black uppercase italic text-white group-hover:text-red-600 transition-colors">${s.name}</p><p class="text-[8px] text-gray-500 font-bold uppercase">${s.email}</p></div></div></td>
+                        <td class="py-5 text-[10px] font-bold text-gray-400">${s.dni}</td>
+                        <td class="py-5 text-center"><span class="px-3 py-1 ${s.status === 'Activo' ? 'bg-green-500/20 text-green-500 border-green-500/30' : 'bg-red-500/20 text-red-500 border-red-500/30'} text-[8px] font-black uppercase rounded-lg border">${s.status}</span></td>
+                        <td class="py-5 text-[10px] font-bold text-red-600 text-center italic">${s.expiry}</td>
+                        <td class="py-5 text-right"><button class="text-[8px] font-black uppercase bg-white/5 text-white px-3 py-1.5 rounded-lg hover:bg-red-600 transition-colors">Gestionar</button></td>
+                    </tr>
+                `).join('');
+            }
+
+            if (fullBody) {
+                fullBody.innerHTML = students.map(s => `
+                    <tr class="viking-table-row group">
+                        <td class="py-5">
+                            <p class="text-[11px] font-black uppercase italic text-white group-hover:text-red-600 transition-colors">${s.name}</p>
+                        </td>
+                        <td class="py-5 text-[10px] font-bold text-gray-400">${s.email}</td>
+                        <td class="py-5 text-[10px] font-bold text-gray-400">${s.dni}</td>
+                        <td class="py-5">
+                            <span class="px-3 py-1 ${s.status === 'Activo' ? 'bg-green-500/20 text-green-500 border-green-500/30' : 'bg-red-500/20 text-red-500 border-red-500/30'} text-[8px] font-black uppercase rounded-lg border tracking-widest italic">${s.status}</span>
+                        </td>
+                        <td class="py-5">
+                            <p class="text-[10px] font-black italic uppercase text-gray-400">${s.plan}</p>
+                        </td>
+                        <td class="py-5 text-[10px] font-bold text-gray-400 text-center">${s.lastRenewal}</td>
+                        <td class="py-5 text-[10px] font-bold text-red-600 text-center italic">${s.expiry}</td>
+                        <td class="py-5 text-right">
+                            <div class="flex gap-2 justify-end">
+                                <button class="text-[8px] font-black uppercase bg-white/5 text-white px-3 py-1.5 rounded-lg hover:bg-red-600 transition-colors"><i data-lucide="edit-3" class="w-3 h-3"></i></button>
+                                <button class="text-[8px] font-black uppercase bg-white/5 text-white px-3 py-1.5 rounded-lg hover:bg-red-600 transition-colors"><i data-lucide="trash-2" class="w-3 h-3"></i></button>
+                            </div>
+                        </td>
+                    </tr>
+                `).join('');
+            }
+            lucide.createIcons();
+        }
+
+        function renderCaja() {
+            const body = document.getElementById('caja-movements-body');
+            if (!body) return;
+            body.innerHTML = cajaMovements.map(m => `
+                <tr class="viking-table-row">
+                    <td class="py-4 text-[10px] font-bold text-gray-400">${m.date}</td>
+                    <td class="py-4 text-[11px] font-black uppercase italic text-white">${m.desc}</td>
+                    <td class="py-4 text-[9px] font-black uppercase tracking-widest text-gray-500 italic">${m.cat}</td>
+                    <td class="py-4 text-[11px] font-black italic text-right ${m.type === 'in' ? 'text-green-600' : 'text-red-600'}">
+                        ${m.type === 'in' ? '+' : ''} $ ${Math.abs(m.amount).toLocaleString('es-AR')}
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function renderStock() {
+            const grid = document.getElementById('stock-grid');
+            if (!grid) return;
+            grid.innerHTML = stockProducts.map(p => `
+                <div class="glass-card p-6 rounded-3xl flex flex-col viking-shadow relative overflow-hidden group">
+                    <div class="absolute -right-2 -top-2 w-12 h-12 viking-bg-red flex items-center justify-center -rotate-12 opacity-0 group-hover:opacity-100 transition-all">
+                        <i data-lucide="edit-3" class="w-4 h-4 text-black"></i>
+                    </div>
+                    <p class="text-[8px] font-black text-red-600 uppercase tracking-[0.3em] mb-3 italic">${p.cat}</p>
+                    <h4 class="text-xs font-black uppercase italic tracking-tighter mb-1 text-white">${p.name}</h4>
+                    <p class="text-[14px] font-black text-white italic mb-4">$ ${p.price.toLocaleString('es-AR')}</p>
+                    <div class="mt-auto flex items-center justify-between border-t border-white/5 pt-4">
+                        <span class="text-[9px] font-black uppercase text-gray-400 italic">Disponibilidad</span>
+                        <span class="text-[11px] font-black italic ${p.stock < 10 ? 'text-red-600' : 'text-green-500'}">${p.stock} UNID.</span>
+                    </div>
+                </div>
+            `).join('');
+            lucide.createIcons();
+        }
+
+        function renderClases() {
+            const container = document.getElementById('clases-config-list');
+            if (!container) return;
+            container.innerHTML = classConfig.map(c => `
+                <div class="glass-card p-8 rounded-[2.5rem] flex items-center justify-between viking-shadow">
+                    <div class="flex items-center gap-6">
+                        <div class="w-16 h-16 rounded-2xl bg-red-600/10 border border-red-600/30 flex items-center justify-center">
+                            <i data-lucide="presentation" class="w-8 h-8 text-red-600"></i>
+                        </div>
+                        <div class="text-left">
+                            <h4 class="text-lg font-black uppercase italic tracking-tighter text-white leading-none mb-2">${c.name}</h4>
+                            <div class="flex gap-4 opacity-50">
+                                <span class="text-[9px] font-black uppercase italic flex items-center gap-1 text-white"><i data-lucide="user" class="w-3 h-3"></i> ${c.coach}</span>
+                                <span class="text-[9px] font-black uppercase italic flex items-center gap-1 text-white"><i data-lucide="clock" class="w-3 h-3"></i> ${c.dur}</span>
+                                <span class="text-[9px] font-black uppercase italic flex items-center gap-1 text-white"><i data-lucide="users" class="w-3 h-3"></i> Max ${c.capacity}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex gap-2">
+                        <button class="p-3 bg-white/5 hover:bg-white/10 rounded-xl transition-all border border-white/10 text-gray-500 hover:text-white"><i data-lucide="settings-2" class="w-4 h-4"></i></button>
+                        <button class="p-3 bg-red-600 text-white hover:bg-black rounded-xl transition-all border border-red-600"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                    </div>
+                </div>
+            `).join('');
+            lucide.createIcons();
+        }
+
+        function renderPlanes(period) {
+            const grid = document.getElementById('planes-grid');
+            if (!grid) return;
+            grid.innerHTML = planesData.map(p => `
+                <div class="glass-card p-8 rounded-[2.5rem] group hover:border-red-600/30 transition-all flex flex-col h-full viking-shadow">
+                    <div class="flex justify-between items-start mb-6">
+                        <span class="px-3 py-1 bg-red-600 text-white text-[8px] font-black uppercase rounded-lg border border-red-600 italic tracking-widest">${p.tag}</span>
+                        <i data-lucide="award" class="w-4 h-4 text-gray-400 group-hover:text-red-600"></i>
+                    </div>
+                    <h4 class="text-lg font-black uppercase italic tracking-tighter mb-2 leading-tight text-white">${period} ${p.nombre}</h4>
+                    <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-8">${p.desc}</p>
+                    <div class="mt-auto pt-6 border-t border-white/5 flex items-center justify-between">
+                        <span class="text-[9px] font-black uppercase text-gray-400 italic">Gestión ${period}</span>
+                        <button class="w-10 h-10 rounded-xl bg-white/5 text-white flex items-center justify-center hover:bg-red-600 transition-all border border-white/10"><i data-lucide="edit-3" class="w-4 h-4"></i></button>
+                    </div>
+                </div>`).join('');
+            lucide.createIcons();
+        }
+
+        function filterPlanes(period) {
+            document.querySelectorAll('.plan-period-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(`btn-period-${period}`).classList.add('active');
+            renderPlanes(period.charAt(0).toUpperCase() + period.slice(1));
+        }
+
+        function toggleSubmenu(id) {
+            const submenu = document.getElementById(id);
+            const icon = document.getElementById(id + '-chevron');
+            const isOpen = submenu.classList.contains('open');
+
+            document.querySelectorAll('.submenu-container').forEach(sub => sub.classList.remove('open'));
+            document.querySelectorAll('.chevron-icon').forEach(ico => ico.style.transform = 'rotate(0deg)');
+
+            if (!isOpen) {
+                submenu.classList.add('open');
+                if (icon) icon.style.transform = 'rotate(180deg)';
+            }
+        }
+
+        function switchView(viewName) {
+            document.querySelectorAll('.view-content').forEach(view => view.classList.remove('active'));
+            const target = document.getElementById(`view-${viewName}`);
+            if (target) target.classList.add('active');
+            else document.getElementById('view-dashboard').classList.add('active');
+
+            document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+            const activeBtn = document.getElementById(`btn-${viewName}`);
+            if (activeBtn) activeBtn.classList.add('active');
+
+            const titles = {
+                'perfil': ["Perfil Admin", "Configuración > Cuenta & Seguridad"],
+                'alumnos': ["Gestión de Alumnos", "Administración > Directorio Maestro"],
+                'musculacion': ["Musculación", "Operativa > Área Pesas"],
+                'ingreso': ["Ingreso Virtual", "Operativa > Control Digital"],
+                'caja': ["Control de Caja", "Facturación > Caja"],
+                'stock': ["Gestión de Stock", "Facturación > Stock"],
+                'planes': ["Membresías", "Gestión > Planes"],
+                'clases': ["Administración de Clases", "Gestión > Configuración"],
+                'calendario': ["Calendario", "Gestión > Agenda"],
+                'dashboard': ["Dashboard General", "Vikingo Strength Hub"]
+            };
+
+            const [viewTitle, bc] = titles[viewName] || titles['dashboard'];
+            document.getElementById('view-title').innerText = viewTitle;
+            document.getElementById('breadcrumb').innerText = bc;
+
+            if (viewName === 'planes') renderPlanes('Mensual');
+            if (viewName === 'calendario') renderCalendar();
+            if (viewName === 'dashboard' || viewName === 'alumnos') renderStudents();
+            if (viewName === 'caja') renderCaja();
+            if (viewName === 'stock') renderStock();
+            if (viewName === 'clases') renderClases();
+
+            lucide.createIcons();
+        }
+
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            sidebar.classList.toggle('sidebar-collapsed');
+            const icon = document.getElementById('toggle-icon');
+            icon.setAttribute('data-lucide', sidebar.classList.contains('sidebar-collapsed') ? 'chevron-right' : 'chevron-left');
+            lucide.createIcons();
+        }
+
+        window.onload = () => { 
+            lucide.createIcons();
+            renderStudents();
+            renderPlanes('Mensual');
+            console.log("Sistema Vikingo Strength Hub v2.3 - Gonzalo Luongo Systems");
+        };
+    </script>
+</body>
+</html>
