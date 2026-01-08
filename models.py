@@ -1,10 +1,10 @@
-from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Date, Text, Boolean, CheckConstraint
+from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Date, Text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.postgresql import UUID
 import uuid
 from datetime import datetime
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, ConfigDict
 from typing import List, Optional
 
 Base = declarative_base()
@@ -84,23 +84,23 @@ class Calendario(Base):
     
     clase = relationship("Clase", back_populates="horarios")
 
-# --- ESQUEMAS DE PYDANTIC (Para validación de API) ---
+# --- ESQUEMAS DE PYDANTIC (V2) ---
 
 class AlumnoBase(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
     nombre: str
     email: EmailStr
     dni: str
     estado: str
-    plan_id: Optional[int]
+    plan_id: Optional[int] = None
     origen: str
     fecha_vencimiento: str
 
 class PlanSchema(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
     id: int
     nombre: str
     precio: float
-    class Config:
-        orm_mode = True
 
 class DashboardMetrics(BaseModel):
     checkins_recientes: List[dict]

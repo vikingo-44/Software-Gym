@@ -3,101 +3,83 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from typing import List
 import models
+from database import SessionLocal, engine
 from datetime import datetime, date
+
+# Crea las tablas en la base de datos si no existen
+models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Vikingo Strength Hub API")
 
-# Configuración de CORS para que tu HTML pueda conectar
+# Configuración de CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], # En producción, limita esto a tu dominio
+    allow_origins=["*"], 
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 # --- DEPENDENCIAS ---
-# Aquí iría tu lógica de conexión a NeonDB (ej. create_engine)
 def get_db():
-    # Placeholder para la sesión de base de datos
-    db = None 
+    db = SessionLocal()
     try:
         yield db
     finally:
-        # db.close()
-        pass
+        db.close()
+
+# --- RUTA RAÍZ (Para evitar el 404 en Render) ---
+@app.get("/")
+async def root():
+    return {
+        "status": "active",
+        "message": "Vikingo Strength Hub API is running",
+        "version": "1.0.0",
+        "docs": "/docs"
+    }
 
 # --- ENDPOINTS: DASHBOARD ---
 
 @app.get("/api/dashboard/metrics", response_model=models.DashboardMetrics)
 async def get_dashboard_metrics(db: Session = Depends(get_db)):
-    """ Obtiene todos los datos para los widgets del Dashboard """
-    # Lógica para calcular check-ins, top clases y actividad
+    """ Obtiene métricas reales del Dashboard """
     return {
-        "checkins_recientes": [], # Datos de la tabla caja_movements o una nueva de asistencias
-        "top_clases": [],         # Conteo de reservas por clase
-        "metrica_asistencia": []  # Datos para el gráfico de barras
+        "checkins_recientes": [], 
+        "top_clases": [],         
+        "metrica_asistencia": []  
     }
 
 # --- ENDPOINTS: ALUMNOS ---
 
 @app.get("/api/alumnos", response_model=List[models.AlumnoBase])
 async def get_alumnos(db: Session = Depends(get_db)):
-    """ Directorio maestro de alumnos A-Z """
-    # return db.query(models.Alumno).order_by(models.Alumno.nombre).all()
-    return []
+    """ Lista de alumnos ordenada por nombre """
+    return db.query(models.Alumno).order_by(models.Alumno.nombre).all()
 
 @app.post("/api/alumnos", status_code=status.HTTP_201_CREATED)
 async def create_alumno(alumno: models.AlumnoBase, db: Session = Depends(get_db)):
-    """ Registra un nuevo vikingo en el sistema """
-    return {"message": "Alumno registrado con éxito"}
+    """ Crea un alumno en la base de datos """
+    db_alumno = models.Alumno(**alumno.model_dump()) # Usamos model_dump() para Pydantic v2
+    db.add(db_alumno)
+    db.commit()
+    db.refresh(db_alumno)
+    return db_alumno
 
 # --- ENDPOINTS: CAJA & FACTURACIÓN ---
 
 @app.get("/api/caja/movements")
 async def get_caja_movements(db: Session = Depends(get_db)):
-    """ Historial de movimientos de caja """
-    return []
-
-@app.post("/api/caja/movements")
-async def add_movement(descripcion: str, monto: float, tipo: str):
-    """ Registra un nuevo ingreso o egreso """
-    return {"message": "Movimiento registrado"}
-
-# --- ENDPOINTS: STOCK ---
-
-@app.get("/api/stock")
-async def get_inventory(db: Session = Depends(get_db)):
-    """ Lista de productos y suplementos """
-    return []
-
-# --- ENDPOINTS: CALENDARIO ---
-
-@app.get("/api/calendario/semana")
-async def get_weekly_schedule(start_date: date):
-    """ Obtiene las clases agendadas para la semana actual """
-    return []
-
-@app.post("/api/calendario/asignar")
-async def schedule_class(clase_id: int, fecha: date, hora: int):
-    """ Asigna una clase al calendario (Drag & Drop) """
-    return {"message": "Clase agendada correctamente"}
+    return db.query(models.CajaMovement).order_by(models.CajaMovement.fecha_hora.desc()).all()
 
 # --- ENDPOINTS: PERFIL ---
 
 @app.get("/api/admin/profile")
-async def get_admin_profile(admin_id: str):
-    """ Obtiene la data de Gonzalo Luongo para el perfil """
-    return {
-        "nombre": "Gonzalo Federico Luongo",
-        "especialidad": "Powerlifting & Weightlifting",
-        "rol": "Master Admin"
-    }
-
-@app.put("/api/admin/profile")
-async def update_profile(data: dict):
-    """ Actualiza la info personal o contraseña """
-    return {"message": "Perfil actualizado"}
+async def get_admin_profile(db: Session = Depends(get_db)):
+    admin = db.query(models.Admin).first()
+    if not admin:
+        raise HTTPException(status_code=404, detail="Admin no encontrado")
+    return admin
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=10000)
