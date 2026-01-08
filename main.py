@@ -72,7 +72,23 @@ def create_alumno(al: models.AlumnoBase, db: Session = Depends(get_db)):
     db.commit()
     return {"status": "ok"}
 
-# --- PRODUCTOS (STOCK) ---
+@app.put("/api/alumnos/{alumno_id}")
+def update_alumno(alumno_id: int, al: models.AlumnoUpdate, db: Session = Depends(get_db)):
+    db_al = db.query(models.Alumno).filter(models.Alumno.id == alumno_id).first()
+    if not db_al:
+        raise HTTPException(status_code=404, detail="Alumno no encontrado")
+    
+    if al.nombre: db_al.nombre = al.nombre
+    if al.dni: db_al.dni = al.dni
+    if al.fecha_vencimiento:
+        db_al.fecha_vencimiento = datetime.datetime.strptime(al.fecha_vencimiento, "%Y-%m-%d").date()
+    if al.fecha_ultima_renovacion:
+        db_al.fecha_ultima_renovacion = datetime.datetime.strptime(al.fecha_ultima_renovacion, "%Y-%m-%d").date()
+    
+    db.commit()
+    return {"status": "ok"}
+
+# --- PRODUCTOS ---
 @app.get("/api/productos")
 def get_productos(db: Session = Depends(get_db)):
     prods = db.query(models.Producto).all()
@@ -109,7 +125,7 @@ def create_clase(c: models.ClaseCreate, db: Session = Depends(get_db)):
     db.commit()
     return {"status": "ok"}
 
-# --- ADMINS / PROFESORES ---
+# --- ADMINS ---
 @app.get("/api/admins")
 def get_admins(db: Session = Depends(get_db)):
     admins = db.query(models.Admin).all()

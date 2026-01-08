@@ -4,7 +4,7 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.postgresql import UUID
 import uuid
 from datetime import datetime
-from pydantic import BaseModel, EmailStr, ConfigDict
+from pydantic import BaseModel
 from typing import List, Optional
 
 Base = declarative_base()
@@ -93,6 +93,12 @@ class AlumnoBase(BaseModel):
     plan_id: int
     fecha_vencimiento: str
     fecha_ultima_renovacion: str
+
+class AlumnoUpdate(BaseModel):
+    nombre: Optional[str] = None
+    dni: Optional[str] = None
+    fecha_vencimiento: Optional[str] = None
+    fecha_ultima_renovacion: Optional[str] = None
 
 class ProductoCreate(BaseModel):
     nombre: str
