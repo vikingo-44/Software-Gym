@@ -84,25 +84,23 @@ class Calendario(Base):
     
     clase = relationship("Clase", back_populates="horarios")
 
-# --- ESQUEMAS DE PYDANTIC (V2) ---
+# --- ESQUEMAS DE PYDANTIC ---
 
 class AlumnoBase(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
     nombre: str
-    email: EmailStr
+    email: str
     dni: str
-    estado: str
-    plan_id: Optional[int] = None
-    origen: str
+    plan_id: int
     fecha_vencimiento: str
+    fecha_ultima_renovacion: str
 
-class PlanSchema(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-    id: int
+class ProductoCreate(BaseModel):
     nombre: str
-    precio: float
+    categoria: str
+    stock_actual: int
+    precio_venta: float
 
-class DashboardMetrics(BaseModel):
-    checkins_recientes: List[dict]
-    top_clases: List[dict]
-    metrica_asistencia: List[dict]
+class ClaseCreate(BaseModel):
+    nombre: str
+    coach: str
+    capacidad_max: int
