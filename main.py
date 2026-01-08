@@ -28,8 +28,14 @@ def get_db():
 @app.get("/api/planes")
 def get_planes(db: Session = Depends(get_db)):
     planes = db.query(models.Plan).all()
-    # Convertimos a dict para asegurar serialización limpia
-    return [{"id": p.id, "nombre": p.nombre, "precio": p.precio, "periodo": p.periodo, "tag": p.tag, "descripcion": p.descripcion} for p in planes]
+    return [{
+        "id": p.id, 
+        "nombre": p.nombre or "Sin Nombre", 
+        "precio": p.precio or 0.0, 
+        "periodo": p.periodo or "mensual", 
+        "tag": p.tag or "General", 
+        "descripcion": p.descripcion or ""
+    } for p in planes]
 
 @app.post("/api/planes")
 def create_plan(plan: dict, db: Session = Depends(get_db)):
@@ -46,10 +52,10 @@ def get_alumnos(db: Session = Depends(get_db)):
     for a in alumnos:
         res.append({
             "id": a.id,
-            "nombre": a.nombre,
-            "email": a.email,
-            "dni": a.dni,
-            "plan_nombre": a.plan.nombre if a.plan else "N/A",
+            "nombre": a.nombre or "N/A",
+            "email": a.email or "",
+            "dni": a.dni or "",
+            "plan_nombre": a.plan.nombre if a.plan else "Sin Plan",
             "fecha_ultima_renovacion": str(a.fecha_ultima_renovacion) if a.fecha_ultima_renovacion else "-",
             "fecha_vencimiento": str(a.fecha_vencimiento) if a.fecha_vencimiento else "-"
         })
@@ -66,17 +72,17 @@ def create_alumno(al: models.AlumnoBase, db: Session = Depends(get_db)):
     db.commit()
     return {"status": "ok"}
 
-@app.put("/api/alumnos/{id}")
-def update_alumno(id: int, data: dict, db: Session = Depends(get_db)):
-    db.query(models.Alumno).filter(models.Alumno.id == id).update(data)
-    db.commit()
-    return {"status": "ok"}
-
 # --- PRODUCTOS (STOCK) ---
 @app.get("/api/productos")
 def get_productos(db: Session = Depends(get_db)):
     prods = db.query(models.Producto).all()
-    return [{"id": p.id, "nombre": p.nombre, "stock_actual": p.stock_actual, "precio_venta": p.precio_venta, "categoria": p.categoria} for p in prods]
+    return [{
+        "id": p.id, 
+        "nombre": p.nombre or "Producto", 
+        "stock_actual": p.stock_actual if p.stock_actual is not None else 0, 
+        "precio_venta": p.precio_venta or 0.0, 
+        "categoria": p.categoria or "General"
+    } for p in prods]
 
 @app.post("/api/productos")
 def create_producto(p: models.ProductoCreate, db: Session = Depends(get_db)):
@@ -85,18 +91,16 @@ def create_producto(p: models.ProductoCreate, db: Session = Depends(get_db)):
     db.commit()
     return {"status": "ok"}
 
-@app.put("/api/productos/{id}")
-def update_producto(id: int, p: dict, db: Session = Depends(get_db)):
-    db.query(models.Producto).filter(models.Producto.id == id).update(p)
-    db.commit()
-    return {"status": "ok"}
-
 # --- CLASES ---
 @app.get("/api/clases")
 def get_clases(db: Session = Depends(get_db)):
     clases = db.query(models.Clase).all()
-    # Limpieza de datos para el frontend
-    return [{"id": c.id, "nombre": c.nombre, "coach": c.coach, "capacidad_max": c.capacidad_max} for c in clases]
+    return [{
+        "id": c.id, 
+        "nombre": c.nombre or "Clase", 
+        "coach": c.coach or "Sin Coach", 
+        "capacidad_max": c.capacidad_max or 0
+    } for c in clases]
 
 @app.post("/api/clases")
 def create_clase(c: models.ClaseCreate, db: Session = Depends(get_db)):
@@ -105,23 +109,16 @@ def create_clase(c: models.ClaseCreate, db: Session = Depends(get_db)):
     db.commit()
     return {"status": "ok"}
 
-@app.put("/api/clases/{id}")
-def update_clase(id: int, c: dict, db: Session = Depends(get_db)):
-    db.query(models.Clase).filter(models.Clase.id == id).update(c)
-    db.commit()
-    return {"status": "ok"}
-
 # --- ADMINS / PROFESORES ---
 @app.get("/api/admins")
 def get_admins(db: Session = Depends(get_db)):
     admins = db.query(models.Admin).all()
-    # IMPORTANTE: Convertimos el UUID a String para evitar errores de JSON
     return [{
         "id": str(a.id), 
-        "nombre": a.nombre, 
-        "email": a.email, 
-        "rol": a.rol, 
-        "especialidad": a.especialidad
+        "nombre": a.nombre or "Admin", 
+        "email": a.email or "", 
+        "rol": a.rol or "Profesor", 
+        "especialidad": a.especialidad or "General"
     } for a in admins]
 
 @app.post("/api/admins")
