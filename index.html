@@ -245,7 +245,7 @@
 
                 <div class="glass-card p-10 rounded-[3rem]">
                     <div class="flex justify-between items-center mb-8">
-                        <h3 class="text-sm font-black uppercase italic border-l-4 border-red-600 pl-4 tracking-widest">Vista Rápida Alumnos</h3>
+                        <h3 class="text-sm font-black uppercase italic border-l-4 border-red-600 pl-4 tracking-widest">Vista Rápida Alumnos (A-Z)</h3>
                     </div>
                     <div class="overflow-x-auto">
                         <table class="w-full text-left">
@@ -624,7 +624,7 @@
                 document.getElementById('sidebar').classList.remove('hidden');
                 document.getElementById('main-content').classList.remove('hidden');
                 
-                // Cargar datos de perfil
+                // Cargar datos de perfil incluyendo el email
                 document.getElementById('side-user-name').innerText = res.nombre_completo;
                 document.getElementById('side-user-role').innerText = res.rol_nombre || 'Staff';
                 document.getElementById('user-initials').innerText = res.nombre_completo.split(' ').map(n => n[0]).join('').toUpperCase();
@@ -632,6 +632,7 @@
                 document.getElementById('prof-role').innerText = res.rol_nombre || 'Staff';
                 document.getElementById('prof-input-name').value = res.nombre_completo;
                 document.getElementById('prof-input-dni').value = res.dni;
+                document.getElementById('prof-input-email').value = res.email || ''; // Cargamos el correo
                 document.getElementById('prof-initials-view').innerText = document.getElementById('user-initials').innerText;
 
                 initApp();
@@ -668,6 +669,7 @@
             const data = await apiFetch('/alumnos');
             if (data.error) return;
             state.alumnos = data;
+
             const renderRow = (al) => `
                 <tr class="viking-table-row">
                     <td class="py-6">${al.nombre_completo}</td>
@@ -678,8 +680,16 @@
                     <td class="py-6 text-gray-400 font-black">${al.fecha_vencimiento || '-'}</td>
                     <td class="py-6 text-right"><button onclick='openEditAlumno(${JSON.stringify(al)})' class="hover:text-red-600"><i data-lucide="eye" class="w-4 h-4"></i></button></td>
                 </tr>`;
-            document.getElementById('dash-table-alumnos-mini').innerHTML = data.map(renderRow).join('');
+
+            // Ordenamos alfabéticamente para el Dashboard
+            const sortedData = [...data].sort((a, b) => a.nombre_completo.localeCompare(b.nombre_completo));
+            
+            // Renderizamos Dashboard (Primeros 10 de A-Z)
+            document.getElementById('dash-table-alumnos-mini').innerHTML = sortedData.slice(0, 10).map(renderRow).join('');
+            
+            // Renderizamos Gestión de Alumnos (Todos)
             document.getElementById('table-alumnos-full').innerHTML = data.map(renderRow).join('');
+            
             lucide.createIcons();
         }
 
@@ -970,7 +980,6 @@
 
         async function handleProfileUpdate(event) {
             event.preventDefault();
-            // Lógica para actualizar perfil (usando el endpoint de staff si es profe/admin)
             const data = {
                 nombre_completo: document.getElementById('prof-input-name').value,
                 dni: document.getElementById('prof-input-dni').value,
