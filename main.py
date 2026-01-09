@@ -57,6 +57,15 @@ class UsuarioResponse(BaseModel):
     fecha_vencimiento: Optional[date] = None
     fecha_ultima_renovacion: Optional[date] = None
     especialidad: Optional[str] = None
+    # Nuevos campos físicos y médicos
+    fecha_nacimiento: Optional[date] = None
+    edad: Optional[int] = None
+    peso: Optional[float] = None
+    altura: Optional[float] = None
+    imc: Optional[float] = None
+    certificado_medico: Optional[str] = "Pendiente"
+    fecha_entrega_certificado: Optional[date] = None
+    
     class Config:
         from_attributes = True
 
@@ -65,7 +74,15 @@ class AlumnoUpdate(BaseModel):
     dni: str
     email: str
     plan_id: int
-    password: Optional[str] = None # Agregado para perfil de acceso
+    password: Optional[str] = None
+    # Campos adicionales para Alumnos
+    fecha_nacimiento: Optional[date] = None
+    edad: Optional[int] = None
+    peso: Optional[float] = None
+    altura: Optional[float] = None
+    imc: Optional[float] = None
+    certificado_medico: Optional[str] = "Pendiente"
+    fecha_entrega_certificado: Optional[date] = None
 
 class StaffUpdate(BaseModel):
     nombre_completo: str
@@ -90,7 +107,7 @@ class ClaseUpdate(BaseModel):
     coach: str
     dia: int
     horario: int
-    color: Optional[str] = "#FF0000" # Agregado para color de clase
+    color: Optional[str] = "#FF0000"
 
 class ClaseMove(BaseModel):
     dia: int
@@ -153,9 +170,17 @@ def create_alumno(alumno: AlumnoUpdate, db: Session = Depends(database.get_db)):
         email=alumno.email,
         plan_id=alumno.plan_id, 
         perfil_id=perfil.id, 
-        password_hash=alumno.password or alumno.dni, # Usa pass enviada o DNI por defecto
+        password_hash=alumno.password or alumno.dni,
         fecha_ultima_renovacion=date.today(), 
-        fecha_vencimiento=date.today()
+        fecha_vencimiento=date.today(),
+        # Datos físicos y médicos
+        fecha_nacimiento=alumno.fecha_nacimiento,
+        edad=alumno.edad,
+        peso=alumno.peso,
+        altura=alumno.altura,
+        imc=alumno.imc,
+        certificado_medico=alumno.certificado_medico,
+        fecha_entrega_certificado=alumno.fecha_entrega_certificado
     )
     db.add(new_al)
     db.commit()
@@ -171,8 +196,18 @@ def update_alumno(id: int, data: AlumnoUpdate, db: Session = Depends(database.ge
     al.dni = data.dni
     al.email = data.email
     al.plan_id = data.plan_id
+    
+    # Actualización de datos físicos y médicos
+    al.fecha_nacimiento = data.fecha_nacimiento
+    al.edad = data.edad
+    al.peso = data.peso
+    al.altura = data.altura
+    al.imc = data.imc
+    al.certificado_medico = data.certificado_medico
+    al.fecha_entrega_certificado = data.fecha_entrega_certificado
+
     if data.password:
-        al.password_hash = data.password # Actualiza pass si se envía
+        al.password_hash = data.password
     db.commit()
     return {"status": "success"}
 
@@ -182,7 +217,7 @@ def delete_alumno(id: int, db: Session = Depends(database.get_db)):
     db.commit()
     return {"status": "success"}
 
-# --- GESTIÓN DE STAFF (PROFESORES Y ADMIN) ---
+# --- GESTIÓN DE STAFF ---
 
 @app.get("/api/profesores", response_model=List[UsuarioResponse])
 def list_profesores(db: Session = Depends(database.get_db)):
@@ -240,7 +275,7 @@ def delete_staff(id: int, db: Session = Depends(database.get_db)):
     db.commit()
     return {"status": "success"}
 
-# --- GESTIÓN DE STOCK ---
+# --- STOCK, PLANES, CLASES Y CAJA ---
 
 @app.get("/api/stock")
 def get_stock(db: Session = Depends(database.get_db)):
@@ -274,8 +309,6 @@ def delete_stock(id: int, db: Session = Depends(database.get_db)):
     db.commit()
     return {"status": "success"}
 
-# --- GESTIÓN DE PLANES ---
-
 @app.get("/api/planes")
 def get_planes(db: Session = Depends(database.get_db)):
     return db.query(models.Plan).options(joinedload(models.Plan.tipo)).all()
@@ -302,8 +335,6 @@ def delete_plan(id: int, db: Session = Depends(database.get_db)):
     db.query(models.Plan).filter(models.Plan.id == id).delete()
     db.commit()
     return {"status": "success"}
-
-# --- GESTIÓN DE CLASES ---
 
 @app.get("/api/clases")
 def get_clases(db: Session = Depends(database.get_db)):
@@ -340,8 +371,6 @@ def delete_clase(id: int, db: Session = Depends(database.get_db)):
     db.query(models.Clase).filter(models.Clase.id == id).delete()
     db.commit()
     return {"status": "success"}
-
-# --- OTROS / CAJA ---
 
 @app.get("/api/tipos-planes")
 def get_tipos(db: Session = Depends(database.get_db)):

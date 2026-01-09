@@ -38,6 +38,16 @@ class Usuario(Base):
     fecha_ultima_renovacion = Column(Date)
     fecha_vencimiento = Column(Date)
     especialidad = Column(String)
+    
+    # Nuevos campos físicos y médicos solicitados
+    fecha_nacimiento = Column(Date, nullable=True)
+    edad = Column(Integer, nullable=True)
+    peso = Column(Float, nullable=True)
+    altura = Column(Float, nullable=True)
+    imc = Column(Float, nullable=True)
+    certificado_medico = Column(String, default="Pendiente")
+    fecha_entrega_certificado = Column(Date, nullable=True)
+    
     fecha_creacion = Column(DateTime, default=datetime.datetime.utcnow)
     perfil = relationship("Perfil", back_populates="usuarios")
     plan = relationship("Plan", back_populates="usuarios")
@@ -50,7 +60,6 @@ class Clase(Base):
     capacidad_max = Column(Integer, default=20)
     dia = Column(Integer)
     horario = Column(Integer)
-    # Nueva columna para el color de la clase
     color = Column(String, default="#FF0000")
 
 class Stock(Base):
