@@ -99,14 +99,15 @@
         }
 
         .class-badge {
-            background: #FF0000; color: black; font-size: 9px; font-weight: 900;
-            padding: 6px; border-radius: 6px; text-transform: uppercase; font-style: italic;
-            cursor: grab; transition: transform 0.2s;
+            background: #FF0000; color: black; font-size: 8px; font-weight: 900;
+            padding: 4px 8px; border-radius: 6px; text-transform: uppercase; font-style: italic;
+            cursor: grab;
             margin: 2px;
             display: block;
             text-align: center;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
         }
-        .class-badge:active { cursor: grabbing; transform: scale(0.95); }
+        .class-badge:active { cursor: grabbing; }
     </style>
 </head>
 <body class="flex h-screen w-screen overflow-hidden">
@@ -218,12 +219,26 @@
             <div id="view-dashboard" class="view-content active">
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-10">
                     <div class="glass-card p-8 rounded-[2.5rem]">
+                        <h4 class="text-[10px] font-black uppercase italic text-red-600 mb-6 tracking-widest">Últimos Check-ins</h4>
+                        <div id="dash-checkins" class="space-y-4"></div>
+                    </div>
+                    <div class="glass-card p-8 rounded-[2.5rem]">
                         <h4 class="text-[10px] font-black uppercase italic text-red-600 mb-6 tracking-widest">Resumen</h4>
                         <div id="dash-summary" class="space-y-4">
                             <div class="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5">
                                 <span class="text-[10px] font-black italic">INGRESOS HOY</span>
                                 <span class="text-[9px] text-green-600 font-bold italic" id="dash-ingresos">$ 0</span>
                             </div>
+                        </div>
+                    </div>
+                    <div class="glass-card p-8 rounded-[2.5rem]">
+                        <h4 class="text-[10px] font-black uppercase italic text-red-600 mb-6 tracking-widest">Frecuencia Horaria</h4>
+                        <div id="dash-stats-bars" class="flex items-end justify-between h-32 px-2">
+                            <div class="w-4 viking-bg-red/20 h-[35%] rounded-t-lg"></div>
+                            <div class="w-4 viking-bg-red/40 h-[65%] rounded-t-lg"></div>
+                            <div class="w-4 viking-bg-red h-[95%] rounded-t-lg"></div>
+                            <div class="w-4 viking-bg-red/60 h-[75%] rounded-t-lg"></div>
+                            <div class="w-4 viking-bg-red/30 h-[45%] rounded-t-lg"></div>
                         </div>
                     </div>
                 </div>
@@ -261,7 +276,7 @@
                     </div>
                     <div class="lg:col-span-2 glass-card p-10 rounded-[3rem]">
                         <h3 class="text-sm font-black uppercase italic border-l-4 border-red-600 pl-4 tracking-widest mb-10">Datos de Usuario</h3>
-                        <form id="form-perfil" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <form id="form-perfil" onsubmit="handleProfileUpdate(event)" class="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div class="space-y-2">
                                 <label class="text-[9px] font-black uppercase text-gray-500 italic">Nombre Completo</label>
                                 <input type="text" id="prof-input-name" class="viking-input">
@@ -273,6 +288,10 @@
                             <div class="space-y-2">
                                 <label class="text-[9px] font-black uppercase text-gray-500 italic">Correo Electrónico</label>
                                 <input type="email" id="prof-input-email" class="viking-input">
+                            </div>
+                            <div class="space-y-2">
+                                <label class="text-[9px] font-black uppercase text-gray-500 italic">Nueva Contraseña</label>
+                                <input type="password" id="prof-input-pass" placeholder="••••••••" class="viking-input">
                             </div>
                             <div class="md:col-span-2 pt-6">
                                 <button type="submit" class="px-10 py-4 viking-bg-red text-black rounded-2xl font-black uppercase italic tracking-widest hover:scale-105 transition-transform">Guardar Cambios</button>
@@ -398,7 +417,7 @@
             <div id="view-stock" class="view-content">
                 <div class="flex justify-between items-center mb-8">
                     <h3 class="text-3xl font-black italic uppercase">Control de Stock</h3>
-                    <button onclick="openModal('modal-stock')" class="viking-bg-red text-black px-8 py-4 rounded-2xl font-black uppercase italic text-[11px] shadow-xl flex items-center gap-3">
+                    <button onclick="openModalStock()" class="viking-bg-red text-black px-8 py-4 rounded-2xl font-black uppercase italic text-[11px] shadow-xl flex items-center gap-3">
                         <i data-lucide="package-plus" class="w-4 h-4"></i> Crear Mercadería
                     </button>
                 </div>
@@ -409,7 +428,7 @@
             <div id="view-planes" class="view-content">
                 <div class="flex justify-between items-center mb-8">
                     <h3 class="text-3xl font-black italic uppercase">Planes de Entrenamiento</h3>
-                    <button onclick="openModal('modal-plan')" class="viking-bg-red text-black px-8 py-4 rounded-2xl font-black uppercase italic text-[11px] shadow-xl flex items-center gap-3">
+                    <button onclick="openModalPlan()" class="viking-bg-red text-black px-8 py-4 rounded-2xl font-black uppercase italic text-[11px] shadow-xl flex items-center gap-3">
                         <i data-lucide="plus" class="w-4 h-4"></i> Alta de Plan
                     </button>
                 </div>
@@ -420,7 +439,7 @@
             <div id="view-clases" class="view-content">
                 <div class="flex justify-between items-center mb-8">
                     <h3 class="text-3xl font-black italic uppercase">Gestión de Clases</h3>
-                    <button onclick="openModal('modal-clase')" class="viking-bg-red text-black px-8 py-4 rounded-2xl font-black uppercase italic text-[11px] shadow-xl flex items-center gap-3">
+                    <button onclick="openModalClase()" class="viking-bg-red text-black px-8 py-4 rounded-2xl font-black uppercase italic text-[11px] shadow-xl flex items-center gap-3">
                         <i data-lucide="presentation" class="w-4 h-4"></i> Alta de Clase
                     </button>
                 </div>
@@ -431,6 +450,11 @@
             <div id="view-calendario" class="view-content">
                 <div class="flex justify-between items-center mb-10">
                     <h3 class="text-3xl font-black italic uppercase text-left">Agenda Vikinga</h3>
+                    <div class="flex gap-4">
+                        <div class="flex bg-white/5 p-1 rounded-2xl border border-white/5">
+                            <button class="px-6 py-2 bg-red-600 text-black rounded-xl text-[10px] font-black uppercase italic">Semana</button>
+                        </div>
+                    </div>
                 </div>
                 <div class="calendar-container h-[700px] overflow-y-auto custom-scrollbar" id="calendar-grid"></div>
             </div>
@@ -467,11 +491,11 @@
                 <input type="hidden" id="stf-rol">
                 <input type="text" id="stf-nombre" placeholder="Nombre Completo" required class="viking-input">
                 <div class="grid grid-cols-2 gap-4">
-                    <input type="text" id="stf-dni" placeholder="DNI (Será su Usuario)" required class="viking-input">
+                    <input type="text" id="stf-dni" placeholder="DNI" required class="viking-input">
                     <input type="text" id="stf-esp" placeholder="Especialidad / Cargo" class="viking-input">
                 </div>
                 <div id="stf-pass-container" class="space-y-4">
-                    <label class="text-[9px] font-black text-red-600 uppercase italic">Seguridad</label>
+                    <label class="text-[9px] font-black text-red-600 uppercase italic">Accesos</label>
                     <input type="password" id="stf-pass" placeholder="Contraseña Inicial" class="viking-input">
                 </div>
                 <div class="flex gap-4 pt-6">
@@ -491,7 +515,7 @@
                 <input type="hidden" id="stock-id">
                 <input type="text" id="stock-nombre" placeholder="Nombre del Producto" required class="viking-input">
                 <div class="grid grid-cols-2 gap-4">
-                    <input type="number" id="stock-cant" placeholder="Stock Inicial" required class="viking-input">
+                    <input type="number" id="stock-cant" placeholder="Stock" required class="viking-input">
                     <input type="number" id="stock-precio" placeholder="Precio Unidad ($)" required class="viking-input">
                 </div>
                 <div class="flex gap-4 pt-4">
@@ -506,7 +530,7 @@
     <!-- MODAL PLAN -->
     <div id="modal-plan" class="viking-modal">
         <div class="glass-card p-10 rounded-[3rem] w-full max-w-lg text-left">
-            <h3 class="text-2xl font-black uppercase italic mb-8" id="modal-plan-title">Plan de Entrenamiento</h3>
+            <h3 class="text-2xl font-black uppercase italic mb-8" id="modal-plan-title">Plan</h3>
             <form id="form-plan" class="space-y-4">
                 <input type="hidden" id="plan-id">
                 <input type="text" id="plan-nombre" placeholder="Nombre del Plan" required class="viking-input">
@@ -526,11 +550,13 @@
     <!-- MODAL CLASE -->
     <div id="modal-clase" class="viking-modal">
         <div class="glass-card p-10 rounded-[3rem] w-full max-w-lg text-left">
-            <h3 class="text-2xl font-black uppercase italic mb-8" id="modal-clase-title">Configurar Clase</h3>
+            <h3 class="text-2xl font-black uppercase italic mb-8" id="modal-clase-title">Clase</h3>
             <form id="form-clase" class="space-y-4">
                 <input type="hidden" id="cl-id">
                 <input type="text" id="cl-nombre" placeholder="Nombre de la Clase" required class="viking-input">
-                <input type="text" id="cl-coach" placeholder="Coach / Profesor" required class="viking-input">
+                <select id="cl-coach-select" required class="viking-input">
+                    <option value="">Seleccionar Profesor</option>
+                </select>
                 <div class="grid grid-cols-2 gap-4">
                     <select id="cl-dia" required class="viking-input" onchange="updateHourOptions()">
                         <option value="1">Lunes</option>
@@ -554,19 +580,19 @@
     <!-- SCRIPTS INTEGRADOS -->
     <script>
         const API_BASE = window.location.hostname === 'localhost' ? "http://localhost:8000/api" : "/api";
-        let state = { alumnos: [], planes: [], stock: [], clases: [], user: null };
+        let state = { alumnos: [], planes: [], stock: [], clases: [], user: null, profesores: [] };
 
         async function apiFetch(endpoint, method = 'GET', body = null) {
             const options = { method, headers: { 'Content-Type': 'application/json' } };
             if (body) options.body = JSON.stringify(body);
             try {
                 const res = await fetch(`${API_BASE}${endpoint}`, options);
-                if (!res.ok) return { error: await res.json() };
+                if (!res.ok) return { error: "Error en la petición" };
                 return await res.json();
-            } catch (e) { return { error: "Error de red" }; }
+            } catch (e) { return { error: "Servidor fuera de línea" }; }
         }
 
-        // UI Helpers
+        // UI HELPERS
         function toggleSidebar() { document.getElementById('sidebar').classList.toggle('sidebar-collapsed'); lucide.createIcons(); }
         function toggleSub(id) { document.getElementById(id).classList.toggle('hidden'); }
         function openModal(id) { document.getElementById(id).style.display = 'flex'; }
@@ -597,9 +623,17 @@
                 document.getElementById('login-overlay').style.display = 'none';
                 document.getElementById('sidebar').classList.remove('hidden');
                 document.getElementById('main-content').classList.remove('hidden');
+                
+                // Cargar datos de perfil
                 document.getElementById('side-user-name').innerText = res.nombre_completo;
-                document.getElementById('side-user-role').innerText = res.rol_nombre;
+                document.getElementById('side-user-role').innerText = res.rol_nombre || 'Staff';
                 document.getElementById('user-initials').innerText = res.nombre_completo.split(' ').map(n => n[0]).join('').toUpperCase();
+                document.getElementById('prof-name').innerText = res.nombre_completo;
+                document.getElementById('prof-role').innerText = res.rol_nombre || 'Staff';
+                document.getElementById('prof-input-name').value = res.nombre_completo;
+                document.getElementById('prof-input-dni').value = res.dni;
+                document.getElementById('prof-initials-view').innerText = document.getElementById('user-initials').innerText;
+
                 initApp();
             } else {
                 document.getElementById('login-error').classList.remove('hidden');
@@ -608,16 +642,25 @@
 
         async function initApp() {
             updateHourOptions();
-            await Promise.all([fetchAlumnos(), loadStaff(), loadPlanes(), loadStock(), loadClases(), loadDashboard()]);
+            await Promise.all([
+                fetchAlumnos(), loadStaff(), loadPlanes(), 
+                loadStock(), loadClases(), loadDashboard()
+            ]);
         }
 
         async function loadDashboard() {
             const res = await apiFetch('/caja/resumen');
             if(!res.error) {
+                document.getElementById('dash-ingresos').innerText = `$ ${res.ingresos.toLocaleString()}`;
                 document.getElementById('caja-ingresos').innerText = `$ ${res.ingresos.toLocaleString()}`;
                 document.getElementById('caja-gastos').innerText = `$ ${res.gastos.toLocaleString()}`;
                 document.getElementById('caja-balance').innerText = `$ ${res.balance.toLocaleString()}`;
             }
+
+            const check = document.getElementById('dash-checkins');
+            check.innerHTML = [
+                {n: "GONZALO L.", t: "14:22"}, {n: "LAGERTHA S.", t: "14:05"}, {n: "RAGNAR L.", t: "13:55"}
+            ].map(c => `<div class="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5"><span class="text-[10px] font-black italic">${c.n}</span><span class="text-[9px] text-red-600 font-bold italic">${c.t} HS</span></div>`).join('');
         }
 
         // --- ALUMNOS ---
@@ -630,7 +673,7 @@
                     <td class="py-6">${al.nombre_completo}</td>
                     <td class="py-6 text-gray-500">${al.dni}</td>
                     <td class="py-6 text-gray-500 lowercase">${al.email || '-'}</td>
-                    <td class="py-6"><span class="text-green-500">${al.estado_cuenta}</span></td>
+                    <td class="py-6"><span class="text-green-500 font-bold">AL DÍA</span></td>
                     <td class="py-6 text-gray-500">${al.fecha_ultima_renovacion || '-'}</td>
                     <td class="py-6 text-gray-400 font-black">${al.fecha_vencimiento || '-'}</td>
                     <td class="py-6 text-right"><button onclick='openEditAlumno(${JSON.stringify(al)})' class="hover:text-red-600"><i data-lucide="eye" class="w-4 h-4"></i></button></td>
@@ -662,13 +705,20 @@
         async function loadStaff() {
             const profs = await apiFetch('/profesores');
             const admins = await apiFetch('/administrativos');
-            document.getElementById('table-profesores').innerHTML = (profs || []).map(p => `
+            state.profesores = profs || [];
+
+            // Poblar desplegable de clases
+            const coachSelect = document.getElementById('cl-coach-select');
+            coachSelect.innerHTML = '<option value="">Seleccionar Profesor</option>' + state.profesores.map(p => `<option value="${p.nombre_completo}">${p.nombre_completo}</option>`).join('');
+
+            document.getElementById('table-profesores').innerHTML = state.profesores.map(p => `
                 <tr class="viking-table-row">
                     <td class="py-6">${p.nombre_completo}</td>
                     <td class="py-6 text-gray-500">${p.dni}</td>
                     <td class="py-6 text-red-600">${p.especialidad || 'Gral.'}</td>
                     <td class="py-6 text-right"><button onclick='openEditStaff(${JSON.stringify(p)}, "Profesor")' class="hover:text-red-600"><i data-lucide="edit-3" class="w-4 h-4"></i></button></td>
                 </tr>`).join('');
+
             document.getElementById('table-administrativos').innerHTML = (admins || []).map(a => `
                 <tr class="viking-table-row">
                     <td class="py-6">${a.nombre_completo}</td>
@@ -703,7 +753,7 @@
         // --- STOCK ---
         async function loadStock() {
             const data = await apiFetch('/stock');
-            state.stock = data;
+            if(!data || data.error) return;
             document.getElementById('stock-container').innerHTML = data.map(s => `
                 <div class="glass-card p-6 rounded-[2rem] relative group text-left">
                     <button onclick='openEditStock(${JSON.stringify(s)})' class="absolute top-4 right-4 text-gray-600 hover:text-red-600"><i data-lucide="edit-2" class="w-3 h-3"></i></button>
@@ -716,8 +766,16 @@
             lucide.createIcons();
         }
 
+        function openModalStock() {
+            document.getElementById('stock-id').value = "";
+            document.getElementById('modal-stock-title').innerText = "Nuevo Producto";
+            document.getElementById('btn-delete-stock').classList.add('hidden');
+            openModal('modal-stock');
+        }
+
         function openEditStock(s) {
             document.getElementById('stock-id').value = s.id;
+            document.getElementById('modal-stock-title').innerText = "Editar Producto";
             document.getElementById('stock-nombre').value = s.nombre_producto;
             document.getElementById('stock-cant').value = s.stock_actual;
             document.getElementById('stock-precio').value = s.precio_venta;
@@ -741,8 +799,16 @@
             lucide.createIcons();
         }
 
+        function openModalPlan() {
+            document.getElementById('plan-id').value = "";
+            document.getElementById('modal-plan-title').innerText = "Nuevo Plan";
+            document.getElementById('btn-delete-plan').classList.add('hidden');
+            openModal('modal-plan');
+        }
+
         function openEditPlan(p) {
             document.getElementById('plan-id').value = p.id;
+            document.getElementById('modal-plan-title').innerText = "Editar Plan";
             document.getElementById('plan-nombre').value = p.nombre;
             document.getElementById('plan-tipo').value = p.tipo_plan_id;
             document.getElementById('plan-precio').value = p.precio;
@@ -764,10 +830,18 @@
             if(document.getElementById('view-calendario').classList.contains('active')) renderCalendar();
         }
 
+        function openModalClase() {
+            document.getElementById('cl-id').value = "";
+            document.getElementById('modal-clase-title').innerText = "Nueva Clase";
+            document.getElementById('btn-delete-clase').classList.add('hidden');
+            openModal('modal-clase');
+        }
+
         function openEditClase(c) {
             document.getElementById('cl-id').value = c.id;
+            document.getElementById('modal-clase-title').innerText = "Editar Clase";
             document.getElementById('cl-nombre').value = c.nombre;
-            document.getElementById('cl-coach').value = c.coach;
+            document.getElementById('cl-coach-select').value = c.coach;
             document.getElementById('cl-dia').value = c.dia;
             updateHourOptions();
             document.getElementById('cl-horario').value = c.horario;
@@ -812,55 +886,107 @@
             e.preventDefault();
             const id = e.dataTransfer.getData("clase_id");
             if (!id) return;
-            // Validar horario sabado
-            if (dia == 6 && (horario < 10 || horario > 13)) return;
-
+            if (dia == 6 && (horario < 10 || horario > 13)) return; // Validar sábado
             const res = await apiFetch(`/clases/${id}/move`, 'PUT', { dia, horario });
             if (!res.error) loadClases();
         }
 
         // --- FORM HANDLERS ---
-        async function genericSubmit(e, endpoint, callback) {
+        document.getElementById('form-alumno').onsubmit = async (e) => {
             e.preventDefault();
-            const formData = new FormData(e.target);
-            const data = Object.from_raw_entries ? Object.from_raw_entries(formData.entries()) : {};
-            // Fallback para navegadores antiguos
-            e.target.querySelectorAll('input, select, hidden').forEach(i => { if(i.id) {
-                const key = i.id.split('-').slice(1).join('_');
-                data[key] = i.type === 'number' ? parseFloat(i.value) : i.value;
-            }});
-
-            const id = e.target.querySelector('input[type="hidden"]').value;
+            const id = document.getElementById('al-id').value;
+            const data = { 
+                nombre_completo: document.getElementById('al-nombre').value,
+                dni: document.getElementById('al-dni').value,
+                email: document.getElementById('al-email').value,
+                plan_id: parseInt(document.getElementById('al-plan').value)
+            };
             const method = id ? 'PUT' : 'POST';
-            const url = id ? `${endpoint}/${id}` : endpoint;
-            
+            const url = id ? `/alumnos/${id}` : '/alumnos';
             const res = await apiFetch(url, method, data);
-            if (!res.error) { closeModal(e.target.closest('.viking-modal').id); callback(); }
-        }
+            if(!res.error) { closeModal('modal-alumno'); fetchAlumnos(); }
+        };
 
-        document.getElementById('form-alumno').onsubmit = (e) => genericSubmit(e, '/alumnos', fetchAlumnos);
-        document.getElementById('form-stock').onsubmit = (e) => genericSubmit(e, '/stock', loadStock);
-        document.getElementById('form-plan').onsubmit = (e) => genericSubmit(e, '/planes', loadPlanes);
-        document.getElementById('form-clase').onsubmit = (e) => genericSubmit(e, '/clases', loadClases);
-        document.getElementById('form-staff').onsubmit = (e) => {
+        document.getElementById('form-staff').onsubmit = async (e) => {
             e.preventDefault();
             const id = document.getElementById('stf-id').value;
+            const rol = document.getElementById('stf-rol').value;
             const data = {
                 nombre_completo: document.getElementById('stf-nombre').value,
                 dni: document.getElementById('stf-dni').value,
+                email: document.getElementById('stf-dni').value + "@vikingo.com",
                 especialidad: document.getElementById('stf-esp').value,
-                perfil_nombre: document.getElementById('stf-rol').value
+                perfil_nombre: rol
             };
             if(!id) data.password = document.getElementById('stf-pass').value;
-            
             const method = id ? 'PUT' : 'POST';
             const url = id ? `/staff/${id}` : '/staff';
-            apiFetch(url, method, data).then(res => { if(!res.error) { closeModal('modal-staff'); loadStaff(); }});
+            const res = await apiFetch(url, method, data);
+            if(!res.error) { closeModal('modal-staff'); loadStaff(); }
         };
+
+        document.getElementById('form-stock').onsubmit = async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('stock-id').value;
+            const data = { 
+                nombre_producto: document.getElementById('stock-nombre').value,
+                stock_actual: parseInt(document.getElementById('stock-cant').value),
+                precio_venta: parseFloat(document.getElementById('stock-precio').value)
+            };
+            const method = id ? 'PUT' : 'POST';
+            const url = id ? `/stock/${id}` : '/stock';
+            const res = await apiFetch(url, method, data);
+            if(!res.error) { closeModal('modal-stock'); loadStock(); }
+        };
+
+        document.getElementById('form-plan').onsubmit = async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('plan-id').value;
+            const data = { 
+                nombre: document.getElementById('plan-nombre').value,
+                precio: parseFloat(document.getElementById('plan-precio').value),
+                tipo_plan_id: parseInt(document.getElementById('plan-tipo').value)
+            };
+            const method = id ? 'PUT' : 'POST';
+            const url = id ? `/planes/${id}` : '/planes';
+            const res = await apiFetch(url, method, data);
+            if(!res.error) { closeModal('modal-plan'); loadPlanes(); }
+        };
+
+        document.getElementById('form-clase').onsubmit = async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('cl-id').value;
+            const data = { 
+                nombre: document.getElementById('cl-nombre').value,
+                coach: document.getElementById('cl-coach-select').value,
+                dia: parseInt(document.getElementById('cl-dia').value),
+                horario: parseInt(document.getElementById('cl-horario').value)
+            };
+            const method = id ? 'PUT' : 'POST';
+            const url = id ? `/clases/${id}` : '/clases';
+            const res = await apiFetch(url, method, data);
+            if(!res.error) { closeModal('modal-clase'); loadClases(); }
+        };
+
+        async function handleProfileUpdate(event) {
+            event.preventDefault();
+            // Lógica para actualizar perfil (usando el endpoint de staff si es profe/admin)
+            const data = {
+                nombre_completo: document.getElementById('prof-input-name').value,
+                dni: document.getElementById('prof-input-dni').value,
+                email: document.getElementById('prof-input-email').value,
+                perfil_nombre: state.user.rol_nombre
+            };
+            const pass = document.getElementById('prof-input-pass').value;
+            if(pass) data.password = pass;
+
+            const res = await apiFetch(`/staff/${state.user.id}`, 'PUT', data);
+            if(!res.error) alert("Perfil actualizado correctamente");
+        }
 
         async function deleteEntity(entity, idField, modalId, callback) {
             const id = document.getElementById(idField).value;
-            if(!id || !confirm("¿Estás seguro de eliminar este registro?")) return;
+            if(!id || !confirm("¿Eliminar registro?")) return;
             const res = await apiFetch(`/${entity}/${id}`, 'DELETE');
             if(!res.error) { closeModal(modalId); callback(); }
         }
