@@ -14,7 +14,7 @@ import database
 
 app = FastAPI(title="Vikingo Strength Hub API")
 
-# Configuración de CORS
+# Configuración de CORS para permitir conexiones desde el frontend
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -23,7 +23,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# --- SCHEMAS ---
+# --- SCHEMAS PARA VALIDACIÓN ---
 
 class UsuarioLogin(BaseModel):
     dni: str
@@ -63,6 +63,7 @@ class StaffUpdate(BaseModel):
     email: Optional[str] = None
     especialidad: Optional[str] = None
     perfil_nombre: str
+    password: Optional[str] = None
 
 class StockUpdate(BaseModel):
     nombre_producto: str
@@ -84,15 +85,16 @@ class ClaseMove(BaseModel):
     dia: int
     horario: int
 
-# --- ENDPOINTS ---
+# --- ENDPOINTS DE API ---
 
 @app.post("/api/login")
 def login(data: UsuarioLogin, db: Session = Depends(database.get_db)):
     user = db.query(models.Usuario).options(joinedload(models.Usuario.perfil)).filter(models.Usuario.dni == data.dni).first()
+    
     if not user or user.password_hash != data.password:
         raise HTTPException(status_code=401, detail="Credenciales incorrectas")
     
-    # IMPORTANTE: Ahora incluimos el email en la respuesta
+    # IMPORTANTE: Devolvemos el email para que aparezca en "Mi Perfil"
     return {
         "id": user.id, 
         "nombre_completo": user.nombre_completo, 
@@ -101,19 +103,30 @@ def login(data: UsuarioLogin, db: Session = Depends(database.get_db)):
         "rol_nombre": user.perfil.nombre
     }
 
-# ALUMNOS
+# --- GESTIÓN DE ALUMNOS ---
+
 @app.get("/api/alumnos", response_model=List[UsuarioResponse])
 def get_alumnos(db: Session = Depends(database.get_db)):
-    # Buscamos por el nombre exacto del perfil "Alumno"
-    return db.query(models.Usuario).options(joinedload(models.Usuario.plan)).join(models.Perfil).filter(models.Perfil.nombre == "Alumno").all()
+    # Buscamos por el nombre exacto del perfil "Alumno" con carga de planes
+    return db.query(models.Usuario).options(
+        joinedload(models.Usuario.plan)
+    ).join(models.Perfil).filter(models.Perfil.nombre == "Alumno").all()
 
 @app.post("/api/alumnos")
 def create_alumno(alumno: AlumnoUpdate, db: Session = Depends(database.get_db)):
     perfil = db.query(models.Perfil).filter(models.Perfil.nombre == "Alumno").first()
+    if not perfil:
+        raise HTTPException(status_code=500, detail="Perfil Alumno no encontrado")
+        
     new_al = models.Usuario(
-        nombre_completo=alumno.nombre_completo, dni=alumno.dni, email=alumno.email,
-        plan_id=alumno.plan_id, perfil_id=perfil.id, password_hash=alumno.dni,
-        fecha_ultima_renovacion=date.today(), fecha_vencimiento=date.today()
+        nombre_completo=alumno.nombre_completo, 
+        dni=alumno.dni, 
+        email=alumno.email,
+        plan_id=alumno.plan_id, 
+        perfil_id=perfil.id, 
+        password_hash=alumno.dni, # Por defecto el DNI es la pass
+        fecha_ultima_renovacion=date.today(), 
+        fecha_vencimiento=date.today()
     )
     db.add(new_al)
     db.commit()
@@ -122,7 +135,13 @@ def create_alumno(alumno: AlumnoUpdate, db: Session = Depends(database.get_db)):
 @app.put("/api/alumnos/{id}")
 def update_alumno(id: int, data: AlumnoUpdate, db: Session = Depends(database.get_db)):
     al = db.query(models.Usuario).filter(models.Usuario.id == id).first()
-    for k, v in data.dict().items(): setattr(al, k, v)
+    if not al:
+        raise HTTPException(status_code=404, detail="Alumno no encontrado")
+    
+    al.nombre_completo = data.nombre_completo
+    al.dni = data.dni
+    al.email = data.email
+    al.plan_id = data.plan_id
     db.commit()
     return {"status": "success"}
 
@@ -132,7 +151,8 @@ def delete_alumno(id: int, db: Session = Depends(database.get_db)):
     db.commit()
     return {"status": "success"}
 
-# STAFF (Profesores y Administrativos)
+# --- GESTIÓN DE STAFF (PROFESORES Y ADMIN) ---
+
 @app.get("/api/profesores", response_model=List[UsuarioResponse])
 def list_profesores(db: Session = Depends(database.get_db)):
     return db.query(models.Usuario).join(models.Perfil).filter(models.Perfil.nombre == "Profesor").all()
@@ -144,9 +164,15 @@ def list_admins(db: Session = Depends(database.get_db)):
 @app.post("/api/staff")
 def create_staff(data: dict, db: Session = Depends(database.get_db)):
     perfil = db.query(models.Perfil).filter(models.Perfil.nombre == data['perfil_nombre']).first()
+    if not perfil:
+        raise HTTPException(status_code=400, detail="Perfil no válido")
+
     new_staff = models.Usuario(
-        nombre_completo=data['nombre_completo'], dni=data['dni'], email=data.get('email'),
-        password_hash=data.get('password', data['dni']), perfil_id=perfil.id,
+        nombre_completo=data['nombre_completo'], 
+        dni=data['dni'], 
+        email=data.get('email'),
+        password_hash=data.get('password', data['dni']), 
+        perfil_id=perfil.id,
         especialidad=data.get('especialidad')
     )
     db.add(new_staff)
@@ -156,12 +182,20 @@ def create_staff(data: dict, db: Session = Depends(database.get_db)):
 @app.put("/api/staff/{id}")
 def update_staff(id: int, data: StaffUpdate, db: Session = Depends(database.get_db)):
     st = db.query(models.Usuario).filter(models.Usuario.id == id).first()
+    if not st:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+        
     perfil = db.query(models.Perfil).filter(models.Perfil.nombre == data.perfil_nombre).first()
+    
     st.nombre_completo = data.nombre_completo
     st.dni = data.dni
     st.email = data.email
     st.especialidad = data.especialidad
-    st.perfil_id = perfil.id
+    if perfil:
+        st.perfil_id = perfil.id
+    if data.password:
+        st.password_hash = data.password
+        
     db.commit()
     return {"status": "success"}
 
@@ -171,14 +205,20 @@ def delete_staff(id: int, db: Session = Depends(database.get_db)):
     db.commit()
     return {"status": "success"}
 
-# STOCK
+# --- GESTIÓN DE STOCK ---
+
 @app.get("/api/stock")
 def get_stock(db: Session = Depends(database.get_db)):
     return db.query(models.Stock).all()
 
 @app.post("/api/stock")
 def create_stock(data: StockUpdate, db: Session = Depends(database.get_db)):
-    new_s = models.Stock(nombre_producto=data.nombre_producto, stock_actual=data.stock_actual, stock_inicial=data.stock_actual, precio_venta=data.precio_venta)
+    new_s = models.Stock(
+        nombre_producto=data.nombre_producto, 
+        stock_actual=data.stock_actual, 
+        stock_inicial=data.stock_actual, 
+        precio_venta=data.precio_venta
+    )
     db.add(new_s)
     db.commit()
     return {"status": "success"}
@@ -186,8 +226,11 @@ def create_stock(data: StockUpdate, db: Session = Depends(database.get_db)):
 @app.put("/api/stock/{id}")
 def update_stock(id: int, data: StockUpdate, db: Session = Depends(database.get_db)):
     s = db.query(models.Stock).filter(models.Stock.id == id).first()
-    for k, v in data.dict().items(): setattr(s, k, v)
-    db.commit()
+    if s:
+        s.nombre_producto = data.nombre_producto
+        s.stock_actual = data.stock_actual
+        s.precio_venta = data.precio_venta
+        db.commit()
     return {"status": "success"}
 
 @app.delete("/api/stock/{id}")
@@ -196,7 +239,8 @@ def delete_stock(id: int, db: Session = Depends(database.get_db)):
     db.commit()
     return {"status": "success"}
 
-# PLANES
+# --- GESTIÓN DE PLANES ---
+
 @app.get("/api/planes")
 def get_planes(db: Session = Depends(database.get_db)):
     return db.query(models.Plan).options(joinedload(models.Plan.tipo)).all()
@@ -211,8 +255,11 @@ def create_plan(data: PlanUpdate, db: Session = Depends(database.get_db)):
 @app.put("/api/planes/{id}")
 def update_plan(id: int, data: PlanUpdate, db: Session = Depends(database.get_db)):
     p = db.query(models.Plan).filter(models.Plan.id == id).first()
-    for k, v in data.dict().items(): setattr(p, k, v)
-    db.commit()
+    if p:
+        p.nombre = data.nombre
+        p.precio = data.precio
+        p.tipo_plan_id = data.tipo_plan_id
+        db.commit()
     return {"status": "success"}
 
 @app.delete("/api/planes/{id}")
@@ -221,7 +268,8 @@ def delete_plan(id: int, db: Session = Depends(database.get_db)):
     db.commit()
     return {"status": "success"}
 
-# CLASES
+# --- GESTIÓN DE CLASES ---
+
 @app.get("/api/clases")
 def get_clases(db: Session = Depends(database.get_db)):
     return db.query(models.Clase).all()
@@ -236,16 +284,18 @@ def create_clase(data: ClaseUpdate, db: Session = Depends(database.get_db)):
 @app.put("/api/clases/{id}")
 def update_clase(id: int, data: ClaseUpdate, db: Session = Depends(database.get_db)):
     c = db.query(models.Clase).filter(models.Clase.id == id).first()
-    for k, v in data.dict().items(): setattr(c, k, v)
-    db.commit()
+    if c:
+        for k, v in data.dict().items(): setattr(c, k, v)
+        db.commit()
     return {"status": "success"}
 
 @app.put("/api/clases/{id}/move")
 def move_clase(id: int, data: ClaseMove, db: Session = Depends(database.get_db)):
     c = db.query(models.Clase).filter(models.Clase.id == id).first()
-    c.dia = data.dia
-    c.horario = data.horario
-    db.commit()
+    if c:
+        c.dia = data.dia
+        c.horario = data.horario
+        db.commit()
     return {"status": "success"}
 
 @app.delete("/api/clases/{id}")
@@ -254,7 +304,8 @@ def delete_clase(id: int, db: Session = Depends(database.get_db)):
     db.commit()
     return {"status": "success"}
 
-# OTROS
+# --- OTROS / CAJA ---
+
 @app.get("/api/tipos-planes")
 def get_tipos(db: Session = Depends(database.get_db)):
     return db.query(models.TipoPlan).all()
@@ -275,4 +326,5 @@ async def read_index():
 
 if __name__ == "__main__":
     import uvicorn
+    # Puerto dinámico para Render o puerto 8000 local
     uvicorn.run(app, host="0.0.0.0", port=int(os.environ.get("PORT", 8000)))
