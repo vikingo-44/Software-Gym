@@ -1,15 +1,21 @@
+import os
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func
 from typing import List, Optional
-import models, database
 from pydantic import BaseModel
 from datetime import date, datetime
 
+# Importamos nuestros módulos locales
+import models
+import database
+
 app = FastAPI(title="Vikingo Strength Hub API")
 
-# Configuración de CORS
+# Configuración de CORS para permitir conexiones desde cualquier origen
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -18,7 +24,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# --- SCHEMAS ---
+# --- SCHEMAS PARA VALIDACIÓN ---
+
 class UsuarioLogin(BaseModel):
     dni: str
     password: str
@@ -65,15 +72,18 @@ class StaffCreate(BaseModel):
     email: Optional[str]
     password: str
     especialidad: Optional[str] = None
-    perfil_nombre: str # 'Profesor' o 'Administracion'
+    perfil_nombre: str 
 
-# --- ENDPOINTS ---
+# --- ENDPOINTS DE API ---
 
 @app.post("/api/login")
 def login(data: UsuarioLogin, db: Session = Depends(database.get_db)):
+    # Buscamos al usuario y cargamos su perfil
     user = db.query(models.Usuario).options(joinedload(models.Usuario.perfil)).filter(models.Usuario.dni == data.dni).first()
+    
     if not user or user.password_hash != data.password:
-        raise HTTPException(status_code=401, detail="Credenciales inválidas")
+        raise HTTPException(status_code=401, detail="Credenciales incorrectas")
+    
     return {
         "id": user.id,
         "nombre_completo": user.nombre_completo,
@@ -83,21 +93,26 @@ def login(data: UsuarioLogin, db: Session = Depends(database.get_db)):
 
 @app.get("/api/alumnos", response_model=List[UsuarioResponse])
 def get_alumnos(db: Session = Depends(database.get_db)):
-    usuarios = db.query(models.Usuario).options(joinedload(models.Usuario.plan).joinedload(models.Plan.tipo)).join(models.Perfil).filter(models.Perfil.nombre == "Alumno").all()
+    usuarios = db.query(models.Usuario).options(
+        joinedload(models.Usuario.plan).joinedload(models.Plan.tipo)
+    ).join(models.Perfil).filter(models.Perfil.nombre == "Alumno").all()
     return usuarios
 
 @app.post("/api/alumnos")
 def create_alumno(alumno: AlumnoCreate, db: Session = Depends(database.get_db)):
     perfil = db.query(models.Perfil).filter(models.Perfil.nombre == "Alumno").first()
+    if not perfil:
+        raise HTTPException(status_code=500, detail="Perfil Alumno no configurado en BD")
+
     new_al = models.Usuario(
         nombre_completo=alumno.nombre_completo,
         dni=alumno.dni,
         email=alumno.email,
         plan_id=alumno.plan_id,
         perfil_id=perfil.id,
-        password_hash=alumno.dni,
+        password_hash=alumno.dni, # Password por defecto es el DNI
         fecha_ultima_renovacion=date.today(),
-        fecha_vencimiento=date.today(), # En producción sumar días del plan
+        fecha_vencimiento=date.today(),
         estado_cuenta="Al día"
     )
     db.add(new_al)
@@ -115,6 +130,9 @@ def list_admins(db: Session = Depends(database.get_db)):
 @app.post("/api/staff")
 def create_staff(data: StaffCreate, db: Session = Depends(database.get_db)):
     perfil = db.query(models.Perfil).filter(models.Perfil.nombre == data.perfil_nombre).first()
+    if not perfil:
+        raise HTTPException(status_code=400, detail="El rol especificado no existe")
+        
     new_staff = models.Usuario(
         nombre_completo=data.nombre_completo,
         dni=data.dni,
@@ -133,13 +151,18 @@ def get_stock(db: Session = Depends(database.get_db)):
 
 @app.get("/api/caja/resumen")
 def get_caja_resumen(db: Session = Depends(database.get_db)):
+    # Calculamos ingresos y gastos desde la tabla 'caja'
     ingresos = db.query(func.sum(models.MovimientoCaja.monto)).filter(models.MovimientoCaja.tipo == "Ingreso").scalar() or 0
     gastos = db.query(func.sum(models.MovimientoCaja.monto)).filter(models.MovimientoCaja.tipo == "Egreso").scalar() or 0
-    return {"ingresos": float(ingresos), "gastos": float(gastos), "balance": float(ingresos - gastos)}
+    return {
+        "ingresos": float(ingresos), 
+        "gastos": float(gastos), 
+        "balance": float(ingresos - gastos)
+    }
 
 @app.get("/api/caja/movimientos")
 def get_movimientos(db: Session = Depends(database.get_db)):
-    return db.query(models.MovimientoCaja).order_by(models.MovimientoCaja.fecha.desc()).limit(10).all()
+    return db.query(models.MovimientoCaja).order_by(models.MovimientoCaja.fecha.desc()).limit(20).all()
 
 @app.get("/api/planes")
 def get_planes(db: Session = Depends(database.get_db)):
@@ -149,6 +172,18 @@ def get_planes(db: Session = Depends(database.get_db)):
 def get_clases(db: Session = Depends(database.get_db)):
     return db.query(models.Clase).all()
 
+# --- SERVIR FRONTEND ---
+
+# Esta ruta sirve tu index.html cuando entras a la raíz (/)
+@app.get("/")
+async def read_index():
+    return FileResponse("index.html")
+
+# Si tienes carpetas de imágenes o assets, puedes descomentar la siguiente línea:
+# app.mount("/assets", StaticFiles(directory="assets"), name="assets")
+
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    # En local corre en el puerto 8000
+    port = int(os.environ.get("PORT", 8000))
+    uvicorn.run(app, host="0.0.0.0", port=port)
