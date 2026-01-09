@@ -61,7 +61,6 @@
         .viking-table-row { border-bottom: 1px solid rgba(255, 255, 255, 0.03); transition: background 0.2s; }
         .viking-table-row:hover { background: rgba(255, 0, 0, 0.02); }
 
-        /* CALENDARIO */
         .calendar-container {
             display: grid; grid-template-columns: 80px repeat(6, 1fr);
             background: rgba(255, 255, 255, 0.02); border-radius: 24px; overflow: hidden;
@@ -140,11 +139,23 @@
             color: #000;
             border-color: #FF0000;
         }
+
+        /* Botones de Pago */
+        .payment-method-btn {
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            background: rgba(255, 255, 255, 0.02);
+            transition: all 0.2s;
+        }
+        .payment-method-btn.active {
+            border-color: #FF0000;
+            background: rgba(255, 0, 0, 0.1);
+            color: #FF0000;
+        }
     </style>
 </head>
 <body class="flex h-screen w-screen overflow-hidden">
 
-    <!-- OVERLAY DE LOGIN (CORREGIDO w-full max-w-md) -->
+    <!-- OVERLAY DE LOGIN -->
     <div id="login-overlay">
         <div class="glass-card p-12 rounded-[3rem] w-full max-w-md border-red-600/20 text-center">
             <img src="logo.png" alt="Vikingo Logo" class="w-32 mx-auto mb-8" onerror="this.src='https://cdn-icons-png.flaticon.com/512/2964/2964514.png'">
@@ -205,12 +216,17 @@
             </div>
 
             <p class="nav-section-title text-[9px] font-black text-gray-600 uppercase tracking-widest px-6 mb-2 mt-8">Operativa</p>
-            <button onclick="switchView('caja')" id="nav-caja" class="nav-btn w-full nav-item flex items-center gap-5 px-6 py-4 rounded-2xl font-black uppercase text-[10px] italic text-gray-400">
-                <i data-lucide="banknote" class="w-4 h-4"></i> <span class="nav-text">Caja</span>
-            </button>
-            <button onclick="switchView('stock')" id="nav-stock" class="nav-btn w-full nav-item flex items-center gap-5 px-6 py-4 rounded-2xl font-black uppercase text-[10px] italic text-gray-400">
-                <i data-lucide="package" class="w-4 h-4"></i> <span class="nav-text">Stock</span>
-            </button>
+            <div class="relative">
+                <button onclick="toggleSub('sub-facturacion')" class="w-full flex items-center justify-between px-6 py-4 text-gray-400 font-black uppercase text-[10px] italic hover:text-red-600 transition-colors">
+                    <span class="flex items-center gap-5"><i data-lucide="wallet" class="w-4 h-4"></i> <span class="nav-text">Facturación</span></span>
+                    <i data-lucide="chevron-down" class="w-3 h-3 chevron-icon"></i>
+                </button>
+                <div id="sub-facturacion" class="hidden pl-12 space-y-3 pb-4">
+                    <button onclick="switchView('cobrar')" id="nav-cobrar" class="nav-btn block w-full text-left text-[9px] font-black uppercase text-gray-600 hover:text-red-600 transition-colors">Cobrar</button>
+                    <button onclick="switchView('caja')" id="nav-caja" class="nav-btn block w-full text-left text-[9px] font-black uppercase text-gray-600 hover:text-red-600 transition-colors">Caja</button>
+                    <button onclick="switchView('stock')" id="nav-stock" class="nav-btn block w-full text-left text-[9px] font-black uppercase text-gray-600 hover:text-red-600 transition-colors">Stock</button>
+                </div>
+            </div>
 
             <p class="nav-section-title text-[9px] font-black text-gray-600 uppercase tracking-widest px-6 mb-2 mt-8">Gestión</p>
             <button onclick="switchView('planes')" id="nav-planes" class="nav-btn w-full nav-item flex items-center gap-5 px-6 py-4 rounded-2xl font-black uppercase text-[10px] italic text-gray-400">
@@ -294,6 +310,57 @@
                             </thead>
                             <tbody id="dash-table-alumnos-mini" class="text-[11px] font-black uppercase italic"></tbody>
                         </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- NUEVA VISTA COBRAR -->
+            <div id="view-cobrar" class="view-content">
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-10 h-full">
+                    <!-- Catálogo de Productos -->
+                    <div class="lg:col-span-2 space-y-6">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-2xl font-black italic uppercase">Punto de Venta</h3>
+                            <div class="relative w-64">
+                                <i data-lucide="search" class="absolute left-4 top-3.5 w-4 h-4 text-gray-500"></i>
+                                <input type="text" placeholder="Buscar producto..." class="viking-input pl-12 py-3" id="cobrar-search">
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 md:grid-cols-3 gap-6 overflow-y-auto max-h-[600px] pr-2 custom-scrollbar" id="cobrar-catalogo">
+                            <!-- Productos se cargan aquí -->
+                        </div>
+                    </div>
+
+                    <!-- Panel de Cobro -->
+                    <div class="glass-card p-10 rounded-[3rem] border-red-600/10 flex flex-col h-fit">
+                        <h4 class="text-xs font-black uppercase italic text-red-600 mb-6 tracking-widest border-b border-white/5 pb-4">Resumen de Venta</h4>
+                        
+                        <div class="flex-1 space-y-4 mb-8 overflow-y-auto max-h-64 custom-scrollbar" id="cobrar-lista-carrito">
+                            <p class="text-center text-gray-500 text-[10px] italic py-10">Sin productos seleccionados</p>
+                        </div>
+
+                        <div class="space-y-4 border-t border-white/5 pt-6 mb-8">
+                            <div class="flex justify-between text-[10px] font-black italic">
+                                <span class="text-gray-500">SUBTOTAL</span>
+                                <span id="cobrar-subtotal">$ 0</span>
+                            </div>
+                            <div class="flex justify-between text-xl font-black italic">
+                                <span>TOTAL</span>
+                                <span class="viking-red" id="cobrar-total">$ 0</span>
+                            </div>
+                        </div>
+
+                        <div class="space-y-4">
+                            <p class="text-[9px] font-black uppercase text-gray-500 italic mb-2 tracking-widest">Método de Pago</p>
+                            <div class="grid grid-cols-2 gap-3">
+                                <button onclick="setPaymentMethod('MercadoPago')" class="payment-method-btn py-3 rounded-xl text-[9px] font-black uppercase italic">MercadoPago</button>
+                                <button onclick="setPaymentMethod('TC')" class="payment-method-btn py-3 rounded-xl text-[9px] font-black uppercase italic">TC (Crédito)</button>
+                                <button onclick="setPaymentMethod('TD')" class="payment-method-btn py-3 rounded-xl text-[9px] font-black uppercase italic">TD (Débito)</button>
+                                <button onclick="setPaymentMethod('QR')" class="payment-method-btn py-3 rounded-xl text-[9px] font-black uppercase italic">QR / Transfer</button>
+                            </div>
+                        </div>
+
+                        <button onclick="finalizarVenta()" class="w-full mt-8 viking-bg-red text-black py-5 rounded-2xl font-black uppercase italic tracking-widest hover:scale-[1.02] active:scale-95 transition-all shadow-xl">Procesar Pago</button>
                     </div>
                 </div>
             </div>
@@ -495,6 +562,7 @@
     </main>
 
     <!-- MODALES VARIOS -->
+    <!-- Alumno -->
     <div id="modal-alumno" class="viking-modal">
         <div class="glass-card p-10 rounded-[3rem] w-full max-w-lg text-left">
             <h3 class="text-2xl font-black uppercase italic mb-8" id="modal-alumno-title">Alumno</h3>
@@ -504,6 +572,11 @@
                 <div class="grid grid-cols-2 gap-4">
                     <input type="text" id="al-dni" placeholder="DNI / Usuario" required class="viking-input">
                     <input type="email" id="al-email" placeholder="Email" required class="viking-input">
+                </div>
+                <!-- NUEVOS CAMPOS: PESO Y ALTURA -->
+                <div class="grid grid-cols-2 gap-4">
+                    <input type="number" step="0.1" id="al-peso" placeholder="Peso (kg)" class="viking-input">
+                    <input type="number" step="0.1" id="al-altura" placeholder="Altura (cm)" class="viking-input">
                 </div>
                 <div class="grid grid-cols-2 gap-4">
                     <select id="al-plan" class="viking-input" required></select>
@@ -519,6 +592,7 @@
         </div>
     </div>
 
+    <!-- Staff -->
     <div id="modal-staff" class="viking-modal">
         <div class="glass-card p-10 rounded-[3rem] w-full max-w-lg text-left">
             <h3 class="text-2xl font-black uppercase italic mb-4" id="modal-staff-title">Personal</h3>
@@ -543,6 +617,7 @@
         </div>
     </div>
 
+    <!-- Stock -->
     <div id="modal-stock" class="viking-modal">
         <div class="glass-card p-10 rounded-[3rem] w-full max-w-lg text-left">
             <h3 class="text-2xl font-black uppercase italic mb-8" id="modal-stock-title">Mercadería</h3>
@@ -562,6 +637,7 @@
         </div>
     </div>
 
+    <!-- Plan -->
     <div id="modal-plan" class="viking-modal">
         <div class="glass-card p-10 rounded-[3rem] w-full max-w-lg text-left">
             <h3 class="text-2xl font-black uppercase italic mb-8" id="modal-plan-title">Plan</h3>
@@ -581,6 +657,7 @@
         </div>
     </div>
 
+    <!-- Clase -->
     <div id="modal-clase" class="viking-modal">
         <div class="glass-card p-10 rounded-[3rem] w-full max-w-lg text-left">
             <h3 class="text-2xl font-black uppercase italic mb-8" id="modal-clase-title">Clase</h3>
@@ -620,7 +697,11 @@
             ? "http://localhost:8000/api" 
             : "/api";
 
-        let state = { alumnos: [], planes: [], stock: [], clases: [], user: null, profesores: [], administrativos: [], tiposPlanes: [] };
+        let state = { 
+            alumnos: [], planes: [], stock: [], clases: [], user: null, 
+            profesores: [], administrativos: [], tiposPlanes: [],
+            cart: [], currentPaymentMethod: ''
+        };
 
         async function apiFetch(endpoint, method = 'GET', body = null) {
             const options = { method, headers: { 'Content-Type': 'application/json' } };
@@ -632,6 +713,7 @@
             } catch (e) { return { error: "Error de conexión" }; }
         }
 
+        // Sidebar logic
         function toggleSidebar() { document.getElementById('sidebar').classList.toggle('sidebar-collapsed'); lucide.createIcons(); }
         function toggleSub(id) { document.getElementById(id).classList.toggle('hidden'); }
         function openModal(id) { document.getElementById(id).style.display = 'flex'; }
@@ -646,10 +728,19 @@
         function switchView(view) {
             document.querySelectorAll('.view-content').forEach(v => v.classList.remove('active'));
             document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+            
             document.getElementById('view-' + view).classList.add('active');
-            document.getElementById('nav-' + view)?.classList.add('active');
+            
+            // Handle sub-menu highlighting
+            const subMenuBtn = document.getElementById('nav-' + view);
+            if (subMenuBtn) subMenuBtn.classList.add('active');
+            
             document.getElementById('view-title').innerText = view.replace('-', ' ').toUpperCase();
+            
             if(view === 'calendario') renderCalendar();
+            if(view === 'cobrar') renderCobrar();
+            
             lucide.createIcons();
         }
 
@@ -698,6 +789,109 @@
                 .map(c => `<div class="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5"><span class="text-[10px] font-black italic">${c.n}</span><span class="text-[9px] text-red-600 font-bold italic">${c.t} HS</span></div>`).join('');
         }
 
+        // PUNTO DE VENTA (COBRAR)
+        function renderCobrar() {
+            const container = document.getElementById('cobrar-catalogo');
+            const searchVal = document.getElementById('cobrar-search').value.toLowerCase();
+            
+            const filteredStock = state.stock.filter(s => s.nombre_producto.toLowerCase().includes(searchVal));
+
+            container.innerHTML = filteredStock.map(s => `
+                <div class="glass-card p-6 rounded-[2rem] relative group cursor-pointer hover:border-red-600/50" onclick="addToCart(${s.id})">
+                    <div class="w-full aspect-square viking-bg-red/10 rounded-2xl mb-4 flex items-center justify-center">
+                        <i data-lucide="package" class="w-8 h-8 opacity-20 text-white"></i>
+                    </div>
+                    <h4 class="text-[10px] font-black uppercase italic mb-2 truncate">${s.nombre_producto}</h4>
+                    <div class="flex items-center justify-between">
+                        <p class="text-sm font-black italic">$ ${s.precio_venta.toLocaleString()}</p>
+                        <span class="text-[8px] font-bold ${s.stock_actual < 5 ? 'text-red-500' : 'text-gray-500'}">STOCK: ${s.stock_actual}</span>
+                    </div>
+                </div>
+            `).join('');
+            lucide.createIcons();
+            updateCartUI();
+        }
+
+        document.getElementById('cobrar-search').oninput = renderCobrar;
+
+        function addToCart(productId) {
+            const product = state.stock.find(s => s.id === productId);
+            if (!product || product.stock_actual <= 0) return;
+
+            const existing = state.cart.find(c => c.id === productId);
+            if (existing) {
+                if (existing.qty < product.stock_actual) existing.qty++;
+            } else {
+                state.cart.push({ ...product, qty: 1 });
+            }
+            updateCartUI();
+        }
+
+        function updateCartUI() {
+            const list = document.getElementById('cobrar-lista-carrito');
+            if (state.cart.length === 0) {
+                list.innerHTML = '<p class="text-center text-gray-500 text-[10px] italic py-10">Sin productos seleccionados</p>';
+                document.getElementById('cobrar-subtotal').innerText = '$ 0';
+                document.getElementById('cobrar-total').innerText = '$ 0';
+                return;
+            }
+
+            list.innerHTML = state.cart.map((c, idx) => `
+                <div class="flex items-center justify-between bg-white/5 p-3 rounded-xl border border-white/5">
+                    <div class="overflow-hidden">
+                        <p class="text-[9px] font-black uppercase italic truncate">${c.nombre_producto}</p>
+                        <p class="text-[8px] text-gray-500 font-bold">QTY: ${c.qty} x $ ${c.precio_venta.toLocaleString()}</p>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <p class="text-[10px] font-black">$ ${(c.qty * c.precio_venta).toLocaleString()}</p>
+                        <button onclick="removeFromCart(${idx})" class="text-red-600 hover:text-white"><i data-lucide="trash-2" class="w-3 h-3"></i></button>
+                    </div>
+                </div>
+            `).join('');
+
+            const total = state.cart.reduce((acc, c) => acc + (c.qty * c.precio_venta), 0);
+            document.getElementById('cobrar-subtotal').innerText = `$ ${total.toLocaleString()}`;
+            document.getElementById('cobrar-total').innerText = `$ ${total.toLocaleString()}`;
+            lucide.createIcons();
+        }
+
+        function removeFromCart(index) {
+            state.cart.splice(index, 1);
+            updateCartUI();
+        }
+
+        function setPaymentMethod(method) {
+            state.currentPaymentMethod = method;
+            document.querySelectorAll('.payment-method-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.innerText.includes(method));
+            });
+        }
+
+        async function finalizarVenta() {
+            if (state.cart.length === 0) return alert("Selecciona al menos un producto.");
+            if (!state.currentPaymentMethod) return alert("Elige un método de pago.");
+
+            const total = state.cart.reduce((acc, c) => acc + (c.qty * c.precio_venta), 0);
+            
+            // Simular guardado en caja
+            const dataCaja = {
+                tipo: "Ingreso",
+                monto: total,
+                descripcion: `Venta Productos: ${state.cart.map(c => c.nombre_producto).join(', ')} (${state.currentPaymentMethod})`
+            };
+
+            const res = await apiFetch('/caja/movimiento', 'POST', dataCaja);
+            if (!res.error) {
+                alert("Venta realizada con éxito vikingo!");
+                state.cart = [];
+                state.currentPaymentMethod = '';
+                await initApp();
+                renderCobrar();
+                switchView('caja');
+            }
+        }
+
+        // --- ALUMNOS ---
         async function fetchAlumnos() {
             const data = await apiFetch('/alumnos');
             state.alumnos = Array.isArray(data) ? data : [];
@@ -721,7 +915,15 @@
             lucide.createIcons();
         }
 
-        function openModalAlumno() { document.getElementById('modal-alumno-title').innerText = "Nuevo Alumno"; document.getElementById('al-id').value = ""; openModal('modal-alumno'); }
+        function openModalAlumno() { 
+            document.getElementById('modal-alumno-title').innerText = "Nuevo Alumno"; 
+            document.getElementById('al-id').value = ""; 
+            // Limpiar peso y altura
+            document.getElementById('al-peso').value = "";
+            document.getElementById('al-altura').value = "";
+            openModal('modal-alumno'); 
+        }
+
         function openEditAlumno(id) {
             const al = state.alumnos.find(x => x.id == id);
             if(!al) return;
@@ -731,6 +933,10 @@
             document.getElementById('al-dni').value = al.dni;
             document.getElementById('al-email').value = al.email || "";
             document.getElementById('al-plan').value = al.plan_id || "";
+            // Cargar peso y altura desde el estado (si existen)
+            document.getElementById('al-peso').value = al.peso || "";
+            document.getElementById('al-altura').value = al.altura || "";
+
             const delBtn = document.getElementById('btn-delete-alumno');
             delBtn.classList.remove('hidden');
             delBtn.onclick = () => deleteRecord('alumnos', id, 'modal-alumno', fetchAlumnos);
@@ -741,12 +947,21 @@
             e.preventDefault();
             const id = document.getElementById('al-id').value;
             const pass = document.getElementById('al-pass').value;
-            const data = { nombre_completo: document.getElementById('al-nombre').value, dni: document.getElementById('al-dni').value, email: document.getElementById('al-email').value, plan_id: parseInt(document.getElementById('al-plan').value) };
+            const data = { 
+                nombre_completo: document.getElementById('al-nombre').value, 
+                dni: document.getElementById('al-dni').value, 
+                email: document.getElementById('al-email').value, 
+                plan_id: parseInt(document.getElementById('al-plan').value),
+                // Enviar peso y altura
+                peso: parseFloat(document.getElementById('al-peso').value) || null,
+                altura: parseFloat(document.getElementById('al-altura').value) || null
+            };
             if(pass) data.password = pass;
             const res = await apiFetch(id ? `/alumnos/${id}` : '/alumnos', id ? 'PUT' : 'POST', data);
             if(!res.error) { closeModal('modal-alumno'); fetchAlumnos(); }
         };
 
+        // --- STAFF ---
         async function loadStaff() {
             const profs = await apiFetch('/profesores');
             const admins = await apiFetch('/administrativos');
@@ -797,6 +1012,7 @@
             if(!res.error) { closeModal('modal-staff'); loadStaff(); }
         };
 
+        // --- PLANES ---
         async function loadPlanes() {
             const planes = await apiFetch('/planes');
             const tipos = await apiFetch('/tipos-planes');
@@ -850,6 +1066,7 @@
             if(!res.error) { closeModal('modal-plan'); loadPlanes(); }
         };
 
+        // --- CLASES ---
         async function loadClases() {
             const data = await apiFetch('/clases');
             state.clases = Array.isArray(data) ? data : [];
@@ -904,6 +1121,7 @@
             if(!res.error) { closeModal('modal-clase'); loadClases(); }
         };
 
+        // --- STOCK ---
         async function loadStock() {
             const data = await apiFetch('/stock');
             state.stock = Array.isArray(data) ? data : [];
