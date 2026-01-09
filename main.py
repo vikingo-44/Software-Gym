@@ -1,7 +1,7 @@
 import os
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func
 from typing import List, Optional
@@ -85,6 +85,22 @@ class ClaseMove(BaseModel):
     dia: int
     horario: int
 
+# --- RUTAS DE ACCESO ---
+
+@app.get("/")
+def api_root():
+    """Leyenda de API corriendo para el usuario"""
+    return {
+        "status": "Vikingo Strength Hub API is running",
+        "documentation": "/docs",
+        "frontend_app": "/app"
+    }
+
+@app.get("/app")
+async def serve_app():
+    """Servir el frontend en una ruta específica"""
+    return FileResponse("index.html")
+
 # --- ENDPOINTS DE API ---
 
 @app.post("/api/login")
@@ -94,7 +110,6 @@ def login(data: UsuarioLogin, db: Session = Depends(database.get_db)):
     if not user or user.password_hash != data.password:
         raise HTTPException(status_code=401, detail="Credenciales incorrectas")
     
-    # IMPORTANTE: Devolvemos el email para que aparezca en "Mi Perfil"
     return {
         "id": user.id, 
         "nombre_completo": user.nombre_completo, 
@@ -107,14 +122,14 @@ def login(data: UsuarioLogin, db: Session = Depends(database.get_db)):
 
 @app.get("/api/alumnos", response_model=List[UsuarioResponse])
 def get_alumnos(db: Session = Depends(database.get_db)):
-    # Buscamos por el nombre exacto del perfil "Alumno" con carga de planes
+    # Buscamos por el perfil "alumno" de forma insensible a mayúsculas
     return db.query(models.Usuario).options(
-        joinedload(models.Usuario.plan)
-    ).join(models.Perfil).filter(models.Perfil.nombre == "Alumno").all()
+        joinedload(models.Usuario.plan).joinedload(models.Plan.tipo)
+    ).join(models.Perfil).filter(func.lower(models.Perfil.nombre) == "alumno").all()
 
 @app.post("/api/alumnos")
 def create_alumno(alumno: AlumnoUpdate, db: Session = Depends(database.get_db)):
-    perfil = db.query(models.Perfil).filter(models.Perfil.nombre == "Alumno").first()
+    perfil = db.query(models.Perfil).filter(func.lower(models.Perfil.nombre) == "alumno").first()
     if not perfil:
         raise HTTPException(status_code=500, detail="Perfil Alumno no encontrado")
         
@@ -124,7 +139,7 @@ def create_alumno(alumno: AlumnoUpdate, db: Session = Depends(database.get_db)):
         email=alumno.email,
         plan_id=alumno.plan_id, 
         perfil_id=perfil.id, 
-        password_hash=alumno.dni, # Por defecto el DNI es la pass
+        password_hash=alumno.dni, 
         fecha_ultima_renovacion=date.today(), 
         fecha_vencimiento=date.today()
     )
@@ -155,11 +170,11 @@ def delete_alumno(id: int, db: Session = Depends(database.get_db)):
 
 @app.get("/api/profesores", response_model=List[UsuarioResponse])
 def list_profesores(db: Session = Depends(database.get_db)):
-    return db.query(models.Usuario).join(models.Perfil).filter(models.Perfil.nombre == "Profesor").all()
+    return db.query(models.Usuario).join(models.Perfil).filter(func.lower(models.Perfil.nombre) == "profesor").all()
 
 @app.get("/api/administrativos", response_model=List[UsuarioResponse])
 def list_admins(db: Session = Depends(database.get_db)):
-    return db.query(models.Usuario).join(models.Perfil).filter(models.Perfil.nombre == "Administracion").all()
+    return db.query(models.Usuario).join(models.Perfil).filter(func.lower(models.Perfil.nombre) == "administracion").all()
 
 @app.post("/api/staff")
 def create_staff(data: dict, db: Session = Depends(database.get_db)):
@@ -320,11 +335,6 @@ def get_caja_resumen(db: Session = Depends(database.get_db)):
 def get_movimientos(db: Session = Depends(database.get_db)):
     return db.query(models.MovimientoCaja).order_by(models.MovimientoCaja.fecha.desc()).limit(10).all()
 
-@app.get("/")
-async def read_index():
-    return FileResponse("index.html")
-
 if __name__ == "__main__":
     import uvicorn
-    # Puerto dinámico para Render o puerto 8000 local
     uvicorn.run(app, host="0.0.0.0", port=int(os.environ.get("PORT", 8000)))

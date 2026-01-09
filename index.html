@@ -793,7 +793,7 @@
         function openEditStaff(id, rol) {
             let st;
             if(rol === 'Profesor') st = state.profesores.find(x => x.id == id);
-            else st = state.user; // Si es administración o perfil propio (simplificación)
+            else st = state.user; 
             
             if(!st) return;
 
@@ -986,6 +986,7 @@
         }
 
         // --- FORM HANDLERS (CRUD) ---
+        // Se adjuntan los manejadores directamente a los elementos del DOM
         document.getElementById('form-alumno').onsubmit = async (e) => {
             e.preventDefault();
             const id = document.getElementById('al-id').value;
@@ -999,26 +1000,7 @@
             const url = id ? `/alumnos/${id}` : '/alumnos';
             const res = await apiFetch(url, method, data);
             if(!res.error) { closeModal('modal-alumno'); fetchAlumnos(); }
-            else { alert("Error al guardar alumno: " + res.error); }
-        };
-
-        document.getElementById('form-staff').onsubmit = async (e) => {
-            e.preventDefault();
-            const id = document.getElementById('stf-id').value;
-            const rol = document.getElementById('stf-rol').value;
-            const data = {
-                nombre_completo: document.getElementById('stf-nombre').value,
-                dni: document.getElementById('stf-dni').value,
-                email: document.getElementById('stf-dni').value + "@vikingo.com",
-                especialidad: document.getElementById('stf-esp').value,
-                perfil_nombre: rol
-            };
-            if(!id) data.password = document.getElementById('stf-pass').value || data.dni;
-            const method = id ? 'PUT' : 'POST';
-            const url = id ? `/staff/${id}` : '/staff';
-            const res = await apiFetch(url, method, data);
-            if(!res.error) { closeModal('modal-staff'); loadStaff(); }
-            else { alert("Error al guardar staff: " + res.error); }
+            else { alert("Error al guardar: " + res.error); }
         };
 
         document.getElementById('form-stock').onsubmit = async (e) => {
@@ -1036,21 +1018,6 @@
             else { alert("Error al guardar mercadería: " + res.error); }
         };
 
-        document.getElementById('form-plan').onsubmit = async (e) => {
-            e.preventDefault();
-            const id = document.getElementById('plan-id').value;
-            const data = { 
-                nombre: document.getElementById('plan-nombre').value,
-                precio: parseFloat(document.getElementById('plan-precio').value),
-                tipo_plan_id: parseInt(document.getElementById('plan-tipo').value)
-            };
-            const method = id ? 'PUT' : 'POST';
-            const url = id ? `/planes/${id}` : '/planes';
-            const res = await apiFetch(url, method, data);
-            if(!res.error) { closeModal('modal-plan'); loadPlanes(); }
-            else { alert("Error al guardar plan: " + res.error); }
-        };
-
         document.getElementById('form-clase').onsubmit = async (e) => {
             e.preventDefault();
             const id = document.getElementById('cl-id').value;
@@ -1065,6 +1032,21 @@
             const res = await apiFetch(url, method, data);
             if(!res.error) { closeModal('modal-clase'); loadClases(); }
             else { alert("Error al guardar clase: " + res.error); }
+        };
+
+        document.getElementById('form-plan').onsubmit = async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('plan-id').value;
+            const data = { 
+                nombre: document.getElementById('plan-nombre').value,
+                precio: parseFloat(document.getElementById('plan-precio').value),
+                tipo_plan_id: parseInt(document.getElementById('plan-tipo').value)
+            };
+            const method = id ? 'PUT' : 'POST';
+            const url = id ? `/planes/${id}` : '/planes';
+            const res = await apiFetch(url, method, data);
+            if(!res.error) { closeModal('modal-plan'); loadPlanes(); }
+            else { alert("Error al guardar plan: " + res.error); }
         };
 
         async function handleProfileUpdate(event) {
@@ -1101,7 +1083,6 @@
 
         window.onload = () => { 
             lucide.createIcons();
-            // Verificamos estado inicial
             console.log("Sistema cargado, esperando inicio de sesión...");
         };
     </script>
