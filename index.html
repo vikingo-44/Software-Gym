@@ -602,7 +602,11 @@
 
     <!-- SCRIPTS INTEGRADOS -->
     <script>
-        const API_BASE = "/api";
+        // DETECCIÓN AUTOMÁTICA DE API PARA PRUEBAS LOCALES Y PRODUCCIÓN
+        const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.protocol === 'file:'
+            ? "http://localhost:8000/api" 
+            : "/api";
+
         let state = { alumnos: [], planes: [], stock: [], clases: [], user: null, profesores: [], tiposPlanes: [] };
 
         async function apiFetch(endpoint, method = 'GET', body = null) {
@@ -986,7 +990,6 @@
         }
 
         // --- FORM HANDLERS (CRUD) ---
-        // Se adjuntan los manejadores directamente a los elementos del DOM
         document.getElementById('form-alumno').onsubmit = async (e) => {
             e.preventDefault();
             const id = document.getElementById('al-id').value;

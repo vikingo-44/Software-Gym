@@ -122,10 +122,15 @@ def login(data: UsuarioLogin, db: Session = Depends(database.get_db)):
 
 @app.get("/api/alumnos", response_model=List[UsuarioResponse])
 def get_alumnos(db: Session = Depends(database.get_db)):
-    # Buscamos por el perfil "alumno" de forma insensible a mayúsculas
-    return db.query(models.Usuario).options(
+    alumnos = db.query(models.Usuario).options(
+        joinedload(models.Usuario.perfil),
         joinedload(models.Usuario.plan).joinedload(models.Plan.tipo)
     ).join(models.Perfil).filter(func.lower(models.Perfil.nombre) == "alumno").all()
+    
+    # Asignamos el nombre del perfil al campo virtual rol_nombre para que el frontend lo vea
+    for al in alumnos:
+        al.rol_nombre = al.perfil.nombre
+    return alumnos
 
 @app.post("/api/alumnos")
 def create_alumno(alumno: AlumnoUpdate, db: Session = Depends(database.get_db)):
@@ -170,11 +175,15 @@ def delete_alumno(id: int, db: Session = Depends(database.get_db)):
 
 @app.get("/api/profesores", response_model=List[UsuarioResponse])
 def list_profesores(db: Session = Depends(database.get_db)):
-    return db.query(models.Usuario).join(models.Perfil).filter(func.lower(models.Perfil.nombre) == "profesor").all()
+    profs = db.query(models.Usuario).options(joinedload(models.Usuario.perfil)).join(models.Perfil).filter(func.lower(models.Perfil.nombre) == "profesor").all()
+    for p in profs: p.rol_nombre = p.perfil.nombre
+    return profs
 
 @app.get("/api/administrativos", response_model=List[UsuarioResponse])
 def list_admins(db: Session = Depends(database.get_db)):
-    return db.query(models.Usuario).join(models.Perfil).filter(func.lower(models.Perfil.nombre) == "administracion").all()
+    admins = db.query(models.Usuario).options(joinedload(models.Usuario.perfil)).join(models.Perfil).filter(func.lower(models.Perfil.nombre) == "administracion").all()
+    for a in admins: a.rol_nombre = a.perfil.nombre
+    return admins
 
 @app.post("/api/staff")
 def create_staff(data: dict, db: Session = Depends(database.get_db)):

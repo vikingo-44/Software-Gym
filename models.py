@@ -47,7 +47,10 @@ class Clase(Base):
     id = Column(Integer, primary_key=True)
     nombre = Column(String)
     coach = Column(String)
-    capacidad_max = Column(Integer)
+    capacidad_max = Column(Integer, default=20)
+    # ESTO FALTABA Y CAUSABA EL ERROR 500:
+    dia = Column(Integer)
+    horario = Column(Integer)
 
 class Stock(Base):
     __tablename__ = "stock"
@@ -55,6 +58,7 @@ class Stock(Base):
     nombre_producto = Column(String)
     precio_venta = Column(Float)
     stock_actual = Column(Integer)
+    stock_inicial = Column(Integer) # Requerido por tu main.py
 
 class MovimientoCaja(Base):
     __tablename__ = "caja"
