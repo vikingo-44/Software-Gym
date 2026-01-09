@@ -14,7 +14,7 @@ import database
 
 app = FastAPI(title="Vikingo Strength Hub API")
 
-# Configuración de CORS para permitir conexiones desde el frontend
+# Configuración de CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -29,13 +29,23 @@ class UsuarioLogin(BaseModel):
     dni: str
     password: str
 
+# 1. Definimos el Schema para el Tipo de Plan (Soluciona el error de validación)
+class TipoPlanSchema(BaseModel):
+    id: int
+    nombre: str
+    duracion_dias: int
+    class Config:
+        from_attributes = True
+
+# 2. Definimos el Schema para el Plan usando el TipoPlanSchema arriba definido
 class PlanSchema(BaseModel):
     id: int
     nombre: str
     precio: float
     tipo_plan_id: Optional[int]
-    tipo: Optional[dict] = None
-    class Config: from_attributes = True
+    tipo: Optional[TipoPlanSchema] = None # Cambiado de dict a TipoPlanSchema
+    class Config:
+        from_attributes = True
 
 class UsuarioResponse(BaseModel):
     id: int
@@ -49,7 +59,8 @@ class UsuarioResponse(BaseModel):
     fecha_vencimiento: Optional[date] = None
     fecha_ultima_renovacion: Optional[date] = None
     especialidad: Optional[str] = None
-    class Config: from_attributes = True
+    class Config:
+        from_attributes = True
 
 class AlumnoUpdate(BaseModel):
     nombre_completo: str
@@ -89,7 +100,6 @@ class ClaseMove(BaseModel):
 
 @app.get("/")
 def api_root():
-    """Leyenda de API corriendo para el usuario"""
     return {
         "status": "Vikingo Strength Hub API is running",
         "documentation": "/docs",
@@ -98,7 +108,6 @@ def api_root():
 
 @app.get("/app")
 async def serve_app():
-    """Servir el frontend en una ruta específica"""
     return FileResponse("index.html")
 
 # --- ENDPOINTS DE API ---
@@ -122,14 +131,16 @@ def login(data: UsuarioLogin, db: Session = Depends(database.get_db)):
 
 @app.get("/api/alumnos", response_model=List[UsuarioResponse])
 def get_alumnos(db: Session = Depends(database.get_db)):
+    # Traemos los alumnos incluyendo su perfil y su plan con el tipo
     alumnos = db.query(models.Usuario).options(
         joinedload(models.Usuario.perfil),
         joinedload(models.Usuario.plan).joinedload(models.Plan.tipo)
     ).join(models.Perfil).filter(func.lower(models.Perfil.nombre) == "alumno").all()
     
-    # Asignamos el nombre del perfil al campo virtual rol_nombre para que el frontend lo vea
+    # Mapeamos manualmente el nombre del rol para que el Schema lo valide correctamente
     for al in alumnos:
-        al.rol_nombre = al.perfil.nombre
+        al.rol_nombre = al.perfil.nombre if al.perfil else "Alumno"
+        
     return alumnos
 
 @app.post("/api/alumnos")
