@@ -108,6 +108,24 @@
             white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
         }
         .class-badge:active { cursor: grabbing; }
+
+        .filter-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #666;
+            padding: 8px 16px;
+            border-radius: 12px;
+            font-size: 9px;
+            font-weight: 900;
+            text-transform: uppercase;
+            font-style: italic;
+            transition: all 0.3s;
+        }
+        .filter-btn.active {
+            background: #FF0000;
+            color: #000;
+            border-color: #FF0000;
+        }
     </style>
 </head>
 <body class="flex h-screen w-screen overflow-hidden">
@@ -432,6 +450,11 @@
                         <i data-lucide="plus" class="w-4 h-4"></i> Alta de Plan
                     </button>
                 </div>
+                <!-- FILTRO DE PLANES -->
+                <div class="flex gap-2 mb-10 overflow-x-auto pb-2 custom-scrollbar" id="planes-filter-container">
+                    <button onclick="filterPlanes('all')" class="filter-btn active">Todos</button>
+                    <!-- Dinámico -->
+                </div>
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-8" id="planes-container"></div>
             </div>
 
@@ -475,14 +498,14 @@
                 <select id="al-plan" class="viking-input" required></select>
                 <div class="flex gap-4 pt-4">
                     <button type="button" onclick="closeModal('modal-alumno')" class="flex-1 py-4 bg-white/5 rounded-2xl font-black uppercase italic text-[10px]">Cancelar</button>
-                    <button type="button" id="btn-delete-alumno" onclick="deleteEntity('alumnos', 'al-id', 'modal-alumno', fetchAlumnos)" class="hidden py-4 px-4 bg-red-900/40 rounded-2xl font-black uppercase italic text-[10px] text-red-500">Eliminar</button>
+                    <button type="button" id="btn-delete-alumno" class="hidden py-4 px-4 bg-red-900/40 rounded-2xl font-black uppercase italic text-[10px] text-red-500">Eliminar</button>
                     <button type="submit" class="flex-1 py-4 viking-bg-red text-black rounded-2xl font-black uppercase italic text-[10px]">Guardar</button>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- MODAL STAFF (PROFE/ADMIN) -->
+    <!-- MODAL STAFF -->
     <div id="modal-staff" class="viking-modal">
         <div class="glass-card p-10 rounded-[3rem] w-full max-w-lg text-left">
             <h3 class="text-2xl font-black uppercase italic mb-4" id="modal-staff-title">Personal</h3>
@@ -500,8 +523,8 @@
                 </div>
                 <div class="flex gap-4 pt-6">
                     <button type="button" onclick="closeModal('modal-staff')" class="flex-1 py-4 bg-white/5 rounded-2xl font-black uppercase italic text-[10px]">Cancelar</button>
-                    <button type="button" id="btn-delete-staff" onclick="deleteEntity('staff', 'stf-id', 'modal-staff', loadStaff)" class="hidden py-4 px-4 bg-red-900/40 rounded-2xl font-black uppercase italic text-[10px] text-red-500">Eliminar</button>
-                    <button type="submit" class="flex-1 py-4 viking-bg-red text-black rounded-2xl font-black uppercase italic text-[10px]">Guardar</button>
+                    <button type="button" id="btn-delete-staff" class="hidden py-4 px-4 bg-red-900/40 rounded-2xl font-black uppercase italic text-[10px] text-red-500">Eliminar</button>
+                    <button type="submit" class="flex-1 py-4 viking-bg-red text-black rounded-2xl font-black uppercase italic text-[10px]">Guardar Staff</button>
                 </div>
             </form>
         </div>
@@ -520,8 +543,8 @@
                 </div>
                 <div class="flex gap-4 pt-4">
                     <button type="button" onclick="closeModal('modal-stock')" class="flex-1 py-4 bg-white/5 rounded-2xl font-black uppercase italic text-[10px]">Cancelar</button>
-                    <button type="button" id="btn-delete-stock" onclick="deleteEntity('stock', 'stock-id', 'modal-stock', loadStock)" class="hidden py-4 px-4 bg-red-900/40 rounded-2xl font-black uppercase italic text-[10px] text-red-500">Eliminar</button>
-                    <button type="submit" class="flex-1 py-4 viking-bg-red text-black rounded-2xl font-black uppercase italic text-[10px]">Guardar</button>
+                    <button type="button" id="btn-delete-stock" class="hidden py-4 px-4 bg-red-900/40 rounded-2xl font-black uppercase italic text-[10px] text-red-500">Eliminar</button>
+                    <button type="submit" class="flex-1 py-4 viking-bg-red text-black rounded-2xl font-black uppercase italic text-[10px]">Guardar Mercadería</button>
                 </div>
             </form>
         </div>
@@ -540,8 +563,8 @@
                 </div>
                 <div class="flex gap-4 pt-4">
                     <button type="button" onclick="closeModal('modal-plan')" class="flex-1 py-4 bg-white/5 rounded-2xl font-black uppercase italic text-[10px]">Cancelar</button>
-                    <button type="button" id="btn-delete-plan" onclick="deleteEntity('planes', 'plan-id', 'modal-plan', loadPlanes)" class="hidden py-4 px-4 bg-red-900/40 rounded-2xl font-black uppercase italic text-[10px] text-red-500">Eliminar</button>
-                    <button type="submit" class="flex-1 py-4 viking-bg-red text-black rounded-2xl font-black uppercase italic text-[10px]">Guardar</button>
+                    <button type="button" id="btn-delete-plan" class="hidden py-4 px-4 bg-red-900/40 rounded-2xl font-black uppercase italic text-[10px] text-red-500">Eliminar</button>
+                    <button type="submit" class="flex-1 py-4 viking-bg-red text-black rounded-2xl font-black uppercase italic text-[10px]">Guardar Plan</button>
                 </div>
             </form>
         </div>
@@ -570,8 +593,8 @@
                 </div>
                 <div class="flex gap-4 pt-4">
                     <button type="button" onclick="closeModal('modal-clase')" class="flex-1 py-4 bg-white/5 rounded-2xl font-black uppercase italic text-[10px]">Cancelar</button>
-                    <button type="button" id="btn-delete-clase" onclick="deleteEntity('clases', 'cl-id', 'modal-clase', loadClases)" class="hidden py-4 px-4 bg-red-900/40 rounded-2xl font-black uppercase italic text-[10px] text-red-500">Eliminar</button>
-                    <button type="submit" class="flex-1 py-4 viking-bg-red text-black rounded-2xl font-black uppercase italic text-[10px]">Guardar</button>
+                    <button type="button" id="btn-delete-clase" class="hidden py-4 px-4 bg-red-900/40 rounded-2xl font-black uppercase italic text-[10px] text-red-500">Eliminar</button>
+                    <button type="submit" class="flex-1 py-4 viking-bg-red text-black rounded-2xl font-black uppercase italic text-[10px]">Guardar Clase</button>
                 </div>
             </form>
         </div>
@@ -579,8 +602,8 @@
 
     <!-- SCRIPTS INTEGRADOS -->
     <script>
-        const API_BASE = window.location.hostname === 'localhost' ? "http://localhost:8000/api" : "/api";
-        let state = { alumnos: [], planes: [], stock: [], clases: [], user: null, profesores: [] };
+        const API_BASE = "/api";
+        let state = { alumnos: [], planes: [], stock: [], clases: [], user: null, profesores: [], tiposPlanes: [] };
 
         async function apiFetch(endpoint, method = 'GET', body = null) {
             const options = { method, headers: { 'Content-Type': 'application/json' } };
@@ -624,7 +647,6 @@
                 document.getElementById('sidebar').classList.remove('hidden');
                 document.getElementById('main-content').classList.remove('hidden');
                 
-                // Cargar datos de perfil incluyendo el email
                 document.getElementById('side-user-name').innerText = res.nombre_completo;
                 document.getElementById('side-user-role').innerText = res.rol_nombre || 'Staff';
                 document.getElementById('user-initials').innerText = res.nombre_completo.split(' ').map(n => n[0]).join('').toUpperCase();
@@ -632,7 +654,7 @@
                 document.getElementById('prof-role').innerText = res.rol_nombre || 'Staff';
                 document.getElementById('prof-input-name').value = res.nombre_completo;
                 document.getElementById('prof-input-dni').value = res.dni;
-                document.getElementById('prof-input-email').value = res.email || ''; // Cargamos el correo
+                document.getElementById('prof-input-email').value = res.email || ''; 
                 document.getElementById('prof-initials-view').innerText = document.getElementById('user-initials').innerText;
 
                 initApp();
@@ -678,17 +700,14 @@
                     <td class="py-6"><span class="text-green-500 font-bold">AL DÍA</span></td>
                     <td class="py-6 text-gray-500">${al.fecha_ultima_renovacion || '-'}</td>
                     <td class="py-6 text-gray-400 font-black">${al.fecha_vencimiento || '-'}</td>
-                    <td class="py-6 text-right"><button onclick='openEditAlumno(${JSON.stringify(al)})' class="hover:text-red-600"><i data-lucide="eye" class="w-4 h-4"></i></button></td>
+                    <td class="py-6 text-right"><button onclick='openEditAlumno(${JSON.stringify(al).replace(/'/g, "&apos;")})' class="hover:text-red-600"><i data-lucide="eye" class="w-4 h-4"></i></button></td>
                 </tr>`;
 
-            // Ordenamos alfabéticamente para el Dashboard
             const sortedData = [...state.alumnos].sort((a, b) => a.nombre_completo.localeCompare(b.nombre_completo));
             
-            // Renderizamos Dashboard (Primeros 10 de A-Z)
             const dashTable = document.getElementById('dash-table-alumnos-mini');
             if (dashTable) dashTable.innerHTML = sortedData.slice(0, 10).map(renderRow).join('');
             
-            // Renderizamos Gestión de Alumnos (Todos)
             const fullTable = document.getElementById('table-alumnos-full');
             if (fullTable) fullTable.innerHTML = state.alumnos.map(renderRow).join('');
             
@@ -698,7 +717,8 @@
         function openModalAlumno() {
             document.getElementById('modal-alumno-title').innerText = "Nuevo Alumno";
             document.getElementById('al-id').value = "";
-            document.getElementById('btn-delete-alumno').classList.add('hidden');
+            const delBtn = document.getElementById('btn-delete-alumno');
+            delBtn.classList.add('hidden');
             openModal('modal-alumno');
         }
 
@@ -709,7 +729,9 @@
             document.getElementById('al-dni').value = al.dni;
             document.getElementById('al-email').value = al.email;
             document.getElementById('al-plan').value = al.plan_id || "";
-            document.getElementById('btn-delete-alumno').classList.remove('hidden');
+            const delBtn = document.getElementById('btn-delete-alumno');
+            delBtn.classList.remove('hidden');
+            delBtn.onclick = () => deleteEntity('alumnos', al.id, 'modal-alumno', fetchAlumnos);
             openModal('modal-alumno');
         }
 
@@ -717,9 +739,8 @@
         async function loadStaff() {
             const profs = await apiFetch('/profesores');
             const admins = await apiFetch('/administrativos');
-            state.profesores = profs || [];
+            state.profesores = Array.isArray(profs) ? profs : [];
 
-            // Poblar desplegable de clases
             const coachSelect = document.getElementById('cl-coach-select');
             coachSelect.innerHTML = '<option value="">Seleccionar Profesor</option>' + state.profesores.map(p => `<option value="${p.nombre_completo}">${p.nombre_completo}</option>`).join('');
 
@@ -728,7 +749,7 @@
                     <td class="py-6">${p.nombre_completo}</td>
                     <td class="py-6 text-gray-500">${p.dni}</td>
                     <td class="py-6 text-red-600">${p.especialidad || 'Gral.'}</td>
-                    <td class="py-6 text-right"><button onclick='openEditStaff(${JSON.stringify(p)}, "Profesor")' class="hover:text-red-600"><i data-lucide="edit-3" class="w-4 h-4"></i></button></td>
+                    <td class="py-6 text-right"><button onclick='openEditStaff(${JSON.stringify(p).replace(/'/g, "&apos;")}, "Profesor")' class="hover:text-red-600"><i data-lucide="edit-3" class="w-4 h-4"></i></button></td>
                 </tr>`).join('');
 
             document.getElementById('table-administrativos').innerHTML = (admins || []).map(a => `
@@ -736,7 +757,7 @@
                     <td class="py-6">${a.nombre_completo}</td>
                     <td class="py-6 text-gray-500">${a.dni}</td>
                     <td class="py-6 text-gray-500 lowercase">${a.email || '-'}</td>
-                    <td class="py-6 text-right"><button onclick='openEditStaff(${JSON.stringify(a)}, "Administracion")' class="hover:text-red-600"><i data-lucide="user-cog" class="w-4 h-4"></i></button></td>
+                    <td class="py-6 text-right"><button onclick='openEditStaff(${JSON.stringify(a).replace(/'/g, "&apos;")}, "Administracion")' class="hover:text-red-600"><i data-lucide="user-cog" class="w-4 h-4"></i></button></td>
                 </tr>`).join('');
             lucide.createIcons();
         }
@@ -758,7 +779,9 @@
             document.getElementById('stf-dni').value = st.dni;
             document.getElementById('stf-esp').value = st.especialidad || "";
             document.getElementById('stf-pass-container').classList.add('hidden');
-            document.getElementById('btn-delete-staff').classList.remove('hidden');
+            const delBtn = document.getElementById('btn-delete-staff');
+            delBtn.classList.remove('hidden');
+            delBtn.onclick = () => deleteEntity('staff', st.id, 'modal-staff', loadStaff);
             openModal('modal-staff');
         }
 
@@ -766,9 +789,10 @@
         async function loadStock() {
             const data = await apiFetch('/stock');
             if(!data || data.error) return;
+            state.stock = data;
             document.getElementById('stock-container').innerHTML = data.map(s => `
                 <div class="glass-card p-6 rounded-[2rem] relative group text-left">
-                    <button onclick='openEditStock(${JSON.stringify(s)})' class="absolute top-4 right-4 text-gray-600 hover:text-red-600"><i data-lucide="edit-2" class="w-3 h-3"></i></button>
+                    <button onclick='openEditStock(${JSON.stringify(s).replace(/'/g, "&apos;")})' class="absolute top-4 right-4 text-gray-600 hover:text-red-600"><i data-lucide="edit-2" class="w-3 h-3"></i></button>
                     <h4 class="text-sm font-black uppercase italic mb-4">${s.nombre_producto}</h4>
                     <p class="text-2xl font-black italic">$ ${s.precio_venta.toLocaleString()}</p>
                     <div class="mt-4 border-t border-white/5 pt-4">
@@ -791,7 +815,9 @@
             document.getElementById('stock-nombre').value = s.nombre_producto;
             document.getElementById('stock-cant').value = s.stock_actual;
             document.getElementById('stock-precio').value = s.precio_venta;
-            document.getElementById('btn-delete-stock').classList.remove('hidden');
+            const delBtn = document.getElementById('btn-delete-stock');
+            delBtn.classList.remove('hidden');
+            delBtn.onclick = () => deleteEntity('stock', s.id, 'modal-stock', loadStock);
             openModal('modal-stock');
         }
 
@@ -799,16 +825,41 @@
         async function loadPlanes() {
             const planes = await apiFetch('/planes');
             const tipos = await apiFetch('/tipos-planes');
-            document.getElementById('planes-container').innerHTML = planes.map(p => `
+            state.planes = Array.isArray(planes) ? planes : [];
+            state.tiposPlanes = Array.isArray(tipos) ? tipos : [];
+
+            // Actualizar filtros
+            const filterContainer = document.getElementById('planes-filter-container');
+            filterContainer.innerHTML = `<button onclick="filterPlanes('all', this)" class="filter-btn active">Todos</button>`;
+            state.tiposPlanes.forEach(t => {
+                filterContainer.innerHTML += `<button onclick="filterPlanes(${t.id}, this)" class="filter-btn">${t.nombre}</button>`;
+            });
+
+            renderPlanes(state.planes);
+
+            document.getElementById('al-plan').innerHTML = '<option value="">Seleccionar Plan</option>' + state.planes.map(p => `<option value="${p.id}">${p.nombre}</option>`).join('');
+            document.getElementById('plan-tipo').innerHTML = state.tiposPlanes.map(t => `<option value="${t.id}">${t.nombre}</option>`).join('');
+        }
+
+        function renderPlanes(items) {
+            document.getElementById('planes-container').innerHTML = items.map(p => `
                 <div class="glass-card p-8 rounded-[2.5rem] flex flex-col border-red-600/10 relative">
-                    <button onclick='openEditPlan(${JSON.stringify(p)})' class="absolute top-4 right-4 text-gray-600 hover:text-red-600"><i data-lucide="edit-3" class="w-4 h-4"></i></button>
+                    <button onclick='openEditPlan(${JSON.stringify(p).replace(/'/g, "&apos;")})' class="absolute top-4 right-4 text-gray-600 hover:text-red-600"><i data-lucide="edit-3" class="w-4 h-4"></i></button>
                     <span class="text-[8px] font-black viking-red uppercase italic tracking-widest mb-2">${p.tipo?.nombre || 'PLAN'}</span>
                     <h4 class="text-lg font-black uppercase italic mb-6 leading-tight">${p.nombre}</h4>
                     <p class="text-3xl font-black italic mb-8">$ ${p.precio.toLocaleString()}</p>
                 </div>`).join('');
-            document.getElementById('al-plan').innerHTML = '<option value="">Seleccionar Plan</option>' + planes.map(p => `<option value="${p.id}">${p.nombre}</option>`).join('');
-            document.getElementById('plan-tipo').innerHTML = (tipos || []).map(t => `<option value="${t.id}">${t.nombre}</option>`).join('');
             lucide.createIcons();
+        }
+
+        function filterPlanes(tipoId, btn) {
+            // UI
+            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+
+            // Lógica
+            const filtered = tipoId === 'all' ? state.planes : state.planes.filter(p => p.tipo_plan_id === tipoId);
+            renderPlanes(filtered);
         }
 
         function openModalPlan() {
@@ -824,17 +875,19 @@
             document.getElementById('plan-nombre').value = p.nombre;
             document.getElementById('plan-tipo').value = p.tipo_plan_id;
             document.getElementById('plan-precio').value = p.precio;
-            document.getElementById('btn-delete-plan').classList.remove('hidden');
+            const delBtn = document.getElementById('btn-delete-plan');
+            delBtn.classList.remove('hidden');
+            delBtn.onclick = () => deleteEntity('planes', p.id, 'modal-plan', loadPlanes);
             openModal('modal-plan');
         }
 
         // --- CLASES ---
         async function loadClases() {
             const data = await apiFetch('/clases');
-            state.clases = data;
-            document.getElementById('clases-container').innerHTML = data.map(c => `
+            state.clases = Array.isArray(data) ? data : [];
+            document.getElementById('clases-container').innerHTML = state.clases.map(c => `
                 <div class="glass-card p-8 rounded-[2.5rem] relative text-left">
-                    <button onclick='openEditClase(${JSON.stringify(c)})' class="absolute top-4 right-4 text-gray-600 hover:text-red-600"><i data-lucide="settings" class="w-4 h-4"></i></button>
+                    <button onclick='openEditClase(${JSON.stringify(c).replace(/'/g, "&apos;")})' class="absolute top-4 right-4 text-gray-600 hover:text-red-600"><i data-lucide="settings" class="w-4 h-4"></i></button>
                     <h4 class="text-lg font-black uppercase italic mb-2">${c.nombre}</h4>
                     <p class="text-[10px] font-black text-red-600 uppercase italic">Coach: ${c.coach || 'Vikingo'}</p>
                 </div>`).join('');
@@ -857,7 +910,9 @@
             document.getElementById('cl-dia').value = c.dia;
             updateHourOptions();
             document.getElementById('cl-horario').value = c.horario;
-            document.getElementById('btn-delete-clase').classList.remove('hidden');
+            const delBtn = document.getElementById('btn-delete-clase');
+            delBtn.classList.remove('hidden');
+            delBtn.onclick = () => deleteEntity('clases', c.id, 'modal-clase', loadClases);
             openModal('modal-clase');
         }
 
@@ -870,7 +925,6 @@
             for(let i=start; i<=end; i++) select.innerHTML += `<option value="${i}">${i}:00 hs</option>`;
         }
 
-        // --- CALENDARIO & DRAG AND DROP ---
         function renderCalendar() {
             const cal = document.getElementById('calendar-grid');
             if (!cal) return;
@@ -899,12 +953,12 @@
             e.preventDefault();
             const id = e.dataTransfer.getData("clase_id");
             if (!id) return;
-            if (dia == 6 && (horario < 10 || horario > 13)) return; // Validar sábado
+            if (dia == 6 && (horario < 10 || horario > 13)) return; 
             const res = await apiFetch(`/clases/${id}/move`, 'PUT', { dia, horario });
             if (!res.error) loadClases();
         }
 
-        // --- FORM HANDLERS ---
+        // --- FORM HANDLERS (CRUD) ---
         document.getElementById('form-alumno').onsubmit = async (e) => {
             e.preventDefault();
             const id = document.getElementById('al-id').value;
@@ -914,8 +968,8 @@
                 email: document.getElementById('al-email').value,
                 plan_id: parseInt(document.getElementById('al-plan').value)
             };
-            const method = id ? 'PUT' : 'POST';
-            const url = id ? `/alumnos/${id}` : '/alumnos';
+            const method = id && id !== "" ? 'PUT' : 'POST';
+            const url = id && id !== "" ? `/alumnos/${id}` : '/alumnos';
             const res = await apiFetch(url, method, data);
             if(!res.error) { closeModal('modal-alumno'); fetchAlumnos(); }
         };
@@ -931,9 +985,9 @@
                 especialidad: document.getElementById('stf-esp').value,
                 perfil_nombre: rol
             };
-            if(!id) data.password = document.getElementById('stf-pass').value;
-            const method = id ? 'PUT' : 'POST';
-            const url = id ? `/staff/${id}` : '/staff';
+            if(!id || id === "") data.password = document.getElementById('stf-pass').value;
+            const method = id && id !== "" ? 'PUT' : 'POST';
+            const url = id && id !== "" ? `/staff/${id}` : '/staff';
             const res = await apiFetch(url, method, data);
             if(!res.error) { closeModal('modal-staff'); loadStaff(); }
         };
@@ -946,8 +1000,8 @@
                 stock_actual: parseInt(document.getElementById('stock-cant').value),
                 precio_venta: parseFloat(document.getElementById('stock-precio').value)
             };
-            const method = id ? 'PUT' : 'POST';
-            const url = id ? `/stock/${id}` : '/stock';
+            const method = id && id !== "" ? 'PUT' : 'POST';
+            const url = id && id !== "" ? `/stock/${id}` : '/stock';
             const res = await apiFetch(url, method, data);
             if(!res.error) { closeModal('modal-stock'); loadStock(); }
         };
@@ -960,8 +1014,8 @@
                 precio: parseFloat(document.getElementById('plan-precio').value),
                 tipo_plan_id: parseInt(document.getElementById('plan-tipo').value)
             };
-            const method = id ? 'PUT' : 'POST';
-            const url = id ? `/planes/${id}` : '/planes';
+            const method = id && id !== "" ? 'PUT' : 'POST';
+            const url = id && id !== "" ? `/planes/${id}` : '/planes';
             const res = await apiFetch(url, method, data);
             if(!res.error) { closeModal('modal-plan'); loadPlanes(); }
         };
@@ -975,8 +1029,8 @@
                 dia: parseInt(document.getElementById('cl-dia').value),
                 horario: parseInt(document.getElementById('cl-horario').value)
             };
-            const method = id ? 'PUT' : 'POST';
-            const url = id ? `/clases/${id}` : '/clases';
+            const method = id && id !== "" ? 'PUT' : 'POST';
+            const url = id && id !== "" ? `/clases/${id}` : '/clases';
             const res = await apiFetch(url, method, data);
             if(!res.error) { closeModal('modal-clase'); loadClases(); }
         };
@@ -993,12 +1047,15 @@
             if(pass) data.password = pass;
 
             const res = await apiFetch(`/staff/${state.user.id}`, 'PUT', data);
-            if(!res.error) alert("Perfil actualizado correctamente");
+            if(!res.error) {
+                alert("Perfil actualizado correctamente");
+                state.user.nombre_completo = data.nombre_completo;
+                document.getElementById('side-user-name').innerText = data.nombre_completo;
+            }
         }
 
-        async function deleteEntity(entity, idField, modalId, callback) {
-            const id = document.getElementById(idField).value;
-            if(!id || !confirm("¿Eliminar registro?")) return;
+        async function deleteEntity(entity, id, modalId, callback) {
+            if(!id || !confirm("¿Seguro que deseas eliminar este registro?")) return;
             const res = await apiFetch(`/${entity}/${id}`, 'DELETE');
             if(!res.error) { closeModal(modalId); callback(); }
         }
