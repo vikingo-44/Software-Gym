@@ -573,10 +573,20 @@
                     <input type="text" id="al-dni" placeholder="DNI / Usuario" required class="viking-input">
                     <input type="email" id="al-email" placeholder="Email" required class="viking-input">
                 </div>
-                <!-- NUEVOS CAMPOS: PESO Y ALTURA -->
-                <div class="grid grid-cols-2 gap-4">
-                    <input type="number" step="0.1" id="al-peso" placeholder="Peso (kg)" class="viking-input">
-                    <input type="number" step="0.1" id="al-altura" placeholder="Altura (cm)" class="viking-input">
+                <!-- PESO, ALTURA e IMC (Calculado) -->
+                <div class="grid grid-cols-3 gap-4">
+                    <div class="space-y-1">
+                        <label class="text-[8px] font-black text-gray-500 uppercase italic">Peso (kg)</label>
+                        <input type="number" step="0.1" id="al-peso" placeholder="0.0" class="viking-input" oninput="calculateIMC()">
+                    </div>
+                    <div class="space-y-1">
+                        <label class="text-[8px] font-black text-gray-500 uppercase italic">Altura (cm)</label>
+                        <input type="number" step="0.1" id="al-altura" placeholder="0.0" class="viking-input" oninput="calculateIMC()">
+                    </div>
+                    <div class="space-y-1">
+                        <label class="text-[8px] font-black text-red-600 uppercase italic">IMC</label>
+                        <input type="text" id="al-imc" placeholder="-" readonly class="viking-input opacity-60">
+                    </div>
                 </div>
                 <div class="grid grid-cols-2 gap-4">
                     <select id="al-plan" class="viking-input" required></select>
@@ -702,6 +712,21 @@
             profesores: [], administrativos: [], tiposPlanes: [],
             cart: [], currentPaymentMethod: ''
         };
+
+        // --- LÓGICA DE IMC ---
+        function calculateIMC() {
+            const peso = parseFloat(document.getElementById('al-peso').value);
+            const alturaCm = parseFloat(document.getElementById('al-altura').value);
+            const imcField = document.getElementById('al-imc');
+            
+            if (peso > 0 && alturaCm > 0) {
+                const alturaM = alturaCm / 100;
+                const imc = (peso / (alturaM * alturaM)).toFixed(2);
+                imcField.value = imc;
+            } else {
+                imcField.value = "";
+            }
+        }
 
         async function apiFetch(endpoint, method = 'GET', body = null) {
             const options = { method, headers: { 'Content-Type': 'application/json' } };
@@ -918,9 +943,9 @@
         function openModalAlumno() { 
             document.getElementById('modal-alumno-title').innerText = "Nuevo Alumno"; 
             document.getElementById('al-id').value = ""; 
-            // Limpiar peso y altura
             document.getElementById('al-peso').value = "";
             document.getElementById('al-altura').value = "";
+            document.getElementById('al-imc').value = "";
             openModal('modal-alumno'); 
         }
 
@@ -933,9 +958,10 @@
             document.getElementById('al-dni').value = al.dni;
             document.getElementById('al-email').value = al.email || "";
             document.getElementById('al-plan').value = al.plan_id || "";
-            // Cargar peso y altura desde el estado (si existen)
+            // Cargar peso y altura
             document.getElementById('al-peso').value = al.peso || "";
             document.getElementById('al-altura').value = al.altura || "";
+            document.getElementById('al-imc').value = al.imc || "";
 
             const delBtn = document.getElementById('btn-delete-alumno');
             delBtn.classList.remove('hidden');
@@ -952,9 +978,10 @@
                 dni: document.getElementById('al-dni').value, 
                 email: document.getElementById('al-email').value, 
                 plan_id: parseInt(document.getElementById('al-plan').value),
-                // Enviar peso y altura
+                // Enviar peso, altura e IMC
                 peso: parseFloat(document.getElementById('al-peso').value) || null,
-                altura: parseFloat(document.getElementById('al-altura').value) || null
+                altura: parseFloat(document.getElementById('al-altura').value) || null,
+                imc: parseFloat(document.getElementById('al-imc').value) || null
             };
             if(pass) data.password = pass;
             const res = await apiFetch(id ? `/alumnos/${id}` : '/alumnos', id ? 'PUT' : 'POST', data);

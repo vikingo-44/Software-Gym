@@ -57,7 +57,7 @@ class UsuarioResponse(BaseModel):
     fecha_vencimiento: Optional[date] = None
     fecha_ultima_renovacion: Optional[date] = None
     especialidad: Optional[str] = None
-    # Nuevos campos físicos y médicos
+    # Campos físicos y médicos
     fecha_nacimiento: Optional[date] = None
     edad: Optional[int] = None
     peso: Optional[float] = None
@@ -141,7 +141,7 @@ def login(data: UsuarioLogin, db: Session = Depends(database.get_db)):
         "nombre_completo": user.nombre_completo, 
         "dni": user.dni, 
         "email": user.email,
-        "rol_nombre": user.perfil.nombre
+        "rol_nombre": user.perfil.nombre if user.perfil else "Usuario"
     }
 
 # --- GESTIÓN DE ALUMNOS ---
