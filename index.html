@@ -452,7 +452,7 @@
                 </div>
                 <!-- FILTRO DE PLANES -->
                 <div class="flex gap-2 mb-10 overflow-x-auto pb-2 custom-scrollbar" id="planes-filter-container">
-                    <button onclick="filterPlanes('all')" class="filter-btn active">Todos</button>
+                    <button onclick="filterPlanes('all', this)" class="filter-btn active">Todos</button>
                     <!-- Dinámico -->
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-8" id="planes-container"></div>
@@ -608,11 +608,19 @@
         async function apiFetch(endpoint, method = 'GET', body = null) {
             const options = { method, headers: { 'Content-Type': 'application/json' } };
             if (body) options.body = JSON.stringify(body);
+            console.log(`Petición a ${endpoint} [${method}]`, body);
             try {
                 const res = await fetch(`${API_BASE}${endpoint}`, options);
-                if (!res.ok) return { error: "Error en la petición" };
+                if (!res.ok) {
+                    const errorMsg = await res.text();
+                    console.error("Error en API:", errorMsg);
+                    return { error: errorMsg || "Error en la petición" };
+                }
                 return await res.json();
-            } catch (e) { return { error: "Servidor fuera de línea" }; }
+            } catch (e) { 
+                console.error("Error de red:", e);
+                return { error: "Servidor fuera de línea o error de conexión" }; 
+            }
         }
 
         // UI HELPERS
@@ -659,6 +667,7 @@
 
                 initApp();
             } else {
+                alert("Error de acceso: " + (res.error || "Credenciales incorrectas"));
                 document.getElementById('login-error').classList.remove('hidden');
             }
         }
@@ -689,7 +698,11 @@
         // --- ALUMNOS ---
         async function fetchAlumnos() {
             const data = await apiFetch('/alumnos');
-            if (data.error) return;
+            console.log("Datos alumnos recibidos:", data);
+            if (data.error) {
+                console.error("No se pudieron cargar alumnos:", data.error);
+                return;
+            }
             state.alumnos = Array.isArray(data) ? data : [];
 
             const renderRow = (al) => `
@@ -700,7 +713,11 @@
                     <td class="py-6"><span class="text-green-500 font-bold">AL DÍA</span></td>
                     <td class="py-6 text-gray-500">${al.fecha_ultima_renovacion || '-'}</td>
                     <td class="py-6 text-gray-400 font-black">${al.fecha_vencimiento || '-'}</td>
-                    <td class="py-6 text-right"><button onclick='openEditAlumno(${JSON.stringify(al).replace(/'/g, "&apos;")})' class="hover:text-red-600"><i data-lucide="eye" class="w-4 h-4"></i></button></td>
+                    <td class="py-6 text-right">
+                        <button onclick="openEditAlumno(${al.id})" class="hover:text-red-600 transition-colors">
+                            <i data-lucide="edit-2" class="w-4 h-4"></i>
+                        </button>
+                    </td>
                 </tr>`;
 
             const sortedData = [...state.alumnos].sort((a, b) => a.nombre_completo.localeCompare(b.nombre_completo));
@@ -722,7 +739,9 @@
             openModal('modal-alumno');
         }
 
-        function openEditAlumno(al) {
+        function openEditAlumno(id) {
+            const al = state.alumnos.find(x => x.id == id);
+            if(!al) return;
             document.getElementById('modal-alumno-title').innerText = "Editar Alumno";
             document.getElementById('al-id').value = al.id;
             document.getElementById('al-nombre').value = al.nombre_completo;
@@ -749,7 +768,7 @@
                     <td class="py-6">${p.nombre_completo}</td>
                     <td class="py-6 text-gray-500">${p.dni}</td>
                     <td class="py-6 text-red-600">${p.especialidad || 'Gral.'}</td>
-                    <td class="py-6 text-right"><button onclick='openEditStaff(${JSON.stringify(p).replace(/'/g, "&apos;")}, "Profesor")' class="hover:text-red-600"><i data-lucide="edit-3" class="w-4 h-4"></i></button></td>
+                    <td class="py-6 text-right"><button onclick="openEditStaff(${p.id}, 'Profesor')" class="hover:text-red-600"><i data-lucide="edit-3" class="w-4 h-4"></i></button></td>
                 </tr>`).join('');
 
             document.getElementById('table-administrativos').innerHTML = (admins || []).map(a => `
@@ -757,7 +776,7 @@
                     <td class="py-6">${a.nombre_completo}</td>
                     <td class="py-6 text-gray-500">${a.dni}</td>
                     <td class="py-6 text-gray-500 lowercase">${a.email || '-'}</td>
-                    <td class="py-6 text-right"><button onclick='openEditStaff(${JSON.stringify(a).replace(/'/g, "&apos;")}, "Administracion")' class="hover:text-red-600"><i data-lucide="user-cog" class="w-4 h-4"></i></button></td>
+                    <td class="py-6 text-right"><button onclick="openEditStaff(${a.id}, 'Administracion')" class="hover:text-red-600"><i data-lucide="user-cog" class="w-4 h-4"></i></button></td>
                 </tr>`).join('');
             lucide.createIcons();
         }
@@ -771,7 +790,13 @@
             openModal('modal-staff');
         }
 
-        function openEditStaff(st, rol) {
+        function openEditStaff(id, rol) {
+            let st;
+            if(rol === 'Profesor') st = state.profesores.find(x => x.id == id);
+            else st = state.user; // Si es administración o perfil propio (simplificación)
+            
+            if(!st) return;
+
             document.getElementById('modal-staff-title').innerText = "Editar " + rol;
             document.getElementById('stf-id').value = st.id;
             document.getElementById('stf-rol').value = rol;
@@ -792,7 +817,7 @@
             state.stock = data;
             document.getElementById('stock-container').innerHTML = data.map(s => `
                 <div class="glass-card p-6 rounded-[2rem] relative group text-left">
-                    <button onclick='openEditStock(${JSON.stringify(s).replace(/'/g, "&apos;")})' class="absolute top-4 right-4 text-gray-600 hover:text-red-600"><i data-lucide="edit-2" class="w-3 h-3"></i></button>
+                    <button onclick="openEditStock(${s.id})" class="absolute top-4 right-4 text-gray-600 hover:text-red-600"><i data-lucide="edit-2" class="w-3 h-3"></i></button>
                     <h4 class="text-sm font-black uppercase italic mb-4">${s.nombre_producto}</h4>
                     <p class="text-2xl font-black italic">$ ${s.precio_venta.toLocaleString()}</p>
                     <div class="mt-4 border-t border-white/5 pt-4">
@@ -809,7 +834,9 @@
             openModal('modal-stock');
         }
 
-        function openEditStock(s) {
+        function openEditStock(id) {
+            const s = state.stock.find(x => x.id == id);
+            if(!s) return;
             document.getElementById('stock-id').value = s.id;
             document.getElementById('modal-stock-title').innerText = "Editar Producto";
             document.getElementById('stock-nombre').value = s.nombre_producto;
@@ -844,7 +871,7 @@
         function renderPlanes(items) {
             document.getElementById('planes-container').innerHTML = items.map(p => `
                 <div class="glass-card p-8 rounded-[2.5rem] flex flex-col border-red-600/10 relative">
-                    <button onclick='openEditPlan(${JSON.stringify(p).replace(/'/g, "&apos;")})' class="absolute top-4 right-4 text-gray-600 hover:text-red-600"><i data-lucide="edit-3" class="w-4 h-4"></i></button>
+                    <button onclick="openEditPlan(${p.id})" class="absolute top-4 right-4 text-gray-600 hover:text-red-600"><i data-lucide="edit-3" class="w-4 h-4"></i></button>
                     <span class="text-[8px] font-black viking-red uppercase italic tracking-widest mb-2">${p.tipo?.nombre || 'PLAN'}</span>
                     <h4 class="text-lg font-black uppercase italic mb-6 leading-tight">${p.nombre}</h4>
                     <p class="text-3xl font-black italic mb-8">$ ${p.precio.toLocaleString()}</p>
@@ -853,11 +880,8 @@
         }
 
         function filterPlanes(tipoId, btn) {
-            // UI
             document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
-
-            // Lógica
             const filtered = tipoId === 'all' ? state.planes : state.planes.filter(p => p.tipo_plan_id === tipoId);
             renderPlanes(filtered);
         }
@@ -869,7 +893,9 @@
             openModal('modal-plan');
         }
 
-        function openEditPlan(p) {
+        function openEditPlan(id) {
+            const p = state.planes.find(x => x.id == id);
+            if(!p) return;
             document.getElementById('plan-id').value = p.id;
             document.getElementById('modal-plan-title').innerText = "Editar Plan";
             document.getElementById('plan-nombre').value = p.nombre;
@@ -887,7 +913,7 @@
             state.clases = Array.isArray(data) ? data : [];
             document.getElementById('clases-container').innerHTML = state.clases.map(c => `
                 <div class="glass-card p-8 rounded-[2.5rem] relative text-left">
-                    <button onclick='openEditClase(${JSON.stringify(c).replace(/'/g, "&apos;")})' class="absolute top-4 right-4 text-gray-600 hover:text-red-600"><i data-lucide="settings" class="w-4 h-4"></i></button>
+                    <button onclick="openEditClase(${c.id})" class="absolute top-4 right-4 text-gray-600 hover:text-red-600"><i data-lucide="settings" class="w-4 h-4"></i></button>
                     <h4 class="text-lg font-black uppercase italic mb-2">${c.nombre}</h4>
                     <p class="text-[10px] font-black text-red-600 uppercase italic">Coach: ${c.coach || 'Vikingo'}</p>
                 </div>`).join('');
@@ -902,7 +928,9 @@
             openModal('modal-clase');
         }
 
-        function openEditClase(c) {
+        function openEditClase(id) {
+            const c = state.clases.find(x => x.id == id);
+            if(!c) return;
             document.getElementById('cl-id').value = c.id;
             document.getElementById('modal-clase-title').innerText = "Editar Clase";
             document.getElementById('cl-nombre').value = c.nombre;
@@ -953,7 +981,6 @@
             e.preventDefault();
             const id = e.dataTransfer.getData("clase_id");
             if (!id) return;
-            if (dia == 6 && (horario < 10 || horario > 13)) return; 
             const res = await apiFetch(`/clases/${id}/move`, 'PUT', { dia, horario });
             if (!res.error) loadClases();
         }
@@ -968,10 +995,11 @@
                 email: document.getElementById('al-email').value,
                 plan_id: parseInt(document.getElementById('al-plan').value)
             };
-            const method = id && id !== "" ? 'PUT' : 'POST';
-            const url = id && id !== "" ? `/alumnos/${id}` : '/alumnos';
+            const method = id ? 'PUT' : 'POST';
+            const url = id ? `/alumnos/${id}` : '/alumnos';
             const res = await apiFetch(url, method, data);
             if(!res.error) { closeModal('modal-alumno'); fetchAlumnos(); }
+            else { alert("Error al guardar alumno: " + res.error); }
         };
 
         document.getElementById('form-staff').onsubmit = async (e) => {
@@ -985,11 +1013,12 @@
                 especialidad: document.getElementById('stf-esp').value,
                 perfil_nombre: rol
             };
-            if(!id || id === "") data.password = document.getElementById('stf-pass').value;
-            const method = id && id !== "" ? 'PUT' : 'POST';
-            const url = id && id !== "" ? `/staff/${id}` : '/staff';
+            if(!id) data.password = document.getElementById('stf-pass').value || data.dni;
+            const method = id ? 'PUT' : 'POST';
+            const url = id ? `/staff/${id}` : '/staff';
             const res = await apiFetch(url, method, data);
             if(!res.error) { closeModal('modal-staff'); loadStaff(); }
+            else { alert("Error al guardar staff: " + res.error); }
         };
 
         document.getElementById('form-stock').onsubmit = async (e) => {
@@ -1000,10 +1029,11 @@
                 stock_actual: parseInt(document.getElementById('stock-cant').value),
                 precio_venta: parseFloat(document.getElementById('stock-precio').value)
             };
-            const method = id && id !== "" ? 'PUT' : 'POST';
-            const url = id && id !== "" ? `/stock/${id}` : '/stock';
+            const method = id ? 'PUT' : 'POST';
+            const url = id ? `/stock/${id}` : '/stock';
             const res = await apiFetch(url, method, data);
             if(!res.error) { closeModal('modal-stock'); loadStock(); }
+            else { alert("Error al guardar mercadería: " + res.error); }
         };
 
         document.getElementById('form-plan').onsubmit = async (e) => {
@@ -1014,10 +1044,11 @@
                 precio: parseFloat(document.getElementById('plan-precio').value),
                 tipo_plan_id: parseInt(document.getElementById('plan-tipo').value)
             };
-            const method = id && id !== "" ? 'PUT' : 'POST';
-            const url = id && id !== "" ? `/planes/${id}` : '/planes';
+            const method = id ? 'PUT' : 'POST';
+            const url = id ? `/planes/${id}` : '/planes';
             const res = await apiFetch(url, method, data);
             if(!res.error) { closeModal('modal-plan'); loadPlanes(); }
+            else { alert("Error al guardar plan: " + res.error); }
         };
 
         document.getElementById('form-clase').onsubmit = async (e) => {
@@ -1029,10 +1060,11 @@
                 dia: parseInt(document.getElementById('cl-dia').value),
                 horario: parseInt(document.getElementById('cl-horario').value)
             };
-            const method = id && id !== "" ? 'PUT' : 'POST';
-            const url = id && id !== "" ? `/clases/${id}` : '/clases';
+            const method = id ? 'PUT' : 'POST';
+            const url = id ? `/clases/${id}` : '/clases';
             const res = await apiFetch(url, method, data);
             if(!res.error) { closeModal('modal-clase'); loadClases(); }
+            else { alert("Error al guardar clase: " + res.error); }
         };
 
         async function handleProfileUpdate(event) {
@@ -1051,16 +1083,27 @@
                 alert("Perfil actualizado correctamente");
                 state.user.nombre_completo = data.nombre_completo;
                 document.getElementById('side-user-name').innerText = data.nombre_completo;
+            } else {
+                alert("Error al actualizar perfil: " + res.error);
             }
         }
 
         async function deleteEntity(entity, id, modalId, callback) {
             if(!id || !confirm("¿Seguro que deseas eliminar este registro?")) return;
             const res = await apiFetch(`/${entity}/${id}`, 'DELETE');
-            if(!res.error) { closeModal(modalId); callback(); }
+            if(!res.error) { 
+                closeModal(modalId); 
+                callback(); 
+            } else {
+                alert("Error al eliminar: " + res.error);
+            }
         }
 
-        window.onload = () => { lucide.createIcons(); };
+        window.onload = () => { 
+            lucide.createIcons();
+            // Verificamos estado inicial
+            console.log("Sistema cargado, esperando inicio de sesión...");
+        };
     </script>
 </body>
 </html>
