@@ -61,12 +61,26 @@
         .viking-table-row { border-bottom: 1px solid rgba(255, 255, 255, 0.03); transition: background 0.2s; }
         .viking-table-row:hover { background: rgba(255, 0, 0, 0.02); }
 
+        /* CALENDARIO */
         .calendar-container {
             display: grid; grid-template-columns: 80px repeat(6, 1fr);
             background: rgba(255, 255, 255, 0.02); border-radius: 24px; overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }
-        .cal-header { background: rgba(255,0,0,0.05); padding: 15px; text-align: center; font-weight: 900; font-size: 10px; border-right: 1px solid rgba(255,255,255,0.05); }
-        .cal-cell { border-right: 1px solid rgba(255,255,255,0.03); border-bottom: 1px solid rgba(255,255,255,0.03); min-height: 80px; position: relative; }
+        .cal-header { 
+            background: rgba(255,0,0,0.1); padding: 15px; text-align: center; 
+            font-weight: 900; font-size: 10px; border-right: 1px solid rgba(255,255,255,0.2); 
+            text-transform: uppercase;
+        }
+        .cal-cell { 
+            border-right: 1px solid rgba(255,255,255,0.15); 
+            border-bottom: 1px solid rgba(255,255,255,0.15); 
+            min-height: 100px; position: relative; 
+        }
+        .cal-cell-closed {
+            background: repeating-linear-gradient(45deg, rgba(255,255,255,0.02), rgba(255,255,255,0.02) 10px, rgba(255,255,255,0.05) 10px, rgba(255,255,255,0.05) 20px);
+            opacity: 0.5;
+        }
 
         .sidebar-collapsed { width: 80px !important; }
         .sidebar-collapsed .brand-text, 
@@ -99,13 +113,13 @@
         }
 
         .class-badge {
-            background: #FF0000; color: black; font-size: 8px; font-weight: 900;
-            padding: 4px 8px; border-radius: 6px; text-transform: uppercase; font-style: italic;
+            color: black; font-weight: 900;
+            padding: 8px; text-transform: uppercase; font-style: italic;
             cursor: grab;
-            margin: 2px;
-            display: block;
-            text-align: center;
-            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            text-align: center; height: 100%; width: 100%;
+            border: 1px solid rgba(0,0,0,0.1);
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.2);
         }
         .class-badge:active { cursor: grabbing; }
 
@@ -130,10 +144,10 @@
 </head>
 <body class="flex h-screen w-screen overflow-hidden">
 
-    <!-- OVERLAY DE LOGIN -->
+    <!-- OVERLAY DE LOGIN (CORREGIDO w-full max-w-md) -->
     <div id="login-overlay">
         <div class="glass-card p-12 rounded-[3rem] w-full max-w-md border-red-600/20 text-center">
-            <img src="https://cdn-icons-png.flaticon.com/512/2964/2964514.png" alt="Vikingo Logo" class="w-32 mx-auto mb-8">
+            <img src="logo.png" alt="Vikingo Logo" class="w-32 mx-auto mb-8" onerror="this.src='https://cdn-icons-png.flaticon.com/512/2964/2964514.png'">
             <h1 class="text-4xl font-black italic uppercase mb-2">Vikingo <span class="viking-red">Hub</span></h1>
             <p class="text-[9px] tracking-[0.5em] text-gray-500 uppercase mb-10">Acceso al Sistema</p>
             
@@ -271,7 +285,7 @@
                                 <tr class="text-[9px] font-black uppercase text-gray-500 italic border-b border-white/5">
                                     <th class="pb-5">Nombre Completo</th>
                                     <th class="pb-5">DNI</th>
-                                    <th class="pb-5">Email</th>
+                                    <th class="pb-5">Plan</th>
                                     <th class="pb-5">Status</th>
                                     <th class="pb-5">Renovación</th>
                                     <th class="pb-5">Vencimiento</th>
@@ -293,14 +307,14 @@
                         <p class="text-red-600 text-xs font-black uppercase tracking-widest mb-8" id="prof-role">Rol</p>
                     </div>
                     <div class="lg:col-span-2 glass-card p-10 rounded-[3rem]">
-                        <h3 class="text-sm font-black uppercase italic border-l-4 border-red-600 pl-4 tracking-widest mb-10">Datos de Usuario</h3>
+                        <h3 class="text-sm font-black uppercase italic border-l-4 border-red-600 pl-4 tracking-widest mb-10">Mis Datos</h3>
                         <form id="form-perfil" onsubmit="handleProfileUpdate(event)" class="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div class="space-y-2">
                                 <label class="text-[9px] font-black uppercase text-gray-500 italic">Nombre Completo</label>
-                                <input type="text" id="prof-input-name" class="viking-input">
+                                <input type="text" id="prof-input-name" class="viking-input" required>
                             </div>
                             <div class="space-y-2">
-                                <label class="text-[9px] font-black uppercase text-gray-500 italic">DNI / ID</label>
+                                <label class="text-[9px] font-black uppercase text-gray-500 italic">DNI / Usuario</label>
                                 <input type="text" id="prof-input-dni" readonly class="viking-input opacity-50">
                             </div>
                             <div class="space-y-2">
@@ -309,9 +323,9 @@
                             </div>
                             <div class="space-y-2">
                                 <label class="text-[9px] font-black uppercase text-gray-500 italic">Nueva Contraseña</label>
-                                <input type="password" id="prof-input-pass" placeholder="••••••••" class="viking-input">
+                                <input type="password" id="prof-input-pass" placeholder="Dejar vacío para no cambiar" class="viking-input">
                             </div>
-                            <div class="md:col-span-2 pt-6">
+                            <div class="md:col-span-2 pt-6 text-left">
                                 <button type="submit" class="px-10 py-4 viking-bg-red text-black rounded-2xl font-black uppercase italic tracking-widest hover:scale-105 transition-transform">Guardar Cambios</button>
                             </div>
                         </form>
@@ -334,7 +348,7 @@
                                 <tr class="text-[9px] font-black uppercase text-gray-500 italic border-b border-white/5">
                                     <th class="pb-5">Nombre Completo</th>
                                     <th class="pb-5">DNI</th>
-                                    <th class="pb-5">Email</th>
+                                    <th class="pb-5">Plan</th>
                                     <th class="pb-5">Status</th>
                                     <th class="pb-5">Renovación</th>
                                     <th class="pb-5">Vencimiento</th>
@@ -450,11 +464,7 @@
                         <i data-lucide="plus" class="w-4 h-4"></i> Alta de Plan
                     </button>
                 </div>
-                <!-- FILTRO DE PLANES -->
-                <div class="flex gap-2 mb-10 overflow-x-auto pb-2 custom-scrollbar" id="planes-filter-container">
-                    <button onclick="filterPlanes('all', this)" class="filter-btn active">Todos</button>
-                    <!-- Dinámico -->
-                </div>
+                <div class="flex gap-2 mb-10 overflow-x-auto pb-2 custom-scrollbar" id="planes-filter-container"></div>
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-8" id="planes-container"></div>
             </div>
 
@@ -475,7 +485,7 @@
                     <h3 class="text-3xl font-black italic uppercase text-left">Agenda Vikinga</h3>
                     <div class="flex gap-4">
                         <div class="flex bg-white/5 p-1 rounded-2xl border border-white/5">
-                            <button class="px-6 py-2 bg-red-600 text-black rounded-xl text-[10px] font-black uppercase italic">Semana</button>
+                            <button class="px-6 py-2 bg-red-600 text-black rounded-xl text-[10px] font-black uppercase italic">Semana Actual</button>
                         </div>
                     </div>
                 </div>
@@ -484,7 +494,7 @@
         </div>
     </main>
 
-    <!-- MODAL ALUMNO -->
+    <!-- MODALES VARIOS -->
     <div id="modal-alumno" class="viking-modal">
         <div class="glass-card p-10 rounded-[3rem] w-full max-w-lg text-left">
             <h3 class="text-2xl font-black uppercase italic mb-8" id="modal-alumno-title">Alumno</h3>
@@ -492,10 +502,14 @@
                 <input type="hidden" id="al-id">
                 <input type="text" id="al-nombre" placeholder="Nombre Completo" required class="viking-input">
                 <div class="grid grid-cols-2 gap-4">
-                    <input type="text" id="al-dni" placeholder="DNI" required class="viking-input">
+                    <input type="text" id="al-dni" placeholder="DNI / Usuario" required class="viking-input">
                     <input type="email" id="al-email" placeholder="Email" required class="viking-input">
                 </div>
-                <select id="al-plan" class="viking-input" required></select>
+                <div class="grid grid-cols-2 gap-4">
+                    <select id="al-plan" class="viking-input" required></select>
+                    <input type="password" id="al-pass" placeholder="Contraseña de Acceso" class="viking-input">
+                </div>
+                <p class="text-[8px] text-gray-500 uppercase font-bold italic">* Si dejas la contraseña vacía al editar, no se cambiará.</p>
                 <div class="flex gap-4 pt-4">
                     <button type="button" onclick="closeModal('modal-alumno')" class="flex-1 py-4 bg-white/5 rounded-2xl font-black uppercase italic text-[10px]">Cancelar</button>
                     <button type="button" id="btn-delete-alumno" class="hidden py-4 px-4 bg-red-900/40 rounded-2xl font-black uppercase italic text-[10px] text-red-500">Eliminar</button>
@@ -505,7 +519,6 @@
         </div>
     </div>
 
-    <!-- MODAL STAFF -->
     <div id="modal-staff" class="viking-modal">
         <div class="glass-card p-10 rounded-[3rem] w-full max-w-lg text-left">
             <h3 class="text-2xl font-black uppercase italic mb-4" id="modal-staff-title">Personal</h3>
@@ -514,12 +527,12 @@
                 <input type="hidden" id="stf-rol">
                 <input type="text" id="stf-nombre" placeholder="Nombre Completo" required class="viking-input">
                 <div class="grid grid-cols-2 gap-4">
-                    <input type="text" id="stf-dni" placeholder="DNI" required class="viking-input">
+                    <input type="text" id="stf-dni" placeholder="DNI / Usuario" required class="viking-input">
                     <input type="text" id="stf-esp" placeholder="Especialidad / Cargo" class="viking-input">
                 </div>
-                <div id="stf-pass-container" class="space-y-4">
-                    <label class="text-[9px] font-black text-red-600 uppercase italic">Accesos</label>
-                    <input type="password" id="stf-pass" placeholder="Contraseña Inicial" class="viking-input">
+                <div class="space-y-4">
+                    <label class="text-[9px] font-black text-red-600 uppercase italic">Seguridad</label>
+                    <input type="password" id="stf-pass" placeholder="Nueva Contraseña" class="viking-input">
                 </div>
                 <div class="flex gap-4 pt-6">
                     <button type="button" onclick="closeModal('modal-staff')" class="flex-1 py-4 bg-white/5 rounded-2xl font-black uppercase italic text-[10px]">Cancelar</button>
@@ -530,7 +543,6 @@
         </div>
     </div>
 
-    <!-- MODAL STOCK -->
     <div id="modal-stock" class="viking-modal">
         <div class="glass-card p-10 rounded-[3rem] w-full max-w-lg text-left">
             <h3 class="text-2xl font-black uppercase italic mb-8" id="modal-stock-title">Mercadería</h3>
@@ -550,7 +562,6 @@
         </div>
     </div>
 
-    <!-- MODAL PLAN -->
     <div id="modal-plan" class="viking-modal">
         <div class="glass-card p-10 rounded-[3rem] w-full max-w-lg text-left">
             <h3 class="text-2xl font-black uppercase italic mb-8" id="modal-plan-title">Plan</h3>
@@ -570,7 +581,6 @@
         </div>
     </div>
 
-    <!-- MODAL CLASE -->
     <div id="modal-clase" class="viking-modal">
         <div class="glass-card p-10 rounded-[3rem] w-full max-w-lg text-left">
             <h3 class="text-2xl font-black uppercase italic mb-8" id="modal-clase-title">Clase</h3>
@@ -591,6 +601,10 @@
                     </select>
                     <select id="cl-horario" required class="viking-input"></select>
                 </div>
+                <div class="space-y-2">
+                    <label class="text-[9px] font-black uppercase text-gray-500 italic">Color de Identificación</label>
+                    <input type="color" id="cl-color" class="viking-input h-14 p-2 cursor-pointer" value="#FF0000">
+                </div>
                 <div class="flex gap-4 pt-4">
                     <button type="button" onclick="closeModal('modal-clase')" class="flex-1 py-4 bg-white/5 rounded-2xl font-black uppercase italic text-[10px]">Cancelar</button>
                     <button type="button" id="btn-delete-clase" class="hidden py-4 px-4 bg-red-900/40 rounded-2xl font-black uppercase italic text-[10px] text-red-500">Eliminar</button>
@@ -602,32 +616,22 @@
 
     <!-- SCRIPTS INTEGRADOS -->
     <script>
-        // DETECCIÓN AUTOMÁTICA DE API PARA PRUEBAS LOCALES Y PRODUCCIÓN
         const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.protocol === 'file:'
             ? "http://localhost:8000/api" 
             : "/api";
 
-        let state = { alumnos: [], planes: [], stock: [], clases: [], user: null, profesores: [], tiposPlanes: [] };
+        let state = { alumnos: [], planes: [], stock: [], clases: [], user: null, profesores: [], administrativos: [], tiposPlanes: [] };
 
         async function apiFetch(endpoint, method = 'GET', body = null) {
             const options = { method, headers: { 'Content-Type': 'application/json' } };
             if (body) options.body = JSON.stringify(body);
-            console.log(`Petición a ${endpoint} [${method}]`, body);
             try {
                 const res = await fetch(`${API_BASE}${endpoint}`, options);
-                if (!res.ok) {
-                    const errorMsg = await res.text();
-                    console.error("Error en API:", errorMsg);
-                    return { error: errorMsg || "Error en la petición" };
-                }
+                if (!res.ok) return { error: await res.text() };
                 return await res.json();
-            } catch (e) { 
-                console.error("Error de red:", e);
-                return { error: "Servidor fuera de línea o error de conexión" }; 
-            }
+            } catch (e) { return { error: "Error de conexión" }; }
         }
 
-        // UI HELPERS
         function toggleSidebar() { document.getElementById('sidebar').classList.toggle('sidebar-collapsed'); lucide.createIcons(); }
         function toggleSub(id) { document.getElementById(id).classList.toggle('hidden'); }
         function openModal(id) { document.getElementById(id).style.display = 'flex'; }
@@ -662,26 +666,23 @@
                 document.getElementById('side-user-name').innerText = res.nombre_completo;
                 document.getElementById('side-user-role').innerText = res.rol_nombre || 'Staff';
                 document.getElementById('user-initials').innerText = res.nombre_completo.split(' ').map(n => n[0]).join('').toUpperCase();
+                
                 document.getElementById('prof-name').innerText = res.nombre_completo;
                 document.getElementById('prof-role').innerText = res.rol_nombre || 'Staff';
+                document.getElementById('prof-initials-view').innerText = document.getElementById('user-initials').innerText;
                 document.getElementById('prof-input-name').value = res.nombre_completo;
                 document.getElementById('prof-input-dni').value = res.dni;
-                document.getElementById('prof-input-email').value = res.email || ''; 
-                document.getElementById('prof-initials-view').innerText = document.getElementById('user-initials').innerText;
+                document.getElementById('prof-input-email').value = res.email || '';
 
                 initApp();
             } else {
-                alert("Error de acceso: " + (res.error || "Credenciales incorrectas"));
                 document.getElementById('login-error').classList.remove('hidden');
             }
         }
 
         async function initApp() {
             updateHourOptions();
-            await Promise.all([
-                fetchAlumnos(), loadStaff(), loadPlanes(), 
-                loadStock(), loadClases(), loadDashboard()
-            ]);
+            await Promise.all([fetchAlumnos(), loadStaff(), loadPlanes(), loadStock(), loadClases(), loadDashboard()]);
         }
 
         async function loadDashboard() {
@@ -692,57 +693,35 @@
                 document.getElementById('caja-gastos').innerText = `$ ${res.gastos.toLocaleString()}`;
                 document.getElementById('caja-balance').innerText = `$ ${res.balance.toLocaleString()}`;
             }
-
             const check = document.getElementById('dash-checkins');
-            check.innerHTML = [
-                {n: "GONZALO L.", t: "14:22"}, {n: "LAGERTHA S.", t: "14:05"}, {n: "RAGNAR L.", t: "13:55"}
-            ].map(c => `<div class="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5"><span class="text-[10px] font-black italic">${c.n}</span><span class="text-[9px] text-red-600 font-bold italic">${c.t} HS</span></div>`).join('');
+            check.innerHTML = [{n: "GONZALO L.", t: "14:22"}, {n: "LAGERTHA S.", t: "14:05"}, {n: "RAGNAR L.", t: "13:55"}]
+                .map(c => `<div class="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5"><span class="text-[10px] font-black italic">${c.n}</span><span class="text-[9px] text-red-600 font-bold italic">${c.t} HS</span></div>`).join('');
         }
 
-        // --- ALUMNOS ---
         async function fetchAlumnos() {
             const data = await apiFetch('/alumnos');
-            console.log("Datos alumnos recibidos:", data);
-            if (data.error) {
-                console.error("No se pudieron cargar alumnos:", data.error);
-                return;
-            }
             state.alumnos = Array.isArray(data) ? data : [];
-
             const renderRow = (al) => `
                 <tr class="viking-table-row">
                     <td class="py-6">${al.nombre_completo}</td>
                     <td class="py-6 text-gray-500">${al.dni}</td>
-                    <td class="py-6 text-gray-500 lowercase">${al.email || '-'}</td>
+                    <td class="py-6 text-gray-400 font-black italic text-[9px]">${al.plan?.nombre || 'SIN PLAN'}</td>
                     <td class="py-6"><span class="text-green-500 font-bold">AL DÍA</span></td>
-                    <td class="py-6 text-gray-500">${al.fecha_ultima_renovacion || '-'}</td>
+                    <td class="py-6 text-red-600 font-black">${al.fecha_ultima_renovacion || '-'}</td>
                     <td class="py-6 text-gray-400 font-black">${al.fecha_vencimiento || '-'}</td>
                     <td class="py-6 text-right">
-                        <button onclick="openEditAlumno(${al.id})" class="hover:text-red-600 transition-colors">
+                        <button onclick="openEditAlumno(${al.id})" class="hover:text-red-600">
                             <i data-lucide="edit-2" class="w-4 h-4"></i>
                         </button>
                     </td>
                 </tr>`;
-
             const sortedData = [...state.alumnos].sort((a, b) => a.nombre_completo.localeCompare(b.nombre_completo));
-            
-            const dashTable = document.getElementById('dash-table-alumnos-mini');
-            if (dashTable) dashTable.innerHTML = sortedData.slice(0, 10).map(renderRow).join('');
-            
-            const fullTable = document.getElementById('table-alumnos-full');
-            if (fullTable) fullTable.innerHTML = state.alumnos.map(renderRow).join('');
-            
+            document.getElementById('dash-table-alumnos-mini').innerHTML = sortedData.slice(0, 10).map(renderRow).join('');
+            document.getElementById('table-alumnos-full').innerHTML = state.alumnos.map(renderRow).join('');
             lucide.createIcons();
         }
 
-        function openModalAlumno() {
-            document.getElementById('modal-alumno-title').innerText = "Nuevo Alumno";
-            document.getElementById('al-id').value = "";
-            const delBtn = document.getElementById('btn-delete-alumno');
-            delBtn.classList.add('hidden');
-            openModal('modal-alumno');
-        }
-
+        function openModalAlumno() { document.getElementById('modal-alumno-title').innerText = "Nuevo Alumno"; document.getElementById('al-id').value = ""; openModal('modal-alumno'); }
         function openEditAlumno(id) {
             const al = state.alumnos.find(x => x.id == id);
             if(!al) return;
@@ -750,32 +729,38 @@
             document.getElementById('al-id').value = al.id;
             document.getElementById('al-nombre').value = al.nombre_completo;
             document.getElementById('al-dni').value = al.dni;
-            document.getElementById('al-email').value = al.email;
+            document.getElementById('al-email').value = al.email || "";
             document.getElementById('al-plan').value = al.plan_id || "";
             const delBtn = document.getElementById('btn-delete-alumno');
             delBtn.classList.remove('hidden');
-            delBtn.onclick = () => deleteEntity('alumnos', al.id, 'modal-alumno', fetchAlumnos);
+            delBtn.onclick = () => deleteRecord('alumnos', id, 'modal-alumno', fetchAlumnos);
             openModal('modal-alumno');
         }
 
-        // --- STAFF ---
+        document.getElementById('form-alumno').onsubmit = async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('al-id').value;
+            const pass = document.getElementById('al-pass').value;
+            const data = { nombre_completo: document.getElementById('al-nombre').value, dni: document.getElementById('al-dni').value, email: document.getElementById('al-email').value, plan_id: parseInt(document.getElementById('al-plan').value) };
+            if(pass) data.password = pass;
+            const res = await apiFetch(id ? `/alumnos/${id}` : '/alumnos', id ? 'PUT' : 'POST', data);
+            if(!res.error) { closeModal('modal-alumno'); fetchAlumnos(); }
+        };
+
         async function loadStaff() {
             const profs = await apiFetch('/profesores');
             const admins = await apiFetch('/administrativos');
             state.profesores = Array.isArray(profs) ? profs : [];
-
-            const coachSelect = document.getElementById('cl-coach-select');
-            coachSelect.innerHTML = '<option value="">Seleccionar Profesor</option>' + state.profesores.map(p => `<option value="${p.nombre_completo}">${p.nombre_completo}</option>`).join('');
-
+            state.administrativos = Array.isArray(admins) ? admins : [];
+            document.getElementById('cl-coach-select').innerHTML = '<option value="">Seleccionar Profesor</option>' + state.profesores.map(p => `<option value="${p.nombre_completo}">${p.nombre_completo}</option>`).join('');
             document.getElementById('table-profesores').innerHTML = state.profesores.map(p => `
                 <tr class="viking-table-row">
                     <td class="py-6">${p.nombre_completo}</td>
                     <td class="py-6 text-gray-500">${p.dni}</td>
-                    <td class="py-6 text-red-600">${p.especialidad || 'Gral.'}</td>
+                    <td class="py-6 text-red-600 font-black">${p.especialidad || 'Gral.'}</td>
                     <td class="py-6 text-right"><button onclick="openEditStaff(${p.id}, 'Profesor')" class="hover:text-red-600"><i data-lucide="edit-3" class="w-4 h-4"></i></button></td>
                 </tr>`).join('');
-
-            document.getElementById('table-administrativos').innerHTML = (admins || []).map(a => `
+            document.getElementById('table-administrativos').innerHTML = state.administrativos.map(a => `
                 <tr class="viking-table-row">
                     <td class="py-6">${a.nombre_completo}</td>
                     <td class="py-6 text-gray-500">${a.dni}</td>
@@ -785,95 +770,54 @@
             lucide.createIcons();
         }
 
-        function openModalStaff(rol) {
-            document.getElementById('modal-staff-title').innerText = "Alta " + rol;
-            document.getElementById('stf-id').value = "";
-            document.getElementById('stf-rol').value = rol;
-            document.getElementById('stf-pass-container').classList.remove('hidden');
-            document.getElementById('btn-delete-staff').classList.add('hidden');
-            openModal('modal-staff');
-        }
-
+        function openModalStaff(rol) { document.getElementById('modal-staff-title').innerText = "Alta " + rol; document.getElementById('stf-id').value = ""; document.getElementById('stf-rol').value = rol; openModal('modal-staff'); }
         function openEditStaff(id, rol) {
-            let st;
-            if(rol === 'Profesor') st = state.profesores.find(x => x.id == id);
-            else st = state.user; 
-            
-            if(!st) return;
-
+            const user = (rol === 'Profesor' ? state.profesores : state.administrativos).find(x => x.id == id);
+            if(!user) return;
             document.getElementById('modal-staff-title').innerText = "Editar " + rol;
-            document.getElementById('stf-id').value = st.id;
+            document.getElementById('stf-id').value = user.id;
             document.getElementById('stf-rol').value = rol;
-            document.getElementById('stf-nombre').value = st.nombre_completo;
-            document.getElementById('stf-dni').value = st.dni;
-            document.getElementById('stf-esp').value = st.especialidad || "";
-            document.getElementById('stf-pass-container').classList.add('hidden');
+            document.getElementById('stf-nombre').value = user.nombre_completo;
+            document.getElementById('stf-dni').value = user.dni;
+            document.getElementById('stf-esp').value = user.especialidad || "";
             const delBtn = document.getElementById('btn-delete-staff');
             delBtn.classList.remove('hidden');
-            delBtn.onclick = () => deleteEntity('staff', st.id, 'modal-staff', loadStaff);
+            delBtn.onclick = () => deleteRecord('staff', id, 'modal-staff', loadStaff);
             openModal('modal-staff');
         }
 
-        // --- STOCK ---
-        async function loadStock() {
-            const data = await apiFetch('/stock');
-            if(!data || data.error) return;
-            state.stock = data;
-            document.getElementById('stock-container').innerHTML = data.map(s => `
-                <div class="glass-card p-6 rounded-[2rem] relative group text-left">
-                    <button onclick="openEditStock(${s.id})" class="absolute top-4 right-4 text-gray-600 hover:text-red-600"><i data-lucide="edit-2" class="w-3 h-3"></i></button>
-                    <h4 class="text-sm font-black uppercase italic mb-4">${s.nombre_producto}</h4>
-                    <p class="text-2xl font-black italic">$ ${s.precio_venta.toLocaleString()}</p>
-                    <div class="mt-4 border-t border-white/5 pt-4">
-                        <span class="text-[9px] font-black text-gray-600 uppercase">Stock: ${s.stock_actual}</span>
-                    </div>
-                </div>`).join('');
-            lucide.createIcons();
-        }
+        document.getElementById('form-staff').onsubmit = async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('stf-id').value;
+            const rol = document.getElementById('stf-rol').value;
+            const data = { nombre_completo: document.getElementById('stf-nombre').value, dni: document.getElementById('stf-dni').value, especialidad: document.getElementById('stf-esp').value, perfil_nombre: rol };
+            const pass = document.getElementById('stf-pass').value;
+            if(pass) data.password = pass;
+            const res = await apiFetch(id ? `/staff/${id}` : '/staff', id ? 'PUT' : 'POST', data);
+            if(!res.error) { closeModal('modal-staff'); loadStaff(); }
+        };
 
-        function openModalStock() {
-            document.getElementById('stock-id').value = "";
-            document.getElementById('modal-stock-title').innerText = "Nuevo Producto";
-            document.getElementById('btn-delete-stock').classList.add('hidden');
-            openModal('modal-stock');
-        }
-
-        function openEditStock(id) {
-            const s = state.stock.find(x => x.id == id);
-            if(!s) return;
-            document.getElementById('stock-id').value = s.id;
-            document.getElementById('modal-stock-title').innerText = "Editar Producto";
-            document.getElementById('stock-nombre').value = s.nombre_producto;
-            document.getElementById('stock-cant').value = s.stock_actual;
-            document.getElementById('stock-precio').value = s.precio_venta;
-            const delBtn = document.getElementById('btn-delete-stock');
-            delBtn.classList.remove('hidden');
-            delBtn.onclick = () => deleteEntity('stock', s.id, 'modal-stock', loadStock);
-            openModal('modal-stock');
-        }
-
-        // --- PLANES ---
         async function loadPlanes() {
             const planes = await apiFetch('/planes');
             const tipos = await apiFetch('/tipos-planes');
             state.planes = Array.isArray(planes) ? planes : [];
             state.tiposPlanes = Array.isArray(tipos) ? tipos : [];
-
-            // Actualizar filtros
             const filterContainer = document.getElementById('planes-filter-container');
-            filterContainer.innerHTML = `<button onclick="filterPlanes('all', this)" class="filter-btn active">Todos</button>`;
-            state.tiposPlanes.forEach(t => {
-                filterContainer.innerHTML += `<button onclick="filterPlanes(${t.id}, this)" class="filter-btn">${t.nombre}</button>`;
+            filterContainer.innerHTML = ''; 
+            state.tiposPlanes.forEach((t, idx) => {
+                const active = idx === 0 ? 'active' : '';
+                filterContainer.innerHTML += `<button onclick="filterPlanes(${t.id}, this)" class="filter-btn ${active}">${t.nombre}</button>`;
             });
-
-            renderPlanes(state.planes);
-
+            if (state.tiposPlanes.length > 0) filterPlanes(state.tiposPlanes[0].id, filterContainer.children[0]);
             document.getElementById('al-plan').innerHTML = '<option value="">Seleccionar Plan</option>' + state.planes.map(p => `<option value="${p.id}">${p.nombre}</option>`).join('');
             document.getElementById('plan-tipo').innerHTML = state.tiposPlanes.map(t => `<option value="${t.id}">${t.nombre}</option>`).join('');
         }
 
-        function renderPlanes(items) {
-            document.getElementById('planes-container').innerHTML = items.map(p => `
+        function filterPlanes(tipoId, btn) {
+            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            const filtered = state.planes.filter(p => p.tipo_plan_id === tipoId);
+            document.getElementById('planes-container').innerHTML = filtered.map(p => `
                 <div class="glass-card p-8 rounded-[2.5rem] flex flex-col border-red-600/10 relative">
                     <button onclick="openEditPlan(${p.id})" class="absolute top-4 right-4 text-gray-600 hover:text-red-600"><i data-lucide="edit-3" class="w-4 h-4"></i></button>
                     <span class="text-[8px] font-black viking-red uppercase italic tracking-widest mb-2">${p.tipo?.nombre || 'PLAN'}</span>
@@ -883,20 +827,7 @@
             lucide.createIcons();
         }
 
-        function filterPlanes(tipoId, btn) {
-            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            const filtered = tipoId === 'all' ? state.planes : state.planes.filter(p => p.tipo_plan_id === tipoId);
-            renderPlanes(filtered);
-        }
-
-        function openModalPlan() {
-            document.getElementById('plan-id').value = "";
-            document.getElementById('modal-plan-title').innerText = "Nuevo Plan";
-            document.getElementById('btn-delete-plan').classList.add('hidden');
-            openModal('modal-plan');
-        }
-
+        function openModalPlan() { document.getElementById('plan-id').value = ""; document.getElementById('modal-plan-title').innerText = "Nuevo Plan"; openModal('modal-plan'); }
         function openEditPlan(id) {
             const p = state.planes.find(x => x.id == id);
             if(!p) return;
@@ -907,29 +838,39 @@
             document.getElementById('plan-precio').value = p.precio;
             const delBtn = document.getElementById('btn-delete-plan');
             delBtn.classList.remove('hidden');
-            delBtn.onclick = () => deleteEntity('planes', p.id, 'modal-plan', loadPlanes);
+            delBtn.onclick = () => deleteRecord('planes', p.id, 'modal-plan', loadPlanes);
             openModal('modal-plan');
         }
 
-        // --- CLASES ---
+        document.getElementById('form-plan').onsubmit = async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('plan-id').value;
+            const data = { nombre: document.getElementById('plan-nombre').value, precio: parseFloat(document.getElementById('plan-precio').value), tipo_plan_id: parseInt(document.getElementById('plan-tipo').value) };
+            const res = await apiFetch(id ? `/planes/${id}` : '/planes', id ? 'PUT' : 'POST', data);
+            if(!res.error) { closeModal('modal-plan'); loadPlanes(); }
+        };
+
         async function loadClases() {
             const data = await apiFetch('/clases');
             state.clases = Array.isArray(data) ? data : [];
             document.getElementById('clases-container').innerHTML = state.clases.map(c => `
                 <div class="glass-card p-8 rounded-[2.5rem] relative text-left">
                     <button onclick="openEditClase(${c.id})" class="absolute top-4 right-4 text-gray-600 hover:text-red-600"><i data-lucide="settings" class="w-4 h-4"></i></button>
-                    <h4 class="text-lg font-black uppercase italic mb-2">${c.nombre}</h4>
+                    <div class="flex items-center gap-2 mb-2">
+                         <div class="w-3 h-3 rounded-full" style="background-color: ${c.color || '#FF0000'}"></div>
+                         <h4 class="text-lg font-black uppercase italic">${c.nombre}</h4>
+                    </div>
                     <p class="text-[10px] font-black text-red-600 uppercase italic">Coach: ${c.coach || 'Vikingo'}</p>
                 </div>`).join('');
             lucide.createIcons();
             if(document.getElementById('view-calendario').classList.contains('active')) renderCalendar();
         }
 
-        function openModalClase() {
-            document.getElementById('cl-id').value = "";
-            document.getElementById('modal-clase-title').innerText = "Nueva Clase";
-            document.getElementById('btn-delete-clase').classList.add('hidden');
-            openModal('modal-clase');
+        function openModalClase() { 
+            document.getElementById('cl-id').value = ""; 
+            document.getElementById('modal-clase-title').innerText = "Nueva Clase"; 
+            document.getElementById('cl-color').value = "#FF0000";
+            openModal('modal-clase'); 
         }
 
         function openEditClase(id) {
@@ -942,30 +883,86 @@
             document.getElementById('cl-dia').value = c.dia;
             updateHourOptions();
             document.getElementById('cl-horario').value = c.horario;
+            document.getElementById('cl-color').value = c.color || "#FF0000";
             const delBtn = document.getElementById('btn-delete-clase');
             delBtn.classList.remove('hidden');
-            delBtn.onclick = () => deleteEntity('clases', c.id, 'modal-clase', loadClases);
+            delBtn.onclick = () => deleteRecord('clases', c.id, 'modal-clase', loadClases);
             openModal('modal-clase');
         }
 
-        function updateHourOptions() {
-            const dia = document.getElementById('cl-dia').value;
-            const select = document.getElementById('cl-horario');
-            select.innerHTML = "";
-            let start = 7, end = 21;
-            if (dia == "6") { start = 10; end = 13; }
-            for(let i=start; i<=end; i++) select.innerHTML += `<option value="${i}">${i}:00 hs</option>`;
+        document.getElementById('form-clase').onsubmit = async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('cl-id').value;
+            const data = { 
+                nombre: document.getElementById('cl-nombre').value, 
+                coach: document.getElementById('cl-coach-select').value, 
+                dia: parseInt(document.getElementById('cl-dia').value), 
+                horario: parseInt(document.getElementById('cl-horario').value), 
+                color: document.getElementById('cl-color').value 
+            };
+            const res = await apiFetch(id ? `/clases/${id}` : '/clases', id ? 'PUT' : 'POST', data);
+            if(!res.error) { closeModal('modal-clase'); loadClases(); }
+        };
+
+        async function loadStock() {
+            const data = await apiFetch('/stock');
+            state.stock = Array.isArray(data) ? data : [];
+            document.getElementById('stock-container').innerHTML = state.stock.map(s => `
+                <div class="glass-card p-6 rounded-[2rem] relative group text-left">
+                    <button onclick="openEditStock(${s.id})" class="absolute top-4 right-4 text-gray-600 hover:text-red-600"><i data-lucide="edit-2" class="w-3 h-3"></i></button>
+                    <h4 class="text-sm font-black uppercase italic mb-4">${s.nombre_producto}</h4>
+                    <p class="text-2xl font-black italic">$ ${s.precio_venta.toLocaleString()}</p>
+                    <div class="mt-4 border-t border-white/5 pt-4">
+                        <span class="text-[9px] font-black text-gray-600 uppercase">Stock: ${s.stock_actual}</span>
+                    </div>
+                </div>`).join('');
+            lucide.createIcons();
         }
+
+        function openModalStock() { document.getElementById('stock-id').value = ""; document.getElementById('modal-stock-title').innerText = "Nuevo Producto"; openModal('modal-stock'); }
+        function openEditStock(id) {
+            const s = state.stock.find(x => x.id == id);
+            if(!s) return;
+            document.getElementById('stock-id').value = s.id;
+            document.getElementById('modal-stock-title').innerText = "Editar Producto";
+            document.getElementById('stock-nombre').value = s.nombre_producto;
+            document.getElementById('stock-cant').value = s.stock_actual;
+            document.getElementById('stock-precio').value = s.precio_venta;
+            const delBtn = document.getElementById('btn-delete-stock');
+            delBtn.classList.remove('hidden');
+            delBtn.onclick = () => deleteRecord('stock', s.id, 'modal-stock', loadStock);
+            openModal('modal-stock');
+        }
+
+        document.getElementById('form-stock').onsubmit = async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('stock-id').value;
+            const data = { nombre_producto: document.getElementById('stock-nombre').value, stock_actual: parseInt(document.getElementById('stock-cant').value), precio_venta: parseFloat(document.getElementById('stock-precio').value) };
+            const res = await apiFetch(id ? `/stock/${id}` : '/stock', id ? 'PUT' : 'POST', data);
+            if(!res.error) { closeModal('modal-stock'); loadStock(); }
+        };
+
+        async function handleProfileUpdate(event) {
+            event.preventDefault();
+            const pass = document.getElementById('prof-input-pass').value;
+            const data = { nombre_completo: document.getElementById('prof-input-name').value, dni: document.getElementById('prof-input-dni').value, email: document.getElementById('prof-input-email').value, perfil_nombre: state.user.rol_nombre };
+            if(pass) data.password = pass;
+            const res = await apiFetch(`/staff/${state.user.id}`, 'PUT', data);
+            if(!res.error) { alert("Perfil actualizado correctamente"); state.user.nombre_completo = data.nombre_completo; document.getElementById('side-user-name').innerText = data.nombre_completo; document.getElementById('prof-name').innerText = data.nombre_completo; }
+        }
+
+        async function deleteRecord(entity, id, modalId, callback) { if(!confirm("¿Deseas eliminar este registro vikingo?")) return; const res = await apiFetch(`/${entity}/${id}`, 'DELETE'); if(!res.error) { closeModal(modalId); callback(); } }
 
         function renderCalendar() {
             const cal = document.getElementById('calendar-grid');
             if (!cal) return;
             cal.innerHTML = `<div class="cal-header">HORA</div><div class="cal-header">LUNES</div><div class="cal-header">MARTES</div><div class="cal-header">MIÉRCOLES</div><div class="cal-header">JUEVES</div><div class="cal-header">VIERNES</div><div class="cal-header">SÁBADO</div>`;
             for(let h=7; h<=21; h++) {
-                cal.innerHTML += `<div class="cal-cell flex items-center justify-center font-black text-xs text-gray-600 bg-black/20">${h}:00</div>`;
+                cal.innerHTML += `<div class="cal-cell flex items-center justify-center font-black text-[10px] text-white/40 bg-white/5 border-r border-white/20">${h}:00</div>`;
                 for(let d=1; d<=6; d++) {
-                    const cellId = `cell-${d}-${h}`;
-                    cal.innerHTML += `<div id="${cellId}" class="cal-cell" ondragover="event.preventDefault()" ondrop="handleDrop(event, ${d}, ${h})"></div>`;
+                    const isSat = d === 6;
+                    const isClosed = isSat && (h < 10 || h > 13);
+                    cal.innerHTML += `<div id="cell-${d}-${h}" class="cal-cell ${isClosed ? 'cal-cell-closed' : ''}" ondragover="event.preventDefault()" ondrop="handleDrop(event, ${d}, ${h})"></div>`;
                 }
             }
             state.clases.forEach(c => {
@@ -973,121 +970,20 @@
                 if (cell) {
                     const badge = document.createElement('div');
                     badge.className = "class-badge";
+                    badge.style.backgroundColor = c.color || '#FF0000';
                     badge.draggable = true;
-                    badge.innerText = c.nombre;
+                    badge.innerHTML = `<span class="text-[10px] mb-1 leading-none">${c.nombre}</span><span class="text-[7px] opacity-70 font-bold">${c.coach}</span>`;
                     badge.ondragstart = (e) => { e.dataTransfer.setData("clase_id", c.id); };
                     cell.appendChild(badge);
                 }
             });
         }
 
-        async function handleDrop(e, dia, horario) {
-            e.preventDefault();
-            const id = e.dataTransfer.getData("clase_id");
-            if (!id) return;
-            const res = await apiFetch(`/clases/${id}/move`, 'PUT', { dia, horario });
-            if (!res.error) loadClases();
-        }
+        async function handleDrop(e, dia, horario) { e.preventDefault(); const id = e.dataTransfer.getData("clase_id"); if (!id) return; const res = await apiFetch(`/clases/${id}/move`, 'PUT', { dia, horario }); if (!res.error) loadClases(); }
 
-        // --- FORM HANDLERS (CRUD) ---
-        document.getElementById('form-alumno').onsubmit = async (e) => {
-            e.preventDefault();
-            const id = document.getElementById('al-id').value;
-            const data = { 
-                nombre_completo: document.getElementById('al-nombre').value,
-                dni: document.getElementById('al-dni').value,
-                email: document.getElementById('al-email').value,
-                plan_id: parseInt(document.getElementById('al-plan').value)
-            };
-            const method = id ? 'PUT' : 'POST';
-            const url = id ? `/alumnos/${id}` : '/alumnos';
-            const res = await apiFetch(url, method, data);
-            if(!res.error) { closeModal('modal-alumno'); fetchAlumnos(); }
-            else { alert("Error al guardar: " + res.error); }
-        };
+        function updateHourOptions() { const dia = document.getElementById('cl-dia').value; const select = document.getElementById('cl-horario'); select.innerHTML = ""; let start = 7, end = 21; if (dia == "6") { start = 10; end = 13; } for(let i=start; i<=end; i++) select.innerHTML += `<option value="${i}">${i}:00 hs</option>`; }
 
-        document.getElementById('form-stock').onsubmit = async (e) => {
-            e.preventDefault();
-            const id = document.getElementById('stock-id').value;
-            const data = { 
-                nombre_producto: document.getElementById('stock-nombre').value,
-                stock_actual: parseInt(document.getElementById('stock-cant').value),
-                precio_venta: parseFloat(document.getElementById('stock-precio').value)
-            };
-            const method = id ? 'PUT' : 'POST';
-            const url = id ? `/stock/${id}` : '/stock';
-            const res = await apiFetch(url, method, data);
-            if(!res.error) { closeModal('modal-stock'); loadStock(); }
-            else { alert("Error al guardar mercadería: " + res.error); }
-        };
-
-        document.getElementById('form-clase').onsubmit = async (e) => {
-            e.preventDefault();
-            const id = document.getElementById('cl-id').value;
-            const data = { 
-                nombre: document.getElementById('cl-nombre').value,
-                coach: document.getElementById('cl-coach-select').value,
-                dia: parseInt(document.getElementById('cl-dia').value),
-                horario: parseInt(document.getElementById('cl-horario').value)
-            };
-            const method = id ? 'PUT' : 'POST';
-            const url = id ? `/clases/${id}` : '/clases';
-            const res = await apiFetch(url, method, data);
-            if(!res.error) { closeModal('modal-clase'); loadClases(); }
-            else { alert("Error al guardar clase: " + res.error); }
-        };
-
-        document.getElementById('form-plan').onsubmit = async (e) => {
-            e.preventDefault();
-            const id = document.getElementById('plan-id').value;
-            const data = { 
-                nombre: document.getElementById('plan-nombre').value,
-                precio: parseFloat(document.getElementById('plan-precio').value),
-                tipo_plan_id: parseInt(document.getElementById('plan-tipo').value)
-            };
-            const method = id ? 'PUT' : 'POST';
-            const url = id ? `/planes/${id}` : '/planes';
-            const res = await apiFetch(url, method, data);
-            if(!res.error) { closeModal('modal-plan'); loadPlanes(); }
-            else { alert("Error al guardar plan: " + res.error); }
-        };
-
-        async function handleProfileUpdate(event) {
-            event.preventDefault();
-            const data = {
-                nombre_completo: document.getElementById('prof-input-name').value,
-                dni: document.getElementById('prof-input-dni').value,
-                email: document.getElementById('prof-input-email').value,
-                perfil_nombre: state.user.rol_nombre
-            };
-            const pass = document.getElementById('prof-input-pass').value;
-            if(pass) data.password = pass;
-
-            const res = await apiFetch(`/staff/${state.user.id}`, 'PUT', data);
-            if(!res.error) {
-                alert("Perfil actualizado correctamente");
-                state.user.nombre_completo = data.nombre_completo;
-                document.getElementById('side-user-name').innerText = data.nombre_completo;
-            } else {
-                alert("Error al actualizar perfil: " + res.error);
-            }
-        }
-
-        async function deleteEntity(entity, id, modalId, callback) {
-            if(!id || !confirm("¿Seguro que deseas eliminar este registro?")) return;
-            const res = await apiFetch(`/${entity}/${id}`, 'DELETE');
-            if(!res.error) { 
-                closeModal(modalId); 
-                callback(); 
-            } else {
-                alert("Error al eliminar: " + res.error);
-            }
-        }
-
-        window.onload = () => { 
-            lucide.createIcons();
-            console.log("Sistema cargado, esperando inicio de sesión...");
-        };
+        window.onload = () => { lucide.createIcons(); };
     </script>
 </body>
 </html>

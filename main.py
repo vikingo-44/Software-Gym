@@ -29,7 +29,6 @@ class UsuarioLogin(BaseModel):
     dni: str
     password: str
 
-# 1. Definimos el Schema para el Tipo de Plan (Soluciona el error de validación)
 class TipoPlanSchema(BaseModel):
     id: int
     nombre: str
@@ -37,13 +36,12 @@ class TipoPlanSchema(BaseModel):
     class Config:
         from_attributes = True
 
-# 2. Definimos el Schema para el Plan usando el TipoPlanSchema arriba definido
 class PlanSchema(BaseModel):
     id: int
     nombre: str
     precio: float
     tipo_plan_id: Optional[int]
-    tipo: Optional[TipoPlanSchema] = None # Cambiado de dict a TipoPlanSchema
+    tipo: Optional[TipoPlanSchema] = None
     class Config:
         from_attributes = True
 
@@ -67,6 +65,7 @@ class AlumnoUpdate(BaseModel):
     dni: str
     email: str
     plan_id: int
+    password: Optional[str] = None # Agregado para perfil de acceso
 
 class StaffUpdate(BaseModel):
     nombre_completo: str
@@ -91,6 +90,7 @@ class ClaseUpdate(BaseModel):
     coach: str
     dia: int
     horario: int
+    color: Optional[str] = "#FF0000" # Agregado para color de clase
 
 class ClaseMove(BaseModel):
     dia: int
@@ -131,13 +131,11 @@ def login(data: UsuarioLogin, db: Session = Depends(database.get_db)):
 
 @app.get("/api/alumnos", response_model=List[UsuarioResponse])
 def get_alumnos(db: Session = Depends(database.get_db)):
-    # Traemos los alumnos incluyendo su perfil y su plan con el tipo
     alumnos = db.query(models.Usuario).options(
         joinedload(models.Usuario.perfil),
         joinedload(models.Usuario.plan).joinedload(models.Plan.tipo)
     ).join(models.Perfil).filter(func.lower(models.Perfil.nombre) == "alumno").all()
     
-    # Mapeamos manualmente el nombre del rol para que el Schema lo valide correctamente
     for al in alumnos:
         al.rol_nombre = al.perfil.nombre if al.perfil else "Alumno"
         
@@ -155,7 +153,7 @@ def create_alumno(alumno: AlumnoUpdate, db: Session = Depends(database.get_db)):
         email=alumno.email,
         plan_id=alumno.plan_id, 
         perfil_id=perfil.id, 
-        password_hash=alumno.dni, 
+        password_hash=alumno.password or alumno.dni, # Usa pass enviada o DNI por defecto
         fecha_ultima_renovacion=date.today(), 
         fecha_vencimiento=date.today()
     )
@@ -173,6 +171,8 @@ def update_alumno(id: int, data: AlumnoUpdate, db: Session = Depends(database.ge
     al.dni = data.dni
     al.email = data.email
     al.plan_id = data.plan_id
+    if data.password:
+        al.password_hash = data.password # Actualiza pass si se envía
     db.commit()
     return {"status": "success"}
 
@@ -322,7 +322,8 @@ def update_clase(id: int, data: ClaseUpdate, db: Session = Depends(database.get_
     if c:
         for k, v in data.dict().items(): setattr(c, k, v)
         db.commit()
-    return {"status": "success"}
+        return {"status": "success"}
+    return {"status": "error", "message": "Clase no encontrada"}
 
 @app.put("/api/clases/{id}/move")
 def move_clase(id: int, data: ClaseMove, db: Session = Depends(database.get_db)):
@@ -331,7 +332,8 @@ def move_clase(id: int, data: ClaseMove, db: Session = Depends(database.get_db))
         c.dia = data.dia
         c.horario = data.horario
         db.commit()
-    return {"status": "success"}
+        return {"status": "success"}
+    return {"status": "error", "message": "Clase no encontrada"}
 
 @app.delete("/api/clases/{id}")
 def delete_clase(id: int, db: Session = Depends(database.get_db)):
