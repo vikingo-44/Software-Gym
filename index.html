@@ -668,7 +668,7 @@
         async function fetchAlumnos() {
             const data = await apiFetch('/alumnos');
             if (data.error) return;
-            state.alumnos = data;
+            state.alumnos = Array.isArray(data) ? data : [];
 
             const renderRow = (al) => `
                 <tr class="viking-table-row">
@@ -682,13 +682,15 @@
                 </tr>`;
 
             // Ordenamos alfabéticamente para el Dashboard
-            const sortedData = [...data].sort((a, b) => a.nombre_completo.localeCompare(b.nombre_completo));
+            const sortedData = [...state.alumnos].sort((a, b) => a.nombre_completo.localeCompare(b.nombre_completo));
             
             // Renderizamos Dashboard (Primeros 10 de A-Z)
-            document.getElementById('dash-table-alumnos-mini').innerHTML = sortedData.slice(0, 10).map(renderRow).join('');
+            const dashTable = document.getElementById('dash-table-alumnos-mini');
+            if (dashTable) dashTable.innerHTML = sortedData.slice(0, 10).map(renderRow).join('');
             
             // Renderizamos Gestión de Alumnos (Todos)
-            document.getElementById('table-alumnos-full').innerHTML = data.map(renderRow).join('');
+            const fullTable = document.getElementById('table-alumnos-full');
+            if (fullTable) fullTable.innerHTML = state.alumnos.map(renderRow).join('');
             
             lucide.createIcons();
         }
@@ -871,6 +873,7 @@
         // --- CALENDARIO & DRAG AND DROP ---
         function renderCalendar() {
             const cal = document.getElementById('calendar-grid');
+            if (!cal) return;
             cal.innerHTML = `<div class="cal-header">HORA</div><div class="cal-header">LUNES</div><div class="cal-header">MARTES</div><div class="cal-header">MIÉRCOLES</div><div class="cal-header">JUEVES</div><div class="cal-header">VIERNES</div><div class="cal-header">SÁBADO</div>`;
             for(let h=7; h<=21; h++) {
                 cal.innerHTML += `<div class="cal-cell flex items-center justify-center font-black text-xs text-gray-600 bg-black/20">${h}:00</div>`;

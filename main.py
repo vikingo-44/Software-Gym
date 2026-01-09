@@ -60,6 +60,7 @@ class AlumnoUpdate(BaseModel):
 class StaffUpdate(BaseModel):
     nombre_completo: str
     dni: str
+    email: Optional[str] = None
     especialidad: Optional[str] = None
     perfil_nombre: str
 
@@ -90,11 +91,20 @@ def login(data: UsuarioLogin, db: Session = Depends(database.get_db)):
     user = db.query(models.Usuario).options(joinedload(models.Usuario.perfil)).filter(models.Usuario.dni == data.dni).first()
     if not user or user.password_hash != data.password:
         raise HTTPException(status_code=401, detail="Credenciales incorrectas")
-    return {"id": user.id, "nombre_completo": user.nombre_completo, "dni": user.dni, "rol_nombre": user.perfil.nombre}
+    
+    # IMPORTANTE: Ahora incluimos el email en la respuesta
+    return {
+        "id": user.id, 
+        "nombre_completo": user.nombre_completo, 
+        "dni": user.dni, 
+        "email": user.email,
+        "rol_nombre": user.perfil.nombre
+    }
 
 # ALUMNOS
 @app.get("/api/alumnos", response_model=List[UsuarioResponse])
 def get_alumnos(db: Session = Depends(database.get_db)):
+    # Buscamos por el nombre exacto del perfil "Alumno"
     return db.query(models.Usuario).options(joinedload(models.Usuario.plan)).join(models.Perfil).filter(models.Perfil.nombre == "Alumno").all()
 
 @app.post("/api/alumnos")
@@ -122,7 +132,7 @@ def delete_alumno(id: int, db: Session = Depends(database.get_db)):
     db.commit()
     return {"status": "success"}
 
-# STAFF
+# STAFF (Profesores y Administrativos)
 @app.get("/api/profesores", response_model=List[UsuarioResponse])
 def list_profesores(db: Session = Depends(database.get_db)):
     return db.query(models.Usuario).join(models.Perfil).filter(models.Perfil.nombre == "Profesor").all()
@@ -135,7 +145,7 @@ def list_admins(db: Session = Depends(database.get_db)):
 def create_staff(data: dict, db: Session = Depends(database.get_db)):
     perfil = db.query(models.Perfil).filter(models.Perfil.nombre == data['perfil_nombre']).first()
     new_staff = models.Usuario(
-        nombre_completo=data['nombre_completo'], dni=data['dni'],
+        nombre_completo=data['nombre_completo'], dni=data['dni'], email=data.get('email'),
         password_hash=data.get('password', data['dni']), perfil_id=perfil.id,
         especialidad=data.get('especialidad')
     )
@@ -149,6 +159,7 @@ def update_staff(id: int, data: StaffUpdate, db: Session = Depends(database.get_
     perfil = db.query(models.Perfil).filter(models.Perfil.nombre == data.perfil_nombre).first()
     st.nombre_completo = data.nombre_completo
     st.dni = data.dni
+    st.email = data.email
     st.especialidad = data.especialidad
     st.perfil_id = perfil.id
     db.commit()
