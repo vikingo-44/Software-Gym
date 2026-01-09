@@ -1,0 +1,766 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <title>Vikingo Strength Hub - Peak Fit</title>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #000000;
+            background-image: linear-gradient(rgba(0, 0, 0, 0.94), rgba(0, 0, 0, 0.94)), url('https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=2070&auto=format&fit=crop');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            color: #ffffff;
+            overflow: hidden;
+        }
+        
+        .viking-red { color: #FF0000; }
+        .viking-bg-red { background-color: #FF0000; }
+        .glass-sidebar {
+            background: rgba(8, 8, 8, 0.98);
+            backdrop-filter: blur(40px);
+            border-right: 1px solid rgba(255, 0, 0, 0.15);
+            transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            transition: all 0.3s ease;
+        }
+        .glass-card:hover { border-color: rgba(255, 0, 0, 0.3); background: rgba(255, 255, 255, 0.05); }
+
+        .nav-item { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); position: relative; white-space: nowrap; }
+        .nav-item:hover, .nav-item.active { 
+            color: #FF0000; 
+            background: linear-gradient(90deg, rgba(255, 0, 0, 0.1) 0%, transparent 100%);
+        }
+        .nav-item.active::before {
+            content: ''; position: absolute; left: 0; top: 25%; height: 50%; width: 4px;
+            background: #FF0000; box-shadow: 0 0 15px #FF0000;
+        }
+
+        .view-content { display: none; flex-direction: column; height: 100%; }
+        .view-content.active { display: flex; }
+
+        #login-overlay {
+            position: fixed; inset: 0; z-index: 1000;
+            background: black; display: flex; align-items: center; justify-content: center;
+            background-image: linear-gradient(rgba(0,0,0,0.85), rgba(0,0,0,0.85)), url('https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=2070&auto=format&fit=crop');
+            background-size: cover;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #FF0000; border-radius: 10px; }
+
+        .viking-table-row { border-bottom: 1px solid rgba(255, 255, 255, 0.03); transition: background 0.2s; }
+        .viking-table-row:hover { background: rgba(255, 0, 0, 0.02); }
+
+        .calendar-container {
+            display: grid; grid-template-columns: 80px repeat(6, 1fr);
+            background: rgba(255, 255, 255, 0.02); border-radius: 24px; overflow: hidden;
+        }
+        .cal-header { background: rgba(255,0,0,0.05); padding: 15px; text-align: center; font-weight: 900; font-size: 10px; border-right: 1px solid rgba(255,255,255,0.05); }
+        .cal-cell { border-right: 1px solid rgba(255,255,255,0.03); border-bottom: 1px solid rgba(255,255,255,0.03); min-height: 70px; position: relative; }
+
+        .sidebar-collapsed { width: 80px !important; }
+        .sidebar-collapsed .brand-text, 
+        .sidebar-collapsed .user-details, 
+        .sidebar-collapsed .nav-text, 
+        .sidebar-collapsed .nav-section-title,
+        .sidebar-collapsed .chevron-icon { display: none; }
+        .sidebar-collapsed .nav-item { justify-content: center; padding-left: 0; padding-right: 0; }
+        
+        .viking-input {
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 1rem;
+            padding: 0.85rem 1.25rem;
+            width: 100%;
+            outline: none;
+            font-weight: 700;
+            font-size: 0.8rem;
+            color: white;
+            transition: all 0.2s;
+        }
+        .viking-input:focus { border-color: #FF0000; box-shadow: 0 0 10px rgba(255, 0, 0, 0.1); }
+        select.viking-input option { background: #0a0a0a; color: white; }
+
+        .viking-modal {
+            position: fixed; inset: 0; z-index: 1000;
+            background: rgba(0,0,0,0.9); backdrop-filter: blur(15px);
+            display: none; align-items: center; justify-content: center;
+            padding: 20px;
+        }
+
+        .class-badge {
+            background: #FF0000; color: black; font-size: 8px; font-weight: 900;
+            padding: 4px 8px; border-radius: 6px; text-transform: uppercase; font-style: italic;
+            position: absolute; top: 5px; left: 5px; right: 5px;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+    </style>
+</head>
+<body class="flex h-screen w-screen overflow-hidden">
+
+    <!-- OVERLAY DE LOGIN -->
+    <div id="login-overlay">
+        <div class="glass-card p-12 rounded-[3rem] w-full max-w-md border-red-600/20 text-center">
+            <img src="https://cdn-icons-png.flaticon.com/512/2964/2964514.png" alt="Vikingo Logo" class="w-32 mx-auto mb-8">
+            <h1 class="text-4xl font-black italic uppercase mb-2">Vikingo <span class="viking-red">Hub</span></h1>
+            <p class="text-[9px] tracking-[0.5em] text-gray-500 uppercase mb-10">Acceso al Sistema</p>
+            
+            <form onsubmit="handleLogin(event)" class="space-y-4">
+                <input type="text" id="login-dni" placeholder="DNI" required class="viking-input">
+                <input type="password" id="login-pass" placeholder="Contraseña" required class="viking-input">
+                <button type="submit" id="login-button" class="w-full viking-bg-red text-black py-5 rounded-2xl font-black uppercase italic tracking-widest hover:scale-[1.02] active:scale-95 transition-all shadow-[0_0_20px_rgba(255,0,0,0.3)]">Entrar al Valhalla</button>
+            </form>
+            <div id="login-error" class="mt-4 text-[10px] text-red-600 font-bold uppercase hidden">Error en credenciales</div>
+        </div>
+    </div>
+
+    <!-- BARRA LATERAL -->
+    <aside id="sidebar" class="w-72 h-full glass-sidebar flex flex-col hidden z-50">
+        <div class="p-10 flex items-center justify-between">
+            <h1 class="brand-text text-xl font-black italic uppercase leading-none">
+                VIKINGO<br><span class="viking-red text-xs tracking-[0.4em] font-bold">STRENGTH HUB</span>
+            </h1>
+            <button onclick="toggleSidebar()" class="p-2 hover:bg-white/5 rounded-lg transition-colors">
+                <i data-lucide="menu" class="w-5 h-5 viking-red"></i>
+            </button>
+        </div>
+
+        <div class="px-6 mb-8">
+            <div class="glass-card p-4 rounded-3xl flex items-center gap-4">
+                <div class="w-12 h-12 rounded-2xl viking-bg-red flex items-center justify-center font-black text-black text-xl italic shadow-lg shrink-0" id="user-initials">??</div>
+                <div class="user-details text-left overflow-hidden">
+                    <p class="text-[11px] font-black uppercase truncate" id="side-user-name">Usuario Vikingo</p>
+                    <p class="text-[8px] text-red-600 font-bold uppercase tracking-widest" id="side-user-role">Cargando...</p>
+                </div>
+            </div>
+        </div>
+
+        <nav class="flex-1 px-4 space-y-1 overflow-y-auto custom-scrollbar pb-10">
+            <p class="nav-section-title text-[9px] font-black text-gray-600 uppercase tracking-widest px-6 mb-2 mt-4">Administración</p>
+            <button onclick="switchView('dashboard')" id="nav-dashboard" class="nav-btn w-full nav-item active flex items-center gap-5 px-6 py-4 rounded-2xl font-black uppercase text-[10px] italic">
+                <i data-lucide="layout-grid" class="w-4 h-4"></i> <span class="nav-text">Dashboard</span>
+            </button>
+            <button onclick="switchView('perfil')" id="nav-perfil" class="nav-btn w-full nav-item flex items-center gap-5 px-6 py-4 rounded-2xl font-black uppercase text-[10px] italic text-gray-400">
+                <i data-lucide="user-cog" class="w-4 h-4"></i> <span class="nav-text">Mi Perfil</span>
+            </button>
+            <button onclick="switchView('alumnos')" id="nav-alumnos" class="nav-btn w-full nav-item flex items-center gap-5 px-6 py-4 rounded-2xl font-black uppercase text-[10px] italic text-gray-400">
+                <i data-lucide="users" class="w-4 h-4"></i> <span class="nav-text">Alumnos</span>
+            </button>
+
+            <div class="relative">
+                <button onclick="toggleSub('sub-staff')" class="w-full flex items-center justify-between px-6 py-4 text-gray-400 font-black uppercase text-[10px] italic hover:text-red-600 transition-colors">
+                    <span class="flex items-center gap-5"><i data-lucide="shield-check" class="w-4 h-4"></i> <span class="nav-text">Staff</span></span>
+                    <i data-lucide="chevron-down" class="w-3 h-3 chevron-icon"></i>
+                </button>
+                <div id="sub-staff" class="hidden pl-12 space-y-3 pb-4">
+                    <button onclick="switchView('profesores')" id="nav-profesores" class="nav-btn block w-full text-left text-[9px] font-black uppercase text-gray-600 hover:text-red-600 transition-colors">Profesores</button>
+                    <button onclick="switchView('administrativos')" id="nav-administrativos" class="nav-btn block w-full text-left text-[9px] font-black uppercase text-gray-600 hover:text-red-600 transition-colors">Administrativos</button>
+                </div>
+            </div>
+
+            <p class="nav-section-title text-[9px] font-black text-gray-600 uppercase tracking-widest px-6 mb-2 mt-8">Operativa</p>
+            <button onclick="switchView('musculacion')" id="nav-musculacion" class="nav-btn w-full nav-item flex items-center gap-5 px-6 py-4 rounded-2xl font-black uppercase text-[10px] italic text-gray-400">
+                <i data-lucide="dumbbell" class="w-4 h-4"></i> <span class="nav-text">Musculación</span>
+            </button>
+            <div class="relative">
+                <button onclick="toggleSub('sub-fact')" class="w-full flex items-center justify-between px-6 py-4 text-gray-400 font-black uppercase text-[10px] italic hover:text-red-600 transition-colors">
+                    <span class="flex items-center gap-5"><i data-lucide="banknote" class="w-4 h-4"></i> <span class="nav-text">Facturación</span></span>
+                    <i data-lucide="chevron-down" class="w-3 h-3 chevron-icon"></i>
+                </button>
+                <div id="sub-fact" class="hidden pl-12 space-y-3 pb-4">
+                    <button onclick="switchView('caja')" class="nav-btn block w-full text-left text-[9px] font-black uppercase text-gray-600 hover:text-red-600 transition-colors">Caja</button>
+                    <button onclick="switchView('stock')" class="nav-btn block w-full text-left text-[9px] font-black uppercase text-gray-600 hover:text-red-600 transition-colors">Stock</button>
+                </div>
+            </div>
+
+            <p class="nav-section-title text-[9px] font-black text-gray-600 uppercase tracking-widest px-6 mb-2 mt-8">Gestión</p>
+            <button onclick="switchView('planes')" id="nav-planes" class="nav-btn w-full nav-item flex items-center gap-5 px-6 py-4 rounded-2xl font-black uppercase text-[10px] italic text-gray-400">
+                <i data-lucide="clipboard-list" class="w-4 h-4"></i> <span class="nav-text">Planes</span>
+            </button>
+            <button onclick="switchView('clases')" id="nav-clases" class="nav-btn w-full nav-item flex items-center gap-5 px-6 py-4 rounded-2xl font-black uppercase text-[10px] italic text-gray-400">
+                <i data-lucide="presentation" class="w-4 h-4"></i> <span class="nav-text">Clases</span>
+            </button>
+            <button onclick="switchView('calendario')" id="nav-calendario" class="nav-btn w-full nav-item flex items-center gap-5 px-6 py-4 rounded-2xl font-black uppercase text-[10px] italic text-gray-400">
+                <i data-lucide="calendar" class="w-4 h-4"></i> <span class="nav-text">Calendario</span>
+            </button>
+        </nav>
+
+        <div class="p-8">
+            <button onclick="location.reload()" class="w-full flex items-center justify-center gap-3 py-4 border border-white/5 rounded-2xl text-gray-600 hover:text-red-600 transition-all font-black uppercase text-[10px] italic">
+                <i data-lucide="log-out" class="w-4 h-4"></i> <span class="nav-text">Salir</span>
+            </button>
+        </div>
+    </aside>
+
+    <!-- PANEL PRINCIPAL -->
+    <main id="main-content" class="flex-1 h-full overflow-y-auto hidden relative">
+        <header class="h-24 border-b border-white/5 px-12 flex items-center justify-between sticky top-0 bg-black/70 backdrop-blur-2xl z-40">
+            <div>
+                <p id="breadcrumb" class="text-[9px] font-black text-red-600 uppercase tracking-[0.4em] italic">Vikingo Strength Hub</p>
+                <h2 id="view-title" class="text-2xl font-black uppercase italic tracking-tighter">Dashboard</h2>
+            </div>
+            <div class="flex items-center gap-6">
+                <div id="sync-status" class="flex items-center gap-3 bg-red-600/10 px-4 py-2 rounded-xl border border-red-600/20 text-white">
+                    <span class="w-2 h-2 rounded-full bg-red-600 animate-pulse"></span>
+                    <span class="text-[9px] font-black uppercase tracking-widest italic">Hub Sincronizado</span>
+                </div>
+            </div>
+        </header>
+
+        <div id="views-container" class="p-10 text-left">
+            <!-- DASHBOARD -->
+            <div id="view-dashboard" class="view-content active">
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-10">
+                    <div class="glass-card p-8 rounded-[2.5rem]">
+                        <h4 class="text-[10px] font-black uppercase italic text-red-600 mb-6 tracking-widest">Últimos Check-ins</h4>
+                        <div id="dash-checkins" class="space-y-4"></div>
+                    </div>
+                    <div class="glass-card p-8 rounded-[2.5rem]">
+                        <h4 class="text-[10px] font-black uppercase italic text-red-600 mb-6 tracking-widest">Top Clases</h4>
+                        <div id="dash-top-clases" class="space-y-6 pt-2"></div>
+                    </div>
+                    <div class="glass-card p-8 rounded-[2.5rem]">
+                        <h4 class="text-[10px] font-black uppercase italic text-red-600 mb-6 tracking-widest">Frecuencia Horaria</h4>
+                        <div id="dash-stats-bars" class="flex items-end justify-between h-32 px-2">
+                            <div class="w-4 viking-bg-red/20 h-[35%] rounded-t-lg"></div>
+                            <div class="w-4 viking-bg-red/40 h-[65%] rounded-t-lg"></div>
+                            <div class="w-4 viking-bg-red h-[95%] rounded-t-lg"></div>
+                            <div class="w-4 viking-bg-red/60 h-[75%] rounded-t-lg"></div>
+                            <div class="w-4 viking-bg-red/30 h-[45%] rounded-t-lg"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="glass-card p-10 rounded-[3rem]">
+                    <div class="flex justify-between items-center mb-8">
+                        <h3 class="text-sm font-black uppercase italic border-l-4 border-red-600 pl-4 tracking-widest">Vista Rápida Alumnos</h3>
+                        <div class="relative w-72">
+                            <i data-lucide="search" class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-600"></i>
+                            <input type="text" placeholder="Filtrar..." class="w-full bg-black/40 border border-white/10 rounded-2xl pl-12 pr-4 py-3 text-[10px] font-bold outline-none focus:border-red-600 transition-all">
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left">
+                            <thead>
+                                <tr class="text-[9px] font-black uppercase text-gray-500 italic border-b border-white/5">
+                                    <th class="pb-5">Alumno</th>
+                                    <th class="pb-5">Plan</th>
+                                    <th class="pb-5">Vencimiento</th>
+                                    <th class="pb-5 text-right">Acción</th>
+                                </tr>
+                            </thead>
+                            <tbody id="dash-table-alumnos-mini" class="text-[11px] font-black uppercase italic"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- MI PERFIL -->
+            <div id="view-perfil" class="view-content">
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-10">
+                    <div class="glass-card p-10 rounded-[3rem] flex flex-col items-center">
+                        <div class="w-32 h-32 rounded-[2.5rem] viking-bg-red flex items-center justify-center font-black text-black text-4xl italic shadow-2xl mb-6" id="prof-initials-view">??</div>
+                        <h3 class="text-xl font-black uppercase italic" id="prof-name">Cargando...</h3>
+                        <p class="text-red-600 text-xs font-black uppercase tracking-widest mb-8" id="prof-role">Rol</p>
+                    </div>
+                    <div class="lg:col-span-2 glass-card p-10 rounded-[3rem]">
+                        <h3 class="text-sm font-black uppercase italic border-l-4 border-red-600 pl-4 tracking-widest mb-10">Datos de Usuario</h3>
+                        <form class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="space-y-2">
+                                <label class="text-[9px] font-black uppercase text-gray-500 italic">Nombre Completo</label>
+                                <input type="text" id="prof-input-name" class="viking-input">
+                            </div>
+                            <div class="space-y-2">
+                                <label class="text-[9px] font-black uppercase text-gray-500 italic">DNI / ID</label>
+                                <input type="text" id="prof-input-dni" readonly class="viking-input opacity-50">
+                            </div>
+                            <div class="space-y-2">
+                                <label class="text-[9px] font-black uppercase text-gray-500 italic">Correo Electrónico</label>
+                                <input type="email" id="prof-input-email" class="viking-input">
+                            </div>
+                            <div class="space-y-2">
+                                <label class="text-[9px] font-black uppercase text-gray-500 italic">Nueva Contraseña</label>
+                                <input type="password" placeholder="••••••••" class="viking-input">
+                            </div>
+                            <div class="md:col-span-2 pt-6">
+                                <button type="button" class="px-10 py-4 viking-bg-red text-black rounded-2xl font-black uppercase italic tracking-widest hover:scale-105 transition-transform">Guardar Cambios</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ALUMNOS -->
+            <div id="view-alumnos" class="view-content">
+                <div class="flex justify-between items-center mb-8">
+                    <h3 class="text-3xl font-black italic uppercase">Gestión de Alumnos</h3>
+                    <button onclick="openModal('modal-alumno')" class="viking-bg-red text-black px-8 py-4 rounded-2xl font-black uppercase italic text-[11px] shadow-xl flex items-center gap-3 hover:scale-105 transition-all">
+                        <i data-lucide="user-plus" class="w-4 h-4"></i> Nuevo Alumno
+                    </button>
+                </div>
+                <div class="glass-card p-10 rounded-[3rem]">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left">
+                            <thead>
+                                <tr class="text-[9px] font-black uppercase text-gray-500 italic border-b border-white/5">
+                                    <th class="pb-5">Nombre Completo</th>
+                                    <th class="pb-5">DNI</th>
+                                    <th class="pb-5">Email</th>
+                                    <th class="pb-5">Plan</th>
+                                    <th class="pb-5">Status</th>
+                                    <th class="pb-5">Vencimiento</th>
+                                    <th class="pb-5 text-right">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="table-alumnos-full" class="text-[10px] font-black uppercase italic"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PROFESORES -->
+            <div id="view-profesores" class="view-content">
+                <div class="flex justify-between items-center mb-8">
+                    <h3 class="text-3xl font-black italic uppercase">Personal de Profesores</h3>
+                    <button onclick="openModal('modal-profesor')" class="viking-bg-red text-black px-8 py-4 rounded-2xl font-black uppercase italic text-[11px] shadow-xl flex items-center gap-3">
+                        <i data-lucide="user-plus" class="w-4 h-4"></i> Alta Profesor
+                    </button>
+                </div>
+                <div class="glass-card p-10 rounded-[3rem]">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left">
+                            <thead>
+                                <tr class="text-[9px] font-black uppercase text-gray-500 italic border-b border-white/5">
+                                    <th class="pb-5">Nombre</th>
+                                    <th class="pb-5">DNI</th>
+                                    <th class="pb-5">Especialidad</th>
+                                    <th class="pb-5">Estado</th>
+                                    <th class="pb-5 text-right">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="table-profesores" class="text-[10px] font-black uppercase italic"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ADMINISTRATIVOS -->
+            <div id="view-administrativos" class="view-content">
+                <div class="flex justify-between items-center mb-8">
+                    <h3 class="text-3xl font-black italic uppercase">Personal Administrativo</h3>
+                    <button onclick="openModal('modal-administrativo')" class="viking-bg-red text-black px-8 py-4 rounded-2xl font-black uppercase italic text-[11px] shadow-xl flex items-center gap-3">
+                        <i data-lucide="shield-plus" class="w-4 h-4"></i> Alta Administrativo
+                    </button>
+                </div>
+                <div class="glass-card p-10 rounded-[3rem]">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left">
+                            <thead>
+                                <tr class="text-[9px] font-black uppercase text-gray-500 italic border-b border-white/5">
+                                    <th class="pb-5">Nombre</th>
+                                    <th class="pb-5">DNI</th>
+                                    <th class="pb-5">Email</th>
+                                    <th class="pb-5 text-right">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="table-administrativos" class="text-[10px] font-black uppercase italic"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CAJA -->
+            <div id="view-caja" class="view-content">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-10">
+                    <div class="glass-card p-8 rounded-[2.5rem] border-green-500/20">
+                        <p class="text-[10px] font-black text-gray-500 uppercase italic mb-2">Total Ingresos</p>
+                        <h4 class="text-3xl font-black italic text-green-500" id="caja-ingresos">$ 0,00</h4>
+                    </div>
+                    <div class="glass-card p-8 rounded-[2.5rem] border-red-500/20">
+                        <p class="text-[10px] font-black text-gray-500 uppercase italic mb-2">Total Gastos</p>
+                        <h4 class="text-3xl font-black italic text-red-500" id="caja-gastos">$ 0,00</h4>
+                    </div>
+                    <div class="glass-card p-8 rounded-[2.5rem] border-viking-red/20">
+                        <p class="text-[10px] font-black text-red-600 uppercase italic mb-2">Balance Neto</p>
+                        <h4 class="text-3xl font-black italic" id="caja-balance">$ 0,00</h4>
+                    </div>
+                </div>
+                <div class="glass-card p-10 rounded-[3rem]">
+                    <div class="flex justify-between items-center mb-8">
+                        <h3 class="text-sm font-black uppercase italic border-l-4 border-red-600 pl-4 tracking-widest">Flujo Diario de Caja</h3>
+                        <button onclick="openModal('modal-movimiento')" class="viking-bg-red text-black px-6 py-3 rounded-xl font-black uppercase italic text-[10px]">Cargar Movimiento</button>
+                    </div>
+                    <table class="w-full text-left">
+                        <thead>
+                            <tr class="text-[9px] font-black uppercase text-gray-500 italic border-b border-white/5">
+                                <th class="pb-5">Tipo</th>
+                                <th class="pb-5">Descripción</th>
+                                <th class="pb-5 text-right">Monto</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-caja" class="text-[11px] font-black italic uppercase"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- STOCK -->
+            <div id="view-stock" class="view-content">
+                <div class="flex justify-between items-center mb-8">
+                    <h3 class="text-3xl font-black italic uppercase">Control de Stock</h3>
+                    <button onclick="openModal('modal-producto')" class="viking-bg-red text-black px-8 py-4 rounded-2xl font-black uppercase italic text-[11px] shadow-xl flex items-center gap-3">
+                        <i data-lucide="package-plus" class="w-4 h-4"></i> Crear Mercadería
+                    </button>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-8" id="stock-container"></div>
+            </div>
+
+            <!-- PLANES -->
+            <div id="view-planes" class="view-content">
+                <div class="flex justify-between items-center mb-8">
+                    <h3 class="text-3xl font-black italic uppercase">Planes de Entrenamiento</h3>
+                    <button onclick="openModal('modal-plan')" class="viking-bg-red text-black px-8 py-4 rounded-2xl font-black uppercase italic text-[11px] shadow-xl flex items-center gap-3">
+                        <i data-lucide="plus" class="w-4 h-4"></i> Alta de Plan
+                    </button>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-8" id="planes-container"></div>
+            </div>
+
+            <!-- CLASES -->
+            <div id="view-clases" class="view-content">
+                <div class="flex justify-between items-center mb-8">
+                    <h3 class="text-3xl font-black italic uppercase">Gestión de Clases</h3>
+                    <button onclick="openModal('modal-clase')" class="viking-bg-red text-black px-8 py-4 rounded-2xl font-black uppercase italic text-[11px] shadow-xl flex items-center gap-3">
+                        <i data-lucide="presentation" class="w-4 h-4"></i> Alta de Clase
+                    </button>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-8" id="clases-container"></div>
+            </div>
+
+            <!-- CALENDARIO -->
+            <div id="view-calendario" class="view-content">
+                <div class="flex justify-between items-center mb-10">
+                    <h3 class="text-3xl font-black italic uppercase text-left">Agenda Vikinga</h3>
+                    <div class="flex gap-4">
+                        <div class="flex bg-white/5 p-1 rounded-2xl border border-white/5">
+                            <button class="px-6 py-2 bg-red-600 text-black rounded-xl text-[10px] font-black uppercase italic">Semana</button>
+                            <button class="px-6 py-2 text-gray-500 rounded-xl text-[10px] font-black uppercase italic hover:text-white transition-colors">Mes</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="calendar-container h-[700px] overflow-y-auto custom-scrollbar" id="calendar-grid"></div>
+            </div>
+        </div>
+    </main>
+
+    <!-- MODALES -->
+    <div id="modal-alumno" class="viking-modal">
+        <div class="glass-card p-10 rounded-[3rem] w-full max-w-lg text-left">
+            <h3 class="text-2xl font-black uppercase italic mb-8">Registrar Alumno</h3>
+            <form id="form-alumno" class="space-y-4">
+                <input type="text" id="al-nombre" placeholder="Nombre Completo" required class="viking-input">
+                <div class="grid grid-cols-2 gap-4">
+                    <input type="text" id="al-dni" placeholder="DNI" required class="viking-input">
+                    <input type="email" id="al-email" placeholder="Email" required class="viking-input">
+                </div>
+                <select id="al-plan" class="viking-input" required></select>
+                <div class="flex gap-4 pt-4">
+                    <button type="button" onclick="closeModal('modal-alumno')" class="flex-1 py-4 bg-white/5 rounded-2xl font-black uppercase italic text-[10px]">Cancelar</button>
+                    <button type="submit" class="flex-1 py-4 viking-bg-red text-black rounded-2xl font-black uppercase italic text-[10px]">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="modal-profesor" class="viking-modal">
+        <div class="glass-card p-10 rounded-[3rem] w-full max-w-lg text-left">
+            <h3 class="text-2xl font-black uppercase italic mb-4">Alta de Profesor</h3>
+            <form id="form-profesor" class="space-y-4">
+                <input type="text" id="pr-nombre" placeholder="Nombre Completo" required class="viking-input">
+                <div class="grid grid-cols-2 gap-4">
+                    <input type="text" id="pr-dni" placeholder="DNI" required class="viking-input">
+                    <input type="text" id="pr-esp" placeholder="Especialidad" required class="viking-input">
+                </div>
+                <div class="border-t border-white/10 pt-6 mt-2 space-y-4">
+                    <p class="text-[9px] font-black text-red-600 uppercase italic">Accesos al Hub</p>
+                    <input type="password" id="pr-pass" placeholder="Contraseña Inicial" required class="viking-input">
+                </div>
+                <div class="flex gap-4 pt-6">
+                    <button type="button" onclick="closeModal('modal-profesor')" class="flex-1 py-4 bg-white/5 rounded-2xl font-black uppercase italic text-[10px]">Cancelar</button>
+                    <button type="submit" class="flex-1 py-4 viking-bg-red text-black rounded-2xl font-black uppercase italic text-[10px]">Vincular Staff</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- SCRIPTS DE INTEGRACIÓN -->
+    <script>
+        // --- CONFIGURACIÓN API ---
+        const API_BASE = window.location.hostname === 'localhost' ? "http://localhost:8000/api" : "/api";
+
+        let state = {
+            alumnos: [], 
+            planes: [],
+            usuarioLogueado: null
+        };
+
+        // --- UTILIDADES ---
+        async function apiFetch(endpoint, method = 'GET', body = null) {
+            const options = { method, headers: { 'Content-Type': 'application/json' } };
+            if (body) options.body = JSON.stringify(body);
+            try {
+                const res = await fetch(`${API_BASE}${endpoint}`, options);
+                if (!res.ok) return { error: "Error en la petición" };
+                return await res.json();
+            } catch (e) { return { error: "Servidor fuera de línea" }; }
+        }
+
+        // --- UI LOGIC ---
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('sidebar-collapsed');
+            lucide.createIcons();
+        }
+
+        function toggleSub(id) { document.getElementById(id).classList.toggle('hidden'); }
+        function openModal(id) { document.getElementById(id).style.display = 'flex'; }
+        function closeModal(id) { 
+            document.getElementById(id).style.display = 'none'; 
+            const form = document.querySelector(`#${id} form`);
+            if (form) form.reset();
+        }
+
+        function switchView(view) {
+            document.querySelectorAll('.view-content').forEach(v => v.classList.remove('active'));
+            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById('view-' + view).classList.add('active');
+            document.getElementById('nav-' + view)?.classList.add('active');
+            document.getElementById('view-title').innerText = view.replace('-', ' ').toUpperCase();
+            if(view === 'calendario') renderCalendar();
+            lucide.createIcons();
+        }
+
+        // --- AUTHENTICATION ---
+        async function handleLogin(e) {
+            e.preventDefault();
+            const dni = document.getElementById('login-dni').value;
+            const password = document.getElementById('login-pass').value;
+            const errorLabel = document.getElementById('login-error');
+            const btn = document.getElementById('login-button');
+
+            btn.innerText = "ENTRANDO AL VALHALLA...";
+            const user = await apiFetch('/login', 'POST', { dni, password });
+
+            if (user && !user.error) {
+                state.usuarioLogueado = user;
+                document.getElementById('login-overlay').style.display = 'none';
+                document.getElementById('sidebar').classList.remove('hidden');
+                document.getElementById('main-content').classList.remove('hidden');
+
+                document.getElementById('side-user-name').innerText = user.nombre_completo;
+                document.getElementById('side-user-role').innerText = user.rol_nombre || 'Staff';
+                document.getElementById('user-initials').innerText = user.nombre_completo.split(' ').map(n => n[0]).join('').toUpperCase();
+                
+                // Perfil
+                document.getElementById('prof-name').innerText = user.nombre_completo;
+                document.getElementById('prof-role').innerText = user.rol_nombre || 'Staff';
+                document.getElementById('prof-input-name').value = user.nombre_completo;
+                document.getElementById('prof-input-dni').value = user.dni;
+                document.getElementById('prof-initials-view').innerText = document.getElementById('user-initials').innerText;
+
+                initApp();
+            } else {
+                errorLabel.innerText = "ACCESO DENEGADO";
+                errorLabel.classList.remove('hidden');
+                btn.innerText = "Entrar al Valhalla";
+            }
+        }
+
+        // --- APP INITIALIZATION ---
+        async function initApp() {
+            await Promise.all([
+                loadDashboard(), fetchAlumnos(), loadStaff(), 
+                loadPlanes(), loadStock(), loadClases(), loadCaja()
+            ]);
+            lucide.createIcons();
+        }
+
+        async function fetchAlumnos() {
+            const data = await apiFetch('/alumnos');
+            if (data.error) return;
+            state.alumnos = data;
+            
+            // Mini tabla dashboard
+            const mini = document.getElementById('dash-table-alumnos-mini');
+            mini.innerHTML = data.slice(0,5).map(al => `
+                <tr class="viking-table-row">
+                    <td class="py-4">${al.nombre_completo}</td>
+                    <td class="py-4 text-red-600">${al.plan?.nombre || 'S/P'}</td>
+                    <td class="py-4 text-gray-500">${al.fecha_vencimiento || '-'}</td>
+                    <td class="py-4 text-right"><i data-lucide="eye" class="w-3 h-3"></i></td>
+                </tr>
+            `).join('');
+
+            // Tabla full
+            const full = document.getElementById('table-alumnos-full');
+            full.innerHTML = data.map(al => `
+                <tr class="viking-table-row">
+                    <td class="py-6">${al.nombre_completo}</td>
+                    <td class="py-6 text-gray-500">${al.dni}</td>
+                    <td class="py-6 text-gray-500 lowercase">${al.email || '-'}</td>
+                    <td class="py-6 text-red-600">${al.plan?.nombre || 'S/P'}</td>
+                    <td class="py-6"><span class="text-green-500">${al.estado_cuenta}</span></td>
+                    <td class="py-6 text-gray-400 font-black">${al.fecha_vencimiento || '-'}</td>
+                    <td class="py-6 text-right"><i data-lucide="settings" class="w-4 h-4"></i></td>
+                </tr>
+            `).join('');
+            lucide.createIcons();
+        }
+
+        async function loadStaff() {
+            const profs = await apiFetch('/profesores');
+            const admins = await apiFetch('/administrativos');
+
+            document.getElementById('table-profesores').innerHTML = (profs || []).map(p => `
+                <tr class="viking-table-row">
+                    <td class="py-6">${p.nombre_completo}</td>
+                    <td class="py-6 text-gray-500">${p.dni}</td>
+                    <td class="py-6 text-red-600">${p.especialidad || 'Gral.'}</td>
+                    <td class="py-6"><span class="bg-green-500/10 text-green-500 px-3 py-1 rounded-lg">Activo</span></td>
+                    <td class="py-6 text-right"><i data-lucide="edit-3" class="w-4 h-4"></i></td>
+                </tr>
+            `).join('');
+
+            document.getElementById('table-administrativos').innerHTML = (admins || []).map(a => `
+                <tr class="viking-table-row">
+                    <td class="py-6">${a.nombre_completo}</td>
+                    <td class="py-6 text-gray-500">${a.dni}</td>
+                    <td class="py-6 text-gray-500 lowercase">${a.email || '-'}</td>
+                    <td class="py-6 text-right"><i data-lucide="user-cog" class="w-4 h-4"></i></td>
+                </tr>
+            `).join('');
+            lucide.createIcons();
+        }
+
+        async function loadDashboard() {
+            const res = await apiFetch('/caja/resumen');
+            if(!res.error) {
+                document.getElementById('caja-ingresos').innerText = `$ ${res.ingresos.toLocaleString()}`;
+                document.getElementById('caja-gastos').innerText = `$ ${res.gastos.toLocaleString()}`;
+                document.getElementById('caja-balance').innerText = `$ ${res.balance.toLocaleString()}`;
+            }
+
+            const check = document.getElementById('dash-checkins');
+            check.innerHTML = [
+                {n: "GONZALO L.", t: "14:22"}, {n: "LAGERTHA S.", t: "14:05"}, {n: "RAGNAR L.", t: "13:55"}
+            ].map(c => `
+                <div class="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5">
+                    <span class="text-[10px] font-black italic">${c.n}</span>
+                    <span class="text-[9px] text-red-600 font-bold italic">${c.t} HS</span>
+                </div>
+            `).join('');
+        }
+
+        async function loadPlanes() {
+            const data = await apiFetch('/planes');
+            if(data.error) return;
+            state.planes = data;
+            document.getElementById('planes-container').innerHTML = data.map(p => `
+                <div class="glass-card p-8 rounded-[2.5rem] flex flex-col border-red-600/10">
+                    <span class="text-[8px] font-black viking-red uppercase italic tracking-widest mb-2">${p.tipo?.nombre || 'PLAN'}</span>
+                    <h4 class="text-lg font-black uppercase italic mb-6 leading-tight">${p.nombre}</h4>
+                    <p class="text-3xl font-black italic mb-8">$ ${p.precio.toLocaleString()}</p>
+                    <button class="w-full py-4 border border-white/10 rounded-2xl text-[9px] font-black uppercase italic hover:border-red-600 transition-all">Editar Plan</button>
+                </div>
+            `).join('');
+
+            const select = document.getElementById('al-plan');
+            select.innerHTML = '<option value="">Seleccionar Plan</option>' + data.map(p => `<option value="${p.id}">${p.nombre}</option>`).join('');
+        }
+
+        async function loadStock() {
+            const data = await apiFetch('/stock');
+            if(!data || data.error) return;
+            document.getElementById('stock-container').innerHTML = data.map(s => `
+                <div class="glass-card p-6 rounded-[2rem] relative group text-left">
+                    <h4 class="text-sm font-black uppercase italic mb-4">${s.nombre_producto}</h4>
+                    <p class="text-2xl font-black italic">$ ${s.precio_venta.toLocaleString()}</p>
+                    <div class="mt-4 border-t border-white/5 pt-4">
+                        <span class="text-[9px] font-black text-gray-600 uppercase">Stock: ${s.stock_actual}</span>
+                    </div>
+                </div>
+            `).join('');
+            lucide.createIcons();
+        }
+
+        async function loadClases() {
+            const data = await apiFetch('/clases');
+            if(!data || data.error) return;
+            document.getElementById('clases-container').innerHTML = data.map(c => `
+                <div class="glass-card p-8 rounded-[2.5rem] relative text-left">
+                    <h4 class="text-lg font-black uppercase italic mb-2">${c.nombre}</h4>
+                    <p class="text-[10px] font-black text-red-600 uppercase italic">Coach: ${c.coach || 'Vikingo'}</p>
+                </div>
+            `).join('');
+        }
+
+        async function loadCaja() {
+            const data = await apiFetch('/caja/movimientos');
+            if(!data || data.error) return;
+            document.getElementById('table-caja').innerHTML = data.map(m => `
+                <tr class="viking-table-row">
+                    <td class="py-5"><span class="${m.tipo === 'Ingreso' ? 'text-green-500' : 'text-red-500'} font-black uppercase">${m.tipo}</span></td>
+                    <td class="py-5 text-gray-400">${m.descripcion}</td>
+                    <td class="py-5 text-right font-black">$ ${m.monto.toLocaleString()}</td>
+                </tr>
+            `).join('');
+        }
+
+        function renderCalendar() {
+            const cal = document.getElementById('calendar-grid');
+            cal.innerHTML = `<div class="cal-header">HORA</div><div class="cal-header">LUNES</div><div class="cal-header">MARTES</div><div class="cal-header">MIÉRCOLES</div><div class="cal-header">JUEVES</div><div class="cal-header">VIERNES</div><div class="cal-header">SÁBADO</div>`;
+            for(let h=7; h<=21; h++) {
+                cal.innerHTML += `<div class="cal-cell flex items-center justify-center font-black text-xs text-gray-600 bg-black/20">${h}:00</div>`;
+                for(let d=1; d<=6; d++) cal.innerHTML += `<div class="cal-cell"></div>`;
+            }
+        }
+
+        // --- FORMS LOGIC ---
+        document.getElementById('form-alumno').onsubmit = async (e) => {
+            e.preventDefault();
+            const data = {
+                nombre_completo: document.getElementById('al-nombre').value,
+                dni: document.getElementById('al-dni').value,
+                email: document.getElementById('al-email').value,
+                plan_id: parseInt(document.getElementById('al-plan').value)
+            };
+            const res = await apiFetch('/alumnos', 'POST', data);
+            if(!res.error) { closeModal('modal-alumno'); fetchAlumnos(); }
+        };
+
+        document.getElementById('form-profesor').onsubmit = async (e) => {
+            e.preventDefault();
+            const data = {
+                nombre_completo: document.getElementById('pr-nombre').value,
+                dni: document.getElementById('pr-dni').value,
+                email: document.getElementById('pr-dni').value + "@vikingo.com",
+                password: document.getElementById('pr-pass').value,
+                especialidad: document.getElementById('pr-esp').value,
+                perfil_nombre: 'Profesor'
+            };
+            const res = await apiFetch('/staff', 'POST', data);
+            if(!res.error) { closeModal('modal-profesor'); loadStaff(); }
+        };
+
+        window.onload = () => { lucide.createIcons(); };
+    </script>
+</body>
+</html>
