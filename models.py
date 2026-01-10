@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, Date, DateTime, ForeignKey, Text
+from sqlalchemy import Column, Integer, String, Float, Date, DateTime, ForeignKey, Text, Boolean
 from sqlalchemy.orm import relationship
 from database import Base
 import datetime
@@ -39,14 +39,14 @@ class Usuario(Base):
     fecha_vencimiento = Column(Date)
     especialidad = Column(String)
     
-    # Nuevos campos físicos y médicos solicitados
+    # Columnas sincronizadas con tu ALTER TABLE real
     fecha_nacimiento = Column(Date, nullable=True)
-    edad = Column(Integer, nullable=True)
     peso = Column(Float, nullable=True)
     altura = Column(Float, nullable=True)
-    imc = Column(Float, nullable=True)
-    certificado_medico = Column(String, default="Pendiente")
-    fecha_entrega_certificado = Column(Date, nullable=True)
+    imc = Column(Float, nullable=True) # Agregado para consistencia con main.py
+    edad = Column(Integer, nullable=True) # Agregado para consistencia con main.py
+    certificado_entregado = Column(Boolean, default=False)
+    fecha_certificado = Column(Date, nullable=True)
     
     fecha_creacion = Column(DateTime, default=datetime.datetime.utcnow)
     perfil = relationship("Perfil", back_populates="usuarios")

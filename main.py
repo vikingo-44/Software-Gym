@@ -1,7 +1,7 @@
 import os
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func
 from typing import List, Optional
@@ -57,14 +57,14 @@ class UsuarioResponse(BaseModel):
     fecha_vencimiento: Optional[date] = None
     fecha_ultima_renovacion: Optional[date] = None
     especialidad: Optional[str] = None
-    # Campos físicos y médicos
+    # Campos físicos y médicos sincronizados con SQL
     fecha_nacimiento: Optional[date] = None
     edad: Optional[int] = None
     peso: Optional[float] = None
     altura: Optional[float] = None
     imc: Optional[float] = None
-    certificado_medico: Optional[str] = "Pendiente"
-    fecha_entrega_certificado: Optional[date] = None
+    certificado_entregado: bool = False
+    fecha_certificado: Optional[date] = None
     
     class Config:
         from_attributes = True
@@ -72,17 +72,16 @@ class UsuarioResponse(BaseModel):
 class AlumnoUpdate(BaseModel):
     nombre_completo: str
     dni: str
-    email: str
+    email: Optional[str] = None
     plan_id: int
     password: Optional[str] = None
-    # Campos adicionales para Alumnos
     fecha_nacimiento: Optional[date] = None
     edad: Optional[int] = None
     peso: Optional[float] = None
     altura: Optional[float] = None
     imc: Optional[float] = None
-    certificado_medico: Optional[str] = "Pendiente"
-    fecha_entrega_certificado: Optional[date] = None
+    certificado_entregado: bool = False
+    fecha_certificado: Optional[date] = None
 
 class StaffUpdate(BaseModel):
     nombre_completo: str
@@ -113,6 +112,11 @@ class ClaseMove(BaseModel):
     dia: int
     horario: int
 
+class MovimientoCajaCreate(BaseModel):
+    tipo: str
+    monto: float
+    descripcion: str
+
 # --- RUTAS DE ACCESO ---
 
 @app.get("/")
@@ -127,7 +131,7 @@ def api_root():
 async def serve_app():
     return FileResponse("index.html")
 
-# --- ENDPOINTS DE API ---
+# --- ENDPOINTS DE LOGIN ---
 
 @app.post("/api/login")
 def login(data: UsuarioLogin, db: Session = Depends(database.get_db)):
@@ -179,8 +183,8 @@ def create_alumno(alumno: AlumnoUpdate, db: Session = Depends(database.get_db)):
         peso=alumno.peso,
         altura=alumno.altura,
         imc=alumno.imc,
-        certificado_medico=alumno.certificado_medico,
-        fecha_entrega_certificado=alumno.fecha_entrega_certificado
+        certificado_entregado=alumno.certificado_entregado,
+        fecha_certificado=alumno.fecha_certificado
     )
     db.add(new_al)
     db.commit()
@@ -203,8 +207,8 @@ def update_alumno(id: int, data: AlumnoUpdate, db: Session = Depends(database.ge
     al.peso = data.peso
     al.altura = data.altura
     al.imc = data.imc
-    al.certificado_medico = data.certificado_medico
-    al.fecha_entrega_certificado = data.fecha_entrega_certificado
+    al.certificado_entregado = data.certificado_entregado
+    al.fecha_certificado = data.fecha_certificado
 
     if data.password:
         al.password_hash = data.password
@@ -275,7 +279,7 @@ def delete_staff(id: int, db: Session = Depends(database.get_db)):
     db.commit()
     return {"status": "success"}
 
-# --- STOCK, PLANES, CLASES Y CAJA ---
+# --- GESTIÓN DE STOCK ---
 
 @app.get("/api/stock")
 def get_stock(db: Session = Depends(database.get_db)):
@@ -309,13 +313,19 @@ def delete_stock(id: int, db: Session = Depends(database.get_db)):
     db.commit()
     return {"status": "success"}
 
+# --- GESTIÓN DE PLANES ---
+
 @app.get("/api/planes")
 def get_planes(db: Session = Depends(database.get_db)):
     return db.query(models.Plan).options(joinedload(models.Plan.tipo)).all()
 
 @app.post("/api/planes")
 def create_plan(data: PlanUpdate, db: Session = Depends(database.get_db)):
-    new_p = models.Plan(**data.dict())
+    new_p = models.Plan(
+        nombre=data.nombre,
+        precio=data.precio,
+        tipo_plan_id=data.tipo_plan_id
+    )
     db.add(new_p)
     db.commit()
     return {"status": "success"}
@@ -336,13 +346,25 @@ def delete_plan(id: int, db: Session = Depends(database.get_db)):
     db.commit()
     return {"status": "success"}
 
+@app.get("/api/tipos-planes")
+def get_tipos(db: Session = Depends(database.get_db)):
+    return db.query(models.TipoPlan).all()
+
+# --- GESTIÓN DE CLASES ---
+
 @app.get("/api/clases")
 def get_clases(db: Session = Depends(database.get_db)):
     return db.query(models.Clase).all()
 
 @app.post("/api/clases")
 def create_clase(data: ClaseUpdate, db: Session = Depends(database.get_db)):
-    new_c = models.Clase(**data.dict())
+    new_c = models.Clase(
+        nombre=data.nombre,
+        coach=data.coach,
+        dia=data.dia,
+        horario=data.horario,
+        color=data.color
+    )
     db.add(new_c)
     db.commit()
     return {"status": "success"}
@@ -351,7 +373,11 @@ def create_clase(data: ClaseUpdate, db: Session = Depends(database.get_db)):
 def update_clase(id: int, data: ClaseUpdate, db: Session = Depends(database.get_db)):
     c = db.query(models.Clase).filter(models.Clase.id == id).first()
     if c:
-        for k, v in data.dict().items(): setattr(c, k, v)
+        c.nombre = data.nombre
+        c.coach = data.coach
+        c.dia = data.dia
+        c.horario = data.horario
+        c.color = data.color
         db.commit()
         return {"status": "success"}
     return {"status": "error", "message": "Clase no encontrada"}
@@ -372,9 +398,7 @@ def delete_clase(id: int, db: Session = Depends(database.get_db)):
     db.commit()
     return {"status": "success"}
 
-@app.get("/api/tipos-planes")
-def get_tipos(db: Session = Depends(database.get_db)):
-    return db.query(models.TipoPlan).all()
+# --- GESTIÓN DE CAJA ---
 
 @app.get("/api/caja/resumen")
 def get_caja_resumen(db: Session = Depends(database.get_db)):
@@ -384,7 +408,18 @@ def get_caja_resumen(db: Session = Depends(database.get_db)):
 
 @app.get("/api/caja/movimientos")
 def get_movimientos(db: Session = Depends(database.get_db)):
-    return db.query(models.MovimientoCaja).order_by(models.MovimientoCaja.fecha.desc()).limit(10).all()
+    return db.query(models.MovimientoCaja).order_by(models.MovimientoCaja.fecha.desc()).limit(15).all()
+
+@app.post("/api/caja/movimiento")
+def create_movimiento(data: MovimientoCajaCreate, db: Session = Depends(database.get_db)):
+    new_mov = models.MovimientoCaja(
+        tipo=data.tipo,
+        monto=data.monto,
+        descripcion=data.descripcion
+    )
+    db.add(new_mov)
+    db.commit()
+    return {"status": "success"}
 
 if __name__ == "__main__":
     import uvicorn
