@@ -35,6 +35,16 @@
         }
         .glass-card:hover { border-color: rgba(255, 0, 0, 0.3); background: rgba(255, 255, 255, 0.05); }
 
+        /* Efecto Logo Login */
+        .logo-viking-glow {
+            filter: drop-shadow(0 0 15px rgba(255, 0, 0, 0.6));
+            animation: pulse-glow 3s infinite alternate;
+        }
+        @keyframes pulse-glow {
+            from { filter: drop-shadow(0 0 5px rgba(255, 0, 0, 0.4)); transform: scale(1); }
+            to { filter: drop-shadow(0 0 25px rgba(255, 0, 0, 0.8)); transform: scale(1.05); }
+        }
+
         .nav-item { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); position: relative; white-space: nowrap; }
         .nav-item:hover, .nav-item.active { 
             color: #FF0000; 
@@ -140,7 +150,6 @@
             border-color: #FF0000;
         }
 
-        /* Botones de Pago */
         .payment-method-btn {
             border: 1px solid rgba(255, 255, 255, 0.05);
             background: rgba(255, 255, 255, 0.02);
@@ -158,7 +167,7 @@
     <!-- OVERLAY DE LOGIN -->
     <div id="login-overlay">
         <div class="glass-card p-12 rounded-[3rem] w-full max-w-md border-red-600/20 text-center">
-            <img src="logo.png" alt="Vikingo Logo" class="w-32 mx-auto mb-8" onerror="this.src='https://cdn-icons-png.flaticon.com/512/2964/2964514.png'">
+            <img src="logo.png" alt="Vikingo Logo" class="w-32 mx-auto mb-8 logo-viking-glow" onerror="this.src='https://cdn-icons-png.flaticon.com/512/2964/2964514.png'">
             <h1 class="text-4xl font-black italic uppercase mb-2">Vikingo <span class="viking-red">Hub</span></h1>
             <p class="text-[9px] tracking-[0.5em] text-gray-500 uppercase mb-10">Acceso al Sistema</p>
             
@@ -265,7 +274,7 @@
         <div id="views-container" class="p-10 text-left">
             <!-- DASHBOARD -->
             <div id="view-dashboard" class="view-content active">
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-10">
+                <div class="grid grid-cols-1 lg:grid-cols-4 gap-8 mb-10">
                     <div class="glass-card p-8 rounded-[2.5rem]">
                         <h4 class="text-[10px] font-black uppercase italic text-red-600 mb-6 tracking-widest">Últimos Check-ins</h4>
                         <div id="dash-checkins" class="space-y-4"></div>
@@ -288,6 +297,11 @@
                             <div class="w-4 viking-bg-red/60 h-[75%] rounded-t-lg"></div>
                             <div class="w-4 viking-bg-red/30 h-[45%] rounded-t-lg"></div>
                         </div>
+                    </div>
+                    <!-- TOP 5 CLASES -->
+                    <div class="glass-card p-8 rounded-[2.5rem]">
+                        <h4 class="text-[10px] font-black uppercase italic text-red-600 mb-6 tracking-widest">Top 5 Clases</h4>
+                        <div id="dash-top-clases" class="space-y-3"></div>
                     </div>
                 </div>
 
@@ -314,10 +328,9 @@
                 </div>
             </div>
 
-            <!-- NUEVA VISTA COBRAR -->
+            <!-- VISTA COBRAR -->
             <div id="view-cobrar" class="view-content">
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-10 h-full">
-                    <!-- Catálogo de Productos -->
                     <div class="lg:col-span-2 space-y-6">
                         <div class="flex justify-between items-center mb-4">
                             <h3 class="text-2xl font-black italic uppercase">Punto de Venta</h3>
@@ -326,19 +339,14 @@
                                 <input type="text" placeholder="Buscar producto..." class="viking-input pl-12 py-3" id="cobrar-search">
                             </div>
                         </div>
-                        <div class="grid grid-cols-2 md:grid-cols-3 gap-6 overflow-y-auto max-h-[600px] pr-2 custom-scrollbar" id="cobrar-catalogo">
-                            <!-- Productos se cargan aquí -->
-                        </div>
+                        <div class="grid grid-cols-2 md:grid-cols-3 gap-6 overflow-y-auto max-h-[600px] pr-2 custom-scrollbar" id="cobrar-catalogo"></div>
                     </div>
 
-                    <!-- Panel de Cobro -->
                     <div class="glass-card p-10 rounded-[3rem] border-red-600/10 flex flex-col h-fit">
                         <h4 class="text-xs font-black uppercase italic text-red-600 mb-6 tracking-widest border-b border-white/5 pb-4">Resumen de Venta</h4>
-                        
                         <div class="flex-1 space-y-4 mb-8 overflow-y-auto max-h-64 custom-scrollbar" id="cobrar-lista-carrito">
                             <p class="text-center text-gray-500 text-[10px] italic py-10">Sin productos seleccionados</p>
                         </div>
-
                         <div class="space-y-4 border-t border-white/5 pt-6 mb-8">
                             <div class="flex justify-between text-[10px] font-black italic">
                                 <span class="text-gray-500">SUBTOTAL</span>
@@ -349,7 +357,6 @@
                                 <span class="viking-red" id="cobrar-total">$ 0</span>
                             </div>
                         </div>
-
                         <div class="space-y-4">
                             <p class="text-[9px] font-black uppercase text-gray-500 italic mb-2 tracking-widest">Método de Pago</p>
                             <div class="grid grid-cols-2 gap-3">
@@ -359,7 +366,6 @@
                                 <button onclick="setPaymentMethod('QR')" class="payment-method-btn py-3 rounded-xl text-[9px] font-black uppercase italic">QR / Transfer</button>
                             </div>
                         </div>
-
                         <button onclick="finalizarVenta()" class="w-full mt-8 viking-bg-red text-black py-5 rounded-2xl font-black uppercase italic tracking-widest hover:scale-[1.02] active:scale-95 transition-all shadow-xl">Procesar Pago</button>
                     </div>
                 </div>
@@ -573,23 +579,36 @@
                     <input type="text" id="al-dni" placeholder="DNI / Usuario" required class="viking-input">
                     <input type="email" id="al-email" placeholder="Email" required class="viking-input">
                 </div>
-                <!-- PESO, ALTURA e IMC (Calculado) -->
+                <!-- PESO, ALTURA e IMC (Calculado automáticamente) -->
                 <div class="grid grid-cols-3 gap-4">
                     <div class="space-y-1">
                         <label class="text-[8px] font-black text-gray-500 uppercase italic">Peso (kg)</label>
-                        <input type="number" step="0.1" id="al-peso" placeholder="0.0" class="viking-input" oninput="calculateIMC()">
+                        <input type="number" step="0.01" id="al-peso" placeholder="0.00" class="viking-input" oninput="calculateIMC()">
                     </div>
                     <div class="space-y-1">
                         <label class="text-[8px] font-black text-gray-500 uppercase italic">Altura (cm)</label>
-                        <input type="number" step="0.1" id="al-altura" placeholder="0.0" class="viking-input" oninput="calculateIMC()">
+                        <input type="number" step="0.01" id="al-altura" placeholder="0.00" class="viking-input" oninput="calculateIMC()">
                     </div>
                     <div class="space-y-1">
                         <label class="text-[8px] font-black text-red-600 uppercase italic">IMC</label>
                         <input type="text" id="al-imc" placeholder="-" readonly class="viking-input opacity-60">
                     </div>
                 </div>
+
+                <!-- FECHAS DE RENOVACIÓN Y VENCIMIENTO -->
                 <div class="grid grid-cols-2 gap-4">
-                    <select id="al-plan" class="viking-input" required></select>
+                    <div class="space-y-1">
+                        <label class="text-[8px] font-black text-gray-500 uppercase italic">Fecha Renovación</label>
+                        <input type="date" id="al-fecha-renovacion" class="viking-input" onchange="autoCalculateExpiry()">
+                    </div>
+                    <div class="space-y-1">
+                        <label class="text-[8px] font-black text-gray-500 uppercase italic">Fecha Vencimiento</label>
+                        <input type="date" id="al-fecha-vencimiento" class="viking-input">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <select id="al-plan" class="viking-input" required onchange="autoCalculateExpiry()"></select>
                     <input type="password" id="al-pass" placeholder="Contraseña de Acceso" class="viking-input">
                 </div>
                 <p class="text-[8px] text-gray-500 uppercase font-bold italic">* Si dejas la contraseña vacía al editar, no se cambiará.</p>
@@ -597,6 +616,25 @@
                     <button type="button" onclick="closeModal('modal-alumno')" class="flex-1 py-4 bg-white/5 rounded-2xl font-black uppercase italic text-[10px]">Cancelar</button>
                     <button type="button" id="btn-delete-alumno" class="hidden py-4 px-4 bg-red-900/40 rounded-2xl font-black uppercase italic text-[10px] text-red-500">Eliminar</button>
                     <button type="submit" class="flex-1 py-4 viking-bg-red text-black rounded-2xl font-black uppercase italic text-[10px]">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL MOVIMIENTO CAJA -->
+    <div id="modal-movimiento" class="viking-modal">
+        <div class="glass-card p-10 rounded-[3rem] w-full max-w-lg text-left">
+            <h3 class="text-2xl font-black uppercase italic mb-8">Nuevo Movimiento</h3>
+            <form id="form-movimiento" class="space-y-4">
+                <select id="mov-tipo" class="viking-input" required>
+                    <option value="Ingreso">Ingreso</option>
+                    <option value="Egreso">Egreso</option>
+                </select>
+                <input type="number" id="mov-monto" placeholder="Monto ($)" required class="viking-input">
+                <input type="text" id="mov-desc" placeholder="Descripción" required class="viking-input">
+                <div class="flex gap-4 pt-4">
+                    <button type="button" onclick="closeModal('modal-movimiento')" class="flex-1 py-4 bg-white/5 rounded-2xl font-black uppercase italic text-[10px]">Cancelar</button>
+                    <button type="submit" class="flex-1 py-4 viking-bg-red text-black rounded-2xl font-black uppercase italic text-[10px]">Cargar</button>
                 </div>
             </form>
         </div>
@@ -713,19 +751,41 @@
             cart: [], currentPaymentMethod: ''
         };
 
-        // --- LÓGICA DE IMC ---
+        // --- LÓGICA DE IMC AUTOMÁTICA ---
         function calculateIMC() {
             const peso = parseFloat(document.getElementById('al-peso').value);
             const alturaCm = parseFloat(document.getElementById('al-altura').value);
             const imcField = document.getElementById('al-imc');
             
-            if (peso > 0 && alturaCm > 0) {
+            if (peso > 5 && alturaCm > 50) {
                 const alturaM = alturaCm / 100;
                 const imc = (peso / (alturaM * alturaM)).toFixed(2);
                 imcField.value = imc;
             } else {
                 imcField.value = "";
             }
+        }
+
+        // --- LÓGICA DE VENCIMIENTO AUTOMÁTICO ---
+        function autoCalculateExpiry() {
+            const planId = document.getElementById('al-plan').value;
+            const renovDate = document.getElementById('al-fecha-renovacion').value;
+            if(!planId || !renovDate) return;
+
+            const plan = state.planes.find(p => p.id == planId);
+            let monthsToAdd = 1;
+
+            if (plan) {
+                const nombrePlan = plan.nombre.toLowerCase();
+                if (nombrePlan.includes('trimestral')) monthsToAdd = 3;
+                else if (nombrePlan.includes('semestral')) monthsToAdd = 6;
+                else if (nombrePlan.includes('anual')) monthsToAdd = 12;
+            }
+
+            let dateObj = new Date(renovDate + 'T00:00:00');
+            dateObj.setMonth(dateObj.getMonth() + monthsToAdd);
+            
+            document.getElementById('al-fecha-vencimiento').value = dateObj.toISOString().split('T')[0];
         }
 
         async function apiFetch(endpoint, method = 'GET', body = null) {
@@ -754,18 +814,12 @@
             document.querySelectorAll('.view-content').forEach(v => v.classList.remove('active'));
             document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
             document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
-            
             document.getElementById('view-' + view).classList.add('active');
-            
-            // Handle sub-menu highlighting
             const subMenuBtn = document.getElementById('nav-' + view);
             if (subMenuBtn) subMenuBtn.classList.add('active');
-            
             document.getElementById('view-title').innerText = view.replace('-', ' ').toUpperCase();
-            
             if(view === 'calendario') renderCalendar();
             if(view === 'cobrar') renderCobrar();
-            
             lucide.createIcons();
         }
 
@@ -778,18 +832,16 @@
                 document.getElementById('login-overlay').style.display = 'none';
                 document.getElementById('sidebar').classList.remove('hidden');
                 document.getElementById('main-content').classList.remove('hidden');
-                
                 document.getElementById('side-user-name').innerText = res.nombre_completo;
                 document.getElementById('side-user-role').innerText = res.rol_nombre || 'Staff';
                 document.getElementById('user-initials').innerText = res.nombre_completo.split(' ').map(n => n[0]).join('').toUpperCase();
-                
                 document.getElementById('prof-name').innerText = res.nombre_completo;
                 document.getElementById('prof-role').innerText = res.rol_nombre || 'Staff';
                 document.getElementById('prof-initials-view').innerText = document.getElementById('user-initials').innerText;
                 document.getElementById('prof-input-name').value = res.nombre_completo;
                 document.getElementById('prof-input-dni').value = res.dni;
-                document.getElementById('prof-input-email').value = res.email || '';
-
+                // Restauración del correo electrónico en el perfil
+                document.getElementById('prof-input-email').value = res.email || "";
                 initApp();
             } else {
                 document.getElementById('login-error').classList.remove('hidden');
@@ -805,22 +857,22 @@
             const res = await apiFetch('/caja/resumen');
             if(!res.error) {
                 document.getElementById('dash-ingresos').innerText = `$ ${res.ingresos.toLocaleString()}`;
-                document.getElementById('caja-ingresos').innerText = `$ ${res.ingresos.toLocaleString()}`;
-                document.getElementById('caja-gastos').innerText = `$ ${res.gastos.toLocaleString()}`;
-                document.getElementById('caja-balance').innerText = `$ ${res.balance.toLocaleString()}`;
             }
             const check = document.getElementById('dash-checkins');
             check.innerHTML = [{n: "GONZALO L.", t: "14:22"}, {n: "LAGERTHA S.", t: "14:05"}, {n: "RAGNAR L.", t: "13:55"}]
                 .map(c => `<div class="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5"><span class="text-[10px] font-black italic">${c.n}</span><span class="text-[9px] text-red-600 font-bold italic">${c.t} HS</span></div>`).join('');
+            
+            // Render Top Clases
+            const topC = document.getElementById('dash-top-clases');
+            topC.innerHTML = [{n: "CROSSFIT", r: 45}, {n: "POWERLIFTING", r: 32}, {n: "HIIT", r: 28}, {n: "BOXEO", r: 21}, {n: "YOGA", r: 15}]
+                .map((c, i) => `<div class="flex items-center justify-between p-3 bg-white/5 rounded-xl border border-white/5"><span class="text-[9px] font-black italic">${i+1}. ${c.n}</span><span class="text-[8px] text-red-600 font-bold">${c.r} RES.</span></div>`).join('');
         }
 
         // PUNTO DE VENTA (COBRAR)
         function renderCobrar() {
             const container = document.getElementById('cobrar-catalogo');
             const searchVal = document.getElementById('cobrar-search').value.toLowerCase();
-            
             const filteredStock = state.stock.filter(s => s.nombre_producto.toLowerCase().includes(searchVal));
-
             container.innerHTML = filteredStock.map(s => `
                 <div class="glass-card p-6 rounded-[2rem] relative group cursor-pointer hover:border-red-600/50" onclick="addToCart(${s.id})">
                     <div class="w-full aspect-square viking-bg-red/10 rounded-2xl mb-4 flex items-center justify-center">
@@ -842,7 +894,6 @@
         function addToCart(productId) {
             const product = state.stock.find(s => s.id === productId);
             if (!product || product.stock_actual <= 0) return;
-
             const existing = state.cart.find(c => c.id === productId);
             if (existing) {
                 if (existing.qty < product.stock_actual) existing.qty++;
@@ -860,7 +911,6 @@
                 document.getElementById('cobrar-total').innerText = '$ 0';
                 return;
             }
-
             list.innerHTML = state.cart.map((c, idx) => `
                 <div class="flex items-center justify-between bg-white/5 p-3 rounded-xl border border-white/5">
                     <div class="overflow-hidden">
@@ -873,7 +923,6 @@
                     </div>
                 </div>
             `).join('');
-
             const total = state.cart.reduce((acc, c) => acc + (c.qty * c.precio_venta), 0);
             document.getElementById('cobrar-subtotal').innerText = `$ ${total.toLocaleString()}`;
             document.getElementById('cobrar-total').innerText = `$ ${total.toLocaleString()}`;
@@ -893,23 +942,16 @@
         }
 
         async function finalizarVenta() {
-            if (state.cart.length === 0) return alert("Selecciona al menos un producto.");
-            if (!state.currentPaymentMethod) return alert("Elige un método de pago.");
-
+            if (state.cart.length === 0) return;
+            if (!state.currentPaymentMethod) return;
             const total = state.cart.reduce((acc, c) => acc + (c.qty * c.precio_venta), 0);
-            
-            // Simular guardado en caja
             const dataCaja = {
-                tipo: "Ingreso",
-                monto: total,
+                tipo: "Ingreso", monto: total,
                 descripcion: `Venta Productos: ${state.cart.map(c => c.nombre_producto).join(', ')} (${state.currentPaymentMethod})`
             };
-
             const res = await apiFetch('/caja/movimiento', 'POST', dataCaja);
             if (!res.error) {
-                alert("Venta realizada con éxito vikingo!");
-                state.cart = [];
-                state.currentPaymentMethod = '';
+                state.cart = []; state.currentPaymentMethod = '';
                 await initApp();
                 renderCobrar();
                 switchView('caja');
@@ -929,9 +971,7 @@
                     <td class="py-6 text-red-600 font-black">${al.fecha_ultima_renovacion || '-'}</td>
                     <td class="py-6 text-gray-400 font-black">${al.fecha_vencimiento || '-'}</td>
                     <td class="py-6 text-right">
-                        <button onclick="openEditAlumno(${al.id})" class="hover:text-red-600">
-                            <i data-lucide="edit-2" class="w-4 h-4"></i>
-                        </button>
+                        <button onclick="openEditAlumno(${al.id})" class="hover:text-red-600"><i data-lucide="edit-2" class="w-4 h-4"></i></button>
                     </td>
                 </tr>`;
             const sortedData = [...state.alumnos].sort((a, b) => a.nombre_completo.localeCompare(b.nombre_completo));
@@ -943,9 +983,8 @@
         function openModalAlumno() { 
             document.getElementById('modal-alumno-title').innerText = "Nuevo Alumno"; 
             document.getElementById('al-id').value = ""; 
-            document.getElementById('al-peso').value = "";
-            document.getElementById('al-altura').value = "";
-            document.getElementById('al-imc').value = "";
+            // Fecha por defecto hoy para renovación al crear
+            document.getElementById('al-fecha-renovacion').value = new Date().toISOString().split('T')[0];
             openModal('modal-alumno'); 
         }
 
@@ -958,10 +997,13 @@
             document.getElementById('al-dni').value = al.dni;
             document.getElementById('al-email').value = al.email || "";
             document.getElementById('al-plan').value = al.plan_id || "";
-            // Cargar peso y altura
             document.getElementById('al-peso').value = al.peso || "";
             document.getElementById('al-altura').value = al.altura || "";
             document.getElementById('al-imc').value = al.imc || "";
+            
+            // Cargar fechas existentes
+            document.getElementById('al-fecha-renovacion').value = al.fecha_ultima_renovacion || "";
+            document.getElementById('al-fecha-vencimiento').value = al.fecha_vencimiento || "";
 
             const delBtn = document.getElementById('btn-delete-alumno');
             delBtn.classList.remove('hidden');
@@ -972,17 +1014,18 @@
         document.getElementById('form-alumno').onsubmit = async (e) => {
             e.preventDefault();
             const id = document.getElementById('al-id').value;
-            const pass = document.getElementById('al-pass').value;
             const data = { 
                 nombre_completo: document.getElementById('al-nombre').value, 
                 dni: document.getElementById('al-dni').value, 
                 email: document.getElementById('al-email').value, 
-                plan_id: parseInt(document.getElementById('al-plan').value),
-                // Enviar peso, altura e IMC
+                plan_id: parseInt(document.getElementById('al-plan').value) || null,
                 peso: parseFloat(document.getElementById('al-peso').value) || null,
                 altura: parseFloat(document.getElementById('al-altura').value) || null,
-                imc: parseFloat(document.getElementById('al-imc').value) || null
+                imc: parseFloat(document.getElementById('al-imc').value) || null,
+                fecha_ultima_renovacion: document.getElementById('al-fecha-renovacion').value,
+                fecha_vencimiento: document.getElementById('al-fecha-vencimiento').value
             };
+            const pass = document.getElementById('al-pass').value;
             if(pass) data.password = pass;
             const res = await apiFetch(id ? `/alumnos/${id}` : '/alumnos', id ? 'PUT' : 'POST', data);
             if(!res.error) { closeModal('modal-alumno'); fetchAlumnos(); }
@@ -997,16 +1040,12 @@
             document.getElementById('cl-coach-select').innerHTML = '<option value="">Seleccionar Profesor</option>' + state.profesores.map(p => `<option value="${p.nombre_completo}">${p.nombre_completo}</option>`).join('');
             document.getElementById('table-profesores').innerHTML = state.profesores.map(p => `
                 <tr class="viking-table-row">
-                    <td class="py-6">${p.nombre_completo}</td>
-                    <td class="py-6 text-gray-500">${p.dni}</td>
-                    <td class="py-6 text-red-600 font-black">${p.especialidad || 'Gral.'}</td>
+                    <td class="py-6">${p.nombre_completo}</td><td class="py-6 text-gray-500">${p.dni}</td><td class="py-6 text-red-600 font-black">${p.especialidad || 'Gral.'}</td>
                     <td class="py-6 text-right"><button onclick="openEditStaff(${p.id}, 'Profesor')" class="hover:text-red-600"><i data-lucide="edit-3" class="w-4 h-4"></i></button></td>
                 </tr>`).join('');
             document.getElementById('table-administrativos').innerHTML = state.administrativos.map(a => `
                 <tr class="viking-table-row">
-                    <td class="py-6">${a.nombre_completo}</td>
-                    <td class="py-6 text-gray-500">${a.dni}</td>
-                    <td class="py-6 text-gray-500 lowercase">${a.email || '-'}</td>
+                    <td class="py-6">${a.nombre_completo}</td><td class="py-6 text-gray-500">${a.dni}</td><td class="py-6 text-gray-500 lowercase">${a.email || '-'}</td>
                     <td class="py-6 text-right"><button onclick="openEditStaff(${a.id}, 'Administracion')" class="hover:text-red-600"><i data-lucide="user-cog" class="w-4 h-4"></i></button></td>
                 </tr>`).join('');
             lucide.createIcons();
@@ -1017,13 +1056,10 @@
             const user = (rol === 'Profesor' ? state.profesores : state.administrativos).find(x => x.id == id);
             if(!user) return;
             document.getElementById('modal-staff-title').innerText = "Editar " + rol;
-            document.getElementById('stf-id').value = user.id;
-            document.getElementById('stf-rol').value = rol;
+            document.getElementById('stf-id').value = user.id; document.getElementById('stf-rol').value = rol;
             document.getElementById('stf-nombre').value = user.nombre_completo;
-            document.getElementById('stf-dni').value = user.dni;
-            document.getElementById('stf-esp').value = user.especialidad || "";
-            const delBtn = document.getElementById('btn-delete-staff');
-            delBtn.classList.remove('hidden');
+            document.getElementById('stf-dni').value = user.dni; document.getElementById('stf-esp').value = user.especialidad || "";
+            const delBtn = document.getElementById('btn-delete-staff'); delBtn.classList.remove('hidden');
             delBtn.onclick = () => deleteRecord('staff', id, 'modal-staff', loadStaff);
             openModal('modal-staff');
         }
@@ -1039,14 +1075,19 @@
             if(!res.error) { closeModal('modal-staff'); loadStaff(); }
         };
 
+        // --- CAJA ---
+        document.getElementById('form-movimiento').onsubmit = async (e) => {
+            e.preventDefault();
+            const data = { tipo: document.getElementById('mov-tipo').value, monto: parseFloat(document.getElementById('mov-monto').value), descripcion: document.getElementById('mov-desc').value };
+            const res = await apiFetch('/caja/movimiento', 'POST', data);
+            if(!res.error) { closeModal('modal-movimiento'); initApp(); }
+        };
+
         // --- PLANES ---
         async function loadPlanes() {
-            const planes = await apiFetch('/planes');
-            const tipos = await apiFetch('/tipos-planes');
-            state.planes = Array.isArray(planes) ? planes : [];
-            state.tiposPlanes = Array.isArray(tipos) ? tipos : [];
-            const filterContainer = document.getElementById('planes-filter-container');
-            filterContainer.innerHTML = ''; 
+            const planes = await apiFetch('/planes'); const tipos = await apiFetch('/tipos-planes');
+            state.planes = Array.isArray(planes) ? planes : []; state.tiposPlanes = Array.isArray(tipos) ? tipos : [];
+            const filterContainer = document.getElementById('planes-filter-container'); filterContainer.innerHTML = ''; 
             state.tiposPlanes.forEach((t, idx) => {
                 const active = idx === 0 ? 'active' : '';
                 filterContainer.innerHTML += `<button onclick="filterPlanes(${t.id}, this)" class="filter-btn ${active}">${t.nombre}</button>`;
@@ -1057,8 +1098,7 @@
         }
 
         function filterPlanes(tipoId, btn) {
-            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
+            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active');
             const filtered = state.planes.filter(p => p.tipo_plan_id === tipoId);
             document.getElementById('planes-container').innerHTML = filtered.map(p => `
                 <div class="glass-card p-8 rounded-[2.5rem] flex flex-col border-red-600/10 relative">
@@ -1072,15 +1112,10 @@
 
         function openModalPlan() { document.getElementById('plan-id').value = ""; document.getElementById('modal-plan-title').innerText = "Nuevo Plan"; openModal('modal-plan'); }
         function openEditPlan(id) {
-            const p = state.planes.find(x => x.id == id);
-            if(!p) return;
-            document.getElementById('plan-id').value = p.id;
-            document.getElementById('modal-plan-title').innerText = "Editar Plan";
-            document.getElementById('plan-nombre').value = p.nombre;
-            document.getElementById('plan-tipo').value = p.tipo_plan_id;
-            document.getElementById('plan-precio').value = p.precio;
-            const delBtn = document.getElementById('btn-delete-plan');
-            delBtn.classList.remove('hidden');
+            const p = state.planes.find(x => x.id == id); if(!p) return;
+            document.getElementById('plan-id').value = p.id; document.getElementById('plan-nombre').value = p.nombre;
+            document.getElementById('plan-tipo').value = p.tipo_plan_id; document.getElementById('plan-precio').value = p.precio;
+            const delBtn = document.getElementById('btn-delete-plan'); delBtn.classList.remove('hidden');
             delBtn.onclick = () => deleteRecord('planes', p.id, 'modal-plan', loadPlanes);
             openModal('modal-plan');
         }
@@ -1095,8 +1130,7 @@
 
         // --- CLASES ---
         async function loadClases() {
-            const data = await apiFetch('/clases');
-            state.clases = Array.isArray(data) ? data : [];
+            const data = await apiFetch('/clases'); state.clases = Array.isArray(data) ? data : [];
             document.getElementById('clases-container').innerHTML = state.clases.map(c => `
                 <div class="glass-card p-8 rounded-[2.5rem] relative text-left">
                     <button onclick="openEditClase(${c.id})" class="absolute top-4 right-4 text-gray-600 hover:text-red-600"><i data-lucide="settings" class="w-4 h-4"></i></button>
@@ -1110,26 +1144,14 @@
             if(document.getElementById('view-calendario').classList.contains('active')) renderCalendar();
         }
 
-        function openModalClase() { 
-            document.getElementById('cl-id').value = ""; 
-            document.getElementById('modal-clase-title').innerText = "Nueva Clase"; 
-            document.getElementById('cl-color').value = "#FF0000";
-            openModal('modal-clase'); 
-        }
-
+        function openModalClase() { document.getElementById('cl-id').value = ""; openModal('modal-clase'); }
         function openEditClase(id) {
-            const c = state.clases.find(x => x.id == id);
-            if(!c) return;
-            document.getElementById('cl-id').value = c.id;
-            document.getElementById('modal-clase-title').innerText = "Editar Clase";
-            document.getElementById('cl-nombre').value = c.nombre;
-            document.getElementById('cl-coach-select').value = c.coach;
-            document.getElementById('cl-dia').value = c.dia;
-            updateHourOptions();
-            document.getElementById('cl-horario').value = c.horario;
+            const c = state.clases.find(x => x.id == id); if(!c) return;
+            document.getElementById('cl-id').value = c.id; document.getElementById('cl-nombre').value = c.nombre;
+            document.getElementById('cl-coach-select').value = c.coach; document.getElementById('cl-dia').value = c.dia;
+            updateHourOptions(); document.getElementById('cl-horario').value = c.horario;
             document.getElementById('cl-color').value = c.color || "#FF0000";
-            const delBtn = document.getElementById('btn-delete-clase');
-            delBtn.classList.remove('hidden');
+            const delBtn = document.getElementById('btn-delete-clase'); delBtn.classList.remove('hidden');
             delBtn.onclick = () => deleteRecord('clases', c.id, 'modal-clase', loadClases);
             openModal('modal-clase');
         }
@@ -1137,44 +1159,29 @@
         document.getElementById('form-clase').onsubmit = async (e) => {
             e.preventDefault();
             const id = document.getElementById('cl-id').value;
-            const data = { 
-                nombre: document.getElementById('cl-nombre').value, 
-                coach: document.getElementById('cl-coach-select').value, 
-                dia: parseInt(document.getElementById('cl-dia').value), 
-                horario: parseInt(document.getElementById('cl-horario').value), 
-                color: document.getElementById('cl-color').value 
-            };
+            const data = { nombre: document.getElementById('cl-nombre').value, coach: document.getElementById('cl-coach-select').value, dia: parseInt(document.getElementById('cl-dia').value), horario: parseInt(document.getElementById('cl-horario').value), color: document.getElementById('cl-color').value };
             const res = await apiFetch(id ? `/clases/${id}` : '/clases', id ? 'PUT' : 'POST', data);
             if(!res.error) { closeModal('modal-clase'); loadClases(); }
         };
 
         // --- STOCK ---
         async function loadStock() {
-            const data = await apiFetch('/stock');
-            state.stock = Array.isArray(data) ? data : [];
+            const data = await apiFetch('/stock'); state.stock = Array.isArray(data) ? data : [];
             document.getElementById('stock-container').innerHTML = state.stock.map(s => `
                 <div class="glass-card p-6 rounded-[2rem] relative group text-left">
                     <button onclick="openEditStock(${s.id})" class="absolute top-4 right-4 text-gray-600 hover:text-red-600"><i data-lucide="edit-2" class="w-3 h-3"></i></button>
-                    <h4 class="text-sm font-black uppercase italic mb-4">${s.nombre_producto}</h4>
-                    <p class="text-2xl font-black italic">$ ${s.precio_venta.toLocaleString()}</p>
-                    <div class="mt-4 border-t border-white/5 pt-4">
-                        <span class="text-[9px] font-black text-gray-600 uppercase">Stock: ${s.stock_actual}</span>
-                    </div>
+                    <h4 class="text-sm font-black uppercase italic mb-4">${s.nombre_producto}</h4><p class="text-2xl font-black italic">$ ${s.precio_venta.toLocaleString()}</p>
+                    <div class="mt-4 border-t border-white/5 pt-4"><span class="text-[9px] font-black text-gray-600 uppercase">Stock: ${s.stock_actual}</span></div>
                 </div>`).join('');
             lucide.createIcons();
         }
 
-        function openModalStock() { document.getElementById('stock-id').value = ""; document.getElementById('modal-stock-title').innerText = "Nuevo Producto"; openModal('modal-stock'); }
+        function openModalStock() { document.getElementById('stock-id').value = ""; openModal('modal-stock'); }
         function openEditStock(id) {
-            const s = state.stock.find(x => x.id == id);
-            if(!s) return;
-            document.getElementById('stock-id').value = s.id;
-            document.getElementById('modal-stock-title').innerText = "Editar Producto";
-            document.getElementById('stock-nombre').value = s.nombre_producto;
-            document.getElementById('stock-cant').value = s.stock_actual;
-            document.getElementById('stock-precio').value = s.precio_venta;
-            const delBtn = document.getElementById('btn-delete-stock');
-            delBtn.classList.remove('hidden');
+            const s = state.stock.find(x => x.id == id); if(!s) return;
+            document.getElementById('stock-id').value = s.id; document.getElementById('stock-nombre').value = s.nombre_producto;
+            document.getElementById('stock-cant').value = s.stock_actual; document.getElementById('stock-precio').value = s.precio_venta;
+            const delBtn = document.getElementById('btn-delete-stock'); delBtn.classList.remove('hidden');
             delBtn.onclick = () => deleteRecord('stock', s.id, 'modal-stock', loadStock);
             openModal('modal-stock');
         }
@@ -1193,41 +1200,33 @@
             const data = { nombre_completo: document.getElementById('prof-input-name').value, dni: document.getElementById('prof-input-dni').value, email: document.getElementById('prof-input-email').value, perfil_nombre: state.user.rol_nombre };
             if(pass) data.password = pass;
             const res = await apiFetch(`/staff/${state.user.id}`, 'PUT', data);
-            if(!res.error) { alert("Perfil actualizado correctamente"); state.user.nombre_completo = data.nombre_completo; document.getElementById('side-user-name').innerText = data.nombre_completo; document.getElementById('prof-name').innerText = data.nombre_completo; }
+            if(!res.error) { alert("Perfil actualizado!"); state.user.nombre_completo = data.nombre_completo; document.getElementById('side-user-name').innerText = data.nombre_completo; }
         }
 
-        async function deleteRecord(entity, id, modalId, callback) { if(!confirm("¿Deseas eliminar este registro vikingo?")) return; const res = await apiFetch(`/${entity}/${id}`, 'DELETE'); if(!res.error) { closeModal(modalId); callback(); } }
+        async function deleteRecord(entity, id, modalId, callback) { if(!confirm("¿Deseas eliminar este registro?")) return; const res = await apiFetch(`/${entity}/${id}`, 'DELETE'); if(!res.error) { closeModal(modalId); callback(); } }
 
         function renderCalendar() {
-            const cal = document.getElementById('calendar-grid');
-            if (!cal) return;
+            const cal = document.getElementById('calendar-grid'); if (!cal) return;
             cal.innerHTML = `<div class="cal-header">HORA</div><div class="cal-header">LUNES</div><div class="cal-header">MARTES</div><div class="cal-header">MIÉRCOLES</div><div class="cal-header">JUEVES</div><div class="cal-header">VIERNES</div><div class="cal-header">SÁBADO</div>`;
             for(let h=7; h<=21; h++) {
                 cal.innerHTML += `<div class="cal-cell flex items-center justify-center font-black text-[10px] text-white/40 bg-white/5 border-r border-white/20">${h}:00</div>`;
                 for(let d=1; d<=6; d++) {
-                    const isSat = d === 6;
-                    const isClosed = isSat && (h < 10 || h > 13);
+                    const isSat = d === 6; const isClosed = isSat && (h < 10 || h > 13);
                     cal.innerHTML += `<div id="cell-${d}-${h}" class="cal-cell ${isClosed ? 'cal-cell-closed' : ''}" ondragover="event.preventDefault()" ondrop="handleDrop(event, ${d}, ${h})"></div>`;
                 }
             }
             state.clases.forEach(c => {
                 const cell = document.getElementById(`cell-${c.dia}-${c.horario}`);
                 if (cell) {
-                    const badge = document.createElement('div');
-                    badge.className = "class-badge";
-                    badge.style.backgroundColor = c.color || '#FF0000';
-                    badge.draggable = true;
-                    badge.innerHTML = `<span class="text-[10px] mb-1 leading-none">${c.nombre}</span><span class="text-[7px] opacity-70 font-bold">${c.coach}</span>`;
-                    badge.ondragstart = (e) => { e.dataTransfer.setData("clase_id", c.id); };
-                    cell.appendChild(badge);
+                    const badge = document.createElement('div'); badge.className = "class-badge"; badge.style.backgroundColor = c.color || '#FF0000';
+                    badge.draggable = true; badge.innerHTML = `<span class="text-[10px] mb-1 leading-none">${c.nombre}</span><span class="text-[7px] opacity-70 font-bold">${c.coach}</span>`;
+                    badge.ondragstart = (e) => { e.dataTransfer.setData("clase_id", c.id); }; cell.appendChild(badge);
                 }
             });
         }
 
         async function handleDrop(e, dia, horario) { e.preventDefault(); const id = e.dataTransfer.getData("clase_id"); if (!id) return; const res = await apiFetch(`/clases/${id}/move`, 'PUT', { dia, horario }); if (!res.error) loadClases(); }
-
         function updateHourOptions() { const dia = document.getElementById('cl-dia').value; const select = document.getElementById('cl-horario'); select.innerHTML = ""; let start = 7, end = 21; if (dia == "6") { start = 10; end = 13; } for(let i=start; i<=end; i++) select.innerHTML += `<option value="${i}">${i}:00 hs</option>`; }
-
         window.onload = () => { lucide.createIcons(); };
     </script>
 </body>
