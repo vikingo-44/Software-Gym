@@ -83,7 +83,7 @@
         .cal-cell { 
             border-right: 1px solid rgba(255,255,255,0.15); 
             border-bottom: 1px solid rgba(255,255,255,0.15); 
-            min-height: 65px; /* Altura reducida como pediste */
+            min-height: 65px;
             position: relative; 
         }
         .cal-cell-closed {
@@ -161,7 +161,6 @@
             color: #FF0000;
         }
 
-        /* Pestañas para Cobrar */
         .cobrar-tab {
             padding: 12px 24px;
             font-weight: 900;
@@ -176,6 +175,9 @@
             border-bottom-color: #FF0000;
             color: #FF0000;
         }
+
+        /* Estilo para iconos de edición restringidos */
+        .restricted-action { display: none !important; }
     </style>
 </head>
 <body class="flex h-screen w-screen overflow-hidden">
@@ -267,7 +269,7 @@
             <button onclick="switchView('calendario')" id="nav-calendario" class="nav-btn w-full nav-item flex items-center gap-5 px-6 py-4 rounded-2xl font-black uppercase text-[10px] italic text-gray-400">
                 <i data-lucide="calendar" class="w-4 h-4"></i> <span class="nav-text">Calendario</span>
             </button>
-            <button id="nav-rutinas" onclick="switchView('rutinas')" class="nav-btn w-full nav-item hidden flex items-center gap-5 px-6 py-4 rounded-2xl font-black uppercase text-[10px] italic text-gray-400">
+            <button id="nav-rutinas" onclick="switchView('rutinas')" class="nav-btn w-full nav-item flex items-center gap-5 px-6 py-4 rounded-2xl font-black uppercase text-[10px] italic text-gray-400">
                 <i data-lucide="dumbbell" class="w-4 h-4"></i> <span class="nav-text">Rutinas Musc.</span>
             </button>
         </nav>
@@ -341,7 +343,7 @@
                                     <th class="pb-5">Status</th>
                                     <th class="pb-5">Renovación</th>
                                     <th class="pb-5">Vencimiento</th>
-                                    <th class="pb-5 text-right">Acciones</th>
+                                    <th class="pb-5 text-right action-col">Acciones</th>
                                 </tr>
                             </thead>
                             <tbody id="dash-table-alumnos-mini" class="text-[11px] font-black uppercase italic"></tbody>
@@ -350,7 +352,7 @@
                 </div>
             </div>
 
-            <!-- VISTA COBRAR (NUEVO DISEÑO POR PESTAÑAS) -->
+            <!-- VISTA COBRAR -->
             <div id="view-cobrar" class="view-content">
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-10 h-full">
                     <div class="lg:col-span-2 space-y-6">
@@ -365,7 +367,6 @@
                             </div>
                         </div>
                         <div id="cobrar-display-area">
-                             <!-- Contenido dinámico aquí -->
                              <div class="grid grid-cols-2 md:grid-cols-4 gap-4 overflow-y-auto max-h-[600px] pr-2 custom-scrollbar" id="cobrar-catalogo"></div>
                         </div>
                     </div>
@@ -394,7 +395,7 @@
                                 <button onclick="setPaymentMethod('Tarjeta')" class="payment-method-btn py-3 rounded-xl text-[9px] font-black uppercase italic">Tarjeta</button>
                             </div>
                         </div>
-                        <button onclick="finalizarVenta()" class="w-full mt-8 viking-bg-red text-black py-5 rounded-2xl font-black uppercase italic tracking-widest hover:scale-[1.02] active:scale-95 transition-all shadow-xl">Procesar Pago</button>
+                        <button id="btn-finalizar-pago" onclick="finalizarVenta()" class="w-full mt-8 viking-bg-red text-black py-5 rounded-2xl font-black uppercase italic tracking-widest hover:scale-[1.02] active:scale-95 transition-all shadow-xl">Procesar Pago</button>
                     </div>
                 </div>
             </div>
@@ -406,6 +407,13 @@
                         <div class="w-32 h-32 rounded-[2.5rem] viking-bg-red flex items-center justify-center font-black text-black text-4xl italic shadow-2xl mb-6" id="prof-initials-view">??</div>
                         <h3 class="text-xl font-black uppercase italic" id="prof-name">Cargando...</h3>
                         <p class="text-red-600 text-xs font-black uppercase tracking-widest mb-8" id="prof-role">Rol</p>
+                        <div id="plan-alumno-info" class="w-full space-y-2 mt-4 hidden">
+                            <p class="text-[9px] font-black uppercase text-gray-500 italic text-center">Plan Actual</p>
+                            <div class="bg-white/5 p-4 rounded-2xl border border-white/5 text-center">
+                                <p class="text-sm font-black viking-red uppercase" id="perfil-plan-nombre">-</p>
+                                <p class="text-[9px] text-gray-500 font-bold" id="perfil-vencimiento">Vence: -</p>
+                            </div>
+                        </div>
                     </div>
                     <div class="lg:col-span-2 glass-card p-10 rounded-[3rem]">
                         <h3 class="text-sm font-black uppercase italic border-l-4 border-red-600 pl-4 tracking-widest mb-10">Mis Datos</h3>
@@ -427,7 +435,7 @@
                                 <input type="password" id="prof-input-pass" placeholder="Dejar vacío para no cambiar" class="viking-input">
                             </div>
                             <div class="md:col-span-2 pt-6 text-left">
-                                <button type="submit" class="px-10 py-4 viking-bg-red text-black rounded-2xl font-black uppercase italic tracking-widest hover:scale-105 transition-transform">Guardar Cambios</button>
+                                <button type="submit" id="btn-save-profile" class="px-10 py-4 viking-bg-red text-black rounded-2xl font-black uppercase italic tracking-widest hover:scale-105 transition-transform">Guardar Cambios</button>
                             </div>
                         </form>
                     </div>
@@ -453,7 +461,7 @@
                                     <th class="pb-5">Status</th>
                                     <th class="pb-5">Renovación</th>
                                     <th class="pb-5">Vencimiento</th>
-                                    <th class="pb-5 text-right">Acciones</th>
+                                    <th class="pb-5 text-right action-col">Acciones</th>
                                 </tr>
                             </thead>
                             <tbody id="table-alumnos-full" class="text-[10px] font-black uppercase italic"></tbody>
@@ -478,7 +486,7 @@
                                     <th class="pb-5">Nombre</th>
                                     <th class="pb-5">DNI (Usuario)</th>
                                     <th class="pb-5">Especialidad</th>
-                                    <th class="pb-5 text-right">Acciones</th>
+                                    <th class="pb-5 text-right action-col">Acciones</th>
                                 </tr>
                             </thead>
                             <tbody id="table-profesores" class="text-[10px] font-black uppercase italic"></tbody>
@@ -503,7 +511,7 @@
                                     <th class="pb-5">Nombre</th>
                                     <th class="pb-5">DNI (Usuario)</th>
                                     <th class="pb-5">Email</th>
-                                    <th class="pb-5 text-right">Acciones</th>
+                                    <th class="pb-5 text-right action-col">Acciones</th>
                                 </tr>
                             </thead>
                             <tbody id="table-administrativos" class="text-[10px] font-black uppercase italic"></tbody>
@@ -531,7 +539,7 @@
                 <div class="glass-card p-10 rounded-[3rem]">
                     <div class="flex justify-between items-center mb-8">
                         <h3 class="text-sm font-black uppercase italic border-l-4 border-red-600 pl-4 tracking-widest">Flujo Diario de Caja</h3>
-                        <button onclick="openModal('modal-movimiento')" class="viking-bg-red text-black px-6 py-3 rounded-xl font-black uppercase italic text-[10px]">Cargar Movimiento</button>
+                        <button id="btn-nuevo-mov" onclick="openModal('modal-movimiento')" class="viking-bg-red text-black px-6 py-3 rounded-xl font-black uppercase italic text-[10px]">Cargar Movimiento</button>
                     </div>
                     <table class="w-full text-left">
                         <thead>
@@ -593,12 +601,29 @@
                 <div class="calendar-container h-[700px] overflow-y-auto custom-scrollbar" id="calendar-grid"></div>
             </div>
 
-            <!-- RUTINAS (VISTA PROFESOR) -->
+            <!-- RUTINAS (MUSCULACIÓN) -->
             <div id="view-rutinas" class="view-content">
-                <h3 class="text-3xl font-black italic uppercase mb-8">Rutinas de Alumnos</h3>
+                <h3 class="text-3xl font-black italic uppercase mb-8" id="rutina-title">Rutinas de Alumnos</h3>
                 <div class="glass-card p-10 rounded-[3rem]">
+                    <div id="musculacion-student-view" class="hidden space-y-8">
+                        <div class="bg-red-600/10 p-6 rounded-3xl border border-red-600/20">
+                            <h4 class="text-xl font-black italic uppercase mb-2">MI RUTINA DEL VALHALLA</h4>
+                            <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Enfocada en hipertrofia y fuerza vikinga</p>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6" id="student-routine-exercises">
+                            <!-- Ejemplo de contenido para alumno -->
+                            <div class="glass-card p-6 rounded-2xl border-white/5">
+                                <h5 class="font-black italic uppercase viking-red mb-2">Día 1: Empuje</h5>
+                                <ul class="text-[11px] space-y-2 opacity-80">
+                                    <li>- Press de Banca 4x10</li>
+                                    <li>- Sentadilla 4x8</li>
+                                    <li>- Press Militar 3x12</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="rutinas-lista">
-                         <!-- Aquí se cargarán los alumnos con plan musculación -->
+                         <!-- Aquí se cargarán los alumnos con plan musculación para el Prof/Admin -->
                     </div>
                 </div>
             </div>
@@ -649,7 +674,7 @@
                 <div class="flex gap-4 pt-4">
                     <button type="button" onclick="closeModal('modal-alumno')" class="flex-1 py-4 bg-white/5 rounded-2xl font-black uppercase italic text-[10px]">Cancelar</button>
                     <button type="button" id="btn-delete-alumno" class="hidden py-4 px-4 bg-red-900/40 rounded-2xl font-black uppercase italic text-[10px] text-red-500">Eliminar</button>
-                    <button type="submit" id="btn-save-alumno" class="flex-1 py-4 viking-bg-red text-black rounded-2xl font-black uppercase italic text-[10px]">Guardar</button>
+                    <button type="submit" id="btn-save-alumno-modal" class="flex-1 py-4 viking-bg-red text-black rounded-2xl font-black uppercase italic text-[10px]">Guardar</button>
                 </div>
             </form>
         </div>
@@ -668,7 +693,7 @@
                 <input type="text" id="mov-desc" placeholder="Descripción" required class="viking-input">
                 <div class="flex gap-4 pt-4">
                     <button type="button" onclick="closeModal('modal-movimiento')" class="flex-1 py-4 bg-white/5 rounded-2xl font-black uppercase italic text-[10px]">Cancelar</button>
-                    <button type="submit" class="flex-1 py-4 viking-bg-red text-black rounded-2xl font-black uppercase italic text-[10px]">Cargar</button>
+                    <button type="submit" id="btn-save-mov-modal" class="flex-1 py-4 viking-bg-red text-black rounded-2xl font-black uppercase italic text-[10px]">Cargar</button>
                 </div>
             </form>
         </div>
@@ -693,7 +718,7 @@
                 <div class="flex gap-4 pt-6">
                     <button type="button" onclick="closeModal('modal-staff')" class="flex-1 py-4 bg-white/5 rounded-2xl font-black uppercase italic text-[10px]">Cancelar</button>
                     <button type="button" id="btn-delete-staff" class="hidden py-4 px-4 bg-red-900/40 rounded-2xl font-black uppercase italic text-[10px] text-red-500">Eliminar</button>
-                    <button type="submit" class="flex-1 py-4 viking-bg-red text-black rounded-2xl font-black uppercase italic text-[10px]">Guardar Staff</button>
+                    <button type="submit" id="btn-save-staff-modal" class="flex-1 py-4 viking-bg-red text-black rounded-2xl font-black uppercase italic text-[10px]">Guardar Staff</button>
                 </div>
             </form>
         </div>
@@ -713,7 +738,7 @@
                 <div class="flex gap-4 pt-4">
                     <button type="button" onclick="closeModal('modal-stock')" class="flex-1 py-4 bg-white/5 rounded-2xl font-black uppercase italic text-[10px]">Cancelar</button>
                     <button type="button" id="btn-delete-stock" class="hidden py-4 px-4 bg-red-900/40 rounded-2xl font-black uppercase italic text-[10px] text-red-500">Eliminar</button>
-                    <button type="submit" class="flex-1 py-4 viking-bg-red text-black rounded-2xl font-black uppercase italic text-[10px]">Guardar Mercadería</button>
+                    <button type="submit" id="btn-save-stock-modal" class="flex-1 py-4 viking-bg-red text-black rounded-2xl font-black uppercase italic text-[10px]">Guardar Mercadería</button>
                 </div>
             </form>
         </div>
@@ -733,7 +758,7 @@
                 <div class="flex gap-4 pt-4">
                     <button type="button" onclick="closeModal('modal-plan')" class="flex-1 py-4 bg-white/5 rounded-2xl font-black uppercase italic text-[10px]">Cancelar</button>
                     <button type="button" id="btn-delete-plan" class="hidden py-4 px-4 bg-red-900/40 rounded-2xl font-black uppercase italic text-[10px] text-red-500">Eliminar</button>
-                    <button type="submit" class="flex-1 py-4 viking-bg-red text-black rounded-2xl font-black uppercase italic text-[10px]">Guardar Plan</button>
+                    <button type="submit" id="btn-save-plan-modal" class="flex-1 py-4 viking-bg-red text-black rounded-2xl font-black uppercase italic text-[10px]">Guardar Plan</button>
                 </div>
             </form>
         </div>
@@ -767,7 +792,7 @@
                 <div class="flex gap-4 pt-4">
                     <button type="button" onclick="closeModal('modal-clase')" class="flex-1 py-4 bg-white/5 rounded-2xl font-black uppercase italic text-[10px]">Cancelar</button>
                     <button type="button" id="btn-delete-clase" class="hidden py-4 px-4 bg-red-900/40 rounded-2xl font-black uppercase italic text-[10px] text-red-500">Eliminar</button>
-                    <button type="submit" class="flex-1 py-4 viking-bg-red text-black rounded-2xl font-black uppercase italic text-[10px]">Guardar Clase</button>
+                    <button type="submit" id="btn-save-clase-modal" class="flex-1 py-4 viking-bg-red text-black rounded-2xl font-black uppercase italic text-[10px]">Guardar Clase</button>
                 </div>
             </form>
         </div>
@@ -783,41 +808,80 @@
             alumnos: [], planes: [], stock: [], clases: [], user: null, 
             profesores: [], administrativos: [], tiposPlanes: [],
             cart: [], currentPaymentMethod: '',
-            cobrarTab: 'mercaderia' // Pestaña por defecto
+            cobrarTab: 'mercaderia'
         };
 
-        // --- SISTEMA DE PERMISOS (RBAC) ---
+        // --- SISTEMA DE PERMISOS (RESTRICCIONES POR PERFIL) ---
         function applyPermissions() {
             if (!state.user) return;
             const rol = state.user.rol_nombre || "";
             const isProf = rol === "Profesor";
             const isAdm = rol === "Administracion";
+            const isAlumno = rol === "Alumno";
             const isAdmin = rol === "Administrador" || rol === "Supervisor";
 
-            // Secciones del menú
-            document.getElementById('nav-section-staff').style.display = isAdmin ? 'block' : 'none';
-            document.getElementById('nav-section-operativa').style.display = isProf ? 'none' : 'block';
-            document.getElementById('nav-rutinas').style.display = (isProf || isAdmin) ? 'flex' : 'none';
-            
-            // Si es Administrativo, ocultar Caja y Stock
-            if (isAdm) {
-                document.querySelector('button[onclick="switchView(\'caja\')"]').style.display = 'none';
-                document.querySelector('button[onclick="switchView(\'stock\')"]').style.display = 'none';
+            // 1. RESTRICCIONES PARA EL ALUMNO
+            if (isAlumno) {
+                document.getElementById('nav-section-admin').style.display = 'none';
+                document.getElementById('nav-section-staff').style.display = 'none';
+                document.getElementById('nav-section-operativa').style.display = 'none';
+                document.getElementById('nav-planes').style.display = 'none';
+                document.getElementById('nav-clases').style.display = 'none';
+                
+                // Mostrar solo Perfil, Calendario y Rutina si corresponde
+                document.getElementById('nav-perfil').style.display = 'flex';
+                document.getElementById('nav-calendario').style.display = 'flex';
+                
+                const planNombre = state.user.plan?.nombre?.toLowerCase() || "";
+                if (planNombre.includes('musculacion') || planNombre.includes('completo')) {
+                    document.getElementById('nav-rutinas').style.display = 'flex';
+                } else {
+                    document.getElementById('nav-rutinas').style.display = 'none';
+                }
+
+                // Ocultar columnas de acciones en tablas (aunque no debería verlas)
+                document.querySelectorAll('.action-col').forEach(el => el.style.display = 'none');
             }
 
-            // Deshabilitar botones de edición si no es Admin/Supervisor
-            const restrictedRoles = isProf || isAdm;
-            if (restrictedRoles) {
-                if(document.getElementById('btn-nuevo-alumno')) document.getElementById('btn-nuevo-alumno').style.display = 'none';
-                if(document.getElementById('btn-nuevo-plan')) document.getElementById('btn-nuevo-plan').style.display = 'none';
+            // 2. RESTRICCIONES PARA EL PROFESOR
+            if (isProf) {
+                // No debería ver operativa ni staff
+                document.getElementById('nav-section-staff').style.display = 'none';
+                document.getElementById('nav-section-operativa').style.display = 'none';
+                
+                // No puede GUARDAR nada (ocultar botones de nuevo y de guardado en modales)
+                const saveButtons = [
+                    'btn-nuevo-alumno', 'btn-nuevo-plan', 'btn-nueva-clase', 'btn-nuevo-stock', 'btn-nuevo-prof', 'btn-nuevo-adm',
+                    'btn-save-alumno-modal', 'btn-save-staff-modal', 'btn-save-plan-modal', 'btn-save-clase-modal', 'btn-save-stock-modal', 'btn-save-mov-modal'
+                ];
+                saveButtons.forEach(id => {
+                    const btn = document.getElementById(id);
+                    if(btn) btn.style.display = 'none';
+                });
+
+                // No debe ver el "lapiz" de editar en ninguna tabla
+                document.querySelectorAll('.action-col').forEach(el => el.style.display = 'none');
+            }
+
+            // 3. RESTRICCIONES PARA EL ADMINISTRATIVO
+            if (isAdm) {
+                // No puede editar clases ni ver el botón de editar
                 if(document.getElementById('btn-nueva-clase')) document.getElementById('btn-nueva-clase').style.display = 'none';
-                if(document.getElementById('btn-save-alumno')) document.getElementById('btn-save-alumno').style.display = 'none';
+                
+                // Ocultar botón editar en vista de clases (estilo específico)
+                const editClaseButtons = document.querySelectorAll('#clases-container button');
+                editClaseButtons.forEach(b => b.style.display = 'none');
+
+                // En calendario no debe poder mover nada (se maneja en render)
+                // Tampoco ve Caja ni Stock
+                document.querySelector('button[onclick="switchView(\'caja\')"]').parentElement.style.display = 'none';
+                document.querySelector('button[onclick="switchView(\'stock\')"]').parentElement.style.display = 'none';
             }
 
             lucide.createIcons();
         }
 
-        // --- PUNTO DE VENTA (COBRAR) CON PESTAÑAS ---
+        // --- PUNTO DE VENTA (COBRAR) ---
         function setCobrarTab(tab) {
             state.cobrarTab = tab;
             document.querySelectorAll('.cobrar-tab').forEach(t => t.classList.remove('active'));
@@ -846,7 +910,6 @@
                     </div>
                 `).join('');
             } else {
-                // Pestaña de Planes: Lista de Alumnos para pagar cuota
                 const filteredAl = state.alumnos.filter(a => a.nombre_completo.toLowerCase().includes(searchVal) || a.dni.includes(searchVal));
                 displayArea.innerHTML = `
                     <div class="glass-card p-8 rounded-[2.5rem] h-[600px] flex flex-col">
@@ -890,18 +953,12 @@
             if (!al || !al.plan_id) return;
             const plan = state.planes.find(p => p.id === al.plan_id);
             if (!plan) return;
-            
             const isNew = !al.fecha_ultima_renovacion;
             const item = {
                 id: `plan-${al.id}`,
                 nombre_producto: `${isNew ? 'ALTA' : 'RENOV'}: ${al.nombre_completo} (${plan.nombre})`,
-                precio_venta: plan.precio,
-                qty: 1,
-                type: 'plan',
-                alumno_id: al.id
+                precio_venta: plan.precio, qty: 1, type: 'plan', alumno_id: al.id
             };
-            
-            // Solo permitimos un plan por cobro para evitar errores
             state.cart = state.cart.filter(c => c.type !== 'plan');
             state.cart.push(item);
             updateCartUI();
@@ -930,7 +987,6 @@
         }
 
         function removeFromCart(i) { state.cart.splice(i, 1); updateCartUI(); }
-
         function setPaymentMethod(m) {
             state.currentPaymentMethod = m;
             document.querySelectorAll('.payment-method-btn').forEach(b => b.classList.toggle('active', b.innerText.includes(m)));
@@ -952,47 +1008,65 @@
             }
         }
 
-        // --- CALENDARIO COMPACTO ---
+        // --- CALENDARIO ---
         function renderCalendar() {
             const cal = document.getElementById('calendar-grid'); if (!cal) return;
+            const rol = state.user?.rol_nombre;
+            const canMove = rol !== "Administracion" && rol !== "Alumno" && rol !== "Profesor"; // Solo Admin/Supervisor mueven
+
             cal.innerHTML = `<div class="cal-header">HORA</div><div class="cal-header">LUNES</div><div class="cal-header">MARTES</div><div class="cal-header">MIÉRCOLES</div><div class="cal-header">JUEVES</div><div class="cal-header">VIERNES</div><div class="cal-header">SÁBADO</div>`;
             for(let h=7; h<=21; h++) {
                 cal.innerHTML += `<div class="cal-cell flex items-center justify-center font-black text-[9px] text-white/40 bg-white/5 border-r border-white/20">${h}:00</div>`;
                 for(let d=1; d<=6; d++) {
                     const isSat = d === 6; const isClosed = isSat && (h < 10 || h > 13);
-                    cal.innerHTML += `<div id="cell-${d}-${h}" class="cal-cell ${isClosed ? 'cal-cell-closed' : ''}" ondragover="event.preventDefault()" ondrop="handleDrop(event, ${d}, ${h})"></div>`;
+                    cal.innerHTML += `<div id="cell-${d}-${h}" class="cal-cell ${isClosed ? 'cal-cell-closed' : ''}" ondragover="event.preventDefault()" ondrop="${canMove ? `handleDrop(event, ${d}, ${h})` : ''}"></div>`;
                 }
             }
             state.clases.forEach(c => {
                 const cell = document.getElementById(`cell-${c.dia}-${c.horario}`);
                 if (cell) {
                     const badge = document.createElement('div'); badge.className = "class-badge"; badge.style.backgroundColor = c.color || '#FF0000';
-                    badge.draggable = true; 
+                    if (canMove) {
+                        badge.draggable = true; 
+                        badge.ondragstart = (e) => { e.dataTransfer.setData("clase_id", c.id); }; 
+                    } else {
+                        badge.style.cursor = "default";
+                    }
                     badge.innerHTML = `<span class="text-[8px] mb-0.5 leading-none">${c.nombre}</span><span class="text-[6px] opacity-70 font-bold">${c.coach}</span>`;
-                    badge.ondragstart = (e) => { e.dataTransfer.setData("clase_id", c.id); }; 
                     cell.appendChild(badge);
                 }
             });
         }
 
-        // --- RUTINAS (PARA PROFESORES) ---
+        // --- RUTINAS ---
         function renderRutinas() {
+            const rol = state.user?.rol_nombre;
             const list = document.getElementById('rutinas-lista');
-            // Filtramos alumnos que tienen plan con musculación o similar
-            const alRutinas = state.alumnos.filter(a => a.plan?.nombre.toLowerCase().includes('musculacion') || a.plan?.nombre.toLowerCase().includes('completo'));
-            if (alRutinas.length === 0) {
-                list.innerHTML = '<p class="text-gray-500 italic col-span-3">No hay alumnos activos con plan de musculación.</p>';
-                return;
+            const studentView = document.getElementById('musculacion-student-view');
+
+            if (rol === "Alumno") {
+                list.style.display = 'none';
+                studentView.classList.remove('hidden');
+                document.getElementById('rutina-title').innerText = "Mi Rutina Musculación";
+            } else {
+                list.style.display = 'grid';
+                studentView.classList.add('hidden');
+                document.getElementById('rutina-title').innerText = "Rutinas de Alumnos";
+                const alRutinas = state.alumnos.filter(a => a.plan?.nombre.toLowerCase().includes('musculacion') || a.plan?.nombre.toLowerCase().includes('completo'));
+                if (alRutinas.length === 0) {
+                    list.innerHTML = '<p class="text-gray-500 italic col-span-3">No hay alumnos activos con plan de musculación.</p>';
+                    return;
+                }
+                list.innerHTML = alRutinas.map(a => `
+                    <div class="glass-card p-6 rounded-3xl border-red-600/10">
+                        <h4 class="text-xs font-black uppercase italic mb-2">${a.nombre_completo}</h4>
+                        <p class="text-[9px] text-gray-500 uppercase mb-4">Plan: ${a.plan.nombre}</p>
+                        <button class="w-full py-3 bg-white/5 rounded-xl text-[9px] font-black uppercase italic hover:bg-red-600 hover:text-black transition-colors">Ver Ficha Rutina</button>
+                    </div>`).join('');
             }
-            list.innerHTML = alRutinas.map(a => `
-                <div class="glass-card p-6 rounded-3xl border-red-600/10">
-                    <h4 class="text-xs font-black uppercase italic mb-2">${a.nombre_completo}</h4>
-                    <p class="text-[9px] text-gray-500 uppercase mb-4">Plan: ${a.plan.nombre}</p>
-                    <button class="w-full py-3 bg-white/5 rounded-xl text-[9px] font-black uppercase italic hover:bg-red-600 hover:text-black transition-colors">Ver Ficha Rutina</button>
-                </div>`).join('');
         }
 
-        // --- LÓGICA DE ALUMNOS (ORIGINAL) ---
+        // --- LÓGICA GENERAL ---
         function calculateIMC() {
             const peso = parseFloat(document.getElementById('al-peso').value);
             const alturaCm = parseFloat(document.getElementById('al-altura').value);
@@ -1036,7 +1110,6 @@
         function closeModal(id) { 
             document.getElementById(id).style.display = 'none'; 
             const f = document.querySelector(`#${id} form`); if (f) f.reset();
-            const delBtn = document.querySelector(`#${id} button[id^='btn-delete']`); if (delBtn) delBtn.classList.add('hidden');
         }
 
         function switchView(view) {
@@ -1064,8 +1137,24 @@
                 document.getElementById('side-user-name').innerText = res.nombre_completo;
                 document.getElementById('side-user-role').innerText = res.rol_nombre || 'Staff';
                 document.getElementById('user-initials').innerText = res.nombre_completo.split(' ').map(n => n[0]).join('').toUpperCase();
+                
+                // Cargar datos en el perfil
+                document.getElementById('prof-name').innerText = res.nombre_completo;
+                document.getElementById('prof-role').innerText = res.rol_nombre;
+                document.getElementById('prof-initials-view').innerText = res.nombre_completo.split(' ').map(n => n[0]).join('').toUpperCase();
+                document.getElementById('prof-input-name').value = res.nombre_completo;
+                document.getElementById('prof-input-dni').value = res.dni;
                 document.getElementById('prof-input-email').value = res.email || "";
-                applyPermissions();
+
+                if (res.rol_nombre === "Alumno") {
+                    document.getElementById('plan-alumno-info').classList.remove('hidden');
+                    document.getElementById('perfil-plan-nombre').innerText = res.plan?.nombre || "SIN PLAN";
+                    document.getElementById('perfil-vencimiento').innerText = "Vence: " + (res.fecha_vencimiento || "-");
+                    switchView('perfil'); // El alumno inicia en su perfil
+                } else {
+                    switchView('dashboard');
+                }
+                
                 initApp();
             } else {
                 document.getElementById('login-error').classList.remove('hidden');
@@ -1087,6 +1176,9 @@
         async function fetchAlumnos() {
             const data = await apiFetch('/alumnos');
             state.alumnos = Array.isArray(data) ? data : [];
+            const rol = state.user?.rol_nombre;
+            const hideEdit = (rol === "Profesor" || rol === "Alumno");
+
             const renderRow = (al) => `
                 <tr class="viking-table-row">
                     <td class="py-6">${al.nombre_completo}</td><td class="py-6 text-gray-500">${al.dni}</td>
@@ -1094,11 +1186,14 @@
                     <td class="py-6"><span class="text-green-500 font-bold">AL DÍA</span></td>
                     <td class="py-6 text-red-600 font-black">${al.fecha_ultima_renovacion || '-'}</td>
                     <td class="py-6 text-gray-400 font-black">${al.fecha_vencimiento || '-'}</td>
-                    <td class="py-6 text-right"><button onclick="openEditAlumno(${al.id})" class="hover:text-red-600"><i data-lucide="edit-2" class="w-4 h-4"></i></button></td>
+                    <td class="py-6 text-right action-col">
+                        ${hideEdit ? '' : `<button onclick="openEditAlumno(${al.id})" class="hover:text-red-600"><i data-lucide="edit-2" class="w-4 h-4"></i></button>`}
+                    </td>
                 </tr>`;
             document.getElementById('dash-table-alumnos-mini').innerHTML = [...state.alumnos].sort((a,b)=>a.nombre_completo.localeCompare(b.nombre_completo)).slice(0, 10).map(renderRow).join('');
             document.getElementById('table-alumnos-full').innerHTML = state.alumnos.map(renderRow).join('');
             lucide.createIcons();
+            applyPermissions();
         }
 
         function openModalAlumno() { 
@@ -1121,7 +1216,8 @@
             document.getElementById('al-imc').value = al.imc || "";
             document.getElementById('al-fecha-renovacion').value = al.fecha_ultima_renovacion || "";
             document.getElementById('al-fecha-vencimiento').value = al.fecha_vencimiento || "";
-            const delBtn = document.getElementById('btn-delete-alumno'); delBtn.classList.remove('hidden');
+            const delBtn = document.getElementById('btn-delete-alumno'); 
+            if(state.user.rol_nombre === "Administrador" || state.user.rol_nombre === "Supervisor") delBtn.classList.remove('hidden');
             delBtn.onclick = () => deleteRecord('alumnos', id, 'modal-alumno', fetchAlumnos);
             openModal('modal-alumno');
         }
@@ -1138,10 +1234,18 @@
         async function loadStaff() {
             const profs = await apiFetch('/profesores'); const admins = await apiFetch('/administrativos');
             state.profesores = Array.isArray(profs) ? profs : []; state.administrativos = Array.isArray(admins) ? admins : [];
+            const rol = state.user?.rol_nombre;
+            const hideEdit = rol !== "Administrador" && rol !== "Supervisor";
+
             document.getElementById('cl-coach-select').innerHTML = '<option value="">Seleccionar Profesor</option>' + state.profesores.map(p => `<option value="${p.nombre_completo}">${p.nombre_completo}</option>`).join('');
-            document.getElementById('table-profesores').innerHTML = state.profesores.map(p => `<tr class="viking-table-row"><td class="py-6">${p.nombre_completo}</td><td class="py-6 text-gray-500">${p.dni}</td><td class="py-6 text-red-600 font-black">${p.especialidad || 'Gral.'}</td><td class="py-6 text-right"><button onclick="openEditStaff(${p.id}, 'Profesor')" class="hover:text-red-600"><i data-lucide="edit-3" class="w-4 h-4"></i></button></td></tr>`).join('');
-            document.getElementById('table-administrativos').innerHTML = state.administrativos.map(a => `<tr class="viking-table-row"><td class="py-6">${a.nombre_completo}</td><td class="py-6 text-gray-500">${a.dni}</td><td class="py-6 text-gray-500 lowercase">${a.email || '-'}</td><td class="py-6 text-right"><button onclick="openEditStaff(${a.id}, 'Administracion')" class="hover:text-red-600"><i data-lucide="user-cog" class="w-4 h-4"></i></button></td></tr>`).join('');
+            document.getElementById('table-profesores').innerHTML = state.profesores.map(p => `
+                <tr class="viking-table-row"><td class="py-6">${p.nombre_completo}</td><td class="py-6 text-gray-500">${p.dni}</td><td class="py-6 text-red-600 font-black">${p.especialidad || 'Gral.'}</td>
+                <td class="py-6 text-right action-col">${hideEdit ? '' : `<button onclick="openEditStaff(${p.id}, 'Profesor')" class="hover:text-red-600"><i data-lucide="edit-3" class="w-4 h-4"></i></button>`}</td></tr>`).join('');
+            document.getElementById('table-administrativos').innerHTML = state.administrativos.map(a => `
+                <tr class="viking-table-row"><td class="py-6">${a.nombre_completo}</td><td class="py-6 text-gray-500">${a.dni}</td><td class="py-6 text-gray-500 lowercase">${a.email || '-'}</td>
+                <td class="py-6 text-right action-col">${hideEdit ? '' : `<button onclick="openEditStaff(${a.id}, 'Administracion')" class="hover:text-red-600"><i data-lucide="user-cog" class="w-4 h-4"></i></button>`}</td></tr>`).join('');
             lucide.createIcons();
+            applyPermissions();
         }
 
         function openModalStaff(rol) { document.getElementById('modal-staff-title').innerText = "Alta " + rol; document.getElementById('stf-id').value = ""; document.getElementById('stf-rol').value = rol; openModal('modal-staff'); }
@@ -1150,7 +1254,8 @@
             document.getElementById('modal-staff-title').innerText = "Editar " + rol;
             document.getElementById('stf-id').value = user.id; document.getElementById('stf-rol').value = rol;
             document.getElementById('stf-nombre').value = user.nombre_completo; document.getElementById('stf-dni').value = user.dni; document.getElementById('stf-esp').value = user.especialidad || "";
-            const delBtn = document.getElementById('btn-delete-staff'); delBtn.classList.remove('hidden');
+            const delBtn = document.getElementById('btn-delete-staff'); 
+            if(state.user.rol_nombre === "Administrador" || state.user.rol_nombre === "Supervisor") delBtn.classList.remove('hidden');
             delBtn.onclick = () => deleteRecord('staff', id, 'modal-staff', loadStaff);
             openModal('modal-staff');
         }
@@ -1177,15 +1282,26 @@
         function filterPlanes(tipoId, btn) {
             document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active');
             const filtered = state.planes.filter(p => p.tipo_plan_id === tipoId);
-            document.getElementById('planes-container').innerHTML = filtered.map(p => `<div class="glass-card p-8 rounded-[2.5rem] flex flex-col border-red-600/10 relative"><button onclick="openEditPlan(${p.id})" class="absolute top-4 right-4 text-gray-600 hover:text-red-600"><i data-lucide="edit-3" class="w-4 h-4"></i></button><span class="text-[8px] font-black viking-red uppercase italic tracking-widest mb-2">${p.tipo?.nombre || 'PLAN'}</span><h4 class="text-lg font-black uppercase italic mb-6 leading-tight">${p.nombre}</h4><p class="text-3xl font-black italic mb-8">$ ${p.precio.toLocaleString()}</p></div>`).join('');
+            const rol = state.user?.rol_nombre;
+            const hideEdit = (rol === "Profesor" || rol === "Alumno" || rol === "Administracion");
+
+            document.getElementById('planes-container').innerHTML = filtered.map(p => `
+                <div class="glass-card p-8 rounded-[2.5rem] flex flex-col border-red-600/10 relative">
+                    ${hideEdit ? '' : `<button onclick="openEditPlan(${p.id})" class="absolute top-4 right-4 text-gray-600 hover:text-red-600"><i data-lucide="edit-3" class="w-4 h-4"></i></button>`}
+                    <span class="text-[8px] font-black viking-red uppercase italic tracking-widest mb-2">${p.tipo?.nombre || 'PLAN'}</span>
+                    <h4 class="text-lg font-black uppercase italic mb-6 leading-tight">${p.nombre}</h4>
+                    <p class="text-3xl font-black italic mb-8">$ ${p.precio.toLocaleString()}</p>
+                </div>`).join('');
             lucide.createIcons();
+            applyPermissions();
         }
 
         function openModalPlan() { document.getElementById('plan-id').value = ""; document.getElementById('modal-plan-title').innerText = "Nuevo Plan"; openModal('modal-plan'); }
         function openEditPlan(id) {
             const p = state.planes.find(x => x.id == id); if(!p) return;
             document.getElementById('plan-id').value = p.id; document.getElementById('plan-nombre').value = p.nombre; document.getElementById('plan-tipo').value = p.tipo_plan_id; document.getElementById('plan-precio').value = p.precio;
-            const delBtn = document.getElementById('btn-delete-plan'); delBtn.classList.remove('hidden');
+            const delBtn = document.getElementById('btn-delete-plan'); 
+            if(state.user.rol_nombre === "Administrador" || state.user.rol_nombre === "Supervisor") delBtn.classList.remove('hidden');
             delBtn.onclick = () => deleteRecord('planes', p.id, 'modal-plan', loadPlanes);
             openModal('modal-plan');
         }
@@ -1200,15 +1316,25 @@
 
         async function loadStock() {
             const data = await apiFetch('/stock'); state.stock = Array.isArray(data) ? data : [];
-            document.getElementById('stock-container').innerHTML = state.stock.map(s => `<div class="glass-card p-6 rounded-[2rem] relative group text-left"><button onclick="openEditStock(${s.id})" class="absolute top-4 right-4 text-gray-600 hover:text-red-600"><i data-lucide="edit-2" class="w-3 h-3"></i></button><h4 class="text-sm font-black uppercase italic mb-4">${s.nombre_producto}</h4><p class="text-2xl font-black italic">$ ${s.precio_venta.toLocaleString()}</p><div class="mt-4 border-t border-white/5 pt-4"><span class="text-[9px] font-black text-gray-600 uppercase">Stock: ${s.stock_actual}</span></div></div>`).join('');
+            const rol = state.user?.rol_nombre;
+            const hideEdit = (rol === "Profesor");
+
+            document.getElementById('stock-container').innerHTML = state.stock.map(s => `
+                <div class="glass-card p-6 rounded-[2rem] relative group text-left">
+                    ${hideEdit ? '' : `<button onclick="openEditStock(${s.id})" class="absolute top-4 right-4 text-gray-600 hover:text-red-600"><i data-lucide="edit-2" class="w-3 h-3"></i></button>`}
+                    <h4 class="text-sm font-black uppercase italic mb-4">${s.nombre_producto}</h4><p class="text-2xl font-black italic">$ ${s.precio_venta.toLocaleString()}</p>
+                    <div class="mt-4 border-t border-white/5 pt-4"><span class="text-[9px] font-black text-gray-600 uppercase">Stock: ${s.stock_actual}</span></div>
+                </div>`).join('');
             lucide.createIcons();
+            applyPermissions();
         }
 
         function openModalStock() { document.getElementById('stock-id').value = ""; openModal('modal-stock'); }
         function openEditStock(id) {
             const s = state.stock.find(x => x.id == id); if(!s) return;
             document.getElementById('stock-id').value = s.id; document.getElementById('stock-nombre').value = s.nombre_producto; document.getElementById('stock-cant').value = s.stock_actual; document.getElementById('stock-precio').value = s.precio_venta;
-            const delBtn = document.getElementById('btn-delete-stock'); delBtn.classList.remove('hidden');
+            const delBtn = document.getElementById('btn-delete-stock'); 
+            if(state.user.rol_nombre === "Administrador" || state.user.rol_nombre === "Supervisor") delBtn.classList.remove('hidden');
             delBtn.onclick = () => deleteRecord('stock', s.id, 'modal-stock', loadStock);
             openModal('modal-stock');
         }
@@ -1223,9 +1349,18 @@
 
         async function loadClases() {
             const data = await apiFetch('/clases'); state.clases = Array.isArray(data) ? data : [];
-            document.getElementById('clases-container').innerHTML = state.clases.map(c => `<div class="glass-card p-8 rounded-[2.5rem] relative text-left"><button onclick="openEditClase(${c.id})" class="absolute top-4 right-4 text-gray-600 hover:text-red-600"><i data-lucide="settings" class="w-4 h-4"></i></button><div class="flex items-center gap-2 mb-2"><div class="w-3 h-3 rounded-full" style="background-color: ${c.color || '#FF0000'}"></div><h4 class="text-lg font-black uppercase italic">${c.nombre}</h4></div><p class="text-[10px] font-black text-red-600 uppercase italic">Coach: ${c.coach || 'Vikingo'}</p></div>`).join('');
+            const rol = state.user?.rol_nombre;
+            const hideEdit = (rol === "Profesor" || rol === "Administracion" || rol === "Alumno");
+
+            document.getElementById('clases-container').innerHTML = state.clases.map(c => `
+                <div class="glass-card p-8 rounded-[2.5rem] relative text-left">
+                    ${hideEdit ? '' : `<button onclick="openEditClase(${c.id})" class="absolute top-4 right-4 text-gray-600 hover:text-red-600"><i data-lucide="settings" class="w-4 h-4"></i></button>`}
+                    <div class="flex items-center gap-2 mb-2"><div class="w-3 h-3 rounded-full" style="background-color: ${c.color || '#FF0000'}"></div><h4 class="text-lg font-black uppercase italic">${c.nombre}</h4></div>
+                    <p class="text-[10px] font-black text-red-600 uppercase italic">Coach: ${c.coach || 'Vikingo'}</p>
+                </div>`).join('');
             lucide.createIcons();
             if(document.getElementById('view-calendario').classList.contains('active')) renderCalendar();
+            applyPermissions();
         }
 
         function openModalClase() { document.getElementById('cl-id').value = ""; openModal('modal-clase'); }
@@ -1233,7 +1368,8 @@
             const c = state.clases.find(x => x.id == id); if(!c) return;
             document.getElementById('cl-id').value = c.id; document.getElementById('cl-nombre').value = c.nombre; document.getElementById('cl-coach-select').value = c.coach; document.getElementById('cl-dia').value = c.dia;
             updateHourOptions(); document.getElementById('cl-horario').value = c.horario; document.getElementById('cl-color').value = c.color || "#FF0000";
-            const delBtn = document.getElementById('btn-delete-clase'); delBtn.classList.remove('hidden');
+            const delBtn = document.getElementById('btn-delete-clase'); 
+            if(state.user.rol_nombre === "Administrador" || state.user.rol_nombre === "Supervisor") delBtn.classList.remove('hidden');
             delBtn.onclick = () => deleteRecord('clases', c.id, 'modal-clase', loadClases);
             openModal('modal-clase');
         }
