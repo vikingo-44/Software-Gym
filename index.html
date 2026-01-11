@@ -790,8 +790,13 @@
 
     <!-- SCRIPTS INTEGRADOS -->
     <script>
+        // CONFIGURACIÓN DE URL PARA FUNCIONAMIENTO LOCAL
+        // Si tu backend en Render es por ejemplo https://mi-backend.onrender.com
+        // Pon esa URL aquí para que el frontend local sepa a dónde llamar.
+        const PRODUCTION_URL = "/api"; 
+        
         const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.protocol === 'file:'
-            ? "http://localhost:8000/api" 
+            ? (PRODUCTION_URL === "/api" ? "http://localhost:8000/api" : PRODUCTION_URL)
             : "/api";
 
         let state = { 
@@ -810,7 +815,6 @@
             const isAlumno = rol === "Alumno";
             const isAdmin = rol === "Administrador" || rol === "Supervisor";
 
-            // Reset de visibilidad general
             document.getElementById('nav-section-staff').style.display = 'block';
             document.getElementById('nav-section-operativa').style.display = 'block';
             document.getElementById('nav-planes').style.display = 'flex';
@@ -819,7 +823,6 @@
             document.getElementById('nav-stock').style.display = 'block';
             document.getElementById('nav-cobrar').style.display = 'block';
 
-            // 1. RESTRICCIONES PARA EL ALUMNO
             if (isAlumno) {
                 document.getElementById('nav-section-admin').style.display = 'none';
                 document.getElementById('nav-section-staff').style.display = 'none';
@@ -833,36 +836,23 @@
                 document.querySelectorAll('.action-col').forEach(el => el.style.display = 'none');
             }
 
-            // 2. RESTRICCIONES PARA EL PROFESOR
             if (isProf) {
                 document.getElementById('nav-section-staff').style.display = 'none';
                 document.getElementById('nav-section-operativa').style.display = 'none';
-                document.getElementById('nav-planes').style.display = 'none'; // Requisito: Sacar Planes
-                document.getElementById('nav-clases').style.display = 'none'; // Requisito: Sacar Clases
-                
-                const saveButtons = [
-                    'btn-nuevo-alumno', 'btn-nuevo-plan', 'btn-nueva-clase', 'btn-nuevo-stock', 'btn-nuevo-prof', 'btn-nuevo-adm',
-                    'btn-save-alumno-modal', 'btn-save-staff-modal', 'btn-save-plan-modal', 'btn-save-clase-modal', 'btn-save-stock-modal', 'btn-save-mov-modal'
-                ];
+                document.getElementById('nav-planes').style.display = 'none'; 
+                document.getElementById('nav-clases').style.display = 'none'; 
+                const saveButtons = ['btn-nuevo-alumno', 'btn-nuevo-plan', 'btn-nueva-clase', 'btn-nuevo-stock', 'btn-nuevo-prof', 'btn-nuevo-adm'];
                 saveButtons.forEach(id => { const b = document.getElementById(id); if(b) b.style.display = 'none'; });
                 document.querySelectorAll('.action-col').forEach(el => el.style.display = 'none');
             }
 
-            // 3. RESTRICCIONES PARA EL ADMINISTRATIVO
             if (isAdm) {
                 document.getElementById('nav-section-staff').style.display = 'none';
-                // El menú de facturación debe desplegarse:
                 document.getElementById('nav-section-operativa').style.display = 'block';
                 document.getElementById('btn-facturacion').style.display = 'flex';
-                
-                // Pero ocultamos las secciones prohibidas dentro de facturación
                 document.getElementById('nav-caja').style.display = 'none';
                 document.getElementById('nav-stock').style.display = 'none';
-                
-                // No puede editar clases
                 document.getElementById('btn-nueva-clase').style.display = 'none';
-                const editClaseButtons = document.querySelectorAll('#clases-container button');
-                editClaseButtons.forEach(b => b.style.display = 'none');
             }
 
             if (isAdmin) {
@@ -870,7 +860,6 @@
                 document.getElementById('nav-section-operativa').style.display = 'block';
                 document.querySelectorAll('.action-col').forEach(el => el.style.display = 'table-cell');
             }
-
             lucide.createIcons();
         }
 
@@ -905,14 +894,21 @@
                 displayArea.innerHTML = `
                     <div class="glass-card p-8 rounded-[2.5rem] h-[600px] flex flex-col">
                         <h4 class="text-[10px] font-black uppercase italic text-red-600 mb-6 tracking-widest">Alumnos para Renovación</h4>
-                        <div class="overflow-y-auto custom-scrollbar flex-1 space-y-2">
+                        <div class="overflow-y-auto custom-scrollbar flex-1 space-y-3">
                             ${filteredAl.map(a => `
-                                <div class="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5 hover:border-red-600/30 cursor-pointer" onclick="preparePlanCharge(${a.id})">
-                                    <div>
-                                        <p class="text-[11px] font-black italic uppercase">${a.nombre_completo}</p>
-                                        <p class="text-[8px] text-gray-500">DNI: ${a.dni} | PLAN: ${a.plan?.nombre || 'NINGUNO'}</p>
+                                <div class="flex flex-col gap-2 p-4 bg-white/5 rounded-2xl border border-white/5 hover:border-red-600/30">
+                                    <div class="flex justify-between items-start">
+                                        <div>
+                                            <p class="text-[11px] font-black italic uppercase leading-tight">${a.nombre_completo}</p>
+                                            <p class="text-[8px] text-gray-500">DNI: ${a.dni}</p>
+                                        </div>
                                     </div>
-                                    <span class="px-3 py-1 rounded-full text-[8px] font-black italic bg-green-600/20 text-green-500">Pagar</span>
+                                    <div class="flex gap-2 items-center mt-1">
+                                        <select id="plan-select-${a.id}" class="viking-input py-1 text-[9px] h-8 bg-black/40 border-white/10 flex-1">
+                                            ${state.planes.map(p => `<option value="${p.id}" ${p.id === a.plan_id ? 'selected' : ''}>${p.nombre} ($${p.precio})</option>`).join('')}
+                                        </select>
+                                        <button onclick="preparePlanCharge(${a.id})" class="px-4 py-2 rounded-xl text-[9px] font-black italic bg-green-600/20 text-green-500 hover:bg-green-600 hover:text-black transition-all">Cobrar</button>
+                                    </div>
                                 </div>`).join('')}
                         </div>
                     </div>`;
@@ -936,10 +932,22 @@
 
         function preparePlanCharge(alumnoId) {
             const al = state.alumnos.find(a => a.id === alumnoId);
-            if (!al || !al.plan_id) return;
-            const plan = state.planes.find(p => p.id === al.plan_id);
+            if (!al) return;
+            // Se obtiene el plan seleccionado del dropdown (por si se cambió)
+            const selectedPlanId = parseInt(document.getElementById(`plan-select-${alumnoId}`).value);
+            const plan = state.planes.find(p => p.id === selectedPlanId);
             if (!plan) return;
-            const item = { id: `plan-${al.id}`, nombre_producto: `RENOV: ${al.nombre_completo} (${plan.nombre})`, precio_venta: plan.precio, qty: 1, type: 'plan', alumno_id: al.id };
+
+            const item = { 
+                id: `plan-${al.id}`, 
+                nombre_producto: `RENOV: ${al.nombre_completo} (${plan.nombre})`, 
+                precio_venta: plan.precio, 
+                qty: 1, 
+                type: 'plan', 
+                alumno_id: al.id,
+                plan_id_cobrado: plan.id 
+            };
+            
             state.cart = state.cart.filter(c => c.type !== 'plan');
             state.cart.push(item);
             updateCartUI();
@@ -976,9 +984,20 @@
         async function finalizarVenta() {
             if (state.cart.length === 0 || !state.currentPaymentMethod) return;
             const total = state.cart.reduce((acc, c) => acc + (c.qty * c.precio_venta), 0);
-            const dataCaja = { tipo: "Ingreso", monto: total, descripcion: `Venta (${state.currentPaymentMethod}): ${state.cart.map(c => c.nombre_producto).join(', ')}` };
+            const desc = `Venta (${state.currentPaymentMethod}): ${state.cart.map(c => c.nombre_producto).join(', ')}`;
+            const dataCaja = { tipo: "Ingreso", monto: total, descripcion: desc };
+            
             const res = await apiFetch('/caja/movimiento', 'POST', dataCaja);
             if (!res.error) {
+                for (let item of state.cart) {
+                    if (item.type === 'plan' && item.alumno_id) {
+                        const hoy = new Date().toISOString().split('T')[0];
+                        await apiFetch(`/alumnos/${item.alumno_id}`, 'PUT', { 
+                            plan_id: item.plan_id_cobrado,
+                            fecha_ultima_renovacion: hoy 
+                        });
+                    }
+                }
                 state.cart = []; state.currentPaymentMethod = '';
                 await initApp();
                 renderCobrar();
@@ -990,7 +1009,6 @@
         function renderCalendar() {
             const cal = document.getElementById('calendar-grid'); if (!cal) return;
             const rol = state.user?.rol_nombre;
-            // Solo Administradores y Supervisores pueden mover clases. Administrativos, Profesores y Alumnos NO.
             const canMove = (rol === "Administrador" || rol === "Supervisor");
 
             cal.innerHTML = `<div class="cal-header">HORA</div><div class="cal-header">LUNES</div><div class="cal-header">MARTES</div><div class="cal-header">MIÉRCOLES</div><div class="cal-header">JUEVES</div><div class="cal-header">VIERNES</div><div class="cal-header">SÁBADO</div>`;
@@ -1009,7 +1027,8 @@
                         badge.draggable = true; 
                         badge.ondragstart = (e) => { e.dataTransfer.setData("clase_id", c.id); }; 
                     } else { badge.style.cursor = "default"; }
-                    badge.innerHTML = `<span class="text-[8px] mb-0.5 leading-none">${c.nombre}</span><span class="text-[6px] opacity-70 font-bold">${c.coach}</span>`;
+                    // Aumentamos legibilidad de la fuente aquí
+                    badge.innerHTML = `<span class="text-[10px] mb-0.5 leading-none font-black uppercase">${c.nombre}</span><span class="text-[8px] opacity-70 font-black italic">${c.coach}</span>`;
                     cell.appendChild(badge);
                 }
             });
@@ -1026,18 +1045,38 @@
             } else {
                 list.style.display = 'grid'; studentView.classList.add('hidden');
                 document.getElementById('rutina-title').innerText = "Rutinas de Alumnos";
-                const alRutinas = state.alumnos.filter(a => a.plan?.nombre.toLowerCase().includes('musculacion') || a.plan?.nombre.toLowerCase().includes('completo'));
+                // Filtrar alumnos automáticamente basándose en su plan
+                const alRutinas = state.alumnos.filter(a => {
+                    const pName = a.plan?.nombre?.toLowerCase() || "";
+                    return pName.includes('musculacion') || pName.includes('completo');
+                });
+                
                 if (alRutinas.length === 0) { list.innerHTML = '<p class="text-gray-500 italic col-span-3">No hay alumnos activos con plan de musculación.</p>'; return; }
                 list.innerHTML = alRutinas.map(a => `
                     <div class="glass-card p-6 rounded-3xl border-red-600/10">
-                        <h4 class="text-xs font-black uppercase italic mb-2">${a.nombre_completo}</h4>
-                        <p class="text-[9px] text-gray-500 uppercase mb-4">Plan: ${a.plan.nombre}</p>
-                        <button class="w-full py-3 bg-white/5 rounded-xl text-[9px] font-black uppercase italic hover:bg-red-600 hover:text-black transition-colors">Ver Ficha Rutina</button>
+                        <div class="flex items-center gap-4 mb-4">
+                            <div class="w-10 h-10 rounded-xl viking-bg-red flex items-center justify-center font-black text-black text-sm italic">${a.nombre_completo[0]}</div>
+                            <div>
+                                <h4 class="text-xs font-black uppercase italic leading-tight">${a.nombre_completo}</h4>
+                                <p class="text-[8px] text-gray-500 uppercase font-bold">Plan: ${a.plan.nombre}</p>
+                            </div>
+                        </div>
+                        <button class="w-full py-3 bg-white/5 rounded-xl text-[9px] font-black uppercase italic hover:bg-red-600 hover:text-black transition-colors">Ver Ficha Técnica</button>
                     </div>`).join('');
             }
         }
 
         // --- LÓGICA GENERAL ---
+        async function apiFetch(endpoint, method = 'GET', body = null) {
+            const options = { method, headers: { 'Content-Type': 'application/json' } };
+            if (body) options.body = JSON.stringify(body);
+            try {
+                const res = await fetch(`${API_BASE}${endpoint}`, options);
+                if (!res.ok) return { error: await res.text() };
+                return await res.json();
+            } catch (e) { return { error: "Error de conexión" }; }
+        }
+
         function calculateIMC() {
             const peso = parseFloat(document.getElementById('al-peso').value);
             const alturaCm = parseFloat(document.getElementById('al-altura').value);
@@ -1063,16 +1102,6 @@
             let d = new Date(renovDate + 'T00:00:00');
             d.setMonth(d.getMonth() + months);
             document.getElementById('al-fecha-vencimiento').value = d.toISOString().split('T')[0];
-        }
-
-        async function apiFetch(endpoint, method = 'GET', body = null) {
-            const options = { method, headers: { 'Content-Type': 'application/json' } };
-            if (body) options.body = JSON.stringify(body);
-            try {
-                const res = await fetch(`${API_BASE}${endpoint}`, options);
-                if (!res.ok) return { error: await res.text() };
-                return await res.json();
-            } catch (e) { return { error: "Error de conexión" }; }
         }
 
         function toggleSidebar() { document.getElementById('sidebar').classList.toggle('sidebar-collapsed'); lucide.createIcons(); }
@@ -1155,27 +1184,6 @@
             applyPermissions();
         }
 
-        function openModalAlumno() { document.getElementById('modal-alumno-title').innerText = "Nuevo Alumno"; document.getElementById('al-id').value = ""; document.getElementById('al-fecha-renovacion').value = new Date().toISOString().split('T')[0]; openModal('modal-alumno'); }
-        function openEditAlumno(id) {
-            const al = state.alumnos.find(x => x.id == id); if(!al) return;
-            document.getElementById('modal-alumno-title').innerText = "Editar Alumno";
-            document.getElementById('al-id').value = al.id; document.getElementById('al-nombre').value = al.nombre_completo; document.getElementById('al-dni').value = al.dni;
-            document.getElementById('al-email').value = al.email || ""; document.getElementById('al-plan').value = al.plan_id || ""; document.getElementById('al-peso').value = al.peso || "";
-            document.getElementById('al-altura').value = al.altura || ""; document.getElementById('al-imc').value = al.imc || ""; document.getElementById('al-fecha-renovacion').value = al.fecha_ultima_renovacion || "";
-            document.getElementById('al-fecha-vencimiento').value = al.fecha_vencimiento || "";
-            const delBtn = document.getElementById('btn-delete-alumno'); if(state.user.rol_nombre === "Administrador" || state.user.rol_nombre === "Supervisor") delBtn.classList.remove('hidden');
-            delBtn.onclick = () => deleteRecord('alumnos', id, 'modal-alumno', fetchAlumnos);
-            openModal('modal-alumno');
-        }
-
-        document.getElementById('form-alumno').onsubmit = async (e) => {
-            e.preventDefault(); const id = document.getElementById('al-id').value;
-            const data = { nombre_completo: document.getElementById('al-nombre').value, dni: document.getElementById('al-dni').value, email: document.getElementById('al-email').value, plan_id: parseInt(document.getElementById('al-plan').value) || null, peso: parseFloat(document.getElementById('al-peso').value) || null, altura: parseFloat(document.getElementById('al-altura').value) || null, imc: parseFloat(document.getElementById('al-imc').value) || null, fecha_ultima_renovacion: document.getElementById('al-fecha-renovacion').value, fecha_vencimiento: document.getElementById('al-fecha-vencimiento').value };
-            const pass = document.getElementById('al-pass').value; if(pass) data.password = pass;
-            const res = await apiFetch(id ? `/alumnos/${id}` : '/alumnos', id ? 'PUT' : 'POST', data);
-            if(!res.error) { closeModal('modal-alumno'); fetchAlumnos(); }
-        };
-
         async function loadStaff() {
             const profs = await apiFetch('/profesores'); const admins = await apiFetch('/administrativos');
             state.profesores = Array.isArray(profs) ? profs : []; state.administrativos = Array.isArray(admins) ? admins : [];
@@ -1190,25 +1198,6 @@
             lucide.createIcons();
             applyPermissions();
         }
-
-        function openModalStaff(rol) { document.getElementById('modal-staff-title').innerText = "Alta " + rol; document.getElementById('stf-id').value = ""; document.getElementById('stf-rol').value = rol; openModal('modal-staff'); }
-        function openEditStaff(id, rol) {
-            const user = (rol === 'Profesor' ? state.profesores : state.administrativos).find(x => x.id == id); if(!user) return;
-            document.getElementById('modal-staff-title').innerText = "Editar " + rol;
-            document.getElementById('stf-id').value = user.id; document.getElementById('stf-rol').value = rol;
-            document.getElementById('stf-nombre').value = user.nombre_completo; document.getElementById('stf-dni').value = user.dni; document.getElementById('stf-esp').value = user.especialidad || "";
-            const delBtn = document.getElementById('btn-delete-staff'); if(state.user.rol_nombre === "Administrador" || state.user.rol_nombre === "Supervisor") delBtn.classList.remove('hidden');
-            delBtn.onclick = () => deleteRecord('staff', id, 'modal-staff', loadStaff);
-            openModal('modal-staff');
-        }
-
-        document.getElementById('form-staff').onsubmit = async (e) => {
-            e.preventDefault(); const id = document.getElementById('stf-id').value; const rol = document.getElementById('stf-rol').value;
-            const data = { nombre_completo: document.getElementById('stf-nombre').value, dni: document.getElementById('stf-dni').value, especialidad: document.getElementById('stf-esp').value, perfil_nombre: rol };
-            const pass = document.getElementById('stf-pass').value; if(pass) data.password = pass;
-            const res = await apiFetch(id ? `/staff/${id}` : '/staff', id ? 'PUT' : 'POST', data);
-            if(!res.error) { closeModal('modal-staff'); loadStaff(); }
-        };
 
         async function loadPlanes() {
             const p = await apiFetch('/planes'); const t = await apiFetch('/tipos-planes');
@@ -1236,22 +1225,6 @@
             applyPermissions();
         }
 
-        function openModalPlan() { document.getElementById('plan-id').value = ""; document.getElementById('modal-plan-title').innerText = "Nuevo Plan"; openModal('modal-plan'); }
-        function openEditPlan(id) {
-            const p = state.planes.find(x => x.id == id); if(!p) return;
-            document.getElementById('plan-id').value = p.id; document.getElementById('plan-nombre').value = p.nombre; document.getElementById('plan-tipo').value = p.tipo_plan_id; document.getElementById('plan-precio').value = p.precio;
-            const delBtn = document.getElementById('btn-delete-plan'); if(state.user.rol_nombre === "Administrador" || state.user.rol_nombre === "Supervisor") delBtn.classList.remove('hidden');
-            delBtn.onclick = () => deleteRecord('planes', p.id, 'modal-plan', loadPlanes);
-            openModal('modal-plan');
-        }
-
-        document.getElementById('form-plan').onsubmit = async (e) => {
-            e.preventDefault(); const id = document.getElementById('plan-id').value;
-            const data = { nombre: document.getElementById('plan-nombre').value, precio: parseFloat(document.getElementById('plan-precio').value), tipo_plan_id: parseInt(document.getElementById('plan-tipo').value) };
-            const res = await apiFetch(id ? `/planes/${id}` : '/planes', id ? 'PUT' : 'POST', data);
-            if(!res.error) { closeModal('modal-plan'); loadPlanes(); }
-        };
-
         async function loadStock() {
             const data = await apiFetch('/stock'); state.stock = Array.isArray(data) ? data : [];
             const rol = state.user?.rol_nombre;
@@ -1265,22 +1238,6 @@
             lucide.createIcons();
             applyPermissions();
         }
-
-        function openModalStock() { document.getElementById('stock-id').value = ""; openModal('modal-stock'); }
-        function openEditStock(id) {
-            const s = state.stock.find(x => x.id == id); if(!s) return;
-            document.getElementById('stock-id').value = s.id; document.getElementById('stock-nombre').value = s.nombre_producto; document.getElementById('stock-cant').value = s.stock_actual; document.getElementById('stock-precio').value = s.precio_venta;
-            const delBtn = document.getElementById('btn-delete-stock'); if(state.user.rol_nombre === "Administrador" || state.user.rol_nombre === "Supervisor") delBtn.classList.remove('hidden');
-            delBtn.onclick = () => deleteRecord('stock', s.id, 'modal-stock', loadStock);
-            openModal('modal-stock');
-        }
-
-        document.getElementById('form-stock').onsubmit = async (e) => {
-            e.preventDefault(); const id = document.getElementById('stock-id').value;
-            const data = { nombre_producto: document.getElementById('stock-nombre').value, stock_actual: parseInt(document.getElementById('stock-cant').value), precio_venta: parseFloat(document.getElementById('stock-precio').value) };
-            const res = await apiFetch(id ? `/stock/${id}` : '/stock', id ? 'PUT' : 'POST', data);
-            if(!res.error) { closeModal('modal-stock'); loadStock(); }
-        };
 
         async function loadClases() {
             const data = await apiFetch('/clases'); state.clases = Array.isArray(data) ? data : [];
@@ -1297,7 +1254,52 @@
             applyPermissions();
         }
 
-        function openModalClase() { document.getElementById('cl-id').value = ""; openModal('modal-clase'); }
+        // --- MANEJO DE MODALES Y EDICIÓN ---
+        function openEditAlumno(id) {
+            const al = state.alumnos.find(x => x.id == id); if(!al) return;
+            document.getElementById('modal-alumno-title').innerText = "Editar Alumno";
+            document.getElementById('al-id').value = al.id; 
+            document.getElementById('al-nombre').value = al.nombre_completo; 
+            document.getElementById('al-dni').value = al.dni;
+            document.getElementById('al-email').value = al.email || ""; 
+            document.getElementById('al-plan').value = al.plan_id || ""; 
+            document.getElementById('al-peso').value = al.peso || "";
+            document.getElementById('al-altura').value = al.altura || ""; 
+            document.getElementById('al-imc').value = al.imc || ""; 
+            document.getElementById('al-fecha-renovacion').value = al.fecha_ultima_renovacion || "";
+            document.getElementById('al-fecha-vencimiento').value = al.fecha_vencimiento || "";
+            const delBtn = document.getElementById('btn-delete-alumno'); 
+            if(state.user.rol_nombre === "Administrador" || state.user.rol_nombre === "Supervisor") delBtn.classList.remove('hidden');
+            delBtn.onclick = () => deleteRecord('alumnos', id, 'modal-alumno', fetchAlumnos);
+            openModal('modal-alumno');
+        }
+
+        function openEditStaff(id, rol) {
+            const user = (rol === 'Profesor' ? state.profesores : state.administrativos).find(x => x.id == id); if(!user) return;
+            document.getElementById('modal-staff-title').innerText = "Editar " + rol;
+            document.getElementById('stf-id').value = user.id; document.getElementById('stf-rol').value = rol;
+            document.getElementById('stf-nombre').value = user.nombre_completo; document.getElementById('stf-dni').value = user.dni; document.getElementById('stf-esp').value = user.especialidad || "";
+            const delBtn = document.getElementById('btn-delete-staff'); if(state.user.rol_nombre === "Administrador" || state.user.rol_nombre === "Supervisor") delBtn.classList.remove('hidden');
+            delBtn.onclick = () => deleteRecord('staff', id, 'modal-staff', loadStaff);
+            openModal('modal-staff');
+        }
+
+        function openEditPlan(id) {
+            const p = state.planes.find(x => x.id == id); if(!p) return;
+            document.getElementById('plan-id').value = p.id; document.getElementById('plan-nombre').value = p.nombre; document.getElementById('plan-tipo').value = p.tipo_plan_id; document.getElementById('plan-precio').value = p.precio;
+            const delBtn = document.getElementById('btn-delete-plan'); if(state.user.rol_nombre === "Administrador" || state.user.rol_nombre === "Supervisor") delBtn.classList.remove('hidden');
+            delBtn.onclick = () => deleteRecord('planes', p.id, 'modal-plan', loadPlanes);
+            openModal('modal-plan');
+        }
+
+        function openEditStock(id) {
+            const s = state.stock.find(x => x.id == id); if(!s) return;
+            document.getElementById('stock-id').value = s.id; document.getElementById('stock-nombre').value = s.nombre_producto; document.getElementById('stock-cant').value = s.stock_actual; document.getElementById('stock-precio').value = s.precio_venta;
+            const delBtn = document.getElementById('btn-delete-stock'); if(state.user.rol_nombre === "Administrador" || state.user.rol_nombre === "Supervisor") delBtn.classList.remove('hidden');
+            delBtn.onclick = () => deleteRecord('stock', s.id, 'modal-stock', loadStock);
+            openModal('modal-stock');
+        }
+
         function openEditClase(id) {
             const c = state.clases.find(x => x.id == id); if(!c) return;
             document.getElementById('cl-id').value = c.id; document.getElementById('cl-nombre').value = c.nombre; document.getElementById('cl-coach-select').value = c.coach; document.getElementById('cl-dia').value = c.dia;
@@ -1307,18 +1309,13 @@
             openModal('modal-clase');
         }
 
-        document.getElementById('form-clase').onsubmit = async (e) => {
-            e.preventDefault(); const id = document.getElementById('cl-id').value;
-            const data = { nombre: document.getElementById('cl-nombre').value, coach: document.getElementById('cl-coach-select').value, dia: parseInt(document.getElementById('cl-dia').value), horario: parseInt(document.getElementById('cl-horario').value), color: document.getElementById('cl-color').value };
-            const res = await apiFetch(id ? `/clases/${id}` : '/clases', id ? 'PUT' : 'POST', data);
-            if(!res.error) { closeModal('modal-clase'); loadClases(); }
-        };
-
         async function handleDrop(e, dia, horario) { e.preventDefault(); const id = e.dataTransfer.getData("clase_id"); if (!id) return; const res = await apiFetch(`/clases/${id}/move`, 'PUT', { dia, horario }); if (!res.error) loadClases(); }
         function updateHourOptions() { const dia = document.getElementById('cl-dia').value; const select = document.getElementById('cl-horario'); select.innerHTML = ""; let start = 7, end = 21; if (dia == "6") { start = 10; end = 13; } for(let i=start; i<=end; i++) select.innerHTML += `<option value="${i}">${i}:00 hs</option>`; }
         async function deleteRecord(entity, id, modalId, callback) { if(!confirm("¿Deseas eliminar este registro?")) return; const res = await apiFetch(`/${entity}/${id}`, 'DELETE'); if(!res.error) { closeModal(modalId); callback(); } }
         async function handleProfileUpdate(e) { e.preventDefault(); const pass = document.getElementById('prof-input-pass').value; const data = { nombre_completo: document.getElementById('prof-input-name').value, dni: document.getElementById('prof-input-dni').value, email: document.getElementById('prof-input-email').value, perfil_nombre: state.user.rol_nombre }; if(pass) data.password = pass; const res = await apiFetch(`/staff/${state.user.id}`, 'PUT', data); if(!res.error) { state.user.nombre_completo = data.nombre_completo; document.getElementById('side-user-name').innerText = data.nombre_completo; } }
+        
         document.getElementById('form-movimiento').onsubmit = async (e) => { e.preventDefault(); const data = { tipo: document.getElementById('mov-tipo').value, monto: parseFloat(document.getElementById('mov-monto').value), descripcion: document.getElementById('mov-desc').value }; const res = await apiFetch('/caja/movimiento', 'POST', data); if(!res.error) { closeModal('modal-movimiento'); initApp(); } };
+        
         window.onload = () => { lucide.createIcons(); };
     </script>
 </body>
