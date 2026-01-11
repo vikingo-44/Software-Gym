@@ -139,10 +139,10 @@ async def serve_app():
     return FileResponse("index.html")
 
 # ==========================================
-# AUTENTICACIÓN (LOGIN)
+# MÓDULO 1: AUTENTICACIÓN (LOGIN)
 # ==========================================
 
-@app.post("/api/login")
+@app.post("/api/login", tags=["Autenticacion"])
 def login(data: UsuarioLogin, db: Session = Depends(database.get_db)):
     user = db.query(models.Usuario).options(
         joinedload(models.Usuario.perfil),
@@ -152,7 +152,6 @@ def login(data: UsuarioLogin, db: Session = Depends(database.get_db)):
     if not user or user.password_hash != data.password:
         raise HTTPException(status_code=401, detail="Credenciales incorrectas")
     
-    # Respuesta segura tanto para alumnos como para staff
     return {
         "id": user.id, 
         "nombre_completo": user.nombre_completo, 
@@ -172,7 +171,7 @@ def login(data: UsuarioLogin, db: Session = Depends(database.get_db)):
     }
 
 # ==========================================
-# MÓDULO DE ALUMNOS
+# MÓDULO 2: GESTIÓN DE ALUMNOS Y FICHAS
 # ==========================================
 
 @app.get("/api/alumnos", response_model=List[UsuarioResponse])
@@ -186,6 +185,27 @@ def get_alumnos(db: Session = Depends(database.get_db)):
         al.rol_nombre = al.perfil.nombre if al.perfil else "Alumno"
         
     return alumnos
+
+@app.get("/api/alumnos/{id}/ficha")
+def get_ficha_tecnica(id: int, db: Session = Depends(database.get_db)):
+    al = db.query(models.Usuario).options(joinedload(models.Usuario.plan)).filter(models.Usuario.id == id).first()
+    if not al:
+        raise HTTPException(status_code=404, detail="Alumno no encontrado")
+    
+    # Aquí retornamos los datos físicos y una rutina estática (o dinámica si tuvieras tabla de rutinas)
+    return {
+        "nombre_completo": al.nombre_completo,
+        "dni": al.dni,
+        "plan": al.plan.nombre if al.plan else "Sin plan",
+        "peso": al.peso,
+        "altura": al.altura,
+        "imc": al.imc,
+        "estado_cuenta": al.estado_cuenta,
+        "rutina": [
+            {"dia": "Día 1: Empuje", "ejercicios": ["Press Banca 4x10", "Sentadilla 4x8", "Press Militar 3x12"]},
+            {"dia": "Día 2: Tracción", "ejercicios": ["Peso Muerto 3x5", "Dominadas 4x10", "Remo c/ Barra 4x12"]}
+        ]
+    }
 
 @app.post("/api/alumnos")
 def create_alumno(alumno: AlumnoUpdate, db: Session = Depends(database.get_db)):
@@ -244,7 +264,71 @@ def delete_alumno(id: int, db: Session = Depends(database.get_db)):
     return {"status": "success"}
 
 # ==========================================
-# MÓDULO DE STAFF (PROFESORES / ADM)
+# MÓDULO 3: RESERVAS (PERSISTENCIA Y CANCELACIÓN)
+# ==========================================
+
+@app.get("/api/reservas")
+def get_reservas(db: Session = Depends(database.get_db)):
+    res = db.query(models.Reserva).options(
+        joinedload(models.Reserva.usuario),
+        joinedload(models.Reserva.clase)
+    ).all()
+    # Retornamos la lista con info legible para el front
+    return [{
+        "id": r.id,
+        "usuario_id": r.usuario_id,
+        "clase_id": r.clase_id,
+        "alumno_dni": r.usuario.dni,
+        "clase_nombre": r.clase.nombre,
+        "horario": r.clase.horario,
+        "dia": r.clase.dia
+    } for r in res]
+
+@app.post("/api/reservas")
+def book_clase(data: dict, db: Session = Depends(database.get_db)):
+    # Verificar si ya existe reserva para el mismo alumno y clase hoy
+    exists = db.query(models.Reserva).filter(
+        models.Reserva.usuario_id == data['usuario_id'],
+        models.Reserva.clase_id == data['clase_id'],
+        models.Reserva.fecha_reserva == date.today()
+    ).first()
+    
+    if exists:
+        raise HTTPException(status_code=400, detail="Ya tienes una reserva para esta clase hoy")
+    
+    # Verificar cupo disponible
+    clase = db.query(models.Clase).filter(models.Clase.id == data['clase_id']).first()
+    if not clase:
+        raise HTTPException(status_code=404, detail="Clase no encontrada")
+        
+    cupo_actual = db.query(models.Reserva).filter(
+        models.Reserva.clase_id == data['clase_id'],
+        models.Reserva.fecha_reserva == date.today()
+    ).count()
+    
+    if cupo_actual >= clase.capacidad_max:
+        raise HTTPException(status_code=400, detail="Clase sin cupos disponibles")
+
+    new_res = models.Reserva(
+        usuario_id=data['usuario_id'],
+        clase_id=data['clase_id'],
+        fecha_reserva=date.today()
+    )
+    db.add(new_res)
+    db.commit()
+    return {"status": "success"}
+
+@app.delete("/api/reservas/{id}")
+def cancel_reserva(id: int, db: Session = Depends(database.get_db)):
+    reserva = db.query(models.Reserva).filter(models.Reserva.id == id).first()
+    if not reserva:
+        raise HTTPException(status_code=404, detail="Reserva no encontrada")
+    db.delete(reserva)
+    db.commit()
+    return {"status": "success"}
+
+# ==========================================
+# MÓDULO 4: STAFF (PROFESORES / ADM)
 # ==========================================
 
 @app.get("/api/profesores", response_model=List[UsuarioResponse])
@@ -304,7 +388,7 @@ def delete_staff(id: int, db: Session = Depends(database.get_db)):
     return {"status": "success"}
 
 # ==========================================
-# MÓDULO DE PRODUCTOS Y STOCK
+# MÓDULO 5: PRODUCTOS Y STOCK
 # ==========================================
 
 @app.get("/api/stock")
@@ -340,7 +424,7 @@ def delete_stock(id: int, db: Session = Depends(database.get_db)):
     return {"status": "success"}
 
 # ==========================================
-# MÓDULO DE PLANES DE ENTRENAMIENTO
+# MÓDULO 6: PLANES DE ENTRENAMIENTO
 # ==========================================
 
 @app.get("/api/planes")
@@ -379,7 +463,7 @@ def get_tipos(db: Session = Depends(database.get_db)):
     return db.query(models.TipoPlan).all()
 
 # ==========================================
-# MÓDULO DE CLASES Y AGENDA
+# MÓDULO 7: CLASES Y AGENDA
 # ==========================================
 
 @app.get("/api/clases")
@@ -431,7 +515,7 @@ def delete_clase(id: int, db: Session = Depends(database.get_db)):
     return {"status": "success"}
 
 # ==========================================
-# MÓDULO DE CAJA Y FINANZAS
+# MÓDULO 8: CAJA Y FINANZAS
 # ==========================================
 
 @app.get("/api/caja/resumen")

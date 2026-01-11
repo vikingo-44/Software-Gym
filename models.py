@@ -39,18 +39,20 @@ class Usuario(Base):
     fecha_vencimiento = Column(Date)
     especialidad = Column(String)
     
-    # Columnas sincronizadas con tu ALTER TABLE real
+    # Datos físicos y médicos
     fecha_nacimiento = Column(Date, nullable=True)
     peso = Column(Float, nullable=True)
     altura = Column(Float, nullable=True)
-    imc = Column(Float, nullable=True) # Agregado para consistencia con main.py
-    edad = Column(Integer, nullable=True) # Agregado para consistencia con main.py
+    imc = Column(Float, nullable=True)
+    edad = Column(Integer, nullable=True)
     certificado_entregado = Column(Boolean, default=False)
     fecha_certificado = Column(Date, nullable=True)
     
     fecha_creacion = Column(DateTime, default=datetime.datetime.utcnow)
     perfil = relationship("Perfil", back_populates="usuarios")
     plan = relationship("Plan", back_populates="usuarios")
+    # Relación con reservas
+    reservas = relationship("Reserva", back_populates="usuario", cascade="all, delete-orphan")
 
 class Clase(Base):
     __tablename__ = "clases"
@@ -61,6 +63,18 @@ class Clase(Base):
     dia = Column(Integer)
     horario = Column(Integer)
     color = Column(String, default="#FF0000")
+    # Relación con reservas para contar cupos
+    reservas = relationship("Reserva", back_populates="clase", cascade="all, delete-orphan")
+
+class Reserva(Base):
+    __tablename__ = "reservas"
+    id = Column(Integer, primary_key=True)
+    usuario_id = Column(Integer, ForeignKey("usuarios.id"))
+    clase_id = Column(Integer, ForeignKey("clases.id"))
+    fecha_reserva = Column(Date, default=datetime.date.today)
+    
+    usuario = relationship("Usuario", back_populates="reservas")
+    clase = relationship("Clase", back_populates="reservas")
 
 class Stock(Base):
     __tablename__ = "stock"
