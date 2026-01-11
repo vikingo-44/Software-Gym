@@ -930,10 +930,15 @@
                 document.getElementById('nav-calendario').style.display = 'flex';
                 document.getElementById('nav-dashboard').style.display = 'flex';
                 
-                // Lógica de acceso a rutinas para alumnos
+                // Lógica de acceso a rutinas para alumnos - MEJORADA PARA DETECTAR MUSCULACIÓN
                 const planNombre = state.user.plan?.nombre?.toLowerCase() || "";
                 const normalizedPlan = planNombre.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-                document.getElementById('nav-rutinas').style.display = (normalizedPlan.includes('musculacion') || normalizedPlan.includes('completo')) ? 'flex' : 'none';
+                
+                if (normalizedPlan.includes('musculacion') || normalizedPlan.includes('completo')) {
+                    document.getElementById('nav-rutinas').style.display = 'flex';
+                } else {
+                    document.getElementById('nav-rutinas').style.display = 'none';
+                }
                 
                 renderStudentDashboard();
                 document.querySelectorAll('.action-col').forEach(el => el.style.display = 'none');
@@ -972,9 +977,7 @@
             const historyList = document.getElementById('al-dash-history');
 
             const misReservas = state.reservas.filter(r => r.alumno_dni === u.dni);
-            const hoy = new Date().setHours(0,0,0,0);
 
-            // Filtrado simulado de próximas vs pasadas (basado en fecha de reserva si la hubiera)
             upcomingList.innerHTML = misReservas.length ? misReservas.map(r => `
                 <div class="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-red-600/20">
                     <div>
@@ -994,7 +997,6 @@
             const clase = state.clases.find(c => c.id === claseId);
             if (!clase) return;
 
-            // Capacidad Max (usando el nombre de columna de la DB)
             const cupoMax = clase.capacidad_max || 40; 
             const cupoActual = state.reservas.filter(r => r.clase_id === claseId).length;
 
@@ -1003,7 +1005,6 @@
                 return;
             }
 
-            // Evitar duplicados en el estado local
             const yaReservado = state.reservas.find(r => r.clase_id === claseId && r.alumno_dni === state.user.dni);
             if (yaReservado) {
                 showVikingToast("Ya estás anotado en esta clase.", true);
@@ -1012,7 +1013,7 @@
 
             const diasSemana = ["", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
             const nuevaReserva = {
-                id: Date.now(), // Simulación de ID
+                id: Date.now(),
                 clase_id: clase.id,
                 clase_nombre: clase.nombre,
                 alumno_dni: state.user.dni,
@@ -1020,7 +1021,6 @@
                 horario: clase.horario
             };
 
-            // Aquí llamarías a tu API: await apiFetch('/reservas', 'POST', nuevaReserva);
             state.reservas.push(nuevaReserva);
             showVikingToast("¡Reserva confirmada en " + clase.nombre + "!");
             renderCalendar();
@@ -1211,8 +1211,17 @@
             const studentView = document.getElementById('musculacion-student-view');
             
             if (rol === "Alumno") {
-                list.style.display = 'none'; studentView.classList.remove('hidden');
+                list.style.display = 'none'; 
+                studentView.classList.remove('hidden');
                 document.getElementById('rutina-title').innerText = "Mi Rutina Musculación";
+                
+                // Si el alumno tiene el plan de musculación, mostramos su rutina
+                const planNombre = state.user.plan?.nombre?.toLowerCase() || "";
+                const normalized = planNombre.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                
+                if (!(normalized.includes('musculacion') || normalized.includes('completo'))) {
+                     studentView.innerHTML = '<p class="text-gray-500 italic py-10 text-center">Debes tener un plan de Musculación activo para ver tus rutinas.</p>';
+                }
             } else {
                 list.style.display = 'grid'; studentView.classList.add('hidden');
                 document.getElementById('rutina-title').innerText = "Rutinas de Alumnos";
@@ -1303,7 +1312,7 @@
             const data = { dni: document.getElementById('login-dni').value, password: document.getElementById('login-pass').value };
             const res = await apiFetch('/login', 'POST', data);
             if (res && !res.error) {
-                state.user = res;
+                state.user = res; // Guardamos TODO el objeto del backend (ahora incluye plan)
                 document.getElementById('login-overlay').style.display = 'none';
                 document.getElementById('sidebar').classList.remove('hidden');
                 document.getElementById('main-content').classList.remove('hidden');
@@ -1317,13 +1326,16 @@
                 document.getElementById('prof-input-dni').value = res.dni;
                 document.getElementById('prof-input-email').value = res.email || "";
                 
-                initApp();
+                await initApp();
+                
                 if (res.rol_nombre === "Alumno") {
                     document.getElementById('plan-alumno-info').classList.remove('hidden');
                     document.getElementById('perfil-plan-nombre').innerText = res.plan?.nombre || "SIN PLAN";
                     document.getElementById('perfil-vencimiento').innerText = "Vence: " + (res.fecha_vencimiento || "-");
                     switchView('dashboard');
-                } else switchView('dashboard');
+                } else {
+                    switchView('dashboard');
+                }
                 
             } else document.getElementById('login-error').classList.remove('hidden');
         }
@@ -1521,7 +1533,7 @@
 
         async function handleDrop(e, dia, horario) { e.preventDefault(); const id = e.dataTransfer.getData("clase_id"); if (!id) return; const res = await apiFetch(`/clases/${id}/move`, 'PUT', { dia, horario }); if (!res.error) { loadClases(); showVikingToast("Clase Reubicada"); } }
         function updateHourOptions() { const dia = document.getElementById('cl-dia').value; const select = document.getElementById('cl-horario'); select.innerHTML = ""; let start = 7, end = 21; if (dia == "6") { start = 10; end = 13; } for(let i=start; i<=end; i++) select.innerHTML += `<option value="${i}">${i}:00 hs</option>`; }
-        async function deleteRecord(entity, id, modalId, callback) { if(!confirm("¿Deseas eliminar este registro?")) return; const res = await apiFetch(`/${entity}/${id}`, 'DELETE'); if(!res.error) { closeModal(modalId); callback(); showVikingToast("Registro Eliminado", true); } }
+        async function deleteRecord(entity, id, modalId, callback) { if(!confirm("¿Deseas eliminar este registro?")) return; const res = await apiFetch(`/${entity}/${id}`, 'DELETE'); if(!res.error) { closeModal(modalId); callback(); showVikingToast("Registro Eliminar", true); } }
         async function handleProfileUpdate(e) { e.preventDefault(); const pass = document.getElementById('prof-input-pass').value; const data = { nombre_completo: document.getElementById('prof-input-name').value, dni: document.getElementById('prof-input-dni').value, email: document.getElementById('prof-input-email').value, perfil_nombre: state.user.rol_nombre }; if(pass) data.password = pass; const res = await apiFetch(`/staff/${state.user.id}`, 'PUT', data); if(!res.error) { state.user.nombre_completo = data.nombre_completo; document.getElementById('side-user-name').innerText = data.nombre_completo; showVikingToast("Perfil Actualizado"); } }
         
         window.onload = () => { lucide.createIcons(); };

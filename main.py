@@ -14,7 +14,10 @@ import database
 
 app = FastAPI(title="Vikingo Strength Hub API")
 
-# Configuración de CORS
+# ==========================================
+# CONFIGURACIÓN Y MIDDLEWARE
+# ==========================================
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -23,7 +26,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# --- SCHEMAS PARA VALIDACIÓN ---
+# ==========================================
+# MODELOS DE DATOS (PYDANTIC SCHEMAS)
+# ==========================================
 
 class UsuarioLogin(BaseModel):
     dni: str
@@ -57,7 +62,6 @@ class UsuarioResponse(BaseModel):
     fecha_vencimiento: Optional[date] = None
     fecha_ultima_renovacion: Optional[date] = None
     especialidad: Optional[str] = None
-    # Campos físicos y médicos sincronizados con SQL
     fecha_nacimiento: Optional[date] = None
     edad: Optional[int] = None
     peso: Optional[float] = None
@@ -107,6 +111,7 @@ class ClaseUpdate(BaseModel):
     dia: int
     horario: int
     color: Optional[str] = "#FF0000"
+    capacidad_max: Optional[int] = 40
 
 class ClaseMove(BaseModel):
     dia: int
@@ -117,7 +122,9 @@ class MovimientoCajaCreate(BaseModel):
     monto: float
     descripcion: str
 
-# --- RUTAS DE ACCESO ---
+# ==========================================
+# ENDPOINTS DE ACCESO Y FRONTEND
+# ==========================================
 
 @app.get("/")
 def api_root():
@@ -131,24 +138,42 @@ def api_root():
 async def serve_app():
     return FileResponse("index.html")
 
-# --- ENDPOINTS DE LOGIN ---
+# ==========================================
+# AUTENTICACIÓN (LOGIN)
+# ==========================================
 
 @app.post("/api/login")
 def login(data: UsuarioLogin, db: Session = Depends(database.get_db)):
-    user = db.query(models.Usuario).options(joinedload(models.Usuario.perfil)).filter(models.Usuario.dni == data.dni).first()
+    user = db.query(models.Usuario).options(
+        joinedload(models.Usuario.perfil),
+        joinedload(models.Usuario.plan).joinedload(models.Plan.tipo)
+    ).filter(models.Usuario.dni == data.dni).first()
     
     if not user or user.password_hash != data.password:
         raise HTTPException(status_code=401, detail="Credenciales incorrectas")
     
+    # Respuesta segura tanto para alumnos como para staff
     return {
         "id": user.id, 
         "nombre_completo": user.nombre_completo, 
         "dni": user.dni, 
         "email": user.email,
-        "rol_nombre": user.perfil.nombre if user.perfil else "Usuario"
+        "rol_nombre": user.perfil.nombre if user.perfil else "Usuario",
+        "plan": {
+            "id": user.plan.id,
+            "nombre": user.plan.nombre,
+            "precio": user.plan.precio
+        } if user.plan else None,
+        "fecha_vencimiento": user.fecha_vencimiento.isoformat() if user.fecha_vencimiento else None,
+        "fecha_ultima_renovacion": user.fecha_ultima_renovacion.isoformat() if user.fecha_ultima_renovacion else None,
+        "peso": user.peso,
+        "altura": user.altura,
+        "imc": user.imc
     }
 
-# --- GESTIÓN DE ALUMNOS ---
+# ==========================================
+# MÓDULO DE ALUMNOS
+# ==========================================
 
 @app.get("/api/alumnos", response_model=List[UsuarioResponse])
 def get_alumnos(db: Session = Depends(database.get_db)):
@@ -177,7 +202,6 @@ def create_alumno(alumno: AlumnoUpdate, db: Session = Depends(database.get_db)):
         password_hash=alumno.password or alumno.dni,
         fecha_ultima_renovacion=date.today(), 
         fecha_vencimiento=date.today(),
-        # Datos físicos y médicos
         fecha_nacimiento=alumno.fecha_nacimiento,
         edad=alumno.edad,
         peso=alumno.peso,
@@ -200,8 +224,6 @@ def update_alumno(id: int, data: AlumnoUpdate, db: Session = Depends(database.ge
     al.dni = data.dni
     al.email = data.email
     al.plan_id = data.plan_id
-    
-    # Actualización de datos físicos y médicos
     al.fecha_nacimiento = data.fecha_nacimiento
     al.edad = data.edad
     al.peso = data.peso
@@ -221,7 +243,9 @@ def delete_alumno(id: int, db: Session = Depends(database.get_db)):
     db.commit()
     return {"status": "success"}
 
-# --- GESTIÓN DE STAFF ---
+# ==========================================
+# MÓDULO DE STAFF (PROFESORES / ADM)
+# ==========================================
 
 @app.get("/api/profesores", response_model=List[UsuarioResponse])
 def list_profesores(db: Session = Depends(database.get_db)):
@@ -279,7 +303,9 @@ def delete_staff(id: int, db: Session = Depends(database.get_db)):
     db.commit()
     return {"status": "success"}
 
-# --- GESTIÓN DE STOCK ---
+# ==========================================
+# MÓDULO DE PRODUCTOS Y STOCK
+# ==========================================
 
 @app.get("/api/stock")
 def get_stock(db: Session = Depends(database.get_db)):
@@ -313,7 +339,9 @@ def delete_stock(id: int, db: Session = Depends(database.get_db)):
     db.commit()
     return {"status": "success"}
 
-# --- GESTIÓN DE PLANES ---
+# ==========================================
+# MÓDULO DE PLANES DE ENTRENAMIENTO
+# ==========================================
 
 @app.get("/api/planes")
 def get_planes(db: Session = Depends(database.get_db)):
@@ -350,7 +378,9 @@ def delete_plan(id: int, db: Session = Depends(database.get_db)):
 def get_tipos(db: Session = Depends(database.get_db)):
     return db.query(models.TipoPlan).all()
 
-# --- GESTIÓN DE CLASES ---
+# ==========================================
+# MÓDULO DE CLASES Y AGENDA
+# ==========================================
 
 @app.get("/api/clases")
 def get_clases(db: Session = Depends(database.get_db)):
@@ -363,7 +393,8 @@ def create_clase(data: ClaseUpdate, db: Session = Depends(database.get_db)):
         coach=data.coach,
         dia=data.dia,
         horario=data.horario,
-        color=data.color
+        color=data.color,
+        capacidad_max=data.capacidad_max
     )
     db.add(new_c)
     db.commit()
@@ -378,6 +409,7 @@ def update_clase(id: int, data: ClaseUpdate, db: Session = Depends(database.get_
         c.dia = data.dia
         c.horario = data.horario
         c.color = data.color
+        c.capacidad_max = data.capacidad_max
         db.commit()
         return {"status": "success"}
     return {"status": "error", "message": "Clase no encontrada"}
@@ -398,7 +430,9 @@ def delete_clase(id: int, db: Session = Depends(database.get_db)):
     db.commit()
     return {"status": "success"}
 
-# --- GESTIÓN DE CAJA ---
+# ==========================================
+# MÓDULO DE CAJA Y FINANZAS
+# ==========================================
 
 @app.get("/api/caja/resumen")
 def get_caja_resumen(db: Session = Depends(database.get_db)):
@@ -420,6 +454,10 @@ def create_movimiento(data: MovimientoCajaCreate, db: Session = Depends(database
     db.add(new_mov)
     db.commit()
     return {"status": "success"}
+
+# ==========================================
+# EJECUCIÓN DEL SERVIDOR
+# ==========================================
 
 if __name__ == "__main__":
     import uvicorn
