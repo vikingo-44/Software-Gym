@@ -124,13 +124,14 @@
         .class-badge {
             color: black; font-weight: 900;
             padding: 6px; text-transform: uppercase; font-style: italic;
-            cursor: grab;
+            cursor: pointer;
             display: flex; flex-direction: column; justify-content: center; align-items: center;
             text-align: center; height: 100%; width: 100%;
             border: 1px solid rgba(0,0,0,0.1);
             box-shadow: inset 0 0 10px rgba(0,0,0,0.2);
+            transition: transform 0.2s;
         }
-        .class-badge:active { cursor: grabbing; }
+        .class-badge:hover { transform: scale(0.97); }
 
         .filter-btn {
             background: rgba(255, 255, 255, 0.05);
@@ -176,15 +177,29 @@
             color: #FF0000;
         }
 
+        /* Notificaciones */
+        .notification-toast {
+            position: fixed; bottom: 30px; right: 30px;
+            background: #FF0000; color: black;
+            padding: 20px 40px; border-radius: 20px;
+            font-weight: 900; text-transform: uppercase; font-style: italic;
+            z-index: 2000; transform: translateY(150%);
+            transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: 0 10px 40px rgba(255, 0, 0, 0.4);
+        }
+        .notification-toast.show { transform: translateY(0); }
+
         .restricted-action { display: none !important; }
     </style>
 </head>
 <body class="flex h-screen w-screen overflow-hidden">
 
+    <!-- TOAST DE NOTIFICACIONES -->
+    <div id="viking-toast" class="notification-toast">¡Acción Completada!</div>
+
     <!-- OVERLAY DE LOGIN -->
     <div id="login-overlay">
         <div class="glass-card p-12 rounded-[3rem] w-full max-w-md border-red-600/20 text-center">
-            <!-- LOGO RESTAURADO -->
             <div class="w-32 h-32 mx-auto mb-8 logo-viking-glow bg-black rounded-full flex items-center justify-center overflow-hidden">
                 <img src="logo.png" alt="Vikingo Logo" class="w-full h-full object-cover" onerror="this.src='https://via.placeholder.com/150/FF0000/000000?text=VIKINGO'">
             </div>
@@ -203,7 +218,6 @@
     <!-- BARRA LATERAL -->
     <aside id="sidebar" class="w-72 h-full glass-sidebar flex flex-col hidden z-50">
         <div class="p-8 flex items-center gap-4">
-            <!-- LOGO EN SIDEBAR -->
             <img src="logo.png" alt="Vikingo Hub" class="w-10 h-10 object-contain logo-viking-glow brand-text" onerror="this.style.display='none'">
             <h1 class="brand-text text-xl font-black italic uppercase leading-none">
                 VIKINGO<br><span class="viking-red text-xs tracking-[0.4em] font-bold">STRENGTH HUB</span>
@@ -286,7 +300,7 @@
     </aside>
 
     <!-- PANEL PRINCIPAL -->
-    <main id="main-content" class="flex-1 h-full overflow-y-auto hidden relative">
+    <main id="main-content" class="flex-1 h-full overflow-y-auto hidden relative text-left">
         <header class="h-24 border-b border-white/5 px-12 flex items-center justify-between sticky top-0 bg-black/70 backdrop-blur-2xl z-40">
             <div>
                 <p id="breadcrumb" class="text-[9px] font-black text-red-600 uppercase tracking-[0.4em] italic">Vikingo Strength Hub</p>
@@ -303,55 +317,127 @@
         <div id="views-container" class="p-10 text-left">
             <!-- DASHBOARD -->
             <div id="view-dashboard" class="view-content active">
-                <div class="grid grid-cols-1 lg:grid-cols-4 gap-8 mb-10">
-                    <div class="glass-card p-8 rounded-[2.5rem]">
-                        <h4 class="text-[10px] font-black uppercase italic text-red-600 mb-6 tracking-widest">Últimos Check-ins</h4>
-                        <div id="dash-checkins" class="space-y-4"></div>
-                    </div>
-                    <div class="glass-card p-8 rounded-[2.5rem]">
-                        <h4 class="text-[10px] font-black uppercase italic text-red-600 mb-6 tracking-widest">Resumen</h4>
-                        <div id="dash-summary" class="space-y-4">
-                            <div class="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5">
-                                <span class="text-[10px] font-black italic">INGRESOS HOY</span>
-                                <span class="text-[9px] text-green-600 font-bold italic" id="dash-ingresos">$ 0</span>
+                <!-- Layout Administrador/Staff -->
+                <div id="admin-dashboard-layout">
+                    <div class="grid grid-cols-1 lg:grid-cols-4 gap-8 mb-10">
+                        <div class="glass-card p-8 rounded-[2.5rem]">
+                            <h4 class="text-[10px] font-black uppercase italic text-red-600 mb-6 tracking-widest">Últimos Check-ins</h4>
+                            <div id="dash-checkins" class="space-y-4"></div>
+                        </div>
+                        <div class="glass-card p-8 rounded-[2.5rem]">
+                            <h4 class="text-[10px] font-black uppercase italic text-red-600 mb-6 tracking-widest">Resumen</h4>
+                            <div id="dash-summary" class="space-y-4">
+                                <div class="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5">
+                                    <span class="text-[10px] font-black italic">INGRESOS HOY</span>
+                                    <span class="text-[9px] text-green-600 font-bold italic" id="dash-ingresos">$ 0</span>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                    <div class="glass-card p-8 rounded-[2.5rem]">
-                        <h4 class="text-[10px] font-black uppercase italic text-red-600 mb-6 tracking-widest">Frecuencia Horaria</h4>
-                        <div id="dash-stats-bars" class="flex items-end justify-between h-32 px-2">
-                            <div class="w-4 viking-bg-red/20 h-[35%] rounded-t-lg"></div>
-                            <div class="w-4 viking-bg-red/40 h-[65%] rounded-t-lg"></div>
-                            <div class="w-4 viking-bg-red h-[95%] rounded-t-lg"></div>
-                            <div class="w-4 viking-bg-red/60 h-[75%] rounded-t-lg"></div>
-                            <div class="w-4 viking-bg-red/30 h-[45%] rounded-t-lg"></div>
+                        <div class="glass-card p-8 rounded-[2.5rem]">
+                            <h4 class="text-[10px] font-black uppercase italic text-red-600 mb-6 tracking-widest">Frecuencia Horaria</h4>
+                            <div id="dash-stats-bars" class="flex items-end justify-between h-32 px-2">
+                                <div class="w-4 viking-bg-red/20 h-[35%] rounded-t-lg"></div>
+                                <div class="w-4 viking-bg-red/40 h-[65%] rounded-t-lg"></div>
+                                <div class="w-4 viking-bg-red h-[95%] rounded-t-lg"></div>
+                                <div class="w-4 viking-bg-red/60 h-[75%] rounded-t-lg"></div>
+                                <div class="w-4 viking-bg-red/30 h-[45%] rounded-t-lg"></div>
+                            </div>
+                        </div>
+                        <div class="glass-card p-8 rounded-[2.5rem]">
+                            <h4 class="text-[10px] font-black uppercase italic text-red-600 mb-6 tracking-widest">Top 5 Clases</h4>
+                            <div id="dash-top-clases" class="space-y-3"></div>
                         </div>
                     </div>
-                    <div class="glass-card p-8 rounded-[2.5rem]">
-                        <h4 class="text-[10px] font-black uppercase italic text-red-600 mb-6 tracking-widest">Top 5 Clases</h4>
-                        <div id="dash-top-clases" class="space-y-3"></div>
+
+                    <div class="glass-card p-10 rounded-[3rem]">
+                        <div class="flex justify-between items-center mb-8">
+                            <h3 class="text-sm font-black uppercase italic border-l-4 border-red-600 pl-4 tracking-widest">Vista Rápida Alumnos (A-Z)</h3>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left">
+                                <thead>
+                                    <tr class="text-[9px] font-black uppercase text-gray-500 italic border-b border-white/5">
+                                        <th class="pb-5">Nombre Completo</th>
+                                        <th class="pb-5">DNI</th>
+                                        <th class="pb-5">Plan</th>
+                                        <th class="pb-5">Status</th>
+                                        <th class="pb-5">Renovación</th>
+                                        <th class="pb-5">Vencimiento</th>
+                                        <th class="pb-5 text-right action-col">Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="dash-table-alumnos-mini" class="text-[11px] font-black uppercase italic"></tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
 
-                <div class="glass-card p-10 rounded-[3rem]">
-                    <div class="flex justify-between items-center mb-8">
-                        <h3 class="text-sm font-black uppercase italic border-l-4 border-red-600 pl-4 tracking-widest">Vista Rápida Alumnos (A-Z)</h3>
+                <!-- Layout Alumno (DASHBOARD PERSONALIZADO) -->
+                <div id="alumno-dashboard-layout" class="hidden">
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-10">
+                        <div class="glass-card p-8 rounded-[3rem] lg:col-span-2">
+                            <div class="flex items-center gap-6 mb-8">
+                                <div class="w-20 h-20 rounded-[1.5rem] viking-bg-red flex items-center justify-center font-black text-black text-3xl italic shadow-2xl" id="al-dash-initials">??</div>
+                                <div>
+                                    <h3 class="text-3xl font-black uppercase italic leading-none" id="al-dash-name">-</h3>
+                                    <p class="text-red-600 text-[10px] font-black uppercase tracking-widest mt-1">Guerrero Vikingo en Formación</p>
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
+                                <div class="bg-white/5 p-4 rounded-2xl border border-white/5">
+                                    <p class="text-[8px] text-gray-500 font-black uppercase italic mb-1">DNI / Usuario</p>
+                                    <p class="text-xs font-black italic" id="al-dash-dni">-</p>
+                                </div>
+                                <div class="bg-white/5 p-4 rounded-2xl border border-white/5">
+                                    <p class="text-[8px] text-gray-500 font-black uppercase italic mb-1">Email</p>
+                                    <p class="text-xs font-black italic truncate" id="al-dash-email">-</p>
+                                </div>
+                                <div class="bg-white/5 p-4 rounded-2xl border border-white/5">
+                                    <p class="text-[8px] text-gray-500 font-black uppercase italic mb-1">Plan Actual</p>
+                                    <p class="text-xs font-black italic viking-red uppercase" id="al-dash-plan">-</p>
+                                </div>
+                                <div class="bg-white/5 p-4 rounded-2xl border border-white/5">
+                                    <p class="text-[8px] text-gray-500 font-black uppercase italic mb-1">Vencimiento</p>
+                                    <p class="text-xs font-black italic" id="al-dash-vencimiento">-</p>
+                                </div>
+                                <div class="bg-white/5 p-4 rounded-2xl border border-white/5">
+                                    <p class="text-[8px] text-gray-500 font-black uppercase italic mb-1">Última Renovación</p>
+                                    <p class="text-xs font-black italic" id="al-dash-renovacion">-</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="glass-card p-8 rounded-[3rem]">
+                            <h4 class="text-[10px] font-black uppercase italic text-red-600 mb-6 tracking-widest border-b border-white/5 pb-4">Métricas Físicas</h4>
+                            <div class="grid grid-cols-3 gap-4 text-center">
+                                <div>
+                                    <p class="text-2xl font-black italic mb-1" id="al-dash-peso">0</p>
+                                    <p class="text-[8px] text-gray-500 font-black uppercase">Peso (kg)</p>
+                                </div>
+                                <div>
+                                    <p class="text-2xl font-black italic mb-1" id="al-dash-altura">0</p>
+                                    <p class="text-[8px] text-gray-500 font-black uppercase">Altura (cm)</p>
+                                </div>
+                                <div>
+                                    <p class="text-2xl font-black italic mb-1 viking-red" id="al-dash-imc">0</p>
+                                    <p class="text-[8px] text-gray-500 font-black uppercase">IMC</p>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-left">
-                            <thead>
-                                <tr class="text-[9px] font-black uppercase text-gray-500 italic border-b border-white/5">
-                                    <th class="pb-5">Nombre Completo</th>
-                                    <th class="pb-5">DNI</th>
-                                    <th class="pb-5">Plan</th>
-                                    <th class="pb-5">Status</th>
-                                    <th class="pb-5">Renovación</th>
-                                    <th class="pb-5">Vencimiento</th>
-                                    <th class="pb-5 text-right action-col">Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody id="dash-table-alumnos-mini" class="text-[11px] font-black uppercase italic"></tbody>
-                        </table>
+                    
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                        <div class="glass-card p-10 rounded-[3rem]">
+                            <h3 class="text-sm font-black uppercase italic border-l-4 border-red-600 pl-4 tracking-widest mb-8">Mis Próximas Clases</h3>
+                            <div id="al-dash-upcoming" class="space-y-4">
+                                <p class="text-gray-500 italic text-[10px]">No tienes reservas próximas. ¡Ve al calendario!</p>
+                            </div>
+                        </div>
+                        <div class="glass-card p-10 rounded-[3rem]">
+                            <h3 class="text-sm font-black uppercase italic border-l-4 border-gray-600 pl-4 tracking-widest mb-8 text-gray-500">Historial de Clases</h3>
+                            <div id="al-dash-history" class="space-y-4 opacity-60">
+                                <p class="text-gray-500 italic text-[10px]">Sin historial registrado.</p>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -769,7 +855,7 @@
                 <select id="cl-coach-select" required class="viking-input">
                     <option value="">Seleccionar Profesor</option>
                 </select>
-                <div class="grid grid-cols-2 gap-4">
+                <div class="grid grid-cols-3 gap-4">
                     <select id="cl-dia" required class="viking-input" onchange="updateHourOptions()">
                         <option value="1">Lunes</option>
                         <option value="2">Martes</option>
@@ -779,6 +865,7 @@
                         <option value="6">Sábado</option>
                     </select>
                     <select id="cl-horario" required class="viking-input"></select>
+                    <input type="number" id="cl-cupo" placeholder="Cupo Max" class="viking-input" value="40">
                 </div>
                 <div class="space-y-2">
                     <label class="text-[9px] font-black uppercase text-gray-500 italic">Color de Identificación</label>
@@ -804,9 +891,20 @@
         let state = { 
             alumnos: [], planes: [], stock: [], clases: [], user: null, 
             profesores: [], administrativos: [], tiposPlanes: [],
+            reservas: [], // Estructura para almacenar las reservas de la DB
             cart: [], currentPaymentMethod: '',
             cobrarTab: 'mercaderia'
         };
+
+        // --- SISTEMA DE NOTIFICACIONES ---
+        function showVikingToast(msg, error = false) {
+            const toast = document.getElementById('viking-toast');
+            toast.innerText = msg;
+            toast.style.background = error ? '#660000' : '#FF0000';
+            toast.style.color = error ? '#FF0000' : 'black';
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 3000);
+        }
 
         // --- SISTEMA DE PERMISOS (RBAC) ---
         function applyPermissions() {
@@ -817,56 +915,166 @@
             const isAlumno = rol === "Alumno";
             const isAdmin = rol === "Administrador" || rol === "Supervisor";
 
-            document.getElementById('nav-section-staff').style.display = 'block';
-            document.getElementById('nav-section-operativa').style.display = 'block';
-            document.getElementById('nav-planes').style.display = 'flex';
-            document.getElementById('nav-clases').style.display = 'flex';
-            document.getElementById('nav-caja').style.display = 'block';
-            document.getElementById('nav-stock').style.display = 'block';
-            document.getElementById('nav-cobrar').style.display = 'block';
+            // Mostrar/Ocultar Dashboard layouts
+            document.getElementById('admin-dashboard-layout').style.display = isAlumno ? 'none' : 'block';
+            document.getElementById('alumno-dashboard-layout').style.display = isAlumno ? 'block' : 'none';
 
+            document.getElementById('nav-section-admin').style.display = isAlumno ? 'none' : 'block';
+            document.getElementById('nav-section-staff').style.display = isAdmin ? 'block' : 'none';
+            document.getElementById('nav-section-operativa').style.display = (isAdmin || isAdm) ? 'block' : 'none';
+            document.getElementById('nav-planes').style.display = isAdmin ? 'flex' : 'none';
+            document.getElementById('nav-clases').style.display = isAdmin ? 'flex' : 'none';
+            
             if (isAlumno) {
-                document.getElementById('nav-section-admin').style.display = 'none';
-                document.getElementById('nav-section-staff').style.display = 'none';
-                document.getElementById('nav-section-operativa').style.display = 'none';
-                document.getElementById('nav-planes').style.display = 'none';
-                document.getElementById('nav-clases').style.display = 'none';
                 document.getElementById('nav-perfil').style.display = 'flex';
                 document.getElementById('nav-calendario').style.display = 'flex';
+                document.getElementById('nav-dashboard').style.display = 'flex';
                 
                 // Lógica de acceso a rutinas para alumnos
                 const planNombre = state.user.plan?.nombre?.toLowerCase() || "";
                 const normalizedPlan = planNombre.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
                 document.getElementById('nav-rutinas').style.display = (normalizedPlan.includes('musculacion') || normalizedPlan.includes('completo')) ? 'flex' : 'none';
                 
+                renderStudentDashboard();
                 document.querySelectorAll('.action-col').forEach(el => el.style.display = 'none');
             }
 
             if (isProf) {
-                document.getElementById('nav-section-staff').style.display = 'none';
-                document.getElementById('nav-section-operativa').style.display = 'none';
-                document.getElementById('nav-planes').style.display = 'none'; 
-                document.getElementById('nav-clases').style.display = 'none'; 
+                document.querySelectorAll('.action-col').forEach(el => el.style.display = 'none');
                 const saveButtons = ['btn-nuevo-alumno', 'btn-nuevo-plan', 'btn-nueva-clase', 'btn-nuevo-stock', 'btn-nuevo-prof', 'btn-nuevo-adm'];
                 saveButtons.forEach(id => { const b = document.getElementById(id); if(b) b.style.display = 'none'; });
-                document.querySelectorAll('.action-col').forEach(el => el.style.display = 'none');
             }
 
-            if (isAdm) {
-                document.getElementById('nav-section-staff').style.display = 'none';
-                document.getElementById('nav-section-operativa').style.display = 'block';
-                document.getElementById('btn-facturacion').style.display = 'flex';
-                document.getElementById('nav-caja').style.display = 'none';
-                document.getElementById('nav-stock').style.display = 'none';
-                document.getElementById('btn-nueva-clase').style.display = 'none';
-            }
-
-            if (isAdmin) {
-                document.getElementById('nav-section-staff').style.display = 'block';
-                document.getElementById('nav-section-operativa').style.display = 'block';
-                document.querySelectorAll('.action-col').forEach(el => el.style.display = 'table-cell');
-            }
             lucide.createIcons();
+        }
+
+        // --- DASHBOARD ALUMNO ---
+        function renderStudentDashboard() {
+            const u = state.user;
+            if (!u) return;
+
+            // Datos Personales
+            document.getElementById('al-dash-name').innerText = u.nombre_completo;
+            document.getElementById('al-dash-dni').innerText = u.dni;
+            document.getElementById('al-dash-email').innerText = u.email || 'SIN EMAIL';
+            document.getElementById('al-dash-plan').innerText = u.plan?.nombre || 'SIN PLAN ACTIVO';
+            document.getElementById('al-dash-vencimiento').innerText = u.fecha_vencimiento || 'PENDIENTE';
+            document.getElementById('al-dash-renovacion').innerText = u.fecha_ultima_renovacion || 'SIN DATOS';
+            document.getElementById('al-dash-initials').innerText = u.nombre_completo.split(' ').map(n => n[0]).join('').toUpperCase();
+            
+            // Datos Físicos
+            document.getElementById('al-dash-peso').innerText = u.peso || '0';
+            document.getElementById('al-dash-altura').innerText = u.altura || '0';
+            document.getElementById('al-dash-imc').innerText = u.imc || '0';
+
+            // Reservas del alumno
+            const upcomingList = document.getElementById('al-dash-upcoming');
+            const historyList = document.getElementById('al-dash-history');
+
+            const misReservas = state.reservas.filter(r => r.alumno_dni === u.dni);
+            const hoy = new Date().setHours(0,0,0,0);
+
+            // Filtrado simulado de próximas vs pasadas (basado en fecha de reserva si la hubiera)
+            upcomingList.innerHTML = misReservas.length ? misReservas.map(r => `
+                <div class="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-red-600/20">
+                    <div>
+                        <p class="text-xs font-black uppercase italic viking-red">${r.clase_nombre}</p>
+                        <p class="text-[9px] text-gray-500 font-bold uppercase">${r.dia_nombre} - ${r.horario}:00 HS</p>
+                    </div>
+                    <button onclick="cancelBooking(${r.id})" class="text-[8px] font-black uppercase italic text-gray-500 hover:text-red-600">Cancelar</button>
+                </div>`).join('') : '<p class="text-gray-500 italic text-[10px]">No tienes reservas próximas.</p>';
+
+            historyList.innerHTML = '<p class="text-gray-500 italic text-[10px]">Las clases asistidas aparecerán aquí.</p>';
+        }
+
+        // --- SISTEMA DE RESERVAS ---
+        async function bookClass(claseId) {
+            if (state.user.rol_nombre !== "Alumno") return;
+
+            const clase = state.clases.find(c => c.id === claseId);
+            if (!clase) return;
+
+            // Capacidad Max (usando el nombre de columna de la DB)
+            const cupoMax = clase.capacidad_max || 40; 
+            const cupoActual = state.reservas.filter(r => r.clase_id === claseId).length;
+
+            if (cupoActual >= cupoMax) {
+                showVikingToast("¡Clase Llena! No hay más cupos.", true);
+                return;
+            }
+
+            // Evitar duplicados en el estado local
+            const yaReservado = state.reservas.find(r => r.clase_id === claseId && r.alumno_dni === state.user.dni);
+            if (yaReservado) {
+                showVikingToast("Ya estás anotado en esta clase.", true);
+                return;
+            }
+
+            const diasSemana = ["", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
+            const nuevaReserva = {
+                id: Date.now(), // Simulación de ID
+                clase_id: clase.id,
+                clase_nombre: clase.nombre,
+                alumno_dni: state.user.dni,
+                dia_nombre: diasSemana[clase.dia],
+                horario: clase.horario
+            };
+
+            // Aquí llamarías a tu API: await apiFetch('/reservas', 'POST', nuevaReserva);
+            state.reservas.push(nuevaReserva);
+            showVikingToast("¡Reserva confirmada en " + clase.nombre + "!");
+            renderCalendar();
+            renderStudentDashboard();
+        }
+
+        function cancelBooking(id) {
+            state.reservas = state.reservas.filter(r => r.id !== id);
+            showVikingToast("Reserva Cancelada.");
+            renderCalendar();
+            renderStudentDashboard();
+        }
+
+        // --- CALENDARIO ACTUALIZADO ---
+        function renderCalendar() {
+            const cal = document.getElementById('calendar-grid'); if (!cal) return;
+            const canMove = (state.user?.rol_nombre === "Administrador" || state.user?.rol_nombre === "Supervisor");
+            const esAlumno = (state.user?.rol_nombre === "Alumno");
+
+            cal.innerHTML = `<div class="cal-header">HORA</div><div class="cal-header">LUNES</div><div class="cal-header">MARTES</div><div class="cal-header">MIÉRCOLES</div><div class="cal-header">JUEVES</div><div class="cal-header">VIERNES</div><div class="cal-header">SÁBADO</div>`;
+            
+            for(let h=7; h<=21; h++) {
+                cal.innerHTML += `<div class="cal-cell flex items-center justify-center font-black text-[9px] text-white/40 bg-white/5 border-r border-white/20">${h}:00</div>`;
+                for(let d=1; d<=6; d++) {
+                    const isSat = d === 6; const isClosed = isSat && (h < 10 || h > 13);
+                    cal.innerHTML += `<div id="cell-${d}-${h}" class="cal-cell ${isClosed ? 'cal-cell-closed' : ''}" ondragover="event.preventDefault()" ondrop="${canMove ? `handleDrop(event, ${d}, ${h})` : ''}"></div>`;
+                }
+            }
+
+            state.clases.forEach(c => {
+                const cell = document.getElementById(`cell-${c.dia}-${c.horario}`);
+                if (cell) {
+                    const capMax = c.capacidad_max || 40;
+                    const cupoActual = state.reservas.filter(r => r.clase_id === c.id).length;
+                    
+                    const badge = document.createElement('div'); 
+                    badge.className = "class-badge"; 
+                    badge.style.backgroundColor = c.color || '#FF0000';
+                    
+                    if (esAlumno) {
+                        badge.onclick = () => bookClass(c.id);
+                    } else if (canMove) {
+                        badge.draggable = true; 
+                        badge.ondragstart = (e) => e.dataTransfer.setData("clase_id", c.id);
+                    }
+
+                    badge.innerHTML = `
+                        <span class="text-[10px] mb-0.5 leading-none font-black uppercase">${c.nombre}</span>
+                        <span class="text-[8px] opacity-70 font-black italic mb-1">${c.coach}</span>
+                        <div class="bg-black/20 px-2 py-0.5 rounded-full text-[7px] font-black">CUPO: ${cupoActual}/${capMax}</div>
+                    `;
+                    cell.appendChild(badge);
+                }
+            });
         }
 
         // --- PUNTO DE VENTA (COBRAR) ---
@@ -989,36 +1197,14 @@
                     }
                 }
                 state.cart = []; state.currentPaymentMethod = '';
+                showVikingToast("Pago Procesado con Éxito");
                 await initApp();
                 renderCobrar();
                 switchView('caja');
             }
         }
 
-        // --- CALENDARIO ---
-        function renderCalendar() {
-            const cal = document.getElementById('calendar-grid'); if (!cal) return;
-            const canMove = (state.user?.rol_nombre === "Administrador" || state.user?.rol_nombre === "Supervisor");
-            cal.innerHTML = `<div class="cal-header">HORA</div><div class="cal-header">LUNES</div><div class="cal-header">MARTES</div><div class="cal-header">MIÉRCOLES</div><div class="cal-header">JUEVES</div><div class="cal-header">VIERNES</div><div class="cal-header">SÁBADO</div>`;
-            for(let h=7; h<=21; h++) {
-                cal.innerHTML += `<div class="cal-cell flex items-center justify-center font-black text-[9px] text-white/40 bg-white/5 border-r border-white/20">${h}:00</div>`;
-                for(let d=1; d<=6; d++) {
-                    const isSat = d === 6; const isClosed = isSat && (h < 10 || h > 13);
-                    cal.innerHTML += `<div id="cell-${d}-${h}" class="cal-cell ${isClosed ? 'cal-cell-closed' : ''}" ondragover="event.preventDefault()" ondrop="${canMove ? `handleDrop(event, ${d}, ${h})` : ''}"></div>`;
-                }
-            }
-            state.clases.forEach(c => {
-                const cell = document.getElementById(`cell-${c.dia}-${c.horario}`);
-                if (cell) {
-                    const badge = document.createElement('div'); badge.className = "class-badge"; badge.style.backgroundColor = c.color || '#FF0000';
-                    if (canMove) { badge.draggable = true; badge.ondragstart = (e) => e.dataTransfer.setData("clase_id", c.id); }
-                    badge.innerHTML = `<span class="text-[11px] mb-0.5 leading-none font-black uppercase">${c.nombre}</span><span class="text-[9px] opacity-70 font-black italic">${c.coach}</span>`;
-                    cell.appendChild(badge);
-                }
-            });
-        }
-
-        // --- RUTINAS (PROBLEMA RESUELTO) ---
+        // --- RUTINAS ---
         function renderRutinas() {
             const rol = state.user?.rol_nombre;
             const list = document.getElementById('rutinas-lista');
@@ -1031,16 +1217,14 @@
                 list.style.display = 'grid'; studentView.classList.add('hidden');
                 document.getElementById('rutina-title').innerText = "Rutinas de Alumnos";
                 
-                // Filtro optimizado para encontrar planes con o sin tildes
                 const alRutinas = state.alumnos.filter(a => {
                     const pName = a.plan?.nombre?.toLowerCase() || "";
-                    // Normalización para quitar tildes
                     const normalized = pName.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
                     return normalized.includes('musculacion') || normalized.includes('completo');
                 });
 
                 if (alRutinas.length === 0) { 
-                    list.innerHTML = '<p class="text-gray-500 italic col-span-3 py-10">No hay alumnos activos con plan de musculación o completo.</p>'; 
+                    list.innerHTML = '<p class="text-gray-500 italic col-span-3 py-10 text-center">No hay alumnos activos con plan de musculación o completo.</p>'; 
                     return; 
                 }
 
@@ -1109,6 +1293,7 @@
             if(view === 'calendario') renderCalendar();
             if(view === 'cobrar') renderCobrar();
             if(view === 'rutinas') renderRutinas();
+            if(view === 'dashboard' && state.user?.rol_nombre === "Alumno") renderStudentDashboard();
             applyPermissions();
             lucide.createIcons();
         }
@@ -1131,13 +1316,15 @@
                 document.getElementById('prof-input-name').value = res.nombre_completo;
                 document.getElementById('prof-input-dni').value = res.dni;
                 document.getElementById('prof-input-email').value = res.email || "";
+                
+                initApp();
                 if (res.rol_nombre === "Alumno") {
                     document.getElementById('plan-alumno-info').classList.remove('hidden');
                     document.getElementById('perfil-plan-nombre').innerText = res.plan?.nombre || "SIN PLAN";
                     document.getElementById('perfil-vencimiento').innerText = "Vence: " + (res.fecha_vencimiento || "-");
-                    switchView('perfil');
+                    switchView('dashboard');
                 } else switchView('dashboard');
-                initApp();
+                
             } else document.getElementById('login-error').classList.remove('hidden');
         }
 
@@ -1235,6 +1422,7 @@
                     ${hideEdit ? '' : `<button onclick="openEditClase(${c.id})" class="absolute top-4 right-4 text-gray-600 hover:text-red-600"><i data-lucide="settings" class="w-4 h-4"></i></button>`}
                     <div class="flex items-center gap-2 mb-2"><div class="w-3 h-3 rounded-full" style="background-color: ${c.color || '#FF0000'}"></div><h4 class="text-lg font-black uppercase italic">${c.nombre}</h4></div>
                     <p class="text-[10px] font-black text-red-600 uppercase italic">Coach: ${c.coach || 'Vikingo'}</p>
+                    <p class="text-[9px] text-gray-500 font-bold uppercase">Cupo: ${c.capacidad_max || 40}</p>
                 </div>`).join('');
             lucide.createIcons();
             if(document.getElementById('view-calendario').classList.contains('active')) renderCalendar();
@@ -1259,7 +1447,7 @@
             const data = { nombre_completo: document.getElementById('al-nombre').value, dni: document.getElementById('al-dni').value, email: document.getElementById('al-email').value, plan_id: parseInt(document.getElementById('al-plan').value) || null, peso: parseFloat(document.getElementById('al-peso').value) || null, altura: parseFloat(document.getElementById('al-altura').value) || null, imc: parseFloat(document.getElementById('al-imc').value) || null, fecha_ultima_renovacion: document.getElementById('al-fecha-renovacion').value, fecha_vencimiento: document.getElementById('al-fecha-vencimiento').value };
             const pass = document.getElementById('al-pass').value; if(pass) data.password = pass;
             const res = await apiFetch(id ? `/alumnos/${id}` : '/alumnos', id ? 'PUT' : 'POST', data);
-            if(!res.error) { closeModal('modal-alumno'); fetchAlumnos(); }
+            if(!res.error) { closeModal('modal-alumno'); fetchAlumnos(); showVikingToast("Alumno Guardado"); }
         };
 
         function openModalStaff(rol) { document.getElementById('modal-staff-title').innerText = "Alta " + rol; document.getElementById('stf-id').value = ""; document.getElementById('stf-rol').value = rol; openModal('modal-staff'); }
@@ -1278,7 +1466,7 @@
             const data = { nombre_completo: document.getElementById('stf-nombre').value, dni: document.getElementById('stf-dni').value, especialidad: document.getElementById('stf-esp').value, perfil_nombre: rol };
             const pass = document.getElementById('stf-pass').value; if(pass) data.password = pass;
             const res = await apiFetch(id ? `/staff/${id}` : '/staff', id ? 'PUT' : 'POST', data);
-            if(!res.error) { closeModal('modal-staff'); loadStaff(); }
+            if(!res.error) { closeModal('modal-staff'); loadStaff(); showVikingToast("Staff Actualizado"); }
         };
 
         function openModalPlan() { document.getElementById('plan-id').value = ""; document.getElementById('modal-plan-title').innerText = "Nuevo Plan"; openModal('modal-plan'); }
@@ -1294,7 +1482,7 @@
             e.preventDefault(); const id = document.getElementById('plan-id').value;
             const data = { nombre: document.getElementById('plan-nombre').value, precio: parseFloat(document.getElementById('plan-precio').value), tipo_plan_id: parseInt(document.getElementById('plan-tipo').value) };
             const res = await apiFetch(id ? `/planes/${id}` : '/planes', id ? 'PUT' : 'POST', data);
-            if(!res.error) { closeModal('modal-plan'); loadPlanes(); }
+            if(!res.error) { closeModal('modal-plan'); loadPlanes(); showVikingToast("Plan Guardado"); }
         };
 
         function openModalStock() { document.getElementById('stock-id').value = ""; openModal('modal-stock'); }
@@ -1310,13 +1498,14 @@
             e.preventDefault(); const id = document.getElementById('stock-id').value;
             const data = { nombre_producto: document.getElementById('stock-nombre').value, stock_actual: parseInt(document.getElementById('stock-cant').value), precio_venta: parseFloat(document.getElementById('stock-precio').value) };
             const res = await apiFetch(id ? `/stock/${id}` : '/stock', id ? 'PUT' : 'POST', data);
-            if(!res.error) { closeModal('modal-stock'); loadStock(); }
+            if(!res.error) { closeModal('modal-stock'); loadStock(); showVikingToast("Stock Actualizado"); }
         };
 
         function openModalClase() { document.getElementById('cl-id').value = ""; openModal('modal-clase'); }
         function openEditClase(id) {
             const c = state.clases.find(x => x.id == id); if(!c) return;
             document.getElementById('cl-id').value = c.id; document.getElementById('cl-nombre').value = c.nombre; document.getElementById('cl-coach-select').value = c.coach; document.getElementById('cl-dia').value = c.dia;
+            document.getElementById('cl-cupo').value = c.capacidad_max || 40;
             updateHourOptions(); document.getElementById('cl-horario').value = c.horario; document.getElementById('cl-color').value = c.color || "#FF0000";
             const delBtn = document.getElementById('btn-delete-clase'); if(state.user.rol_nombre === "Administrador" || state.user.rol_nombre === "Supervisor") delBtn.classList.remove('hidden');
             delBtn.onclick = () => deleteRecord('clases', c.id, 'modal-clase', loadClases);
@@ -1325,15 +1514,15 @@
 
         document.getElementById('form-clase').onsubmit = async (e) => {
             e.preventDefault(); const id = document.getElementById('cl-id').value;
-            const data = { nombre: document.getElementById('cl-nombre').value, coach: document.getElementById('cl-coach-select').value, dia: parseInt(document.getElementById('cl-dia').value), horario: parseInt(document.getElementById('cl-horario').value), color: document.getElementById('cl-color').value };
+            const data = { nombre: document.getElementById('cl-nombre').value, coach: document.getElementById('cl-coach-select').value, dia: parseInt(document.getElementById('cl-dia').value), horario: parseInt(document.getElementById('cl-horario').value), color: document.getElementById('cl-color').value, capacidad_max: parseInt(document.getElementById('cl-cupo').value) };
             const res = await apiFetch(id ? `/clases/${id}` : '/clases', id ? 'PUT' : 'POST', data);
-            if(!res.error) { closeModal('modal-clase'); loadClases(); }
+            if(!res.error) { closeModal('modal-clase'); loadClases(); showVikingToast("Clase Guardada"); }
         };
 
-        async function handleDrop(e, dia, horario) { e.preventDefault(); const id = e.dataTransfer.getData("clase_id"); if (!id) return; const res = await apiFetch(`/clases/${id}/move`, 'PUT', { dia, horario }); if (!res.error) loadClases(); }
+        async function handleDrop(e, dia, horario) { e.preventDefault(); const id = e.dataTransfer.getData("clase_id"); if (!id) return; const res = await apiFetch(`/clases/${id}/move`, 'PUT', { dia, horario }); if (!res.error) { loadClases(); showVikingToast("Clase Reubicada"); } }
         function updateHourOptions() { const dia = document.getElementById('cl-dia').value; const select = document.getElementById('cl-horario'); select.innerHTML = ""; let start = 7, end = 21; if (dia == "6") { start = 10; end = 13; } for(let i=start; i<=end; i++) select.innerHTML += `<option value="${i}">${i}:00 hs</option>`; }
-        async function deleteRecord(entity, id, modalId, callback) { if(!confirm("¿Deseas eliminar este registro?")) return; const res = await apiFetch(`/${entity}/${id}`, 'DELETE'); if(!res.error) { closeModal(modalId); callback(); } }
-        async function handleProfileUpdate(e) { e.preventDefault(); const pass = document.getElementById('prof-input-pass').value; const data = { nombre_completo: document.getElementById('prof-input-name').value, dni: document.getElementById('prof-input-dni').value, email: document.getElementById('prof-input-email').value, perfil_nombre: state.user.rol_nombre }; if(pass) data.password = pass; const res = await apiFetch(`/staff/${state.user.id}`, 'PUT', data); if(!res.error) { state.user.nombre_completo = data.nombre_completo; document.getElementById('side-user-name').innerText = data.nombre_completo; } }
+        async function deleteRecord(entity, id, modalId, callback) { if(!confirm("¿Deseas eliminar este registro?")) return; const res = await apiFetch(`/${entity}/${id}`, 'DELETE'); if(!res.error) { closeModal(modalId); callback(); showVikingToast("Registro Eliminado", true); } }
+        async function handleProfileUpdate(e) { e.preventDefault(); const pass = document.getElementById('prof-input-pass').value; const data = { nombre_completo: document.getElementById('prof-input-name').value, dni: document.getElementById('prof-input-dni').value, email: document.getElementById('prof-input-email').value, perfil_nombre: state.user.rol_nombre }; if(pass) data.password = pass; const res = await apiFetch(`/staff/${state.user.id}`, 'PUT', data); if(!res.error) { state.user.nombre_completo = data.nombre_completo; document.getElementById('side-user-name').innerText = data.nombre_completo; showVikingToast("Perfil Actualizado"); } }
         
         window.onload = () => { lucide.createIcons(); };
     </script>
