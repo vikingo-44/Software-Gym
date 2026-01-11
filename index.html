@@ -184,11 +184,9 @@
     <!-- OVERLAY DE LOGIN -->
     <div id="login-overlay">
         <div class="glass-card p-12 rounded-[3rem] w-full max-w-md border-red-600/20 text-center">
-            <!-- Logo SVG Fijo para que siempre se vea -->
-            <div class="w-32 h-32 mx-auto mb-8 logo-viking-glow bg-red-600 rounded-full flex items-center justify-center">
-                <svg viewBox="0 0 24 24" class="w-20 h-20 text-black fill-current" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M12,2L4.5,20.29L5.21,21L12,18L18.79,21L19.5,20.29L12,2Z"/>
-                </svg>
+            <!-- LOGO RESTAURADO -->
+            <div class="w-32 h-32 mx-auto mb-8 logo-viking-glow bg-black rounded-full flex items-center justify-center overflow-hidden">
+                <img src="logo.png" alt="Vikingo Logo" class="w-full h-full object-cover" onerror="this.src='https://via.placeholder.com/150/FF0000/000000?text=VIKINGO'">
             </div>
             <h1 class="text-4xl font-black italic uppercase mb-2">Vikingo <span class="viking-red">Hub</span></h1>
             <p class="text-[9px] tracking-[0.5em] text-gray-500 uppercase mb-10">Acceso al Sistema</p>
@@ -204,11 +202,13 @@
 
     <!-- BARRA LATERAL -->
     <aside id="sidebar" class="w-72 h-full glass-sidebar flex flex-col hidden z-50">
-        <div class="p-10 flex items-center justify-between">
+        <div class="p-8 flex items-center gap-4">
+            <!-- LOGO EN SIDEBAR -->
+            <img src="logo.png" alt="Vikingo Hub" class="w-10 h-10 object-contain logo-viking-glow brand-text" onerror="this.style.display='none'">
             <h1 class="brand-text text-xl font-black italic uppercase leading-none">
                 VIKINGO<br><span class="viking-red text-xs tracking-[0.4em] font-bold">STRENGTH HUB</span>
             </h1>
-            <button onclick="toggleSidebar()" class="p-2 hover:bg-white/5 rounded-lg transition-colors">
+            <button onclick="toggleSidebar()" class="p-2 hover:bg-white/5 rounded-lg transition-colors ml-auto">
                 <i data-lucide="menu" class="w-5 h-5 viking-red"></i>
             </button>
         </div>
@@ -625,6 +625,7 @@
                             </div>
                         </div>
                     </div>
+                    <!-- Lista de alumnos para profesores/admin -->
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="rutinas-lista"></div>
                 </div>
             </div>
@@ -832,8 +833,12 @@
                 document.getElementById('nav-clases').style.display = 'none';
                 document.getElementById('nav-perfil').style.display = 'flex';
                 document.getElementById('nav-calendario').style.display = 'flex';
+                
+                // Lógica de acceso a rutinas para alumnos
                 const planNombre = state.user.plan?.nombre?.toLowerCase() || "";
-                document.getElementById('nav-rutinas').style.display = (planNombre.includes('musculacion') || planNombre.includes('completo')) ? 'flex' : 'none';
+                const normalizedPlan = planNombre.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                document.getElementById('nav-rutinas').style.display = (normalizedPlan.includes('musculacion') || normalizedPlan.includes('completo')) ? 'flex' : 'none';
+                
                 document.querySelectorAll('.action-col').forEach(el => el.style.display = 'none');
             }
 
@@ -1013,23 +1018,32 @@
             });
         }
 
-        // --- RUTINAS ---
+        // --- RUTINAS (PROBLEMA RESUELTO) ---
         function renderRutinas() {
             const rol = state.user?.rol_nombre;
             const list = document.getElementById('rutinas-lista');
             const studentView = document.getElementById('musculacion-student-view');
+            
             if (rol === "Alumno") {
                 list.style.display = 'none'; studentView.classList.remove('hidden');
                 document.getElementById('rutina-title').innerText = "Mi Rutina Musculación";
             } else {
                 list.style.display = 'grid'; studentView.classList.add('hidden');
                 document.getElementById('rutina-title').innerText = "Rutinas de Alumnos";
-                // FILTRO CORRECTO BASADO EN EL PLAN DE LA DB
+                
+                // Filtro optimizado para encontrar planes con o sin tildes
                 const alRutinas = state.alumnos.filter(a => {
                     const pName = a.plan?.nombre?.toLowerCase() || "";
-                    return pName.includes('musculacion') || pName.includes('completo');
+                    // Normalización para quitar tildes
+                    const normalized = pName.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                    return normalized.includes('musculacion') || normalized.includes('completo');
                 });
-                if (alRutinas.length === 0) { list.innerHTML = '<p class="text-gray-500 italic col-span-3">No hay alumnos activos con plan de musculación.</p>'; return; }
+
+                if (alRutinas.length === 0) { 
+                    list.innerHTML = '<p class="text-gray-500 italic col-span-3 py-10">No hay alumnos activos con plan de musculación o completo.</p>'; 
+                    return; 
+                }
+
                 list.innerHTML = alRutinas.map(a => `
                     <div class="glass-card p-6 rounded-3xl border-red-600/10">
                         <div class="flex items-center gap-4 mb-4">
