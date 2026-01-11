@@ -35,7 +35,6 @@
         }
         .glass-card:hover { border-color: rgba(255, 0, 0, 0.3); background: rgba(255, 255, 255, 0.05); }
 
-        /* Efecto Logo Login */
         .logo-viking-glow {
             filter: drop-shadow(0 0 15px rgba(255, 0, 0, 0.6));
             animation: pulse-glow 3s infinite alternate;
@@ -84,7 +83,8 @@
         .cal-cell { 
             border-right: 1px solid rgba(255,255,255,0.15); 
             border-bottom: 1px solid rgba(255,255,255,0.15); 
-            min-height: 100px; position: relative; 
+            min-height: 65px; /* Altura reducida como pediste */
+            position: relative; 
         }
         .cal-cell-closed {
             background: repeating-linear-gradient(45deg, rgba(255,255,255,0.02), rgba(255,255,255,0.02) 10px, rgba(255,255,255,0.05) 10px, rgba(255,255,255,0.05) 20px);
@@ -123,7 +123,7 @@
 
         .class-badge {
             color: black; font-weight: 900;
-            padding: 8px; text-transform: uppercase; font-style: italic;
+            padding: 4px; text-transform: uppercase; font-style: italic;
             cursor: grab;
             display: flex; flex-direction: column; justify-content: center; align-items: center;
             text-align: center; height: 100%; width: 100%;
@@ -158,6 +158,22 @@
         .payment-method-btn.active {
             border-color: #FF0000;
             background: rgba(255, 0, 0, 0.1);
+            color: #FF0000;
+        }
+
+        /* Pestañas para Cobrar */
+        .cobrar-tab {
+            padding: 12px 24px;
+            font-weight: 900;
+            font-size: 10px;
+            text-transform: uppercase;
+            font-style: italic;
+            border-bottom: 2px solid transparent;
+            color: #666;
+            transition: all 0.3s;
+        }
+        .cobrar-tab.active {
+            border-bottom-color: #FF0000;
             color: #FF0000;
         }
     </style>
@@ -202,18 +218,20 @@
         </div>
 
         <nav class="flex-1 px-4 space-y-1 overflow-y-auto custom-scrollbar pb-10">
-            <p class="nav-section-title text-[9px] font-black text-gray-600 uppercase tracking-widest px-6 mb-2 mt-4">Administración</p>
-            <button onclick="switchView('dashboard')" id="nav-dashboard" class="nav-btn w-full nav-item active flex items-center gap-5 px-6 py-4 rounded-2xl font-black uppercase text-[10px] italic">
-                <i data-lucide="layout-grid" class="w-4 h-4"></i> <span class="nav-text">Dashboard</span>
-            </button>
-            <button onclick="switchView('perfil')" id="nav-perfil" class="nav-btn w-full nav-item flex items-center gap-5 px-6 py-4 rounded-2xl font-black uppercase text-[10px] italic text-gray-400">
-                <i data-lucide="user-cog" class="w-4 h-4"></i> <span class="nav-text">Mi Perfil</span>
-            </button>
-            <button onclick="switchView('alumnos')" id="nav-alumnos" class="nav-btn w-full nav-item flex items-center gap-5 px-6 py-4 rounded-2xl font-black uppercase text-[10px] italic text-gray-400">
-                <i data-lucide="users" class="w-4 h-4"></i> <span class="nav-text">Alumnos</span>
-            </button>
+            <div id="nav-section-admin">
+                <p class="nav-section-title text-[9px] font-black text-gray-600 uppercase tracking-widest px-6 mb-2 mt-4">Administración</p>
+                <button onclick="switchView('dashboard')" id="nav-dashboard" class="nav-btn w-full nav-item active flex items-center gap-5 px-6 py-4 rounded-2xl font-black uppercase text-[10px] italic">
+                    <i data-lucide="layout-grid" class="w-4 h-4"></i> <span class="nav-text">Dashboard</span>
+                </button>
+                <button onclick="switchView('perfil')" id="nav-perfil" class="nav-btn w-full nav-item flex items-center gap-5 px-6 py-4 rounded-2xl font-black uppercase text-[10px] italic text-gray-400">
+                    <i data-lucide="user-cog" class="w-4 h-4"></i> <span class="nav-text">Mi Perfil</span>
+                </button>
+                <button onclick="switchView('alumnos')" id="nav-alumnos" class="nav-btn w-full nav-item flex items-center gap-5 px-6 py-4 rounded-2xl font-black uppercase text-[10px] italic text-gray-400">
+                    <i data-lucide="users" class="w-4 h-4"></i> <span class="nav-text">Alumnos</span>
+                </button>
+            </div>
 
-            <div class="relative">
+            <div id="nav-section-staff" class="relative">
                 <button onclick="toggleSub('sub-staff')" class="w-full flex items-center justify-between px-6 py-4 text-gray-400 font-black uppercase text-[10px] italic hover:text-red-600 transition-colors">
                     <span class="flex items-center gap-5"><i data-lucide="shield-check" class="w-4 h-4"></i> <span class="nav-text">Staff</span></span>
                     <i data-lucide="chevron-down" class="w-3 h-3 chevron-icon"></i>
@@ -224,16 +242,18 @@
                 </div>
             </div>
 
-            <p class="nav-section-title text-[9px] font-black text-gray-600 uppercase tracking-widest px-6 mb-2 mt-8">Operativa</p>
-            <div class="relative">
-                <button onclick="toggleSub('sub-facturacion')" class="w-full flex items-center justify-between px-6 py-4 text-gray-400 font-black uppercase text-[10px] italic hover:text-red-600 transition-colors">
-                    <span class="flex items-center gap-5"><i data-lucide="wallet" class="w-4 h-4"></i> <span class="nav-text">Facturación</span></span>
-                    <i data-lucide="chevron-down" class="w-3 h-3 chevron-icon"></i>
-                </button>
-                <div id="sub-facturacion" class="hidden pl-12 space-y-3 pb-4">
-                    <button onclick="switchView('cobrar')" id="nav-cobrar" class="nav-btn block w-full text-left text-[9px] font-black uppercase text-gray-600 hover:text-red-600 transition-colors">Cobrar</button>
-                    <button onclick="switchView('caja')" id="nav-caja" class="nav-btn block w-full text-left text-[9px] font-black uppercase text-gray-600 hover:text-red-600 transition-colors">Caja</button>
-                    <button onclick="switchView('stock')" id="nav-stock" class="nav-btn block w-full text-left text-[9px] font-black uppercase text-gray-600 hover:text-red-600 transition-colors">Stock</button>
+            <div id="nav-section-operativa">
+                <p class="nav-section-title text-[9px] font-black text-gray-600 uppercase tracking-widest px-6 mb-2 mt-8">Operativa</p>
+                <div class="relative">
+                    <button onclick="toggleSub('sub-facturacion')" class="w-full flex items-center justify-between px-6 py-4 text-gray-400 font-black uppercase text-[10px] italic hover:text-red-600 transition-colors">
+                        <span class="flex items-center gap-5"><i data-lucide="wallet" class="w-4 h-4"></i> <span class="nav-text">Facturación</span></span>
+                        <i data-lucide="chevron-down" class="w-3 h-3 chevron-icon"></i>
+                    </button>
+                    <div id="sub-facturacion" class="hidden pl-12 space-y-3 pb-4">
+                        <button onclick="switchView('cobrar')" id="nav-cobrar" class="nav-btn block w-full text-left text-[9px] font-black uppercase text-gray-600 hover:text-red-600 transition-colors">Cobrar</button>
+                        <button onclick="switchView('caja')" id="nav-caja" class="nav-btn block w-full text-left text-[9px] font-black uppercase text-gray-600 hover:text-red-600 transition-colors">Caja</button>
+                        <button onclick="switchView('stock')" id="nav-stock" class="nav-btn block w-full text-left text-[9px] font-black uppercase text-gray-600 hover:text-red-600 transition-colors">Stock</button>
+                    </div>
                 </div>
             </div>
 
@@ -246,6 +266,9 @@
             </button>
             <button onclick="switchView('calendario')" id="nav-calendario" class="nav-btn w-full nav-item flex items-center gap-5 px-6 py-4 rounded-2xl font-black uppercase text-[10px] italic text-gray-400">
                 <i data-lucide="calendar" class="w-4 h-4"></i> <span class="nav-text">Calendario</span>
+            </button>
+            <button id="nav-rutinas" onclick="switchView('rutinas')" class="nav-btn w-full nav-item hidden flex items-center gap-5 px-6 py-4 rounded-2xl font-black uppercase text-[10px] italic text-gray-400">
+                <i data-lucide="dumbbell" class="w-4 h-4"></i> <span class="nav-text">Rutinas Musc.</span>
             </button>
         </nav>
 
@@ -298,7 +321,6 @@
                             <div class="w-4 viking-bg-red/30 h-[45%] rounded-t-lg"></div>
                         </div>
                     </div>
-                    <!-- TOP 5 CLASES -->
                     <div class="glass-card p-8 rounded-[2.5rem]">
                         <h4 class="text-[10px] font-black uppercase italic text-red-600 mb-6 tracking-widest">Top 5 Clases</h4>
                         <div id="dash-top-clases" class="space-y-3"></div>
@@ -328,24 +350,30 @@
                 </div>
             </div>
 
-            <!-- VISTA COBRAR -->
+            <!-- VISTA COBRAR (NUEVO DISEÑO POR PESTAÑAS) -->
             <div id="view-cobrar" class="view-content">
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-10 h-full">
                     <div class="lg:col-span-2 space-y-6">
                         <div class="flex justify-between items-center mb-4">
-                            <h3 class="text-2xl font-black italic uppercase">Punto de Venta</h3>
+                            <div class="flex border-b border-white/5">
+                                <button onclick="setCobrarTab('mercaderia')" id="tab-mercaderia" class="cobrar-tab active">Mercadería</button>
+                                <button onclick="setCobrarTab('planes')" id="tab-planes" class="cobrar-tab">Planes</button>
+                            </div>
                             <div class="relative w-64">
                                 <i data-lucide="search" class="absolute left-4 top-3.5 w-4 h-4 text-gray-500"></i>
-                                <input type="text" placeholder="Buscar producto..." class="viking-input pl-12 py-3" id="cobrar-search">
+                                <input type="text" placeholder="Buscar..." class="viking-input pl-12 py-3" id="cobrar-search">
                             </div>
                         </div>
-                        <div class="grid grid-cols-2 md:grid-cols-3 gap-6 overflow-y-auto max-h-[600px] pr-2 custom-scrollbar" id="cobrar-catalogo"></div>
+                        <div id="cobrar-display-area">
+                             <!-- Contenido dinámico aquí -->
+                             <div class="grid grid-cols-2 md:grid-cols-4 gap-4 overflow-y-auto max-h-[600px] pr-2 custom-scrollbar" id="cobrar-catalogo"></div>
+                        </div>
                     </div>
 
                     <div class="glass-card p-10 rounded-[3rem] border-red-600/10 flex flex-col h-fit">
-                        <h4 class="text-xs font-black uppercase italic text-red-600 mb-6 tracking-widest border-b border-white/5 pb-4">Resumen de Venta</h4>
+                        <h4 class="text-xs font-black uppercase italic text-red-600 mb-6 tracking-widest border-b border-white/5 pb-4">Carrito de Cobro</h4>
                         <div class="flex-1 space-y-4 mb-8 overflow-y-auto max-h-64 custom-scrollbar" id="cobrar-lista-carrito">
-                            <p class="text-center text-gray-500 text-[10px] italic py-10">Sin productos seleccionados</p>
+                            <p class="text-center text-gray-500 text-[10px] italic py-10">Sin ítems seleccionados</p>
                         </div>
                         <div class="space-y-4 border-t border-white/5 pt-6 mb-8">
                             <div class="flex justify-between text-[10px] font-black italic">
@@ -361,9 +389,9 @@
                             <p class="text-[9px] font-black uppercase text-gray-500 italic mb-2 tracking-widest">Método de Pago</p>
                             <div class="grid grid-cols-2 gap-3">
                                 <button onclick="setPaymentMethod('MercadoPago')" class="payment-method-btn py-3 rounded-xl text-[9px] font-black uppercase italic">MercadoPago</button>
-                                <button onclick="setPaymentMethod('TC')" class="payment-method-btn py-3 rounded-xl text-[9px] font-black uppercase italic">TC (Crédito)</button>
-                                <button onclick="setPaymentMethod('TD')" class="payment-method-btn py-3 rounded-xl text-[9px] font-black uppercase italic">TD (Débito)</button>
-                                <button onclick="setPaymentMethod('QR')" class="payment-method-btn py-3 rounded-xl text-[9px] font-black uppercase italic">QR / Transfer</button>
+                                <button onclick="setPaymentMethod('Transferencia')" class="payment-method-btn py-3 rounded-xl text-[9px] font-black uppercase italic">Transferencia</button>
+                                <button onclick="setPaymentMethod('Efectivo')" class="payment-method-btn py-3 rounded-xl text-[9px] font-black uppercase italic">Efectivo</button>
+                                <button onclick="setPaymentMethod('Tarjeta')" class="payment-method-btn py-3 rounded-xl text-[9px] font-black uppercase italic">Tarjeta</button>
                             </div>
                         </div>
                         <button onclick="finalizarVenta()" class="w-full mt-8 viking-bg-red text-black py-5 rounded-2xl font-black uppercase italic tracking-widest hover:scale-[1.02] active:scale-95 transition-all shadow-xl">Procesar Pago</button>
@@ -410,7 +438,7 @@
             <div id="view-alumnos" class="view-content">
                 <div class="flex justify-between items-center mb-8">
                     <h3 class="text-3xl font-black italic uppercase">Gestión de Alumnos</h3>
-                    <button onclick="openModalAlumno()" class="viking-bg-red text-black px-8 py-4 rounded-2xl font-black uppercase italic text-[11px] shadow-xl flex items-center gap-3 hover:scale-105 transition-all">
+                    <button id="btn-nuevo-alumno" onclick="openModalAlumno()" class="viking-bg-red text-black px-8 py-4 rounded-2xl font-black uppercase italic text-[11px] shadow-xl flex items-center gap-3 hover:scale-105 transition-all">
                         <i data-lucide="user-plus" class="w-4 h-4"></i> Nuevo Alumno
                     </button>
                 </div>
@@ -438,7 +466,7 @@
             <div id="view-profesores" class="view-content">
                 <div class="flex justify-between items-center mb-8">
                     <h3 class="text-3xl font-black italic uppercase">Personal de Profesores</h3>
-                    <button onclick="openModalStaff('Profesor')" class="viking-bg-red text-black px-8 py-4 rounded-2xl font-black uppercase italic text-[11px] shadow-xl flex items-center gap-3">
+                    <button id="btn-nuevo-prof" onclick="openModalStaff('Profesor')" class="viking-bg-red text-black px-8 py-4 rounded-2xl font-black uppercase italic text-[11px] shadow-xl flex items-center gap-3">
                         <i data-lucide="user-plus" class="w-4 h-4"></i> Alta Profesor
                     </button>
                 </div>
@@ -463,7 +491,7 @@
             <div id="view-administrativos" class="view-content">
                 <div class="flex justify-between items-center mb-8">
                     <h3 class="text-3xl font-black italic uppercase">Personal Administrativo</h3>
-                    <button onclick="openModalStaff('Administracion')" class="viking-bg-red text-black px-8 py-4 rounded-2xl font-black uppercase italic text-[11px] shadow-xl flex items-center gap-3">
+                    <button id="btn-nuevo-adm" onclick="openModalStaff('Administracion')" class="viking-bg-red text-black px-8 py-4 rounded-2xl font-black uppercase italic text-[11px] shadow-xl flex items-center gap-3">
                         <i data-lucide="shield-plus" class="w-4 h-4"></i> Alta Administrativo
                     </button>
                 </div>
@@ -522,7 +550,7 @@
             <div id="view-stock" class="view-content">
                 <div class="flex justify-between items-center mb-8">
                     <h3 class="text-3xl font-black italic uppercase">Control de Stock</h3>
-                    <button onclick="openModalStock()" class="viking-bg-red text-black px-8 py-4 rounded-2xl font-black uppercase italic text-[11px] shadow-xl flex items-center gap-3">
+                    <button id="btn-nuevo-stock" onclick="openModalStock()" class="viking-bg-red text-black px-8 py-4 rounded-2xl font-black uppercase italic text-[11px] shadow-xl flex items-center gap-3">
                         <i data-lucide="package-plus" class="w-4 h-4"></i> Crear Mercadería
                     </button>
                 </div>
@@ -533,7 +561,7 @@
             <div id="view-planes" class="view-content">
                 <div class="flex justify-between items-center mb-8">
                     <h3 class="text-3xl font-black italic uppercase">Planes de Entrenamiento</h3>
-                    <button onclick="openModalPlan()" class="viking-bg-red text-black px-8 py-4 rounded-2xl font-black uppercase italic text-[11px] shadow-xl flex items-center gap-3">
+                    <button id="btn-nuevo-plan" onclick="openModalPlan()" class="viking-bg-red text-black px-8 py-4 rounded-2xl font-black uppercase italic text-[11px] shadow-xl flex items-center gap-3">
                         <i data-lucide="plus" class="w-4 h-4"></i> Alta de Plan
                     </button>
                 </div>
@@ -545,7 +573,7 @@
             <div id="view-clases" class="view-content">
                 <div class="flex justify-between items-center mb-8">
                     <h3 class="text-3xl font-black italic uppercase">Gestión de Clases</h3>
-                    <button onclick="openModalClase()" class="viking-bg-red text-black px-8 py-4 rounded-2xl font-black uppercase italic text-[11px] shadow-xl flex items-center gap-3">
+                    <button id="btn-nueva-clase" onclick="openModalClase()" class="viking-bg-red text-black px-8 py-4 rounded-2xl font-black uppercase italic text-[11px] shadow-xl flex items-center gap-3">
                         <i data-lucide="presentation" class="w-4 h-4"></i> Alta de Clase
                     </button>
                 </div>
@@ -564,6 +592,16 @@
                 </div>
                 <div class="calendar-container h-[700px] overflow-y-auto custom-scrollbar" id="calendar-grid"></div>
             </div>
+
+            <!-- RUTINAS (VISTA PROFESOR) -->
+            <div id="view-rutinas" class="view-content">
+                <h3 class="text-3xl font-black italic uppercase mb-8">Rutinas de Alumnos</h3>
+                <div class="glass-card p-10 rounded-[3rem]">
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="rutinas-lista">
+                         <!-- Aquí se cargarán los alumnos con plan musculación -->
+                    </div>
+                </div>
+            </div>
         </div>
     </main>
 
@@ -579,7 +617,6 @@
                     <input type="text" id="al-dni" placeholder="DNI / Usuario" required class="viking-input">
                     <input type="email" id="al-email" placeholder="Email" required class="viking-input">
                 </div>
-                <!-- PESO, ALTURA e IMC (Calculado automáticamente) -->
                 <div class="grid grid-cols-3 gap-4">
                     <div class="space-y-1">
                         <label class="text-[8px] font-black text-gray-500 uppercase italic">Peso (kg)</label>
@@ -594,8 +631,6 @@
                         <input type="text" id="al-imc" placeholder="-" readonly class="viking-input opacity-60">
                     </div>
                 </div>
-
-                <!-- FECHAS DE RENOVACIÓN Y VENCIMIENTO -->
                 <div class="grid grid-cols-2 gap-4">
                     <div class="space-y-1">
                         <label class="text-[8px] font-black text-gray-500 uppercase italic">Fecha Renovación</label>
@@ -606,7 +641,6 @@
                         <input type="date" id="al-fecha-vencimiento" class="viking-input">
                     </div>
                 </div>
-
                 <div class="grid grid-cols-2 gap-4">
                     <select id="al-plan" class="viking-input" required onchange="autoCalculateExpiry()"></select>
                     <input type="password" id="al-pass" placeholder="Contraseña de Acceso" class="viking-input">
@@ -615,7 +649,7 @@
                 <div class="flex gap-4 pt-4">
                     <button type="button" onclick="closeModal('modal-alumno')" class="flex-1 py-4 bg-white/5 rounded-2xl font-black uppercase italic text-[10px]">Cancelar</button>
                     <button type="button" id="btn-delete-alumno" class="hidden py-4 px-4 bg-red-900/40 rounded-2xl font-black uppercase italic text-[10px] text-red-500">Eliminar</button>
-                    <button type="submit" class="flex-1 py-4 viking-bg-red text-black rounded-2xl font-black uppercase italic text-[10px]">Guardar</button>
+                    <button type="submit" id="btn-save-alumno" class="flex-1 py-4 viking-bg-red text-black rounded-2xl font-black uppercase italic text-[10px]">Guardar</button>
                 </div>
             </form>
         </div>
@@ -640,7 +674,7 @@
         </div>
     </div>
 
-    <!-- Staff -->
+    <!-- MODAL STAFF -->
     <div id="modal-staff" class="viking-modal">
         <div class="glass-card p-10 rounded-[3rem] w-full max-w-lg text-left">
             <h3 class="text-2xl font-black uppercase italic mb-4" id="modal-staff-title">Personal</h3>
@@ -665,7 +699,7 @@
         </div>
     </div>
 
-    <!-- Stock -->
+    <!-- MODAL STOCK -->
     <div id="modal-stock" class="viking-modal">
         <div class="glass-card p-10 rounded-[3rem] w-full max-w-lg text-left">
             <h3 class="text-2xl font-black uppercase italic mb-8" id="modal-stock-title">Mercadería</h3>
@@ -685,7 +719,7 @@
         </div>
     </div>
 
-    <!-- Plan -->
+    <!-- MODAL PLAN -->
     <div id="modal-plan" class="viking-modal">
         <div class="glass-card p-10 rounded-[3rem] w-full max-w-lg text-left">
             <h3 class="text-2xl font-black uppercase italic mb-8" id="modal-plan-title">Plan</h3>
@@ -705,7 +739,7 @@
         </div>
     </div>
 
-    <!-- Clase -->
+    <!-- MODAL CLASE -->
     <div id="modal-clase" class="viking-modal">
         <div class="glass-card p-10 rounded-[3rem] w-full max-w-lg text-left">
             <h3 class="text-2xl font-black uppercase italic mb-8" id="modal-clase-title">Clase</h3>
@@ -748,44 +782,242 @@
         let state = { 
             alumnos: [], planes: [], stock: [], clases: [], user: null, 
             profesores: [], administrativos: [], tiposPlanes: [],
-            cart: [], currentPaymentMethod: ''
+            cart: [], currentPaymentMethod: '',
+            cobrarTab: 'mercaderia' // Pestaña por defecto
         };
 
-        // --- LÓGICA DE IMC AUTOMÁTICA ---
+        // --- SISTEMA DE PERMISOS (RBAC) ---
+        function applyPermissions() {
+            if (!state.user) return;
+            const rol = state.user.rol_nombre || "";
+            const isProf = rol === "Profesor";
+            const isAdm = rol === "Administracion";
+            const isAdmin = rol === "Administrador" || rol === "Supervisor";
+
+            // Secciones del menú
+            document.getElementById('nav-section-staff').style.display = isAdmin ? 'block' : 'none';
+            document.getElementById('nav-section-operativa').style.display = isProf ? 'none' : 'block';
+            document.getElementById('nav-rutinas').style.display = (isProf || isAdmin) ? 'flex' : 'none';
+            
+            // Si es Administrativo, ocultar Caja y Stock
+            if (isAdm) {
+                document.querySelector('button[onclick="switchView(\'caja\')"]').style.display = 'none';
+                document.querySelector('button[onclick="switchView(\'stock\')"]').style.display = 'none';
+            }
+
+            // Deshabilitar botones de edición si no es Admin/Supervisor
+            const restrictedRoles = isProf || isAdm;
+            if (restrictedRoles) {
+                if(document.getElementById('btn-nuevo-alumno')) document.getElementById('btn-nuevo-alumno').style.display = 'none';
+                if(document.getElementById('btn-nuevo-plan')) document.getElementById('btn-nuevo-plan').style.display = 'none';
+                if(document.getElementById('btn-nueva-clase')) document.getElementById('btn-nueva-clase').style.display = 'none';
+                if(document.getElementById('btn-save-alumno')) document.getElementById('btn-save-alumno').style.display = 'none';
+            }
+
+            lucide.createIcons();
+        }
+
+        // --- PUNTO DE VENTA (COBRAR) CON PESTAÑAS ---
+        function setCobrarTab(tab) {
+            state.cobrarTab = tab;
+            document.querySelectorAll('.cobrar-tab').forEach(t => t.classList.remove('active'));
+            document.getElementById('tab-' + tab).classList.add('active');
+            renderCobrar();
+        }
+
+        function renderCobrar() {
+            const displayArea = document.getElementById('cobrar-display-area');
+            const searchVal = document.getElementById('cobrar-search').value.toLowerCase();
+
+            if (state.cobrarTab === 'mercaderia') {
+                const filtered = state.stock.filter(s => s.nombre_producto.toLowerCase().includes(searchVal));
+                displayArea.innerHTML = `<div class="grid grid-cols-2 md:grid-cols-4 gap-4 overflow-y-auto max-h-[600px] pr-2 custom-scrollbar" id="cobrar-catalogo"></div>`;
+                const catalog = document.getElementById('cobrar-catalogo');
+                catalog.innerHTML = filtered.map(s => `
+                    <div class="glass-card p-4 rounded-3xl relative group cursor-pointer hover:border-red-600/50" onclick="addToCart(${s.id}, 'stock')">
+                        <div class="w-full h-20 viking-bg-red/10 rounded-2xl mb-3 flex items-center justify-center">
+                            <i data-lucide="package" class="w-6 h-6 opacity-20 text-white"></i>
+                        </div>
+                        <h4 class="text-[9px] font-black uppercase italic mb-1 truncate">${s.nombre_producto}</h4>
+                        <div class="flex items-center justify-between">
+                            <p class="text-[11px] font-black italic">$ ${s.precio_venta.toLocaleString()}</p>
+                            <span class="text-[7px] font-bold ${s.stock_actual < 5 ? 'text-red-500' : 'text-gray-500'}">S: ${s.stock_actual}</span>
+                        </div>
+                    </div>
+                `).join('');
+            } else {
+                // Pestaña de Planes: Lista de Alumnos para pagar cuota
+                const filteredAl = state.alumnos.filter(a => a.nombre_completo.toLowerCase().includes(searchVal) || a.dni.includes(searchVal));
+                displayArea.innerHTML = `
+                    <div class="glass-card p-8 rounded-[2.5rem] h-[600px] flex flex-col">
+                        <h4 class="text-[10px] font-black uppercase italic text-red-600 mb-6 tracking-widest">Alumnos para Renovación / Inscripción</h4>
+                        <div class="overflow-y-auto custom-scrollbar flex-1 space-y-2">
+                            ${filteredAl.map(a => {
+                                const isNew = !a.fecha_ultima_renovacion;
+                                return `
+                                <div class="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5 hover:border-red-600/30 cursor-pointer" onclick="preparePlanCharge(${a.id})">
+                                    <div>
+                                        <p class="text-[11px] font-black italic uppercase">${a.nombre_completo}</p>
+                                        <p class="text-[8px] text-gray-500">DNI: ${a.dni} | PLAN: ${a.plan?.nombre || 'NINGUNO'}</p>
+                                    </div>
+                                    <span class="px-3 py-1 rounded-full text-[8px] font-black italic ${isNew ? 'bg-blue-600/20 text-blue-500' : 'bg-green-600/20 text-green-500'}">
+                                        ${isNew ? 'INSCRIPCIÓN' : 'RENOVACIÓN'}
+                                    </span>
+                                </div>`;
+                            }).join('')}
+                        </div>
+                    </div>`;
+            }
+            lucide.createIcons();
+            updateCartUI();
+        }
+
+        document.getElementById('cobrar-search').oninput = renderCobrar;
+
+        function addToCart(id, type) {
+            if (type === 'stock') {
+                const product = state.stock.find(s => s.id === id);
+                if (!product || product.stock_actual <= 0) return;
+                const existing = state.cart.find(c => c.id === id && c.type === 'stock');
+                if (existing) { if (existing.qty < product.stock_actual) existing.qty++; }
+                else state.cart.push({ ...product, qty: 1, type: 'stock' });
+            }
+            updateCartUI();
+        }
+
+        function preparePlanCharge(alumnoId) {
+            const al = state.alumnos.find(a => a.id === alumnoId);
+            if (!al || !al.plan_id) return;
+            const plan = state.planes.find(p => p.id === al.plan_id);
+            if (!plan) return;
+            
+            const isNew = !al.fecha_ultima_renovacion;
+            const item = {
+                id: `plan-${al.id}`,
+                nombre_producto: `${isNew ? 'ALTA' : 'RENOV'}: ${al.nombre_completo} (${plan.nombre})`,
+                precio_venta: plan.precio,
+                qty: 1,
+                type: 'plan',
+                alumno_id: al.id
+            };
+            
+            // Solo permitimos un plan por cobro para evitar errores
+            state.cart = state.cart.filter(c => c.type !== 'plan');
+            state.cart.push(item);
+            updateCartUI();
+        }
+
+        function updateCartUI() {
+            const list = document.getElementById('cobrar-lista-carrito');
+            if (state.cart.length === 0) {
+                list.innerHTML = '<p class="text-center text-gray-500 text-[10px] italic py-10">Sin ítems seleccionados</p>';
+                document.getElementById('cobrar-subtotal').innerText = '$ 0';
+                document.getElementById('cobrar-total').innerText = '$ 0';
+                return;
+            }
+            list.innerHTML = state.cart.map((c, idx) => `
+                <div class="flex items-center justify-between bg-white/5 p-3 rounded-xl border border-white/5">
+                    <div class="overflow-hidden">
+                        <p class="text-[9px] font-black uppercase italic truncate">${c.nombre_producto}</p>
+                        <p class="text-[8px] text-gray-500 font-bold">VALOR: $ ${c.precio_venta.toLocaleString()}</p>
+                    </div>
+                    <button onclick="removeFromCart(${idx})" class="text-red-600 hover:text-white"><i data-lucide="trash-2" class="w-3 h-3"></i></button>
+                </div>`).join('');
+            const total = state.cart.reduce((acc, c) => acc + (c.qty * c.precio_venta), 0);
+            document.getElementById('cobrar-subtotal').innerText = `$ ${total.toLocaleString()}`;
+            document.getElementById('cobrar-total').innerText = `$ ${total.toLocaleString()}`;
+            lucide.createIcons();
+        }
+
+        function removeFromCart(i) { state.cart.splice(i, 1); updateCartUI(); }
+
+        function setPaymentMethod(m) {
+            state.currentPaymentMethod = m;
+            document.querySelectorAll('.payment-method-btn').forEach(b => b.classList.toggle('active', b.innerText.includes(m)));
+        }
+
+        async function finalizarVenta() {
+            if (state.cart.length === 0 || !state.currentPaymentMethod) return;
+            const total = state.cart.reduce((acc, c) => acc + (c.qty * c.precio_venta), 0);
+            const dataCaja = {
+                tipo: "Ingreso", monto: total,
+                descripcion: `Venta (${state.currentPaymentMethod}): ${state.cart.map(c => c.nombre_producto).join(', ')}`
+            };
+            const res = await apiFetch('/caja/movimiento', 'POST', dataCaja);
+            if (!res.error) {
+                state.cart = []; state.currentPaymentMethod = '';
+                await initApp();
+                renderCobrar();
+                switchView('caja');
+            }
+        }
+
+        // --- CALENDARIO COMPACTO ---
+        function renderCalendar() {
+            const cal = document.getElementById('calendar-grid'); if (!cal) return;
+            cal.innerHTML = `<div class="cal-header">HORA</div><div class="cal-header">LUNES</div><div class="cal-header">MARTES</div><div class="cal-header">MIÉRCOLES</div><div class="cal-header">JUEVES</div><div class="cal-header">VIERNES</div><div class="cal-header">SÁBADO</div>`;
+            for(let h=7; h<=21; h++) {
+                cal.innerHTML += `<div class="cal-cell flex items-center justify-center font-black text-[9px] text-white/40 bg-white/5 border-r border-white/20">${h}:00</div>`;
+                for(let d=1; d<=6; d++) {
+                    const isSat = d === 6; const isClosed = isSat && (h < 10 || h > 13);
+                    cal.innerHTML += `<div id="cell-${d}-${h}" class="cal-cell ${isClosed ? 'cal-cell-closed' : ''}" ondragover="event.preventDefault()" ondrop="handleDrop(event, ${d}, ${h})"></div>`;
+                }
+            }
+            state.clases.forEach(c => {
+                const cell = document.getElementById(`cell-${c.dia}-${c.horario}`);
+                if (cell) {
+                    const badge = document.createElement('div'); badge.className = "class-badge"; badge.style.backgroundColor = c.color || '#FF0000';
+                    badge.draggable = true; 
+                    badge.innerHTML = `<span class="text-[8px] mb-0.5 leading-none">${c.nombre}</span><span class="text-[6px] opacity-70 font-bold">${c.coach}</span>`;
+                    badge.ondragstart = (e) => { e.dataTransfer.setData("clase_id", c.id); }; 
+                    cell.appendChild(badge);
+                }
+            });
+        }
+
+        // --- RUTINAS (PARA PROFESORES) ---
+        function renderRutinas() {
+            const list = document.getElementById('rutinas-lista');
+            // Filtramos alumnos que tienen plan con musculación o similar
+            const alRutinas = state.alumnos.filter(a => a.plan?.nombre.toLowerCase().includes('musculacion') || a.plan?.nombre.toLowerCase().includes('completo'));
+            if (alRutinas.length === 0) {
+                list.innerHTML = '<p class="text-gray-500 italic col-span-3">No hay alumnos activos con plan de musculación.</p>';
+                return;
+            }
+            list.innerHTML = alRutinas.map(a => `
+                <div class="glass-card p-6 rounded-3xl border-red-600/10">
+                    <h4 class="text-xs font-black uppercase italic mb-2">${a.nombre_completo}</h4>
+                    <p class="text-[9px] text-gray-500 uppercase mb-4">Plan: ${a.plan.nombre}</p>
+                    <button class="w-full py-3 bg-white/5 rounded-xl text-[9px] font-black uppercase italic hover:bg-red-600 hover:text-black transition-colors">Ver Ficha Rutina</button>
+                </div>`).join('');
+        }
+
+        // --- LÓGICA DE ALUMNOS (ORIGINAL) ---
         function calculateIMC() {
             const peso = parseFloat(document.getElementById('al-peso').value);
             const alturaCm = parseFloat(document.getElementById('al-altura').value);
             const imcField = document.getElementById('al-imc');
-            
             if (peso > 5 && alturaCm > 50) {
                 const alturaM = alturaCm / 100;
-                const imc = (peso / (alturaM * alturaM)).toFixed(2);
-                imcField.value = imc;
-            } else {
-                imcField.value = "";
-            }
+                imcField.value = (peso / (alturaM * alturaM)).toFixed(2);
+            } else imcField.value = "";
         }
 
-        // --- LÓGICA DE VENCIMIENTO AUTOMÁTICO ---
         function autoCalculateExpiry() {
             const planId = document.getElementById('al-plan').value;
             const renovDate = document.getElementById('al-fecha-renovacion').value;
             if(!planId || !renovDate) return;
-
             const plan = state.planes.find(p => p.id == planId);
-            let monthsToAdd = 1;
-
+            let months = 1;
             if (plan) {
-                const nombrePlan = plan.nombre.toLowerCase();
-                if (nombrePlan.includes('trimestral')) monthsToAdd = 3;
-                else if (nombrePlan.includes('semestral')) monthsToAdd = 6;
-                else if (nombrePlan.includes('anual')) monthsToAdd = 12;
+                const n = plan.nombre.toLowerCase();
+                if (n.includes('trimestral')) months = 3;
+                else if (n.includes('semestral')) months = 6;
+                else if (n.includes('anual')) months = 12;
             }
-
-            let dateObj = new Date(renovDate + 'T00:00:00');
-            dateObj.setMonth(dateObj.getMonth() + monthsToAdd);
-            
-            document.getElementById('al-fecha-vencimiento').value = dateObj.toISOString().split('T')[0];
+            let d = new Date(renovDate + 'T00:00:00');
+            d.setMonth(d.getMonth() + months);
+            document.getElementById('al-fecha-vencimiento').value = d.toISOString().split('T')[0];
         }
 
         async function apiFetch(endpoint, method = 'GET', body = null) {
@@ -798,28 +1030,25 @@
             } catch (e) { return { error: "Error de conexión" }; }
         }
 
-        // Sidebar logic
         function toggleSidebar() { document.getElementById('sidebar').classList.toggle('sidebar-collapsed'); lucide.createIcons(); }
         function toggleSub(id) { document.getElementById(id).classList.toggle('hidden'); }
         function openModal(id) { document.getElementById(id).style.display = 'flex'; }
         function closeModal(id) { 
             document.getElementById(id).style.display = 'none'; 
-            const form = document.querySelector(`#${id} form`);
-            if (form) form.reset();
-            const delBtn = document.querySelector(`#${id} button[id^='btn-delete']`);
-            if (delBtn) delBtn.classList.add('hidden');
+            const f = document.querySelector(`#${id} form`); if (f) f.reset();
+            const delBtn = document.querySelector(`#${id} button[id^='btn-delete']`); if (delBtn) delBtn.classList.add('hidden');
         }
 
         function switchView(view) {
             document.querySelectorAll('.view-content').forEach(v => v.classList.remove('active'));
-            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-            document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.nav-btn, .nav-item').forEach(b => b.classList.remove('active'));
             document.getElementById('view-' + view).classList.add('active');
-            const subMenuBtn = document.getElementById('nav-' + view);
-            if (subMenuBtn) subMenuBtn.classList.add('active');
+            const n = document.getElementById('nav-' + view); if (n) n.classList.add('active');
             document.getElementById('view-title').innerText = view.replace('-', ' ').toUpperCase();
             if(view === 'calendario') renderCalendar();
             if(view === 'cobrar') renderCobrar();
+            if(view === 'rutinas') renderRutinas();
+            applyPermissions();
             lucide.createIcons();
         }
 
@@ -835,13 +1064,8 @@
                 document.getElementById('side-user-name').innerText = res.nombre_completo;
                 document.getElementById('side-user-role').innerText = res.rol_nombre || 'Staff';
                 document.getElementById('user-initials').innerText = res.nombre_completo.split(' ').map(n => n[0]).join('').toUpperCase();
-                document.getElementById('prof-name').innerText = res.nombre_completo;
-                document.getElementById('prof-role').innerText = res.rol_nombre || 'Staff';
-                document.getElementById('prof-initials-view').innerText = document.getElementById('user-initials').innerText;
-                document.getElementById('prof-input-name').value = res.nombre_completo;
-                document.getElementById('prof-input-dni').value = res.dni;
-                // Restauración del correo electrónico en el perfil
                 document.getElementById('prof-input-email').value = res.email || "";
+                applyPermissions();
                 initApp();
             } else {
                 document.getElementById('login-error').classList.remove('hidden');
@@ -855,127 +1079,24 @@
 
         async function loadDashboard() {
             const res = await apiFetch('/caja/resumen');
-            if(!res.error) {
-                document.getElementById('dash-ingresos').innerText = `$ ${res.ingresos.toLocaleString()}`;
-            }
-            const check = document.getElementById('dash-checkins');
-            check.innerHTML = [{n: "GONZALO L.", t: "14:22"}, {n: "LAGERTHA S.", t: "14:05"}, {n: "RAGNAR L.", t: "13:55"}]
-                .map(c => `<div class="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5"><span class="text-[10px] font-black italic">${c.n}</span><span class="text-[9px] text-red-600 font-bold italic">${c.t} HS</span></div>`).join('');
-            
-            // Render Top Clases
-            const topC = document.getElementById('dash-top-clases');
-            topC.innerHTML = [{n: "CROSSFIT", r: 45}, {n: "POWERLIFTING", r: 32}, {n: "HIIT", r: 28}, {n: "BOXEO", r: 21}, {n: "YOGA", r: 15}]
-                .map((c, i) => `<div class="flex items-center justify-between p-3 bg-white/5 rounded-xl border border-white/5"><span class="text-[9px] font-black italic">${i+1}. ${c.n}</span><span class="text-[8px] text-red-600 font-bold">${c.r} RES.</span></div>`).join('');
+            if(!res.error) document.getElementById('dash-ingresos').innerText = `$ ${res.ingresos.toLocaleString()}`;
+            document.getElementById('dash-checkins').innerHTML = [{n: "GONZALO L.", t: "14:22"}, {n: "LAGERTHA S.", t: "14:05"}].map(c => `<div class="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5"><span class="text-[10px] font-black italic">${c.n}</span><span class="text-[9px] text-red-600 font-bold italic">${c.t} HS</span></div>`).join('');
+            document.getElementById('dash-top-clases').innerHTML = [{n: "CROSSFIT", r: 45}, {n: "HIIT", r: 28}].map((c, i) => `<div class="flex items-center justify-between p-3 bg-white/5 rounded-xl border border-white/5"><span class="text-[9px] font-black italic">${i+1}. ${c.n}</span><span class="text-[8px] text-red-600 font-bold">${c.r} RES.</span></div>`).join('');
         }
 
-        // PUNTO DE VENTA (COBRAR)
-        function renderCobrar() {
-            const container = document.getElementById('cobrar-catalogo');
-            const searchVal = document.getElementById('cobrar-search').value.toLowerCase();
-            const filteredStock = state.stock.filter(s => s.nombre_producto.toLowerCase().includes(searchVal));
-            container.innerHTML = filteredStock.map(s => `
-                <div class="glass-card p-6 rounded-[2rem] relative group cursor-pointer hover:border-red-600/50" onclick="addToCart(${s.id})">
-                    <div class="w-full aspect-square viking-bg-red/10 rounded-2xl mb-4 flex items-center justify-center">
-                        <i data-lucide="package" class="w-8 h-8 opacity-20 text-white"></i>
-                    </div>
-                    <h4 class="text-[10px] font-black uppercase italic mb-2 truncate">${s.nombre_producto}</h4>
-                    <div class="flex items-center justify-between">
-                        <p class="text-sm font-black italic">$ ${s.precio_venta.toLocaleString()}</p>
-                        <span class="text-[8px] font-bold ${s.stock_actual < 5 ? 'text-red-500' : 'text-gray-500'}">STOCK: ${s.stock_actual}</span>
-                    </div>
-                </div>
-            `).join('');
-            lucide.createIcons();
-            updateCartUI();
-        }
-
-        document.getElementById('cobrar-search').oninput = renderCobrar;
-
-        function addToCart(productId) {
-            const product = state.stock.find(s => s.id === productId);
-            if (!product || product.stock_actual <= 0) return;
-            const existing = state.cart.find(c => c.id === productId);
-            if (existing) {
-                if (existing.qty < product.stock_actual) existing.qty++;
-            } else {
-                state.cart.push({ ...product, qty: 1 });
-            }
-            updateCartUI();
-        }
-
-        function updateCartUI() {
-            const list = document.getElementById('cobrar-lista-carrito');
-            if (state.cart.length === 0) {
-                list.innerHTML = '<p class="text-center text-gray-500 text-[10px] italic py-10">Sin productos seleccionados</p>';
-                document.getElementById('cobrar-subtotal').innerText = '$ 0';
-                document.getElementById('cobrar-total').innerText = '$ 0';
-                return;
-            }
-            list.innerHTML = state.cart.map((c, idx) => `
-                <div class="flex items-center justify-between bg-white/5 p-3 rounded-xl border border-white/5">
-                    <div class="overflow-hidden">
-                        <p class="text-[9px] font-black uppercase italic truncate">${c.nombre_producto}</p>
-                        <p class="text-[8px] text-gray-500 font-bold">QTY: ${c.qty} x $ ${c.precio_venta.toLocaleString()}</p>
-                    </div>
-                    <div class="flex items-center gap-3">
-                        <p class="text-[10px] font-black">$ ${(c.qty * c.precio_venta).toLocaleString()}</p>
-                        <button onclick="removeFromCart(${idx})" class="text-red-600 hover:text-white"><i data-lucide="trash-2" class="w-3 h-3"></i></button>
-                    </div>
-                </div>
-            `).join('');
-            const total = state.cart.reduce((acc, c) => acc + (c.qty * c.precio_venta), 0);
-            document.getElementById('cobrar-subtotal').innerText = `$ ${total.toLocaleString()}`;
-            document.getElementById('cobrar-total').innerText = `$ ${total.toLocaleString()}`;
-            lucide.createIcons();
-        }
-
-        function removeFromCart(index) {
-            state.cart.splice(index, 1);
-            updateCartUI();
-        }
-
-        function setPaymentMethod(method) {
-            state.currentPaymentMethod = method;
-            document.querySelectorAll('.payment-method-btn').forEach(btn => {
-                btn.classList.toggle('active', btn.innerText.includes(method));
-            });
-        }
-
-        async function finalizarVenta() {
-            if (state.cart.length === 0) return;
-            if (!state.currentPaymentMethod) return;
-            const total = state.cart.reduce((acc, c) => acc + (c.qty * c.precio_venta), 0);
-            const dataCaja = {
-                tipo: "Ingreso", monto: total,
-                descripcion: `Venta Productos: ${state.cart.map(c => c.nombre_producto).join(', ')} (${state.currentPaymentMethod})`
-            };
-            const res = await apiFetch('/caja/movimiento', 'POST', dataCaja);
-            if (!res.error) {
-                state.cart = []; state.currentPaymentMethod = '';
-                await initApp();
-                renderCobrar();
-                switchView('caja');
-            }
-        }
-
-        // --- ALUMNOS ---
         async function fetchAlumnos() {
             const data = await apiFetch('/alumnos');
             state.alumnos = Array.isArray(data) ? data : [];
             const renderRow = (al) => `
                 <tr class="viking-table-row">
-                    <td class="py-6">${al.nombre_completo}</td>
-                    <td class="py-6 text-gray-500">${al.dni}</td>
+                    <td class="py-6">${al.nombre_completo}</td><td class="py-6 text-gray-500">${al.dni}</td>
                     <td class="py-6 text-gray-400 font-black italic text-[9px]">${al.plan?.nombre || 'SIN PLAN'}</td>
                     <td class="py-6"><span class="text-green-500 font-bold">AL DÍA</span></td>
                     <td class="py-6 text-red-600 font-black">${al.fecha_ultima_renovacion || '-'}</td>
                     <td class="py-6 text-gray-400 font-black">${al.fecha_vencimiento || '-'}</td>
-                    <td class="py-6 text-right">
-                        <button onclick="openEditAlumno(${al.id})" class="hover:text-red-600"><i data-lucide="edit-2" class="w-4 h-4"></i></button>
-                    </td>
+                    <td class="py-6 text-right"><button onclick="openEditAlumno(${al.id})" class="hover:text-red-600"><i data-lucide="edit-2" class="w-4 h-4"></i></button></td>
                 </tr>`;
-            const sortedData = [...state.alumnos].sort((a, b) => a.nombre_completo.localeCompare(b.nombre_completo));
-            document.getElementById('dash-table-alumnos-mini').innerHTML = sortedData.slice(0, 10).map(renderRow).join('');
+            document.getElementById('dash-table-alumnos-mini').innerHTML = [...state.alumnos].sort((a,b)=>a.nombre_completo.localeCompare(b.nombre_completo)).slice(0, 10).map(renderRow).join('');
             document.getElementById('table-alumnos-full').innerHTML = state.alumnos.map(renderRow).join('');
             lucide.createIcons();
         }
@@ -983,14 +1104,12 @@
         function openModalAlumno() { 
             document.getElementById('modal-alumno-title').innerText = "Nuevo Alumno"; 
             document.getElementById('al-id').value = ""; 
-            // Fecha por defecto hoy para renovación al crear
             document.getElementById('al-fecha-renovacion').value = new Date().toISOString().split('T')[0];
             openModal('modal-alumno'); 
         }
 
         function openEditAlumno(id) {
-            const al = state.alumnos.find(x => x.id == id);
-            if(!al) return;
+            const al = state.alumnos.find(x => x.id == id); if(!al) return;
             document.getElementById('modal-alumno-title').innerText = "Editar Alumno";
             document.getElementById('al-id').value = al.id;
             document.getElementById('al-nombre').value = al.nombre_completo;
@@ -1000,13 +1119,9 @@
             document.getElementById('al-peso').value = al.peso || "";
             document.getElementById('al-altura').value = al.altura || "";
             document.getElementById('al-imc').value = al.imc || "";
-            
-            // Cargar fechas existentes
             document.getElementById('al-fecha-renovacion').value = al.fecha_ultima_renovacion || "";
             document.getElementById('al-fecha-vencimiento').value = al.fecha_vencimiento || "";
-
-            const delBtn = document.getElementById('btn-delete-alumno');
-            delBtn.classList.remove('hidden');
+            const delBtn = document.getElementById('btn-delete-alumno'); delBtn.classList.remove('hidden');
             delBtn.onclick = () => deleteRecord('alumnos', id, 'modal-alumno', fetchAlumnos);
             openModal('modal-alumno');
         }
@@ -1014,51 +1129,27 @@
         document.getElementById('form-alumno').onsubmit = async (e) => {
             e.preventDefault();
             const id = document.getElementById('al-id').value;
-            const data = { 
-                nombre_completo: document.getElementById('al-nombre').value, 
-                dni: document.getElementById('al-dni').value, 
-                email: document.getElementById('al-email').value, 
-                plan_id: parseInt(document.getElementById('al-plan').value) || null,
-                peso: parseFloat(document.getElementById('al-peso').value) || null,
-                altura: parseFloat(document.getElementById('al-altura').value) || null,
-                imc: parseFloat(document.getElementById('al-imc').value) || null,
-                fecha_ultima_renovacion: document.getElementById('al-fecha-renovacion').value,
-                fecha_vencimiento: document.getElementById('al-fecha-vencimiento').value
-            };
-            const pass = document.getElementById('al-pass').value;
-            if(pass) data.password = pass;
+            const data = { nombre_completo: document.getElementById('al-nombre').value, dni: document.getElementById('al-dni').value, email: document.getElementById('al-email').value, plan_id: parseInt(document.getElementById('al-plan').value) || null, peso: parseFloat(document.getElementById('al-peso').value) || null, altura: parseFloat(document.getElementById('al-altura').value) || null, imc: parseFloat(document.getElementById('al-imc').value) || null, fecha_ultima_renovacion: document.getElementById('al-fecha-renovacion').value, fecha_vencimiento: document.getElementById('al-fecha-vencimiento').value };
+            const pass = document.getElementById('al-pass').value; if(pass) data.password = pass;
             const res = await apiFetch(id ? `/alumnos/${id}` : '/alumnos', id ? 'PUT' : 'POST', data);
             if(!res.error) { closeModal('modal-alumno'); fetchAlumnos(); }
         };
 
-        // --- STAFF ---
         async function loadStaff() {
-            const profs = await apiFetch('/profesores');
-            const admins = await apiFetch('/administrativos');
-            state.profesores = Array.isArray(profs) ? profs : [];
-            state.administrativos = Array.isArray(admins) ? admins : [];
+            const profs = await apiFetch('/profesores'); const admins = await apiFetch('/administrativos');
+            state.profesores = Array.isArray(profs) ? profs : []; state.administrativos = Array.isArray(admins) ? admins : [];
             document.getElementById('cl-coach-select').innerHTML = '<option value="">Seleccionar Profesor</option>' + state.profesores.map(p => `<option value="${p.nombre_completo}">${p.nombre_completo}</option>`).join('');
-            document.getElementById('table-profesores').innerHTML = state.profesores.map(p => `
-                <tr class="viking-table-row">
-                    <td class="py-6">${p.nombre_completo}</td><td class="py-6 text-gray-500">${p.dni}</td><td class="py-6 text-red-600 font-black">${p.especialidad || 'Gral.'}</td>
-                    <td class="py-6 text-right"><button onclick="openEditStaff(${p.id}, 'Profesor')" class="hover:text-red-600"><i data-lucide="edit-3" class="w-4 h-4"></i></button></td>
-                </tr>`).join('');
-            document.getElementById('table-administrativos').innerHTML = state.administrativos.map(a => `
-                <tr class="viking-table-row">
-                    <td class="py-6">${a.nombre_completo}</td><td class="py-6 text-gray-500">${a.dni}</td><td class="py-6 text-gray-500 lowercase">${a.email || '-'}</td>
-                    <td class="py-6 text-right"><button onclick="openEditStaff(${a.id}, 'Administracion')" class="hover:text-red-600"><i data-lucide="user-cog" class="w-4 h-4"></i></button></td>
-                </tr>`).join('');
+            document.getElementById('table-profesores').innerHTML = state.profesores.map(p => `<tr class="viking-table-row"><td class="py-6">${p.nombre_completo}</td><td class="py-6 text-gray-500">${p.dni}</td><td class="py-6 text-red-600 font-black">${p.especialidad || 'Gral.'}</td><td class="py-6 text-right"><button onclick="openEditStaff(${p.id}, 'Profesor')" class="hover:text-red-600"><i data-lucide="edit-3" class="w-4 h-4"></i></button></td></tr>`).join('');
+            document.getElementById('table-administrativos').innerHTML = state.administrativos.map(a => `<tr class="viking-table-row"><td class="py-6">${a.nombre_completo}</td><td class="py-6 text-gray-500">${a.dni}</td><td class="py-6 text-gray-500 lowercase">${a.email || '-'}</td><td class="py-6 text-right"><button onclick="openEditStaff(${a.id}, 'Administracion')" class="hover:text-red-600"><i data-lucide="user-cog" class="w-4 h-4"></i></button></td></tr>`).join('');
             lucide.createIcons();
         }
 
         function openModalStaff(rol) { document.getElementById('modal-staff-title').innerText = "Alta " + rol; document.getElementById('stf-id').value = ""; document.getElementById('stf-rol').value = rol; openModal('modal-staff'); }
         function openEditStaff(id, rol) {
-            const user = (rol === 'Profesor' ? state.profesores : state.administrativos).find(x => x.id == id);
-            if(!user) return;
+            const user = (rol === 'Profesor' ? state.profesores : state.administrativos).find(x => x.id == id); if(!user) return;
             document.getElementById('modal-staff-title').innerText = "Editar " + rol;
             document.getElementById('stf-id').value = user.id; document.getElementById('stf-rol').value = rol;
-            document.getElementById('stf-nombre').value = user.nombre_completo;
-            document.getElementById('stf-dni').value = user.dni; document.getElementById('stf-esp').value = user.especialidad || "";
+            document.getElementById('stf-nombre').value = user.nombre_completo; document.getElementById('stf-dni').value = user.dni; document.getElementById('stf-esp').value = user.especialidad || "";
             const delBtn = document.getElementById('btn-delete-staff'); delBtn.classList.remove('hidden');
             delBtn.onclick = () => deleteRecord('staff', id, 'modal-staff', loadStaff);
             openModal('modal-staff');
@@ -1066,32 +1157,18 @@
 
         document.getElementById('form-staff').onsubmit = async (e) => {
             e.preventDefault();
-            const id = document.getElementById('stf-id').value;
-            const rol = document.getElementById('stf-rol').value;
+            const id = document.getElementById('stf-id').value; const rol = document.getElementById('stf-rol').value;
             const data = { nombre_completo: document.getElementById('stf-nombre').value, dni: document.getElementById('stf-dni').value, especialidad: document.getElementById('stf-esp').value, perfil_nombre: rol };
-            const pass = document.getElementById('stf-pass').value;
-            if(pass) data.password = pass;
+            const pass = document.getElementById('stf-pass').value; if(pass) data.password = pass;
             const res = await apiFetch(id ? `/staff/${id}` : '/staff', id ? 'PUT' : 'POST', data);
             if(!res.error) { closeModal('modal-staff'); loadStaff(); }
         };
 
-        // --- CAJA ---
-        document.getElementById('form-movimiento').onsubmit = async (e) => {
-            e.preventDefault();
-            const data = { tipo: document.getElementById('mov-tipo').value, monto: parseFloat(document.getElementById('mov-monto').value), descripcion: document.getElementById('mov-desc').value };
-            const res = await apiFetch('/caja/movimiento', 'POST', data);
-            if(!res.error) { closeModal('modal-movimiento'); initApp(); }
-        };
-
-        // --- PLANES ---
         async function loadPlanes() {
-            const planes = await apiFetch('/planes'); const tipos = await apiFetch('/tipos-planes');
-            state.planes = Array.isArray(planes) ? planes : []; state.tiposPlanes = Array.isArray(tipos) ? tipos : [];
+            const p = await apiFetch('/planes'); const t = await apiFetch('/tipos-planes');
+            state.planes = Array.isArray(p) ? p : []; state.tiposPlanes = Array.isArray(t) ? t : [];
             const filterContainer = document.getElementById('planes-filter-container'); filterContainer.innerHTML = ''; 
-            state.tiposPlanes.forEach((t, idx) => {
-                const active = idx === 0 ? 'active' : '';
-                filterContainer.innerHTML += `<button onclick="filterPlanes(${t.id}, this)" class="filter-btn ${active}">${t.nombre}</button>`;
-            });
+            state.tiposPlanes.forEach((t, idx) => { filterContainer.innerHTML += `<button onclick="filterPlanes(${t.id}, this)" class="filter-btn ${idx === 0 ? 'active' : ''}">${t.nombre}</button>`; });
             if (state.tiposPlanes.length > 0) filterPlanes(state.tiposPlanes[0].id, filterContainer.children[0]);
             document.getElementById('al-plan').innerHTML = '<option value="">Seleccionar Plan</option>' + state.planes.map(p => `<option value="${p.id}">${p.nombre}</option>`).join('');
             document.getElementById('plan-tipo').innerHTML = state.tiposPlanes.map(t => `<option value="${t.id}">${t.nombre}</option>`).join('');
@@ -1100,21 +1177,14 @@
         function filterPlanes(tipoId, btn) {
             document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active');
             const filtered = state.planes.filter(p => p.tipo_plan_id === tipoId);
-            document.getElementById('planes-container').innerHTML = filtered.map(p => `
-                <div class="glass-card p-8 rounded-[2.5rem] flex flex-col border-red-600/10 relative">
-                    <button onclick="openEditPlan(${p.id})" class="absolute top-4 right-4 text-gray-600 hover:text-red-600"><i data-lucide="edit-3" class="w-4 h-4"></i></button>
-                    <span class="text-[8px] font-black viking-red uppercase italic tracking-widest mb-2">${p.tipo?.nombre || 'PLAN'}</span>
-                    <h4 class="text-lg font-black uppercase italic mb-6 leading-tight">${p.nombre}</h4>
-                    <p class="text-3xl font-black italic mb-8">$ ${p.precio.toLocaleString()}</p>
-                </div>`).join('');
+            document.getElementById('planes-container').innerHTML = filtered.map(p => `<div class="glass-card p-8 rounded-[2.5rem] flex flex-col border-red-600/10 relative"><button onclick="openEditPlan(${p.id})" class="absolute top-4 right-4 text-gray-600 hover:text-red-600"><i data-lucide="edit-3" class="w-4 h-4"></i></button><span class="text-[8px] font-black viking-red uppercase italic tracking-widest mb-2">${p.tipo?.nombre || 'PLAN'}</span><h4 class="text-lg font-black uppercase italic mb-6 leading-tight">${p.nombre}</h4><p class="text-3xl font-black italic mb-8">$ ${p.precio.toLocaleString()}</p></div>`).join('');
             lucide.createIcons();
         }
 
         function openModalPlan() { document.getElementById('plan-id').value = ""; document.getElementById('modal-plan-title').innerText = "Nuevo Plan"; openModal('modal-plan'); }
         function openEditPlan(id) {
             const p = state.planes.find(x => x.id == id); if(!p) return;
-            document.getElementById('plan-id').value = p.id; document.getElementById('plan-nombre').value = p.nombre;
-            document.getElementById('plan-tipo').value = p.tipo_plan_id; document.getElementById('plan-precio').value = p.precio;
+            document.getElementById('plan-id').value = p.id; document.getElementById('plan-nombre').value = p.nombre; document.getElementById('plan-tipo').value = p.tipo_plan_id; document.getElementById('plan-precio').value = p.precio;
             const delBtn = document.getElementById('btn-delete-plan'); delBtn.classList.remove('hidden');
             delBtn.onclick = () => deleteRecord('planes', p.id, 'modal-plan', loadPlanes);
             openModal('modal-plan');
@@ -1128,59 +1198,16 @@
             if(!res.error) { closeModal('modal-plan'); loadPlanes(); }
         };
 
-        // --- CLASES ---
-        async function loadClases() {
-            const data = await apiFetch('/clases'); state.clases = Array.isArray(data) ? data : [];
-            document.getElementById('clases-container').innerHTML = state.clases.map(c => `
-                <div class="glass-card p-8 rounded-[2.5rem] relative text-left">
-                    <button onclick="openEditClase(${c.id})" class="absolute top-4 right-4 text-gray-600 hover:text-red-600"><i data-lucide="settings" class="w-4 h-4"></i></button>
-                    <div class="flex items-center gap-2 mb-2">
-                         <div class="w-3 h-3 rounded-full" style="background-color: ${c.color || '#FF0000'}"></div>
-                         <h4 class="text-lg font-black uppercase italic">${c.nombre}</h4>
-                    </div>
-                    <p class="text-[10px] font-black text-red-600 uppercase italic">Coach: ${c.coach || 'Vikingo'}</p>
-                </div>`).join('');
-            lucide.createIcons();
-            if(document.getElementById('view-calendario').classList.contains('active')) renderCalendar();
-        }
-
-        function openModalClase() { document.getElementById('cl-id').value = ""; openModal('modal-clase'); }
-        function openEditClase(id) {
-            const c = state.clases.find(x => x.id == id); if(!c) return;
-            document.getElementById('cl-id').value = c.id; document.getElementById('cl-nombre').value = c.nombre;
-            document.getElementById('cl-coach-select').value = c.coach; document.getElementById('cl-dia').value = c.dia;
-            updateHourOptions(); document.getElementById('cl-horario').value = c.horario;
-            document.getElementById('cl-color').value = c.color || "#FF0000";
-            const delBtn = document.getElementById('btn-delete-clase'); delBtn.classList.remove('hidden');
-            delBtn.onclick = () => deleteRecord('clases', c.id, 'modal-clase', loadClases);
-            openModal('modal-clase');
-        }
-
-        document.getElementById('form-clase').onsubmit = async (e) => {
-            e.preventDefault();
-            const id = document.getElementById('cl-id').value;
-            const data = { nombre: document.getElementById('cl-nombre').value, coach: document.getElementById('cl-coach-select').value, dia: parseInt(document.getElementById('cl-dia').value), horario: parseInt(document.getElementById('cl-horario').value), color: document.getElementById('cl-color').value };
-            const res = await apiFetch(id ? `/clases/${id}` : '/clases', id ? 'PUT' : 'POST', data);
-            if(!res.error) { closeModal('modal-clase'); loadClases(); }
-        };
-
-        // --- STOCK ---
         async function loadStock() {
             const data = await apiFetch('/stock'); state.stock = Array.isArray(data) ? data : [];
-            document.getElementById('stock-container').innerHTML = state.stock.map(s => `
-                <div class="glass-card p-6 rounded-[2rem] relative group text-left">
-                    <button onclick="openEditStock(${s.id})" class="absolute top-4 right-4 text-gray-600 hover:text-red-600"><i data-lucide="edit-2" class="w-3 h-3"></i></button>
-                    <h4 class="text-sm font-black uppercase italic mb-4">${s.nombre_producto}</h4><p class="text-2xl font-black italic">$ ${s.precio_venta.toLocaleString()}</p>
-                    <div class="mt-4 border-t border-white/5 pt-4"><span class="text-[9px] font-black text-gray-600 uppercase">Stock: ${s.stock_actual}</span></div>
-                </div>`).join('');
+            document.getElementById('stock-container').innerHTML = state.stock.map(s => `<div class="glass-card p-6 rounded-[2rem] relative group text-left"><button onclick="openEditStock(${s.id})" class="absolute top-4 right-4 text-gray-600 hover:text-red-600"><i data-lucide="edit-2" class="w-3 h-3"></i></button><h4 class="text-sm font-black uppercase italic mb-4">${s.nombre_producto}</h4><p class="text-2xl font-black italic">$ ${s.precio_venta.toLocaleString()}</p><div class="mt-4 border-t border-white/5 pt-4"><span class="text-[9px] font-black text-gray-600 uppercase">Stock: ${s.stock_actual}</span></div></div>`).join('');
             lucide.createIcons();
         }
 
         function openModalStock() { document.getElementById('stock-id').value = ""; openModal('modal-stock'); }
         function openEditStock(id) {
             const s = state.stock.find(x => x.id == id); if(!s) return;
-            document.getElementById('stock-id').value = s.id; document.getElementById('stock-nombre').value = s.nombre_producto;
-            document.getElementById('stock-cant').value = s.stock_actual; document.getElementById('stock-precio').value = s.precio_venta;
+            document.getElementById('stock-id').value = s.id; document.getElementById('stock-nombre').value = s.nombre_producto; document.getElementById('stock-cant').value = s.stock_actual; document.getElementById('stock-precio').value = s.precio_venta;
             const delBtn = document.getElementById('btn-delete-stock'); delBtn.classList.remove('hidden');
             delBtn.onclick = () => deleteRecord('stock', s.id, 'modal-stock', loadStock);
             openModal('modal-stock');
@@ -1194,39 +1221,38 @@
             if(!res.error) { closeModal('modal-stock'); loadStock(); }
         };
 
-        async function handleProfileUpdate(event) {
-            event.preventDefault();
-            const pass = document.getElementById('prof-input-pass').value;
-            const data = { nombre_completo: document.getElementById('prof-input-name').value, dni: document.getElementById('prof-input-dni').value, email: document.getElementById('prof-input-email').value, perfil_nombre: state.user.rol_nombre };
-            if(pass) data.password = pass;
-            const res = await apiFetch(`/staff/${state.user.id}`, 'PUT', data);
-            if(!res.error) { alert("Perfil actualizado!"); state.user.nombre_completo = data.nombre_completo; document.getElementById('side-user-name').innerText = data.nombre_completo; }
+        async function loadClases() {
+            const data = await apiFetch('/clases'); state.clases = Array.isArray(data) ? data : [];
+            document.getElementById('clases-container').innerHTML = state.clases.map(c => `<div class="glass-card p-8 rounded-[2.5rem] relative text-left"><button onclick="openEditClase(${c.id})" class="absolute top-4 right-4 text-gray-600 hover:text-red-600"><i data-lucide="settings" class="w-4 h-4"></i></button><div class="flex items-center gap-2 mb-2"><div class="w-3 h-3 rounded-full" style="background-color: ${c.color || '#FF0000'}"></div><h4 class="text-lg font-black uppercase italic">${c.nombre}</h4></div><p class="text-[10px] font-black text-red-600 uppercase italic">Coach: ${c.coach || 'Vikingo'}</p></div>`).join('');
+            lucide.createIcons();
+            if(document.getElementById('view-calendario').classList.contains('active')) renderCalendar();
         }
 
-        async function deleteRecord(entity, id, modalId, callback) { if(!confirm("¿Deseas eliminar este registro?")) return; const res = await apiFetch(`/${entity}/${id}`, 'DELETE'); if(!res.error) { closeModal(modalId); callback(); } }
-
-        function renderCalendar() {
-            const cal = document.getElementById('calendar-grid'); if (!cal) return;
-            cal.innerHTML = `<div class="cal-header">HORA</div><div class="cal-header">LUNES</div><div class="cal-header">MARTES</div><div class="cal-header">MIÉRCOLES</div><div class="cal-header">JUEVES</div><div class="cal-header">VIERNES</div><div class="cal-header">SÁBADO</div>`;
-            for(let h=7; h<=21; h++) {
-                cal.innerHTML += `<div class="cal-cell flex items-center justify-center font-black text-[10px] text-white/40 bg-white/5 border-r border-white/20">${h}:00</div>`;
-                for(let d=1; d<=6; d++) {
-                    const isSat = d === 6; const isClosed = isSat && (h < 10 || h > 13);
-                    cal.innerHTML += `<div id="cell-${d}-${h}" class="cal-cell ${isClosed ? 'cal-cell-closed' : ''}" ondragover="event.preventDefault()" ondrop="handleDrop(event, ${d}, ${h})"></div>`;
-                }
-            }
-            state.clases.forEach(c => {
-                const cell = document.getElementById(`cell-${c.dia}-${c.horario}`);
-                if (cell) {
-                    const badge = document.createElement('div'); badge.className = "class-badge"; badge.style.backgroundColor = c.color || '#FF0000';
-                    badge.draggable = true; badge.innerHTML = `<span class="text-[10px] mb-1 leading-none">${c.nombre}</span><span class="text-[7px] opacity-70 font-bold">${c.coach}</span>`;
-                    badge.ondragstart = (e) => { e.dataTransfer.setData("clase_id", c.id); }; cell.appendChild(badge);
-                }
-            });
+        function openModalClase() { document.getElementById('cl-id').value = ""; openModal('modal-clase'); }
+        function openEditClase(id) {
+            const c = state.clases.find(x => x.id == id); if(!c) return;
+            document.getElementById('cl-id').value = c.id; document.getElementById('cl-nombre').value = c.nombre; document.getElementById('cl-coach-select').value = c.coach; document.getElementById('cl-dia').value = c.dia;
+            updateHourOptions(); document.getElementById('cl-horario').value = c.horario; document.getElementById('cl-color').value = c.color || "#FF0000";
+            const delBtn = document.getElementById('btn-delete-clase'); delBtn.classList.remove('hidden');
+            delBtn.onclick = () => deleteRecord('clases', c.id, 'modal-clase', loadClases);
+            openModal('modal-clase');
         }
+
+        document.getElementById('form-clase').onsubmit = async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('cl-id').value;
+            const data = { nombre: document.getElementById('cl-nombre').value, coach: document.getElementById('cl-coach-select').value, dia: parseInt(document.getElementById('cl-dia').value), horario: parseInt(document.getElementById('cl-horario').value), color: document.getElementById('cl-color').value };
+            const res = await apiFetch(id ? `/clases/${id}` : '/clases', id ? 'PUT' : 'POST', data);
+            if(!res.error) { closeModal('modal-clase'); loadClases(); }
+        };
 
         async function handleDrop(e, dia, horario) { e.preventDefault(); const id = e.dataTransfer.getData("clase_id"); if (!id) return; const res = await apiFetch(`/clases/${id}/move`, 'PUT', { dia, horario }); if (!res.error) loadClases(); }
         function updateHourOptions() { const dia = document.getElementById('cl-dia').value; const select = document.getElementById('cl-horario'); select.innerHTML = ""; let start = 7, end = 21; if (dia == "6") { start = 10; end = 13; } for(let i=start; i<=end; i++) select.innerHTML += `<option value="${i}">${i}:00 hs</option>`; }
+        async function deleteRecord(entity, id, modalId, callback) { if(!confirm("¿Deseas eliminar este registro?")) return; const res = await apiFetch(`/${entity}/${id}`, 'DELETE'); if(!res.error) { closeModal(modalId); callback(); } }
+        async function handleProfileUpdate(e) { e.preventDefault(); const pass = document.getElementById('prof-input-pass').value; const data = { nombre_completo: document.getElementById('prof-input-name').value, dni: document.getElementById('prof-input-dni').value, email: document.getElementById('prof-input-email').value, perfil_nombre: state.user.rol_nombre }; if(pass) data.password = pass; const res = await apiFetch(`/staff/${state.user.id}`, 'PUT', data); if(!res.error) { state.user.nombre_completo = data.nombre_completo; document.getElementById('side-user-name').innerText = data.nombre_completo; } }
+
+        document.getElementById('form-movimiento').onsubmit = async (e) => { e.preventDefault(); const data = { tipo: document.getElementById('mov-tipo').value, monto: parseFloat(document.getElementById('mov-monto').value), descripcion: document.getElementById('mov-desc').value }; const res = await apiFetch('/caja/movimiento', 'POST', data); if(!res.error) { closeModal('modal-movimiento'); initApp(); } };
+
         window.onload = () => { lucide.createIcons(); };
     </script>
 </body>
