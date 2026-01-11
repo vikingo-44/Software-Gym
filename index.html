@@ -247,7 +247,7 @@
             <div id="nav-section-operativa">
                 <p class="nav-section-title text-[9px] font-black text-gray-600 uppercase tracking-widest px-6 mb-2 mt-8">Operativa</p>
                 <div class="relative">
-                    <button onclick="toggleSub('sub-facturacion')" class="w-full flex items-center justify-between px-6 py-4 text-gray-400 font-black uppercase text-[10px] italic hover:text-red-600 transition-colors">
+                    <button id="btn-facturacion" onclick="toggleSub('sub-facturacion')" class="w-full flex items-center justify-between px-6 py-4 text-gray-400 font-black uppercase text-[10px] italic hover:text-red-600 transition-colors">
                         <span class="flex items-center gap-5"><i data-lucide="wallet" class="w-4 h-4"></i> <span class="nav-text">Facturación</span></span>
                         <i data-lucide="chevron-down" class="w-3 h-3 chevron-icon"></i>
                     </button>
@@ -611,7 +611,6 @@
                             <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Enfocada en hipertrofia y fuerza vikinga</p>
                         </div>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6" id="student-routine-exercises">
-                            <!-- Ejemplo de contenido para alumno -->
                             <div class="glass-card p-6 rounded-2xl border-white/5">
                                 <h5 class="font-black italic uppercase viking-red mb-2">Día 1: Empuje</h5>
                                 <ul class="text-[11px] space-y-2 opacity-80">
@@ -622,16 +621,13 @@
                             </div>
                         </div>
                     </div>
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="rutinas-lista">
-                         <!-- Aquí se cargarán los alumnos con plan musculación para el Prof/Admin -->
-                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="rutinas-lista"></div>
                 </div>
             </div>
         </div>
     </main>
 
     <!-- MODALES VARIOS -->
-    <!-- Alumno -->
     <div id="modal-alumno" class="viking-modal">
         <div class="glass-card p-10 rounded-[3rem] w-full max-w-lg text-left">
             <h3 class="text-2xl font-black uppercase italic mb-8" id="modal-alumno-title">Alumno</h3>
@@ -670,7 +666,6 @@
                     <select id="al-plan" class="viking-input" required onchange="autoCalculateExpiry()"></select>
                     <input type="password" id="al-pass" placeholder="Contraseña de Acceso" class="viking-input">
                 </div>
-                <p class="text-[8px] text-gray-500 uppercase font-bold italic">* Si dejas la contraseña vacía al editar, no se cambiará.</p>
                 <div class="flex gap-4 pt-4">
                     <button type="button" onclick="closeModal('modal-alumno')" class="flex-1 py-4 bg-white/5 rounded-2xl font-black uppercase italic text-[10px]">Cancelar</button>
                     <button type="button" id="btn-delete-alumno" class="hidden py-4 px-4 bg-red-900/40 rounded-2xl font-black uppercase italic text-[10px] text-red-500">Eliminar</button>
@@ -680,7 +675,6 @@
         </div>
     </div>
 
-    <!-- MODAL MOVIMIENTO CAJA -->
     <div id="modal-movimiento" class="viking-modal">
         <div class="glass-card p-10 rounded-[3rem] w-full max-w-lg text-left">
             <h3 class="text-2xl font-black uppercase italic mb-8">Nuevo Movimiento</h3>
@@ -699,7 +693,6 @@
         </div>
     </div>
 
-    <!-- MODAL STAFF -->
     <div id="modal-staff" class="viking-modal">
         <div class="glass-card p-10 rounded-[3rem] w-full max-w-lg text-left">
             <h3 class="text-2xl font-black uppercase italic mb-4" id="modal-staff-title">Personal</h3>
@@ -724,7 +717,6 @@
         </div>
     </div>
 
-    <!-- MODAL STOCK -->
     <div id="modal-stock" class="viking-modal">
         <div class="glass-card p-10 rounded-[3rem] w-full max-w-lg text-left">
             <h3 class="text-2xl font-black uppercase italic mb-8" id="modal-stock-title">Mercadería</h3>
@@ -744,7 +736,6 @@
         </div>
     </div>
 
-    <!-- MODAL PLAN -->
     <div id="modal-plan" class="viking-modal">
         <div class="glass-card p-10 rounded-[3rem] w-full max-w-lg text-left">
             <h3 class="text-2xl font-black uppercase italic mb-8" id="modal-plan-title">Plan</h3>
@@ -764,7 +755,6 @@
         </div>
     </div>
 
-    <!-- MODAL CLASE -->
     <div id="modal-clase" class="viking-modal">
         <div class="glass-card p-10 rounded-[3rem] w-full max-w-lg text-left">
             <h3 class="text-2xl font-black uppercase italic mb-8" id="modal-clase-title">Clase</h3>
@@ -811,7 +801,7 @@
             cobrarTab: 'mercaderia'
         };
 
-        // --- SISTEMA DE PERMISOS (RESTRICCIONES POR PERFIL) ---
+        // --- SISTEMA DE PERMISOS (RBAC) ---
         function applyPermissions() {
             if (!state.user) return;
             const rol = state.user.rol_nombre || "";
@@ -820,6 +810,15 @@
             const isAlumno = rol === "Alumno";
             const isAdmin = rol === "Administrador" || rol === "Supervisor";
 
+            // Reset de visibilidad general
+            document.getElementById('nav-section-staff').style.display = 'block';
+            document.getElementById('nav-section-operativa').style.display = 'block';
+            document.getElementById('nav-planes').style.display = 'flex';
+            document.getElementById('nav-clases').style.display = 'flex';
+            document.getElementById('nav-caja').style.display = 'block';
+            document.getElementById('nav-stock').style.display = 'block';
+            document.getElementById('nav-cobrar').style.display = 'block';
+
             // 1. RESTRICCIONES PARA EL ALUMNO
             if (isAlumno) {
                 document.getElementById('nav-section-admin').style.display = 'none';
@@ -827,55 +826,49 @@
                 document.getElementById('nav-section-operativa').style.display = 'none';
                 document.getElementById('nav-planes').style.display = 'none';
                 document.getElementById('nav-clases').style.display = 'none';
-                
-                // Mostrar solo Perfil, Calendario y Rutina si corresponde
                 document.getElementById('nav-perfil').style.display = 'flex';
                 document.getElementById('nav-calendario').style.display = 'flex';
-                
                 const planNombre = state.user.plan?.nombre?.toLowerCase() || "";
-                if (planNombre.includes('musculacion') || planNombre.includes('completo')) {
-                    document.getElementById('nav-rutinas').style.display = 'flex';
-                } else {
-                    document.getElementById('nav-rutinas').style.display = 'none';
-                }
-
-                // Ocultar columnas de acciones en tablas (aunque no debería verlas)
+                document.getElementById('nav-rutinas').style.display = (planNombre.includes('musculacion') || planNombre.includes('completo')) ? 'flex' : 'none';
                 document.querySelectorAll('.action-col').forEach(el => el.style.display = 'none');
             }
 
             // 2. RESTRICCIONES PARA EL PROFESOR
             if (isProf) {
-                // No debería ver operativa ni staff
                 document.getElementById('nav-section-staff').style.display = 'none';
                 document.getElementById('nav-section-operativa').style.display = 'none';
+                document.getElementById('nav-planes').style.display = 'none'; // Requisito: Sacar Planes
+                document.getElementById('nav-clases').style.display = 'none'; // Requisito: Sacar Clases
                 
-                // No puede GUARDAR nada (ocultar botones de nuevo y de guardado en modales)
                 const saveButtons = [
                     'btn-nuevo-alumno', 'btn-nuevo-plan', 'btn-nueva-clase', 'btn-nuevo-stock', 'btn-nuevo-prof', 'btn-nuevo-adm',
                     'btn-save-alumno-modal', 'btn-save-staff-modal', 'btn-save-plan-modal', 'btn-save-clase-modal', 'btn-save-stock-modal', 'btn-save-mov-modal'
                 ];
-                saveButtons.forEach(id => {
-                    const btn = document.getElementById(id);
-                    if(btn) btn.style.display = 'none';
-                });
-
-                // No debe ver el "lapiz" de editar en ninguna tabla
+                saveButtons.forEach(id => { const b = document.getElementById(id); if(b) b.style.display = 'none'; });
                 document.querySelectorAll('.action-col').forEach(el => el.style.display = 'none');
             }
 
             // 3. RESTRICCIONES PARA EL ADMINISTRATIVO
             if (isAdm) {
-                // No puede editar clases ni ver el botón de editar
-                if(document.getElementById('btn-nueva-clase')) document.getElementById('btn-nueva-clase').style.display = 'none';
+                document.getElementById('nav-section-staff').style.display = 'none';
+                // El menú de facturación debe desplegarse:
+                document.getElementById('nav-section-operativa').style.display = 'block';
+                document.getElementById('btn-facturacion').style.display = 'flex';
                 
-                // Ocultar botón editar en vista de clases (estilo específico)
+                // Pero ocultamos las secciones prohibidas dentro de facturación
+                document.getElementById('nav-caja').style.display = 'none';
+                document.getElementById('nav-stock').style.display = 'none';
+                
+                // No puede editar clases
+                document.getElementById('btn-nueva-clase').style.display = 'none';
                 const editClaseButtons = document.querySelectorAll('#clases-container button');
                 editClaseButtons.forEach(b => b.style.display = 'none');
+            }
 
-                // En calendario no debe poder mover nada (se maneja en render)
-                // Tampoco ve Caja ni Stock
-                document.querySelector('button[onclick="switchView(\'caja\')"]').parentElement.style.display = 'none';
-                document.querySelector('button[onclick="switchView(\'stock\')"]').parentElement.style.display = 'none';
+            if (isAdmin) {
+                document.getElementById('nav-section-staff').style.display = 'block';
+                document.getElementById('nav-section-operativa').style.display = 'block';
+                document.querySelectorAll('.action-col').forEach(el => el.style.display = 'table-cell');
             }
 
             lucide.createIcons();
@@ -892,7 +885,6 @@
         function renderCobrar() {
             const displayArea = document.getElementById('cobrar-display-area');
             const searchVal = document.getElementById('cobrar-search').value.toLowerCase();
-
             if (state.cobrarTab === 'mercaderia') {
                 const filtered = state.stock.filter(s => s.nombre_producto.toLowerCase().includes(searchVal));
                 displayArea.innerHTML = `<div class="grid grid-cols-2 md:grid-cols-4 gap-4 overflow-y-auto max-h-[600px] pr-2 custom-scrollbar" id="cobrar-catalogo"></div>`;
@@ -907,27 +899,21 @@
                             <p class="text-[11px] font-black italic">$ ${s.precio_venta.toLocaleString()}</p>
                             <span class="text-[7px] font-bold ${s.stock_actual < 5 ? 'text-red-500' : 'text-gray-500'}">S: ${s.stock_actual}</span>
                         </div>
-                    </div>
-                `).join('');
+                    </div>`).join('');
             } else {
                 const filteredAl = state.alumnos.filter(a => a.nombre_completo.toLowerCase().includes(searchVal) || a.dni.includes(searchVal));
                 displayArea.innerHTML = `
                     <div class="glass-card p-8 rounded-[2.5rem] h-[600px] flex flex-col">
-                        <h4 class="text-[10px] font-black uppercase italic text-red-600 mb-6 tracking-widest">Alumnos para Renovación / Inscripción</h4>
+                        <h4 class="text-[10px] font-black uppercase italic text-red-600 mb-6 tracking-widest">Alumnos para Renovación</h4>
                         <div class="overflow-y-auto custom-scrollbar flex-1 space-y-2">
-                            ${filteredAl.map(a => {
-                                const isNew = !a.fecha_ultima_renovacion;
-                                return `
+                            ${filteredAl.map(a => `
                                 <div class="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5 hover:border-red-600/30 cursor-pointer" onclick="preparePlanCharge(${a.id})">
                                     <div>
                                         <p class="text-[11px] font-black italic uppercase">${a.nombre_completo}</p>
                                         <p class="text-[8px] text-gray-500">DNI: ${a.dni} | PLAN: ${a.plan?.nombre || 'NINGUNO'}</p>
                                     </div>
-                                    <span class="px-3 py-1 rounded-full text-[8px] font-black italic ${isNew ? 'bg-blue-600/20 text-blue-500' : 'bg-green-600/20 text-green-500'}">
-                                        ${isNew ? 'INSCRIPCIÓN' : 'RENOVACIÓN'}
-                                    </span>
-                                </div>`;
-                            }).join('')}
+                                    <span class="px-3 py-1 rounded-full text-[8px] font-black italic bg-green-600/20 text-green-500">Pagar</span>
+                                </div>`).join('')}
                         </div>
                     </div>`;
             }
@@ -953,12 +939,7 @@
             if (!al || !al.plan_id) return;
             const plan = state.planes.find(p => p.id === al.plan_id);
             if (!plan) return;
-            const isNew = !al.fecha_ultima_renovacion;
-            const item = {
-                id: `plan-${al.id}`,
-                nombre_producto: `${isNew ? 'ALTA' : 'RENOV'}: ${al.nombre_completo} (${plan.nombre})`,
-                precio_venta: plan.precio, qty: 1, type: 'plan', alumno_id: al.id
-            };
+            const item = { id: `plan-${al.id}`, nombre_producto: `RENOV: ${al.nombre_completo} (${plan.nombre})`, precio_venta: plan.precio, qty: 1, type: 'plan', alumno_id: al.id };
             state.cart = state.cart.filter(c => c.type !== 'plan');
             state.cart.push(item);
             updateCartUI();
@@ -995,10 +976,7 @@
         async function finalizarVenta() {
             if (state.cart.length === 0 || !state.currentPaymentMethod) return;
             const total = state.cart.reduce((acc, c) => acc + (c.qty * c.precio_venta), 0);
-            const dataCaja = {
-                tipo: "Ingreso", monto: total,
-                descripcion: `Venta (${state.currentPaymentMethod}): ${state.cart.map(c => c.nombre_producto).join(', ')}`
-            };
+            const dataCaja = { tipo: "Ingreso", monto: total, descripcion: `Venta (${state.currentPaymentMethod}): ${state.cart.map(c => c.nombre_producto).join(', ')}` };
             const res = await apiFetch('/caja/movimiento', 'POST', dataCaja);
             if (!res.error) {
                 state.cart = []; state.currentPaymentMethod = '';
@@ -1012,7 +990,8 @@
         function renderCalendar() {
             const cal = document.getElementById('calendar-grid'); if (!cal) return;
             const rol = state.user?.rol_nombre;
-            const canMove = rol !== "Administracion" && rol !== "Alumno" && rol !== "Profesor"; // Solo Admin/Supervisor mueven
+            // Solo Administradores y Supervisores pueden mover clases. Administrativos, Profesores y Alumnos NO.
+            const canMove = (rol === "Administrador" || rol === "Supervisor");
 
             cal.innerHTML = `<div class="cal-header">HORA</div><div class="cal-header">LUNES</div><div class="cal-header">MARTES</div><div class="cal-header">MIÉRCOLES</div><div class="cal-header">JUEVES</div><div class="cal-header">VIERNES</div><div class="cal-header">SÁBADO</div>`;
             for(let h=7; h<=21; h++) {
@@ -1029,9 +1008,7 @@
                     if (canMove) {
                         badge.draggable = true; 
                         badge.ondragstart = (e) => { e.dataTransfer.setData("clase_id", c.id); }; 
-                    } else {
-                        badge.style.cursor = "default";
-                    }
+                    } else { badge.style.cursor = "default"; }
                     badge.innerHTML = `<span class="text-[8px] mb-0.5 leading-none">${c.nombre}</span><span class="text-[6px] opacity-70 font-bold">${c.coach}</span>`;
                     cell.appendChild(badge);
                 }
@@ -1043,20 +1020,14 @@
             const rol = state.user?.rol_nombre;
             const list = document.getElementById('rutinas-lista');
             const studentView = document.getElementById('musculacion-student-view');
-
             if (rol === "Alumno") {
-                list.style.display = 'none';
-                studentView.classList.remove('hidden');
+                list.style.display = 'none'; studentView.classList.remove('hidden');
                 document.getElementById('rutina-title').innerText = "Mi Rutina Musculación";
             } else {
-                list.style.display = 'grid';
-                studentView.classList.add('hidden');
+                list.style.display = 'grid'; studentView.classList.add('hidden');
                 document.getElementById('rutina-title').innerText = "Rutinas de Alumnos";
                 const alRutinas = state.alumnos.filter(a => a.plan?.nombre.toLowerCase().includes('musculacion') || a.plan?.nombre.toLowerCase().includes('completo'));
-                if (alRutinas.length === 0) {
-                    list.innerHTML = '<p class="text-gray-500 italic col-span-3">No hay alumnos activos con plan de musculación.</p>';
-                    return;
-                }
+                if (alRutinas.length === 0) { list.innerHTML = '<p class="text-gray-500 italic col-span-3">No hay alumnos activos con plan de musculación.</p>'; return; }
                 list.innerHTML = alRutinas.map(a => `
                     <div class="glass-card p-6 rounded-3xl border-red-600/10">
                         <h4 class="text-xs font-black uppercase italic mb-2">${a.nombre_completo}</h4>
@@ -1107,10 +1078,7 @@
         function toggleSidebar() { document.getElementById('sidebar').classList.toggle('sidebar-collapsed'); lucide.createIcons(); }
         function toggleSub(id) { document.getElementById(id).classList.toggle('hidden'); }
         function openModal(id) { document.getElementById(id).style.display = 'flex'; }
-        function closeModal(id) { 
-            document.getElementById(id).style.display = 'none'; 
-            const f = document.querySelector(`#${id} form`); if (f) f.reset();
-        }
+        function closeModal(id) { document.getElementById(id).style.display = 'none'; const f = document.querySelector(`#${id} form`); if (f) f.reset(); }
 
         function switchView(view) {
             document.querySelectorAll('.view-content').forEach(v => v.classList.remove('active'));
@@ -1137,28 +1105,20 @@
                 document.getElementById('side-user-name').innerText = res.nombre_completo;
                 document.getElementById('side-user-role').innerText = res.rol_nombre || 'Staff';
                 document.getElementById('user-initials').innerText = res.nombre_completo.split(' ').map(n => n[0]).join('').toUpperCase();
-                
-                // Cargar datos en el perfil
                 document.getElementById('prof-name').innerText = res.nombre_completo;
                 document.getElementById('prof-role').innerText = res.rol_nombre;
                 document.getElementById('prof-initials-view').innerText = res.nombre_completo.split(' ').map(n => n[0]).join('').toUpperCase();
                 document.getElementById('prof-input-name').value = res.nombre_completo;
                 document.getElementById('prof-input-dni').value = res.dni;
                 document.getElementById('prof-input-email').value = res.email || "";
-
                 if (res.rol_nombre === "Alumno") {
                     document.getElementById('plan-alumno-info').classList.remove('hidden');
                     document.getElementById('perfil-plan-nombre').innerText = res.plan?.nombre || "SIN PLAN";
                     document.getElementById('perfil-vencimiento').innerText = "Vence: " + (res.fecha_vencimiento || "-");
-                    switchView('perfil'); // El alumno inicia en su perfil
-                } else {
-                    switchView('dashboard');
-                }
-                
+                    switchView('perfil');
+                } else switchView('dashboard');
                 initApp();
-            } else {
-                document.getElementById('login-error').classList.remove('hidden');
-            }
+            } else document.getElementById('login-error').classList.remove('hidden');
         }
 
         async function initApp() {
@@ -1178,7 +1138,6 @@
             state.alumnos = Array.isArray(data) ? data : [];
             const rol = state.user?.rol_nombre;
             const hideEdit = (rol === "Profesor" || rol === "Alumno");
-
             const renderRow = (al) => `
                 <tr class="viking-table-row">
                     <td class="py-6">${al.nombre_completo}</td><td class="py-6 text-gray-500">${al.dni}</td>
@@ -1196,35 +1155,21 @@
             applyPermissions();
         }
 
-        function openModalAlumno() { 
-            document.getElementById('modal-alumno-title').innerText = "Nuevo Alumno"; 
-            document.getElementById('al-id').value = ""; 
-            document.getElementById('al-fecha-renovacion').value = new Date().toISOString().split('T')[0];
-            openModal('modal-alumno'); 
-        }
-
+        function openModalAlumno() { document.getElementById('modal-alumno-title').innerText = "Nuevo Alumno"; document.getElementById('al-id').value = ""; document.getElementById('al-fecha-renovacion').value = new Date().toISOString().split('T')[0]; openModal('modal-alumno'); }
         function openEditAlumno(id) {
             const al = state.alumnos.find(x => x.id == id); if(!al) return;
             document.getElementById('modal-alumno-title').innerText = "Editar Alumno";
-            document.getElementById('al-id').value = al.id;
-            document.getElementById('al-nombre').value = al.nombre_completo;
-            document.getElementById('al-dni').value = al.dni;
-            document.getElementById('al-email').value = al.email || "";
-            document.getElementById('al-plan').value = al.plan_id || "";
-            document.getElementById('al-peso').value = al.peso || "";
-            document.getElementById('al-altura').value = al.altura || "";
-            document.getElementById('al-imc').value = al.imc || "";
-            document.getElementById('al-fecha-renovacion').value = al.fecha_ultima_renovacion || "";
+            document.getElementById('al-id').value = al.id; document.getElementById('al-nombre').value = al.nombre_completo; document.getElementById('al-dni').value = al.dni;
+            document.getElementById('al-email').value = al.email || ""; document.getElementById('al-plan').value = al.plan_id || ""; document.getElementById('al-peso').value = al.peso || "";
+            document.getElementById('al-altura').value = al.altura || ""; document.getElementById('al-imc').value = al.imc || ""; document.getElementById('al-fecha-renovacion').value = al.fecha_ultima_renovacion || "";
             document.getElementById('al-fecha-vencimiento').value = al.fecha_vencimiento || "";
-            const delBtn = document.getElementById('btn-delete-alumno'); 
-            if(state.user.rol_nombre === "Administrador" || state.user.rol_nombre === "Supervisor") delBtn.classList.remove('hidden');
+            const delBtn = document.getElementById('btn-delete-alumno'); if(state.user.rol_nombre === "Administrador" || state.user.rol_nombre === "Supervisor") delBtn.classList.remove('hidden');
             delBtn.onclick = () => deleteRecord('alumnos', id, 'modal-alumno', fetchAlumnos);
             openModal('modal-alumno');
         }
 
         document.getElementById('form-alumno').onsubmit = async (e) => {
-            e.preventDefault();
-            const id = document.getElementById('al-id').value;
+            e.preventDefault(); const id = document.getElementById('al-id').value;
             const data = { nombre_completo: document.getElementById('al-nombre').value, dni: document.getElementById('al-dni').value, email: document.getElementById('al-email').value, plan_id: parseInt(document.getElementById('al-plan').value) || null, peso: parseFloat(document.getElementById('al-peso').value) || null, altura: parseFloat(document.getElementById('al-altura').value) || null, imc: parseFloat(document.getElementById('al-imc').value) || null, fecha_ultima_renovacion: document.getElementById('al-fecha-renovacion').value, fecha_vencimiento: document.getElementById('al-fecha-vencimiento').value };
             const pass = document.getElementById('al-pass').value; if(pass) data.password = pass;
             const res = await apiFetch(id ? `/alumnos/${id}` : '/alumnos', id ? 'PUT' : 'POST', data);
@@ -1234,9 +1179,7 @@
         async function loadStaff() {
             const profs = await apiFetch('/profesores'); const admins = await apiFetch('/administrativos');
             state.profesores = Array.isArray(profs) ? profs : []; state.administrativos = Array.isArray(admins) ? admins : [];
-            const rol = state.user?.rol_nombre;
-            const hideEdit = rol !== "Administrador" && rol !== "Supervisor";
-
+            const hideEdit = state.user?.rol_nombre !== "Administrador" && state.user?.rol_nombre !== "Supervisor";
             document.getElementById('cl-coach-select').innerHTML = '<option value="">Seleccionar Profesor</option>' + state.profesores.map(p => `<option value="${p.nombre_completo}">${p.nombre_completo}</option>`).join('');
             document.getElementById('table-profesores').innerHTML = state.profesores.map(p => `
                 <tr class="viking-table-row"><td class="py-6">${p.nombre_completo}</td><td class="py-6 text-gray-500">${p.dni}</td><td class="py-6 text-red-600 font-black">${p.especialidad || 'Gral.'}</td>
@@ -1254,15 +1197,13 @@
             document.getElementById('modal-staff-title').innerText = "Editar " + rol;
             document.getElementById('stf-id').value = user.id; document.getElementById('stf-rol').value = rol;
             document.getElementById('stf-nombre').value = user.nombre_completo; document.getElementById('stf-dni').value = user.dni; document.getElementById('stf-esp').value = user.especialidad || "";
-            const delBtn = document.getElementById('btn-delete-staff'); 
-            if(state.user.rol_nombre === "Administrador" || state.user.rol_nombre === "Supervisor") delBtn.classList.remove('hidden');
+            const delBtn = document.getElementById('btn-delete-staff'); if(state.user.rol_nombre === "Administrador" || state.user.rol_nombre === "Supervisor") delBtn.classList.remove('hidden');
             delBtn.onclick = () => deleteRecord('staff', id, 'modal-staff', loadStaff);
             openModal('modal-staff');
         }
 
         document.getElementById('form-staff').onsubmit = async (e) => {
-            e.preventDefault();
-            const id = document.getElementById('stf-id').value; const rol = document.getElementById('stf-rol').value;
+            e.preventDefault(); const id = document.getElementById('stf-id').value; const rol = document.getElementById('stf-rol').value;
             const data = { nombre_completo: document.getElementById('stf-nombre').value, dni: document.getElementById('stf-dni').value, especialidad: document.getElementById('stf-esp').value, perfil_nombre: rol };
             const pass = document.getElementById('stf-pass').value; if(pass) data.password = pass;
             const res = await apiFetch(id ? `/staff/${id}` : '/staff', id ? 'PUT' : 'POST', data);
@@ -1284,7 +1225,6 @@
             const filtered = state.planes.filter(p => p.tipo_plan_id === tipoId);
             const rol = state.user?.rol_nombre;
             const hideEdit = (rol === "Profesor" || rol === "Alumno" || rol === "Administracion");
-
             document.getElementById('planes-container').innerHTML = filtered.map(p => `
                 <div class="glass-card p-8 rounded-[2.5rem] flex flex-col border-red-600/10 relative">
                     ${hideEdit ? '' : `<button onclick="openEditPlan(${p.id})" class="absolute top-4 right-4 text-gray-600 hover:text-red-600"><i data-lucide="edit-3" class="w-4 h-4"></i></button>`}
@@ -1300,15 +1240,13 @@
         function openEditPlan(id) {
             const p = state.planes.find(x => x.id == id); if(!p) return;
             document.getElementById('plan-id').value = p.id; document.getElementById('plan-nombre').value = p.nombre; document.getElementById('plan-tipo').value = p.tipo_plan_id; document.getElementById('plan-precio').value = p.precio;
-            const delBtn = document.getElementById('btn-delete-plan'); 
-            if(state.user.rol_nombre === "Administrador" || state.user.rol_nombre === "Supervisor") delBtn.classList.remove('hidden');
+            const delBtn = document.getElementById('btn-delete-plan'); if(state.user.rol_nombre === "Administrador" || state.user.rol_nombre === "Supervisor") delBtn.classList.remove('hidden');
             delBtn.onclick = () => deleteRecord('planes', p.id, 'modal-plan', loadPlanes);
             openModal('modal-plan');
         }
 
         document.getElementById('form-plan').onsubmit = async (e) => {
-            e.preventDefault();
-            const id = document.getElementById('plan-id').value;
+            e.preventDefault(); const id = document.getElementById('plan-id').value;
             const data = { nombre: document.getElementById('plan-nombre').value, precio: parseFloat(document.getElementById('plan-precio').value), tipo_plan_id: parseInt(document.getElementById('plan-tipo').value) };
             const res = await apiFetch(id ? `/planes/${id}` : '/planes', id ? 'PUT' : 'POST', data);
             if(!res.error) { closeModal('modal-plan'); loadPlanes(); }
@@ -1318,7 +1256,6 @@
             const data = await apiFetch('/stock'); state.stock = Array.isArray(data) ? data : [];
             const rol = state.user?.rol_nombre;
             const hideEdit = (rol === "Profesor");
-
             document.getElementById('stock-container').innerHTML = state.stock.map(s => `
                 <div class="glass-card p-6 rounded-[2rem] relative group text-left">
                     ${hideEdit ? '' : `<button onclick="openEditStock(${s.id})" class="absolute top-4 right-4 text-gray-600 hover:text-red-600"><i data-lucide="edit-2" class="w-3 h-3"></i></button>`}
@@ -1333,15 +1270,13 @@
         function openEditStock(id) {
             const s = state.stock.find(x => x.id == id); if(!s) return;
             document.getElementById('stock-id').value = s.id; document.getElementById('stock-nombre').value = s.nombre_producto; document.getElementById('stock-cant').value = s.stock_actual; document.getElementById('stock-precio').value = s.precio_venta;
-            const delBtn = document.getElementById('btn-delete-stock'); 
-            if(state.user.rol_nombre === "Administrador" || state.user.rol_nombre === "Supervisor") delBtn.classList.remove('hidden');
+            const delBtn = document.getElementById('btn-delete-stock'); if(state.user.rol_nombre === "Administrador" || state.user.rol_nombre === "Supervisor") delBtn.classList.remove('hidden');
             delBtn.onclick = () => deleteRecord('stock', s.id, 'modal-stock', loadStock);
             openModal('modal-stock');
         }
 
         document.getElementById('form-stock').onsubmit = async (e) => {
-            e.preventDefault();
-            const id = document.getElementById('stock-id').value;
+            e.preventDefault(); const id = document.getElementById('stock-id').value;
             const data = { nombre_producto: document.getElementById('stock-nombre').value, stock_actual: parseInt(document.getElementById('stock-cant').value), precio_venta: parseFloat(document.getElementById('stock-precio').value) };
             const res = await apiFetch(id ? `/stock/${id}` : '/stock', id ? 'PUT' : 'POST', data);
             if(!res.error) { closeModal('modal-stock'); loadStock(); }
@@ -1351,7 +1286,6 @@
             const data = await apiFetch('/clases'); state.clases = Array.isArray(data) ? data : [];
             const rol = state.user?.rol_nombre;
             const hideEdit = (rol === "Profesor" || rol === "Administracion" || rol === "Alumno");
-
             document.getElementById('clases-container').innerHTML = state.clases.map(c => `
                 <div class="glass-card p-8 rounded-[2.5rem] relative text-left">
                     ${hideEdit ? '' : `<button onclick="openEditClase(${c.id})" class="absolute top-4 right-4 text-gray-600 hover:text-red-600"><i data-lucide="settings" class="w-4 h-4"></i></button>`}
@@ -1368,15 +1302,13 @@
             const c = state.clases.find(x => x.id == id); if(!c) return;
             document.getElementById('cl-id').value = c.id; document.getElementById('cl-nombre').value = c.nombre; document.getElementById('cl-coach-select').value = c.coach; document.getElementById('cl-dia').value = c.dia;
             updateHourOptions(); document.getElementById('cl-horario').value = c.horario; document.getElementById('cl-color').value = c.color || "#FF0000";
-            const delBtn = document.getElementById('btn-delete-clase'); 
-            if(state.user.rol_nombre === "Administrador" || state.user.rol_nombre === "Supervisor") delBtn.classList.remove('hidden');
+            const delBtn = document.getElementById('btn-delete-clase'); if(state.user.rol_nombre === "Administrador" || state.user.rol_nombre === "Supervisor") delBtn.classList.remove('hidden');
             delBtn.onclick = () => deleteRecord('clases', c.id, 'modal-clase', loadClases);
             openModal('modal-clase');
         }
 
         document.getElementById('form-clase').onsubmit = async (e) => {
-            e.preventDefault();
-            const id = document.getElementById('cl-id').value;
+            e.preventDefault(); const id = document.getElementById('cl-id').value;
             const data = { nombre: document.getElementById('cl-nombre').value, coach: document.getElementById('cl-coach-select').value, dia: parseInt(document.getElementById('cl-dia').value), horario: parseInt(document.getElementById('cl-horario').value), color: document.getElementById('cl-color').value };
             const res = await apiFetch(id ? `/clases/${id}` : '/clases', id ? 'PUT' : 'POST', data);
             if(!res.error) { closeModal('modal-clase'); loadClases(); }
@@ -1386,9 +1318,7 @@
         function updateHourOptions() { const dia = document.getElementById('cl-dia').value; const select = document.getElementById('cl-horario'); select.innerHTML = ""; let start = 7, end = 21; if (dia == "6") { start = 10; end = 13; } for(let i=start; i<=end; i++) select.innerHTML += `<option value="${i}">${i}:00 hs</option>`; }
         async function deleteRecord(entity, id, modalId, callback) { if(!confirm("¿Deseas eliminar este registro?")) return; const res = await apiFetch(`/${entity}/${id}`, 'DELETE'); if(!res.error) { closeModal(modalId); callback(); } }
         async function handleProfileUpdate(e) { e.preventDefault(); const pass = document.getElementById('prof-input-pass').value; const data = { nombre_completo: document.getElementById('prof-input-name').value, dni: document.getElementById('prof-input-dni').value, email: document.getElementById('prof-input-email').value, perfil_nombre: state.user.rol_nombre }; if(pass) data.password = pass; const res = await apiFetch(`/staff/${state.user.id}`, 'PUT', data); if(!res.error) { state.user.nombre_completo = data.nombre_completo; document.getElementById('side-user-name').innerText = data.nombre_completo; } }
-
         document.getElementById('form-movimiento').onsubmit = async (e) => { e.preventDefault(); const data = { tipo: document.getElementById('mov-tipo').value, monto: parseFloat(document.getElementById('mov-monto').value), descripcion: document.getElementById('mov-desc').value }; const res = await apiFetch('/caja/movimiento', 'POST', data); if(!res.error) { closeModal('modal-movimiento'); initApp(); } };
-
         window.onload = () => { lucide.createIcons(); };
     </script>
 </body>
