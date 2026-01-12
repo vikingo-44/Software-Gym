@@ -1031,16 +1031,15 @@
 
             const diasSemana = ["", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
             const data = {
-                clase_id: clase.id,
-                alumno_dni: state.user.dni,
+                clase_id: parseInt(clase.id),
+                alumno_dni: String(state.user.dni),
                 dia_nombre: diasSemana[clase.dia],
-                horario: clase.horario
+                horario: parseInt(clase.horario)
             };
 
             const res = await apiFetch('/reservas', 'POST', data);
             if (!res.error) {
                 showVikingToast("¡Reserva confirmada!");
-                // Corregimos aquí: Recargamos todo tras reservar
                 await fetchReservas();
                 renderCalendar();
                 renderStudentDashboard();
@@ -1609,19 +1608,26 @@
             const pass = document.getElementById('prof-input-pass').value; 
             const data = { 
                 nombre_completo: document.getElementById('prof-input-name').value, 
-                dni: document.getElementById('prof-input-dni').value, 
-                email: document.getElementById('prof-input-email').value, 
-                perfil_nombre: state.user.rol_nombre 
+                dni: String(document.getElementById('prof-input-dni').value), 
+                email: document.getElementById('prof-input-email').value
             }; 
+            
             if(pass) data.password = pass; 
-            const res = await apiFetch(`/staff/${state.user.id}`, 'PUT', data); 
+            
+            // Si es Alumno, usamos endpoint de alumnos, sino staff
+            const endpoint = state.user.rol_nombre === 'Alumno' ? `/alumnos/${state.user.id}` : `/staff/${state.user.id}`;
+            const res = await apiFetch(endpoint, 'PUT', data); 
+            
             if(!res.error) { 
                 state.user.nombre_completo = data.nombre_completo; 
+                state.user.email = data.email;
                 document.getElementById('side-user-name').innerText = data.nombre_completo; 
-                showVikingToast("Perfil Actualizado"); 
-                // Si es alumno, actualizamos su dashboard
+                document.getElementById('prof-name').innerText = data.nombre_completo;
+                showVikingToast("Perfil Vikingo Actualizado"); 
                 if(state.user.rol_nombre === "Alumno") renderStudentDashboard();
-            } 
+            } else {
+                showVikingToast("Error al actualizar: " + res.error, true);
+            }
         }
         
         window.onload = () => { lucide.createIcons(); };
