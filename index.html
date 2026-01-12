@@ -44,11 +44,10 @@
             to { filter: drop-shadow(0 0 25px rgba(255, 0, 0, 0.8)); transform: scale(1.05); }
         }
 
-        /* CORRECCIÓN DE ALINEACIÓN GLOBAL DEL MENÚ */
         .nav-item { 
             display: flex !important;
             align-items: center !important;
-            gap: 1.25rem !important; /* gap-5 */
+            gap: 1.25rem !important; 
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
             position: relative; 
             white-space: nowrap; 
@@ -135,12 +134,17 @@
             padding: 4px; text-transform: uppercase; font-style: italic;
             cursor: pointer;
             display: flex; flex-direction: column; justify-content: center; align-items: center;
-            text-align: center; height: 100%; width: 100%;
+            text-align: center; width: 100%;
             border: 1px solid rgba(0,0,0,0.1);
             box-shadow: inset 0 0 10px rgba(0,0,0,0.2);
             transition: transform 0.2s;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 10;
+            height: calc(200% + 1px); /* Ocupa 2 celdas (1 hora) */
         }
-        .class-badge:hover { transform: scale(0.97); }
+        .class-badge:hover { transform: scale(0.97); z-index: 20; }
 
         .filter-btn {
             background: rgba(255, 255, 255, 0.05);
@@ -186,7 +190,6 @@
             color: #FF0000;
         }
 
-        /* Notificaciones */
         .notification-toast {
             position: fixed; bottom: 30px; right: 30px;
             background: #FF0000; color: black;
@@ -200,7 +203,6 @@
 
         .restricted-action { display: none !important; }
 
-        /* Estilos nuevos para selección múltiple de días y horarios */
         .multi-select-container {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
@@ -234,12 +236,9 @@
 </head>
 <body class="flex h-screen w-screen overflow-hidden text-left">
 
-    <!-- TOAST DE NOTIFICACIONES -->
     <div id="viking-toast" class="notification-toast">¡Acción Completada!</div>
 
-    <!-- OVERLAY DE LOGIN -->
     <div id="login-overlay">
-        <!-- LOGIN CARD FIXED WIDTH -->
         <div class="glass-card p-12 rounded-[3rem] w-full max-w-md border-red-600/20 text-center mx-4">
             <div class="w-32 h-32 mx-auto mb-8 logo-viking-glow bg-black rounded-full flex items-center justify-center overflow-hidden">
                 <img src="https://github.com/vikingo-44/Software-Gym/blob/main/logo.png?raw=true" alt="Vikingo Logo" class="w-full h-full object-cover" onerror="this.src='https://via.placeholder.com/150/FF0000/000000?text=VIKINGO'">
@@ -256,7 +255,6 @@
         </div>
     </div>
 
-    <!-- BARRA LATERAL -->
     <aside id="sidebar" class="w-72 h-full glass-sidebar flex flex-col hidden z-50">
         <div class="p-8 flex items-center gap-4">
             <img src="https://github.com/vikingo-44/Software-Gym/blob/main/logo.png?raw=true" alt="Vikingo Hub" class="w-10 h-10 object-contain logo-viking-glow brand-text" onerror="this.style.display='none'">
@@ -320,7 +318,6 @@
 
             <div id="nav-section-gestion">
                 <p class="nav-section-title text-[9px] font-black text-gray-600 uppercase tracking-widest px-6 mb-2 mt-8">Gestión</p>
-                <!-- CORRECCIÓN DE CLASES PARA ALINEACIÓN -->
                 <button onclick="switchView('planes')" id="nav-planes" class="nav-btn w-full nav-item px-6 py-4 rounded-2xl font-black uppercase text-[10px] italic">
                     <i data-lucide="clipboard-list" class="w-4 h-4"></i> <span class="nav-text">Planes</span>
                 </button>
@@ -343,7 +340,6 @@
         </div>
     </aside>
 
-    <!-- PANEL PRINCIPAL -->
     <main id="main-content" class="flex-1 h-full overflow-y-auto hidden relative">
         <header class="h-24 border-b border-white/5 px-12 flex items-center justify-between sticky top-0 bg-black/70 backdrop-blur-2xl z-40">
             <div>
@@ -485,7 +481,6 @@
                 </div>
             </div>
 
-            <!-- VISTA COBRAR -->
             <div id="view-cobrar" class="view-content">
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-10 h-full">
                     <div class="lg:col-span-2 space-y-6">
@@ -533,7 +528,6 @@
                 </div>
             </div>
 
-            <!-- MI PERFIL (CARGA DE DATOS CORREGIDA) -->
             <div id="view-perfil" class="view-content">
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-10">
                     <div class="glass-card p-10 rounded-[3rem] flex flex-col items-center">
@@ -564,7 +558,6 @@
                                 <input type="email" id="prof-input-email" class="viking-input">
                             </div>
                             
-                            <!-- SECCIÓN DATOS FÍSICOS (VISIBLE PARA ALUMNOS) -->
                             <div id="perfil-datos-fisicos" class="md:col-span-2 grid grid-cols-3 gap-4 border-t border-white/5 pt-6 mt-4 hidden">
                                 <div class="space-y-2">
                                     <label class="text-[9px] font-black uppercase text-gray-500 italic">Peso (kg)</label>
@@ -592,7 +585,6 @@
                 </div>
             </div>
 
-            <!-- ALUMNOS -->
             <div id="view-alumnos" class="view-content">
                 <div class="flex justify-between items-center mb-8">
                     <h3 class="text-3xl font-black italic uppercase">Gestión de Alumnos</h3>
@@ -621,7 +613,6 @@
                 </div>
             </div>
 
-            <!-- PROFESORES -->
             <div id="view-profesores" class="view-content">
                 <div class="flex justify-between items-center mb-8">
                     <h3 class="text-3xl font-black italic uppercase">Personal de Profesores</h3>
@@ -646,7 +637,6 @@
                 </div>
             </div>
 
-            <!-- ADMINISTRATIVOS -->
             <div id="view-administrativos" class="view-content">
                 <div class="flex justify-between items-center mb-8">
                     <h3 class="text-3xl font-black italic uppercase">Personal Administrativo</h3>
@@ -671,7 +661,6 @@
                 </div>
             </div>
 
-            <!-- CAJA -->
             <div id="view-caja" class="view-content">
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-10">
                     <div class="glass-card p-8 rounded-[2.5rem] border-green-500/20">
@@ -705,7 +694,6 @@
                 </div>
             </div>
 
-            <!-- STOCK -->
             <div id="view-stock" class="view-content">
                 <div class="flex justify-between items-center mb-8">
                     <h3 class="text-3xl font-black italic uppercase">Control de Stock</h3>
@@ -716,7 +704,6 @@
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-8" id="stock-container"></div>
             </div>
 
-            <!-- PLANES -->
             <div id="view-planes" class="view-content">
                 <div class="flex justify-between items-center mb-8">
                     <h3 class="text-3xl font-black italic uppercase">Planes de Entrenamiento</h3>
@@ -728,7 +715,6 @@
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-8" id="planes-container"></div>
             </div>
 
-            <!-- CLASES -->
             <div id="view-clases" class="view-content">
                 <div class="flex justify-between items-center mb-8">
                     <h3 class="text-3xl font-black italic uppercase">Gestión de Clases</h3>
@@ -739,7 +725,6 @@
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-8" id="clases-container"></div>
             </div>
 
-            <!-- CALENDARIO -->
             <div id="view-calendario" class="view-content">
                 <div class="flex justify-between items-center mb-10">
                     <h3 class="text-3xl font-black italic uppercase text-left">Agenda Vikinga</h3>
@@ -752,7 +737,6 @@
                 <div class="calendar-container h-[700px] overflow-y-auto custom-scrollbar" id="calendar-grid"></div>
             </div>
 
-            <!-- RUTINAS (MUSCULACIÓN) -->
             <div id="view-rutinas" class="view-content">
                 <h3 class="text-3xl font-black italic uppercase mb-8" id="rutina-title">Rutinas de Alumnos</h3>
                 <div class="glass-card p-10 rounded-[3rem]">
@@ -762,18 +746,14 @@
                             <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Enfocada en hipertrofia y fuerza vikinga</p>
                         </div>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6" id="student-routine-exercises">
-                            <!-- Ejemplo de contenido si el alumno tiene musculación -->
                         </div>
                     </div>
-                    <!-- Lista de alumnos para profesores/admin -->
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="rutinas-lista"></div>
                 </div>
             </div>
         </div>
     </main>
 
-    <!-- MODALES VARIOS -->
-    <!-- FICHA TÉCNICA (NUEVO MODAL PARA GESTIÓN DE RUTINAS POR PARTE DEL STAFF) -->
     <div id="modal-ficha-tecnica" class="viking-modal">
         <div class="glass-card p-10 rounded-[3rem] w-full max-w-2xl text-left overflow-y-auto max-h-[90vh] custom-scrollbar">
             <div class="flex justify-between items-start mb-8">
@@ -805,7 +785,6 @@
             <div class="space-y-6">
                 <h4 class="text-sm font-black uppercase italic border-l-4 border-red-600 pl-4 tracking-widest">Rutina Personalizada</h4>
                 <div id="ficha-rutina-container" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <!-- Dinámico -->
                 </div>
             </div>
 
@@ -967,10 +946,10 @@
                 </div>
 
                 <div class="space-y-2">
-                    <label class="text-[9px] font-black uppercase text-gray-500 italic">Horarios (Franjas de 30 min)</label>
-                    <div class="multi-select-container" id="cl-horarios-container">
+                    <label class="text-[9px] font-black uppercase text-gray-500 italic">Horario de Inicio</label>
+                    <select id="cl-horario-select" class="viking-input" required>
                         <!-- Se llena dinámicamente -->
-                    </div>
+                    </select>
                 </div>
 
                 <div class="grid grid-cols-2 gap-4">
@@ -1001,7 +980,6 @@
         </div>
     </div>
 
-    <!-- SCRIPTS INTEGRADOS -->
     <script>
         const PRODUCTION_URL = "/api"; 
         const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.protocol === 'file:'
@@ -1187,7 +1165,6 @@
 
             cal.innerHTML = `<div class="cal-header">HORA</div><div class="cal-header">LUNES</div><div class="cal-header">MARTES</div><div class="cal-header">MIÉRCOLES</div><div class="cal-header">JUEVES</div><div class="cal-header">VIERNES</div><div class="cal-header">SÁBADO</div>`;
             
-            // Renderizado con saltos de 30 minutos
             for(let h=7; h<=21.5; h+=0.5) {
                 const label = h % 1 === 0 ? `${h}:00` : `${Math.floor(h)}:30`;
                 cal.innerHTML += `<div class="cal-cell flex items-center justify-center font-black text-[9px] text-white/40 bg-white/5 border-r border-white/20">${label}</div>`;
@@ -1315,7 +1292,6 @@
             }
         }
 
-        // --- GESTIÓN DE RUTINAS ---
         async function openFichaTecnica(alumnoId) {
             const res = await apiFetch(`/alumnos/${alumnoId}/ficha`);
             if (res.error) {
@@ -1462,10 +1438,8 @@
             const f = document.querySelector(`#${id} form`); 
             if (f) {
                 f.reset();
-                // Limpiar checkboxes de días y horarios si es el modal de clase
                 if(id === 'modal-clase') {
                     document.querySelectorAll('input[name="cl-dias-check"]').forEach(c => c.checked = false);
-                    document.querySelectorAll('input[name="cl-hora-check"]').forEach(c => c.checked = false);
                 }
             }
         }
@@ -1482,7 +1456,6 @@
             if(view === 'rutinas') renderRutinas();
             if(view === 'dashboard' && state.user?.rol_nombre === "Alumno") renderStudentDashboard();
             
-            // CORRECCIÓN DE CARGA DE PERFIL
             if(view === 'perfil' && state.user) {
                 const u = state.user;
                 document.getElementById('prof-name').innerText = u.nombre_completo || "Usuario Vikingo";
@@ -1647,7 +1620,7 @@
             document.getElementById('stf-nombre').value = user.nombre_completo; document.getElementById('stf-dni').value = user.dni; document.getElementById('stf-esp').value = user.especialidad || "";
             const delBtn = document.getElementById('btn-delete-staff'); if(state.user.rol_nombre === "Administrador" || state.user.rol_nombre === "Supervisor") delBtn.classList.remove('hidden');
             delBtn.onclick = () => deleteRecord('staff', id, 'modal-staff', loadStaff);
-            openModal('modal-staff');
+            openModal('staff');
         }
 
         document.getElementById('form-staff').onsubmit = async (e) => {
@@ -1707,15 +1680,11 @@
             document.getElementById('cl-color').value = c.color || "#FF0000";
             
             updateHourOptions();
+            document.getElementById('cl-horario-select').value = c.horario;
 
-            // Pre-marcar el día y horario actual
             document.querySelectorAll('input[name="cl-dias-check"]').forEach(checkbox => {
                 checkbox.checked = (checkbox.value == c.dia);
             });
-            setTimeout(() => {
-                const hourCheck = document.querySelector(`input[name="cl-hora-check"][value="${c.horario}"]`);
-                if(hourCheck) hourCheck.checked = true;
-            }, 50);
 
             const delBtn = document.getElementById('btn-delete-clase'); 
             if(state.user.rol_nombre === "Administrador" || state.user.rol_nombre === "Supervisor") delBtn.classList.remove('hidden');
@@ -1726,37 +1695,31 @@
         document.getElementById('form-clase').onsubmit = async (e) => {
             e.preventDefault(); 
             const id = document.getElementById('cl-id').value;
-            
             const diasSeleccionados = Array.from(document.querySelectorAll('input[name="cl-dias-check"]:checked')).map(cb => parseInt(cb.value));
-            const horasSeleccionadas = Array.from(document.querySelectorAll('input[name="cl-hora-check"]:checked')).map(cb => parseFloat(cb.value));
+            const horaSeleccionada = parseFloat(document.getElementById('cl-horario-select').value);
 
-            if(diasSeleccionados.length === 0 || horasSeleccionadas.length === 0) {
-                showVikingToast("Selecciona al menos un día y un horario", true);
+            if(diasSeleccionados.length === 0) {
+                showVikingToast("Selecciona al menos un día", true);
                 return;
             }
 
-            // Si es edición, actualizamos solo la clase actual (por lógica de base de datos relacional estándar)
-            // Si es alta nueva, enviamos múltiples registros para cada combinación de día y hora
             const baseData = {
                 nombre: document.getElementById('cl-nombre').value,
                 coach: document.getElementById('cl-coach-select').value,
                 color: document.getElementById('cl-color').value,
-                capacidad_max: parseInt(document.getElementById('cl-cupo').value)
+                capacidad_max: parseInt(document.getElementById('cl-cupo').value),
+                horario: horaSeleccionada
             };
 
             let success = true;
 
             if (id) {
-                // Edición (solo modificamos la actual)
-                const res = await apiFetch(`/clases/${id}`, 'PUT', { ...baseData, dia: diasSeleccionados[0], horario: horasSeleccionadas[0] });
+                const res = await apiFetch(`/clases/${id}`, 'PUT', { ...baseData, dia: diasSeleccionados[0] });
                 if(res.error) success = false;
             } else {
-                // Alta múltiple
                 for(let d of diasSeleccionados) {
-                    for(let h of horasSeleccionadas) {
-                        const res = await apiFetch('/clases', 'POST', { ...baseData, dia: d, horario: h });
-                        if(res.error) success = false;
-                    }
+                    const res = await apiFetch('/clases', 'POST', { ...baseData, dia: d });
+                    if(res.error) success = false;
                 }
             }
 
@@ -1772,17 +1735,14 @@
         async function handleDrop(e, dia, horario) { e.preventDefault(); const id = e.dataTransfer.getData("clase_id"); if (!id) return; const res = await apiFetch(`/clases/${id}/move`, 'PUT', { dia, horario }); if (!res.error) { loadClases(); showVikingToast("Clase Reubicada"); } }
         
         function updateHourOptions() { 
-            const container = document.getElementById('cl-horarios-container');
-            container.innerHTML = "";
-            
-            // Generamos franjas desde las 7 hasta las 21:30 (intervalos de 0.5)
+            const select = document.getElementById('cl-horario-select');
+            select.innerHTML = "";
             for(let i=7; i<=21.5; i+=0.5) {
                 const label = i % 1 === 0 ? `${i}:00` : `${Math.floor(i)}:30`;
-                container.innerHTML += `
-                    <label class="multi-option">
-                        <input type="checkbox" name="cl-hora-check" value="${i}">
-                        <span>${label}</span>
-                    </label>`;
+                const opt = document.createElement('option');
+                opt.value = i;
+                opt.innerText = label + " HS";
+                select.appendChild(opt);
             }
         }
 
