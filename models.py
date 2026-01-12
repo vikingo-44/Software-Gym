@@ -62,7 +62,7 @@ class Clase(Base):
     coach = Column(String)
     capacidad_max = Column(Integer, default=20)
     dia = Column(Integer)
-    horario = Column(Integer)
+    horario = Column(Float) # Se usa Float para soportar medias horas
     color = Column(String, default="#FF0000")
     reservas = relationship("Reserva", back_populates="clase", cascade="all, delete-orphan")
 
@@ -113,8 +113,8 @@ class PlanRutina(Base):
     __tablename__ = "planes_rutina"
     id = Column(Integer, primary_key=True)
     usuario_id = Column(Integer, ForeignKey("usuarios.id"))
-    nombre_grupo = Column(String) # Ej: "Fase de Volumen"
-    descripcion = Column(Text, nullable=True)
+    nombre_grupo = Column(String, nullable=True) # Campo agregado
+    descripcion = Column(Text, nullable=True) # Campo agregado
     fecha_creacion = Column(Date, default=datetime.date.today)
     fecha_vencimiento = Column(Date)
     objetivo = Column(String)

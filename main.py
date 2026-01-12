@@ -77,7 +77,7 @@ class AlumnoUpdate(BaseModel):
     nombre_completo: str
     dni: str
     email: Optional[str] = None
-    plan_id: int
+    plan_id: Optional[int] = None
     password: Optional[str] = None
     fecha_nacimiento: Optional[date] = None
     edad: Optional[int] = None
@@ -86,6 +86,8 @@ class AlumnoUpdate(BaseModel):
     imc: Optional[float] = None
     certificado_entregado: bool = False
     fecha_certificado: Optional[date] = None
+    fecha_ultima_renovacion: Optional[date] = None
+    fecha_vencimiento: Optional[date] = None
 
 class StaffUpdate(BaseModel):
     nombre_completo: str
@@ -109,13 +111,13 @@ class ClaseUpdate(BaseModel):
     nombre: str
     coach: str
     dia: int
-    horario: int
+    horario: float # Sincronizado con models.py
     color: Optional[str] = "#FF0000"
     capacidad_max: Optional[int] = 40
 
 class ClaseMove(BaseModel):
     dia: int
-    horario: int
+    horario: float # Sincronizado con models.py
 
 class MovimientoCajaCreate(BaseModel):
     tipo: str
@@ -205,6 +207,7 @@ def login(data: UsuarioLogin, db: Session = Depends(database.get_db)):
             "nombre": user.plan.nombre,
             "precio": user.plan.precio
         } if user.plan else None,
+        "plan_id": user.plan_id,
         "fecha_vencimiento": user.fecha_vencimiento.isoformat() if user.fecha_vencimiento else None,
         "fecha_ultima_renovacion": user.fecha_ultima_renovacion.isoformat() if user.fecha_ultima_renovacion else None,
         "peso": user.peso,
@@ -257,8 +260,8 @@ def create_alumno(alumno: AlumnoUpdate, db: Session = Depends(database.get_db)):
         plan_id=alumno.plan_id, 
         perfil_id=perfil.id, 
         password_hash=alumno.password or alumno.dni,
-        fecha_ultima_renovacion=date.today(), 
-        fecha_vencimiento=date.today(),
+        fecha_ultima_renovacion=alumno.fecha_ultima_renovacion or date.today(), 
+        fecha_vencimiento=alumno.fecha_vencimiento,
         fecha_nacimiento=alumno.fecha_nacimiento,
         edad=alumno.edad,
         peso=alumno.peso,
@@ -288,6 +291,8 @@ def update_alumno(id: int, data: AlumnoUpdate, db: Session = Depends(database.ge
     al.imc = data.imc
     al.certificado_entregado = data.certificado_entregado
     al.fecha_certificado = data.fecha_certificado
+    if data.fecha_ultima_renovacion: al.fecha_ultima_renovacion = data.fecha_ultima_renovacion
+    if data.fecha_vencimiento: al.fecha_vencimiento = data.fecha_vencimiento
 
     if data.password:
         al.password_hash = data.password
