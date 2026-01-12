@@ -115,7 +115,7 @@
             width: 100%;
             outline: none;
             font-weight: 700;
-            font-size: 0.8rem;
+            font-size: 0.95rem; /* Aumentado para mejor visibilidad */
             color: white;
             transition: all 0.2s;
         }
@@ -149,10 +149,10 @@
         .filter-btn {
             background: rgba(255, 255, 255, 0.05);
             border: 1px solid rgba(255, 255, 255, 0.1);
-            color: #666;
+            color: #999;
             padding: 8px 16px;
             border-radius: 12px;
-            font-size: 9px;
+            font-size: 11px; /* Aumentado */
             font-weight: 900;
             text-transform: uppercase;
             font-style: italic;
@@ -178,7 +178,7 @@
         .cobrar-tab {
             padding: 12px 24px;
             font-weight: 900;
-            font-size: 10px;
+            font-size: 11px; /* Aumentado */
             text-transform: uppercase;
             font-style: italic;
             border-bottom: 2px solid transparent;
@@ -217,7 +217,7 @@
             display: flex;
             align-items: center;
             gap: 8px;
-            font-size: 9px;
+            font-size: 10px; /* Aumentado */
             font-weight: 900;
             text-transform: uppercase;
             cursor: pointer;
@@ -255,8 +255,8 @@
         }
         .exercise-grid {
             display: grid;
-            grid-template-columns: 2fr 1fr 1fr 1fr 1fr;
-            gap: 8px;
+            grid-template-columns: 2fr 0.8fr 0.8fr 0.8fr 0.8fr; /* Ajustado */
+            gap: 12px;
             align-items: end;
         }
     </style>
@@ -271,14 +271,14 @@
                 <img src="https://github.com/vikingo-44/Software-Gym/blob/main/logo.png?raw=true" alt="Vikingo Logo" class="w-full h-full object-cover" onerror="this.src='https://via.placeholder.com/150/FF0000/000000?text=VIKINGO'">
             </div>
             <h1 class="text-4xl font-black italic uppercase mb-2">Vikingo <span class="viking-red">Hub</span></h1>
-            <p class="text-[9px] tracking-[0.5em] text-gray-500 uppercase mb-10">Acceso al Sistema</p>
+            <p class="text-[11px] tracking-[0.5em] text-gray-500 uppercase mb-10">Acceso al Sistema</p>
             
             <form onsubmit="handleLogin(event)" class="space-y-4">
                 <input type="text" id="login-dni" placeholder="DNI" required class="viking-input">
                 <input type="password" id="login-pass" placeholder="Contraseña" required class="viking-input">
                 <button type="submit" id="login-button" class="w-full viking-bg-red text-black py-5 rounded-2xl font-black uppercase italic tracking-widest hover:scale-[1.02] active:scale-95 transition-all shadow-[0_0_20px_rgba(255,0,0,0.3)]">Entrar al Valhalla</button>
             </form>
-            <div id="login-error" class="mt-4 text-[10px] text-red-600 font-bold uppercase hidden">Error en credenciales</div>
+            <div id="login-error" class="mt-4 text-[12px] text-red-600 font-bold uppercase hidden">Error en credenciales</div>
         </div>
     </div>
 
@@ -297,71 +297,71 @@
             <div class="glass-card p-4 rounded-3xl flex items-center gap-4">
                 <div class="w-12 h-12 rounded-2xl viking-bg-red flex items-center justify-center font-black text-black text-xl italic shadow-lg shrink-0" id="user-initials">??</div>
                 <div class="user-details text-left overflow-hidden">
-                    <p class="text-[11px] font-black uppercase truncate" id="side-user-name">Usuario Vikingo</p>
-                    <p class="text-[8px] text-red-600 font-bold uppercase tracking-widest" id="side-user-role">Cargando...</p>
+                    <p class="text-[12px] font-black uppercase truncate" id="side-user-name">Usuario Vikingo</p>
+                    <p class="text-[9px] text-red-600 font-bold uppercase tracking-widest" id="side-user-role">Cargando...</p>
                 </div>
             </div>
         </div>
 
         <nav class="flex-1 px-4 space-y-1 overflow-y-auto custom-scrollbar pb-10">
             <div id="nav-section-admin">
-                <p class="nav-section-title text-[9px] font-black text-gray-600 uppercase tracking-widest px-6 mb-2 mt-4">Administración</p>
-                <button onclick="switchView('dashboard')" id="nav-dashboard" class="nav-btn w-full nav-item active px-6 py-4 rounded-2xl font-black uppercase text-[10px] italic">
+                <p class="nav-section-title text-[10px] font-black text-gray-600 uppercase tracking-widest px-6 mb-2 mt-4">Administración</p>
+                <button onclick="switchView('dashboard')" id="nav-dashboard" class="nav-btn w-full nav-item active px-6 py-4 rounded-2xl font-black uppercase text-[11px] italic">
                     <i data-lucide="layout-grid" class="w-4 h-4"></i> <span class="nav-text">Dashboard</span>
                 </button>
-                <button onclick="switchView('perfil')" id="nav-perfil" class="nav-btn w-full nav-item px-6 py-4 rounded-2xl font-black uppercase text-[10px] italic">
+                <button onclick="switchView('perfil')" id="nav-perfil" class="nav-btn w-full nav-item px-6 py-4 rounded-2xl font-black uppercase text-[11px] italic">
                     <i data-lucide="user-cog" class="w-4 h-4"></i> <span class="nav-text">Mi Perfil</span>
                 </button>
-                <button onclick="switchView('alumnos')" id="nav-alumnos" class="nav-btn w-full nav-item px-6 py-4 rounded-2xl font-black uppercase text-[10px] italic">
+                <button onclick="switchView('alumnos')" id="nav-alumnos" class="nav-btn w-full nav-item px-6 py-4 rounded-2xl font-black uppercase text-[11px] italic">
                     <i data-lucide="users" class="w-4 h-4"></i> <span class="nav-text">Alumnos</span>
                 </button>
             </div>
 
             <div id="nav-section-staff" class="relative">
-                <button onclick="toggleSub('sub-staff')" class="w-full flex items-center justify-between px-6 py-4 text-gray-400 font-black uppercase text-[10px] italic hover:text-red-600 transition-colors">
+                <button onclick="toggleSub('sub-staff')" class="w-full flex items-center justify-between px-6 py-4 text-gray-400 font-black uppercase text-[11px] italic hover:text-red-600 transition-colors">
                     <span class="flex items-center gap-5"><i data-lucide="shield-check" class="w-4 h-4"></i> <span class="nav-text">Staff</span></span>
                     <i data-lucide="chevron-down" class="w-3 h-3 chevron-icon"></i>
                 </button>
                 <div id="sub-staff" class="hidden pl-12 space-y-3 pb-4">
-                    <button onclick="switchView('profesores')" id="nav-profesores" class="nav-btn block w-full text-left text-[9px] font-black uppercase text-gray-600 hover:text-red-600 transition-colors">Profesores</button>
-                    <button onclick="switchView('administrativos')" id="nav-administrativos" class="nav-btn block w-full text-left text-[9px] font-black uppercase text-gray-600 hover:text-red-600 transition-colors">Administrativos</button>
+                    <button onclick="switchView('profesores')" id="nav-profesores" class="nav-btn block w-full text-left text-[10px] font-black uppercase text-gray-600 hover:text-red-600 transition-colors">Profesores</button>
+                    <button onclick="switchView('administrativos')" id="nav-administrativos" class="nav-btn block w-full text-left text-[10px] font-black uppercase text-gray-600 hover:text-red-600 transition-colors">Administrativos</button>
                 </div>
             </div>
 
             <div id="nav-section-operativa">
-                <p class="nav-section-title text-[9px] font-black text-gray-600 uppercase tracking-widest px-6 mb-2 mt-8">Operativa</p>
+                <p class="nav-section-title text-[10px] font-black text-gray-600 uppercase tracking-widest px-6 mb-2 mt-8">Operativa</p>
                 <div class="relative">
-                    <button id="btn-facturacion" onclick="toggleSub('sub-facturacion')" class="w-full flex items-center justify-between px-6 py-4 text-gray-400 font-black uppercase text-[10px] italic hover:text-red-600 transition-colors">
+                    <button id="btn-facturacion" onclick="toggleSub('sub-facturacion')" class="w-full flex items-center justify-between px-6 py-4 text-gray-400 font-black uppercase text-[11px] italic hover:text-red-600 transition-colors">
                         <span class="flex items-center gap-5"><i data-lucide="wallet" class="w-4 h-4"></i> <span class="nav-text">Facturación</span></span>
                         <i data-lucide="chevron-down" class="w-3 h-3 chevron-icon"></i>
                     </button>
                     <div id="sub-facturacion" class="hidden pl-12 space-y-3 pb-4">
-                        <button onclick="switchView('cobrar')" id="nav-cobrar" class="nav-btn block w-full text-left text-[9px] font-black uppercase text-gray-600 hover:text-red-600 transition-colors">Cobrar</button>
-                        <button onclick="switchView('caja')" id="nav-caja" class="nav-btn block w-full text-left text-[9px] font-black uppercase text-gray-600 hover:text-red-600 transition-colors">Caja</button>
-                        <button onclick="switchView('stock')" id="nav-stock" class="nav-btn block w-full text-left text-[9px] font-black uppercase text-gray-600 hover:text-red-600 transition-colors">Stock</button>
+                        <button onclick="switchView('cobrar')" id="nav-cobrar" class="nav-btn block w-full text-left text-[10px] font-black uppercase text-gray-600 hover:text-red-600 transition-colors">Cobrar</button>
+                        <button onclick="switchView('caja')" id="nav-caja" class="nav-btn block w-full text-left text-[10px] font-black uppercase text-gray-600 hover:text-red-600 transition-colors">Caja</button>
+                        <button onclick="switchView('stock')" id="nav-stock" class="nav-btn block w-full text-left text-[10px] font-black uppercase text-gray-600 hover:text-red-600 transition-colors">Stock</button>
                     </div>
                 </div>
             </div>
 
             <div id="nav-section-gestion">
-                <p class="nav-section-title text-[9px] font-black text-gray-600 uppercase tracking-widest px-6 mb-2 mt-8">Gestión</p>
-                <button onclick="switchView('planes')" id="nav-planes" class="nav-btn w-full nav-item px-6 py-4 rounded-2xl font-black uppercase text-[10px] italic">
+                <p class="nav-section-title text-[10px] font-black text-gray-600 uppercase tracking-widest px-6 mb-2 mt-8">Gestión</p>
+                <button onclick="switchView('planes')" id="nav-planes" class="nav-btn w-full nav-item px-6 py-4 rounded-2xl font-black uppercase text-[11px] italic">
                     <i data-lucide="clipboard-list" class="w-4 h-4"></i> <span class="nav-text">Planes</span>
                 </button>
-                <button onclick="switchView('clases')" id="nav-clases" class="nav-btn w-full nav-item px-6 py-4 rounded-2xl font-black uppercase text-[10px] italic">
+                <button onclick="switchView('clases')" id="nav-clases" class="nav-btn w-full nav-item px-6 py-4 rounded-2xl font-black uppercase text-[11px] italic">
                     <i data-lucide="presentation" class="w-4 h-4"></i> <span class="nav-text">Clases</span>
                 </button>
-                <button onclick="switchView('calendario')" id="nav-calendario" class="nav-btn w-full nav-item px-6 py-4 rounded-2xl font-black uppercase text-[10px] italic">
+                <button onclick="switchView('calendario')" id="nav-calendario" class="nav-btn w-full nav-item px-6 py-4 rounded-2xl font-black uppercase text-[11px] italic">
                     <i data-lucide="calendar" class="w-4 h-4"></i> <span class="nav-text">Calendario</span>
                 </button>
-                <button id="nav-rutinas" onclick="switchView('rutinas')" class="nav-btn w-full nav-item px-6 py-4 rounded-2xl font-black uppercase text-[10px] italic">
+                <button id="nav-rutinas" onclick="switchView('rutinas')" class="nav-btn w-full nav-item px-6 py-4 rounded-2xl font-black uppercase text-[11px] italic">
                     <i data-lucide="dumbbell" class="w-4 h-4"></i> <span class="nav-text">Rutinas Musc.</span>
                 </button>
             </div>
         </nav>
 
         <div class="p-8">
-            <button onclick="location.reload()" class="w-full flex items-center justify-center gap-3 py-4 border border-white/5 rounded-2xl text-gray-600 hover:text-red-600 transition-all font-black uppercase text-[10px] italic">
+            <button onclick="location.reload()" class="w-full flex items-center justify-center gap-3 py-4 border border-white/5 rounded-2xl text-gray-600 hover:text-red-600 transition-all font-black uppercase text-[11px] italic">
                 <i data-lucide="log-out" class="w-4 h-4"></i> <span class="nav-text">Salir</span>
             </button>
         </div>
@@ -370,13 +370,13 @@
     <main id="main-content" class="flex-1 h-full overflow-y-auto hidden relative">
         <header class="h-24 border-b border-white/5 px-12 flex items-center justify-between sticky top-0 bg-black/70 backdrop-blur-2xl z-40">
             <div>
-                <p id="breadcrumb" class="text-[9px] font-black text-red-600 uppercase tracking-[0.4em] italic">Vikingo Strength Hub</p>
+                <p id="breadcrumb" class="text-[10px] font-black text-red-600 uppercase tracking-[0.4em] italic">Vikingo Strength Hub</p>
                 <h2 id="view-title" class="text-2xl font-black uppercase italic tracking-tighter">Dashboard</h2>
             </div>
             <div class="flex items-center gap-6">
                 <div id="sync-status" class="flex items-center gap-3 bg-red-600/10 px-4 py-2 rounded-xl border border-red-600/20 text-white">
                     <span class="w-2 h-2 rounded-full bg-red-600 animate-pulse"></span>
-                    <span class="text-[9px] font-black uppercase tracking-widest italic">Hub Sincronizado</span>
+                    <span class="text-[10px] font-black uppercase tracking-widest italic">Hub Sincronizado</span>
                 </div>
             </div>
         </header>
@@ -387,20 +387,20 @@
                 <div id="admin-dashboard-layout">
                     <div class="grid grid-cols-1 lg:grid-cols-4 gap-8 mb-10">
                         <div class="glass-card p-8 rounded-[2.5rem]">
-                            <h4 class="text-[10px] font-black uppercase italic text-red-600 mb-6 tracking-widest">Últimos Check-ins</h4>
+                            <h4 class="text-[11px] font-black uppercase italic text-red-600 mb-6 tracking-widest">Últimos Check-ins</h4>
                             <div id="dash-checkins" class="space-y-4"></div>
                         </div>
                         <div class="glass-card p-8 rounded-[2.5rem]">
-                            <h4 class="text-[10px] font-black uppercase italic text-red-600 mb-6 tracking-widest">Resumen</h4>
+                            <h4 class="text-[11px] font-black uppercase italic text-red-600 mb-6 tracking-widest">Resumen</h4>
                             <div id="dash-summary" class="space-y-4">
                                 <div class="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5">
-                                    <span class="text-[10px] font-black italic">INGRESOS HOY</span>
-                                    <span class="text-[9px] text-green-600 font-bold italic" id="dash-ingresos">$ 0</span>
+                                    <span class="text-[11px] font-black italic">INGRESOS HOY</span>
+                                    <span class="text-[10px] text-green-600 font-bold italic" id="dash-ingresos">$ 0</span>
                                 </div>
                             </div>
                         </div>
                         <div class="glass-card p-8 rounded-[2.5rem]">
-                            <h4 class="text-[10px] font-black uppercase italic text-red-600 mb-6 tracking-widest">Frecuencia Horaria</h4>
+                            <h4 class="text-[11px] font-black uppercase italic text-red-600 mb-6 tracking-widest">Frecuencia Horaria</h4>
                             <div id="dash-stats-bars" class="flex items-end justify-between h-32 px-2">
                                 <div class="w-4 viking-bg-red/20 h-[35%] rounded-t-lg"></div>
                                 <div class="w-4 viking-bg-red/40 h-[65%] rounded-t-lg"></div>
@@ -410,7 +410,7 @@
                             </div>
                         </div>
                         <div class="glass-card p-8 rounded-[2.5rem]">
-                            <h4 class="text-[10px] font-black uppercase italic text-red-600 mb-6 tracking-widest">Top 5 Clases</h4>
+                            <h4 class="text-[11px] font-black uppercase italic text-red-600 mb-6 tracking-widest">Top 5 Clases</h4>
                             <div id="dash-top-clases" class="space-y-3"></div>
                         </div>
                     </div>
@@ -422,7 +422,7 @@
                         <div class="overflow-x-auto">
                             <table class="w-full text-left">
                                 <thead>
-                                    <tr class="text-[9px] font-black uppercase text-gray-500 italic border-b border-white/5">
+                                    <tr class="text-[10px] font-black uppercase text-gray-500 italic border-b border-white/5">
                                         <th class="pb-5">Nombre Completo</th>
                                         <th class="pb-5">DNI</th>
                                         <th class="pb-5">Email</th>
@@ -433,7 +433,7 @@
                                         <th class="pb-5 text-right action-col">Acciones</th>
                                     </tr>
                                 </thead>
-                                <tbody id="dash-table-alumnos-mini" class="text-[11px] font-black uppercase italic"></tbody>
+                                <tbody id="dash-table-alumnos-mini" class="text-[12px] font-black uppercase italic"></tbody>
                             </table>
                         </div>
                     </div>
@@ -446,46 +446,46 @@
                                 <div class="w-20 h-20 rounded-[1.5rem] viking-bg-red flex items-center justify-center font-black text-black text-3xl italic shadow-2xl" id="al-dash-initials">??</div>
                                 <div>
                                     <h3 class="text-3xl font-black uppercase italic leading-none" id="al-dash-name">-</h3>
-                                    <p class="text-red-600 text-[10px] font-black uppercase tracking-widest mt-1">Guerrero Vikingo en Formación</p>
+                                    <p class="text-red-600 text-[11px] font-black uppercase tracking-widest mt-1">Guerrero Vikingo en Formación</p>
                                 </div>
                             </div>
                             <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
                                 <div class="bg-white/5 p-4 rounded-2xl border border-white/5">
-                                    <p class="text-[8px] text-gray-500 font-black uppercase italic mb-1">DNI / Usuario</p>
+                                    <p class="text-[9px] text-gray-500 font-black uppercase italic mb-1">DNI / Usuario</p>
                                     <p class="text-xs font-black italic" id="al-dash-dni">-</p>
                                 </div>
                                 <div class="bg-white/5 p-4 rounded-2xl border border-white/5">
-                                    <p class="text-[8px] text-gray-500 font-black uppercase italic mb-1">Email</p>
+                                    <p class="text-[9px] text-gray-500 font-black uppercase italic mb-1">Email</p>
                                     <p class="text-xs font-black italic truncate" id="al-dash-email">-</p>
                                 </div>
                                 <div class="bg-white/5 p-4 rounded-2xl border border-white/5">
-                                    <p class="text-[8px] text-gray-500 font-black uppercase italic mb-1">Plan Actual</p>
+                                    <p class="text-[9px] text-gray-500 font-black uppercase italic mb-1">Plan Actual</p>
                                     <p class="text-xs font-black italic viking-red uppercase" id="al-dash-plan">-</p>
                                 </div>
                                 <div class="bg-white/5 p-4 rounded-2xl border border-white/5">
-                                    <p class="text-[8px] text-gray-500 font-black uppercase italic mb-1">Vencimiento</p>
+                                    <p class="text-[9px] text-gray-500 font-black uppercase italic mb-1">Vencimiento</p>
                                     <p class="text-xs font-black italic" id="al-dash-vencimiento">-</p>
                                 </div>
                                 <div class="bg-white/5 p-4 rounded-2xl border border-white/5">
-                                    <p class="text-[8px] text-gray-500 font-black uppercase italic mb-1">Última Renovación</p>
+                                    <p class="text-[9px] text-gray-500 font-black uppercase italic mb-1">Última Renovación</p>
                                     <p class="text-xs font-black italic" id="al-dash-renovacion">-</p>
                                 </div>
                             </div>
                         </div>
                         <div class="glass-card p-8 rounded-[3rem]">
-                            <h4 class="text-[10px] font-black uppercase italic text-red-600 mb-6 tracking-widest border-b border-white/5 pb-4">Métricas Físicas</h4>
+                            <h4 class="text-[11px] font-black uppercase italic text-red-600 mb-6 tracking-widest border-b border-white/5 pb-4">Métricas Físicas</h4>
                             <div class="grid grid-cols-3 gap-4 text-center">
                                 <div>
                                     <p class="text-2xl font-black italic mb-1" id="al-dash-peso">0</p>
-                                    <p class="text-[8px] text-gray-500 font-black uppercase">Peso (kg)</p>
+                                    <p class="text-[9px] text-gray-500 font-black uppercase">Peso (kg)</p>
                                 </div>
                                 <div>
                                     <p class="text-2xl font-black italic mb-1" id="al-dash-altura">0</p>
-                                    <p class="text-[8px] text-gray-500 font-black uppercase">Altura (cm)</p>
+                                    <p class="text-[9px] text-gray-500 font-black uppercase">Altura (cm)</p>
                                 </div>
                                 <div>
                                     <p class="text-2xl font-black italic mb-1 viking-red" id="al-dash-imc">0</p>
-                                    <p class="text-[8px] text-gray-500 font-black uppercase">IMC</p>
+                                    <p class="text-[9px] text-gray-500 font-black uppercase">IMC</p>
                                 </div>
                             </div>
                         </div>
@@ -495,13 +495,13 @@
                         <div class="glass-card p-10 rounded-[3rem]">
                             <h3 class="text-sm font-black uppercase italic border-l-4 border-red-600 pl-4 tracking-widest mb-8">Mis Próximas Clases</h3>
                             <div id="al-dash-upcoming" class="space-y-4">
-                                <p class="text-gray-500 italic text-[10px]">No tienes reservas próximas. ¡Ve al calendario!</p>
+                                <p class="text-gray-500 italic text-[11px]">No tienes reservas próximas. ¡Ve al calendario!</p>
                             </div>
                         </div>
                         <div class="glass-card p-10 rounded-[3rem]">
                             <h3 class="text-sm font-black uppercase italic border-l-4 border-gray-600 pl-4 tracking-widest mb-8 text-gray-500">Historial de Clases</h3>
                             <div id="al-dash-history" class="space-y-4 opacity-60">
-                                <p class="text-gray-500 italic text-[10px]">Sin historial registrado.</p>
+                                <p class="text-gray-500 italic text-[11px]">Sin historial registrado.</p>
                             </div>
                         </div>
                     </div>
@@ -529,10 +529,10 @@
                     <div class="glass-card p-10 rounded-[3rem] border-red-600/10 flex flex-col h-fit">
                         <h4 class="text-xs font-black uppercase italic text-red-600 mb-6 tracking-widest border-b border-white/5 pb-4">Carrito de Cobro</h4>
                         <div class="flex-1 space-y-4 mb-8 overflow-y-auto max-h-64 custom-scrollbar" id="cobrar-lista-carrito">
-                            <p class="text-center text-gray-500 text-[10px] italic py-10">Sin ítems seleccionados</p>
+                            <p class="text-center text-gray-500 text-[11px] italic py-10">Sin ítems seleccionados</p>
                         </div>
                         <div class="space-y-4 border-t border-white/5 pt-6 mb-8">
-                            <div class="flex justify-between text-[10px] font-black italic">
+                            <div class="flex justify-between text-[11px] font-black italic">
                                 <span class="text-gray-500">SUBTOTAL</span>
                                 <span id="cobrar-subtotal">$ 0</span>
                             </div>
@@ -542,12 +542,12 @@
                             </div>
                         </div>
                         <div class="space-y-4">
-                            <p class="text-[9px] font-black uppercase text-gray-500 italic mb-2 tracking-widest">Método de Pago</p>
+                            <p class="text-[10px] font-black uppercase text-gray-500 italic mb-2 tracking-widest">Método de Pago</p>
                             <div class="grid grid-cols-2 gap-3">
-                                <button onclick="setPaymentMethod('MercadoPago')" class="payment-method-btn py-3 rounded-xl text-[9px] font-black uppercase italic">MercadoPago</button>
-                                <button onclick="setPaymentMethod('Transferencia')" class="payment-method-btn py-3 rounded-xl text-[9px] font-black uppercase italic">Transferencia</button>
-                                <button onclick="setPaymentMethod('Efectivo')" class="payment-method-btn py-3 rounded-xl text-[9px] font-black uppercase italic">Efectivo</button>
-                                <button onclick="setPaymentMethod('Tarjeta')" class="payment-method-btn py-3 rounded-xl text-[9px] font-black uppercase italic">Tarjeta</button>
+                                <button onclick="setPaymentMethod('MercadoPago')" class="payment-method-btn py-3 rounded-xl text-[10px] font-black uppercase italic">MercadoPago</button>
+                                <button onclick="setPaymentMethod('Transferencia')" class="payment-method-btn py-3 rounded-xl text-[10px] font-black uppercase italic">Transferencia</button>
+                                <button onclick="setPaymentMethod('Efectivo')" class="payment-method-btn py-3 rounded-xl text-[10px] font-black uppercase italic">Efectivo</button>
+                                <button onclick="setPaymentMethod('Tarjeta')" class="payment-method-btn py-3 rounded-xl text-[10px] font-black uppercase italic">Tarjeta</button>
                             </div>
                         </div>
                         <button id="btn-finalizar-pago" onclick="finalizarVenta()" class="w-full mt-8 viking-bg-red text-black py-5 rounded-2xl font-black uppercase italic tracking-widest hover:scale-[1.02] active:scale-95 transition-all shadow-xl">Procesar Pago</button>
@@ -562,10 +562,10 @@
                         <h3 class="text-xl font-black uppercase italic text-center" id="prof-name">Cargando...</h3>
                         <p class="text-red-600 text-xs font-black uppercase tracking-widest mb-8" id="prof-role">Rol</p>
                         <div id="plan-alumno-info" class="w-full space-y-2 mt-4 hidden">
-                            <p class="text-[9px] font-black uppercase text-gray-500 italic text-center">Plan Actual</p>
+                            <p class="text-[10px] font-black uppercase text-gray-500 italic text-center">Plan Actual</p>
                             <div class="bg-white/5 p-4 rounded-2xl border border-white/5 text-center">
                                 <p class="text-sm font-black viking-red uppercase" id="perfil-plan-nombre">-</p>
-                                <p class="text-[9px] text-gray-500 font-bold" id="perfil-vencimiento">Vence: -</p>
+                                <p class="text-[10px] text-gray-500 font-bold" id="perfil-vencimiento">Vence: -</p>
                             </div>
                         </div>
                     </div>
@@ -573,35 +573,35 @@
                         <h3 class="text-sm font-black uppercase italic border-l-4 border-red-600 pl-4 tracking-widest mb-10">Mis Datos</h3>
                         <form id="form-perfil" onsubmit="handleProfileUpdate(event)" class="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div class="space-y-2">
-                                <label class="text-[9px] font-black uppercase text-gray-500 italic">Nombre Completo</label>
+                                <label class="text-[10px] font-black uppercase text-gray-500 italic">Nombre Completo</label>
                                 <input type="text" id="prof-input-name" class="viking-input" required>
                             </div>
                             <div class="space-y-2">
-                                <label class="text-[9px] font-black uppercase text-gray-500 italic">DNI / Usuario</label>
+                                <label class="text-[10px] font-black uppercase text-gray-500 italic">DNI / Usuario</label>
                                 <input type="text" id="prof-input-dni" readonly class="viking-input opacity-50">
                             </div>
                             <div class="space-y-2">
-                                <label class="text-[9px] font-black uppercase text-gray-500 italic">Correo Electrónico</label>
+                                <label class="text-[10px] font-black uppercase text-gray-500 italic">Correo Electrónico</label>
                                 <input type="email" id="prof-input-email" class="viking-input">
                             </div>
                             
                             <div id="perfil-datos-fisicos" class="md:col-span-2 grid grid-cols-3 gap-4 border-t border-white/5 pt-6 mt-4 hidden">
                                 <div class="space-y-2">
-                                    <label class="text-[9px] font-black uppercase text-gray-500 italic">Peso (kg)</label>
+                                    <label class="text-[10px] font-black uppercase text-gray-500 italic">Peso (kg)</label>
                                     <input type="number" step="0.1" id="prof-input-peso" class="viking-input" oninput="calculateIMCProfile()">
                                 </div>
                                 <div class="space-y-2">
-                                    <label class="text-[9px] font-black uppercase text-gray-500 italic">Altura (cm)</label>
+                                    <label class="text-[10px] font-black uppercase text-gray-500 italic">Altura (cm)</label>
                                     <input type="number" step="0.1" id="prof-input-altura" class="viking-input" oninput="calculateIMCProfile()">
                                 </div>
                                 <div class="space-y-2">
-                                    <label class="text-[9px] font-black uppercase text-red-600 italic">IMC</label>
+                                    <label class="text-[10px] font-black uppercase text-red-600 italic">IMC</label>
                                     <input type="text" id="prof-input-imc" readonly class="viking-input opacity-50">
                                 </div>
                             </div>
 
                             <div class="space-y-2 md:col-span-2">
-                                <label class="text-[9px] font-black uppercase text-gray-500 italic">Nueva Contraseña</label>
+                                <label class="text-[10px] font-black uppercase text-gray-500 italic">Nueva Contraseña</label>
                                 <input type="password" id="prof-input-pass" placeholder="Dejar vacío para no cambiar" class="viking-input">
                             </div>
                             <div class="md:col-span-2 pt-6 text-left">
@@ -615,7 +615,7 @@
             <div id="view-alumnos" class="view-content">
                 <div class="flex justify-between items-center mb-8">
                     <h3 class="text-3xl font-black italic uppercase">Gestión de Alumnos</h3>
-                    <button id="btn-nuevo-alumno" onclick="openModalAlumno()" class="viking-bg-red text-black px-8 py-4 rounded-2xl font-black uppercase italic text-[11px] shadow-xl flex items-center gap-3 hover:scale-105 transition-all">
+                    <button id="btn-nuevo-alumno" onclick="openModalAlumno()" class="viking-bg-red text-black px-8 py-4 rounded-2xl font-black uppercase italic text-[12px] shadow-xl flex items-center gap-3 hover:scale-105 transition-all">
                         <i data-lucide="user-plus" class="w-4 h-4"></i> Nuevo Alumno
                     </button>
                 </div>
@@ -623,7 +623,7 @@
                     <div class="overflow-x-auto">
                         <table class="w-full text-left">
                             <thead>
-                                <tr class="text-[9px] font-black uppercase text-gray-500 italic border-b border-white/5">
+                                <tr class="text-[10px] font-black uppercase text-gray-500 italic border-b border-white/5">
                                     <th class="pb-5">Nombre Completo</th>
                                     <th class="pb-5">DNI</th>
                                     <th class="pb-5">Email</th>
@@ -634,7 +634,7 @@
                                     <th class="pb-5 text-right action-col">Acciones</th>
                                 </tr>
                             </thead>
-                            <tbody id="table-alumnos-full" class="text-[10px] font-black uppercase italic"></tbody>
+                            <tbody id="table-alumnos-full" class="text-[11px] font-black uppercase italic"></tbody>
                         </table>
                     </div>
                 </div>
@@ -643,7 +643,7 @@
             <div id="view-profesores" class="view-content">
                 <div class="flex justify-between items-center mb-8">
                     <h3 class="text-3xl font-black italic uppercase">Personal de Profesores</h3>
-                    <button id="btn-nuevo-prof" onclick="openModalStaff('Profesor')" class="viking-bg-red text-black px-8 py-4 rounded-2xl font-black uppercase italic text-[11px] shadow-xl flex items-center gap-3">
+                    <button id="btn-nuevo-prof" onclick="openModalStaff('Profesor')" class="viking-bg-red text-black px-8 py-4 rounded-2xl font-black uppercase italic text-[12px] shadow-xl flex items-center gap-3">
                         <i data-lucide="user-plus" class="w-4 h-4"></i> Alta Profesor
                     </button>
                 </div>
@@ -651,14 +651,14 @@
                     <div class="overflow-x-auto">
                         <table class="w-full text-left">
                             <thead>
-                                <tr class="text-[9px] font-black uppercase text-gray-500 italic border-b border-white/5">
+                                <tr class="text-[10px] font-black uppercase text-gray-500 italic border-b border-white/5">
                                     <th class="pb-5">Nombre</th>
                                     <th class="pb-5">DNI (Usuario)</th>
                                     <th class="pb-5">Especialidad</th>
                                     <th class="pb-5 text-right action-col">Acciones</th>
                                 </tr>
                             </thead>
-                            <tbody id="table-profesores" class="text-[10px] font-black uppercase italic"></tbody>
+                            <tbody id="table-profesores" class="text-[11px] font-black uppercase italic"></tbody>
                         </table>
                     </div>
                 </div>
@@ -667,7 +667,7 @@
             <div id="view-administrativos" class="view-content">
                 <div class="flex justify-between items-center mb-8">
                     <h3 class="text-3xl font-black italic uppercase">Personal Administrativo</h3>
-                    <button id="btn-nuevo-adm" onclick="openModalStaff('Administracion')" class="viking-bg-red text-black px-8 py-4 rounded-2xl font-black uppercase italic text-[11px] shadow-xl flex items-center gap-3">
+                    <button id="btn-nuevo-adm" onclick="openModalStaff('Administracion')" class="viking-bg-red text-black px-8 py-4 rounded-2xl font-black uppercase italic text-[12px] shadow-xl flex items-center gap-3">
                         <i data-lucide="shield-plus" class="w-4 h-4"></i> Alta Administrativo
                     </button>
                 </div>
@@ -675,14 +675,14 @@
                     <div class="overflow-x-auto">
                         <table class="w-full text-left">
                             <thead>
-                                <tr class="text-[9px] font-black uppercase text-gray-500 italic border-b border-white/5">
+                                <tr class="text-[10px] font-black uppercase text-gray-500 italic border-b border-white/5">
                                     <th class="pb-5">Nombre</th>
                                     <th class="pb-5">DNI (Usuario)</th>
                                     <th class="pb-5">Email</th>
                                     <th class="pb-5 text-right action-col">Acciones</th>
                                 </tr>
                             </thead>
-                            <tbody id="table-administrativos" class="text-[10px] font-black uppercase italic"></tbody>
+                            <tbody id="table-administrativos" class="text-[11px] font-black uppercase italic"></tbody>
                         </table>
                     </div>
                 </div>
@@ -691,32 +691,32 @@
             <div id="view-caja" class="view-content">
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-10">
                     <div class="glass-card p-8 rounded-[2.5rem] border-green-500/20">
-                        <p class="text-[10px] font-black text-gray-500 uppercase italic mb-2">Total Ingresos</p>
+                        <p class="text-[11px] font-black text-gray-500 uppercase italic mb-2">Total Ingresos</p>
                         <h4 class="text-3xl font-black italic text-green-500" id="caja-ingresos">$ 0,00</h4>
                     </div>
                     <div class="glass-card p-8 rounded-[2.5rem] border-red-500/20">
-                        <p class="text-[10px] font-black text-gray-500 uppercase italic mb-2">Total Gastos</p>
+                        <p class="text-[11px] font-black text-gray-500 uppercase italic mb-2">Total Gastos</p>
                         <h4 class="text-3xl font-black italic text-red-500" id="caja-gastos">$ 0,00</h4>
                     </div>
                     <div class="glass-card p-8 rounded-[2.5rem] border-viking-red/20">
-                        <p class="text-[10px] font-black text-red-600 uppercase italic mb-2">Balance Neto</p>
+                        <p class="text-[11px] font-black text-red-600 uppercase italic mb-2">Balance Neto</p>
                         <h4 class="text-3xl font-black italic" id="caja-balance">$ 0,00</h4>
                     </div>
                 </div>
                 <div class="glass-card p-10 rounded-[3rem]">
                     <div class="flex justify-between items-center mb-8">
                         <h3 class="text-sm font-black uppercase italic border-l-4 border-red-600 pl-4 tracking-widest">Flujo Diario de Caja</h3>
-                        <button id="btn-nuevo-mov" onclick="openModal('modal-movimiento')" class="viking-bg-red text-black px-6 py-3 rounded-xl font-black uppercase italic text-[10px]">Cargar Movimiento</button>
+                        <button id="btn-nuevo-mov" onclick="openModal('modal-movimiento')" class="viking-bg-red text-black px-6 py-3 rounded-xl font-black uppercase italic text-[11px]">Cargar Movimiento</button>
                     </div>
                     <table class="w-full text-left">
                         <thead>
-                            <tr class="text-[9px] font-black uppercase text-gray-500 italic border-b border-white/5">
+                            <tr class="text-[10px] font-black uppercase text-gray-500 italic border-b border-white/5">
                                 <th class="pb-5">Tipo</th>
                                 <th class="pb-5">Descripción</th>
                                 <th class="pb-5 text-right">Monto</th>
                             </tr>
                         </thead>
-                        <tbody id="table-caja" class="text-[11px] font-black italic uppercase"></tbody>
+                        <tbody id="table-caja" class="text-[12px] font-black italic uppercase"></tbody>
                     </table>
                 </div>
             </div>
@@ -724,7 +724,7 @@
             <div id="view-stock" class="view-content">
                 <div class="flex justify-between items-center mb-8">
                     <h3 class="text-3xl font-black italic uppercase">Control de Stock</h3>
-                    <button id="btn-nuevo-stock" onclick="openModalStock()" class="viking-bg-red text-black px-8 py-4 rounded-2xl font-black uppercase italic text-[11px] shadow-xl flex items-center gap-3">
+                    <button id="btn-nuevo-stock" onclick="openModalStock()" class="viking-bg-red text-black px-8 py-4 rounded-2xl font-black uppercase italic text-[12px] shadow-xl flex items-center gap-3">
                         <i data-lucide="package-plus" class="w-4 h-4"></i> Crear Mercadería
                     </button>
                 </div>
@@ -734,7 +734,7 @@
             <div id="view-planes" class="view-content">
                 <div class="flex justify-between items-center mb-8">
                     <h3 class="text-3xl font-black italic uppercase">Planes de Entrenamiento</h3>
-                    <button id="btn-nuevo-plan" onclick="openModalPlan()" class="viking-bg-red text-black px-8 py-4 rounded-2xl font-black uppercase italic text-[11px] shadow-xl flex items-center gap-3">
+                    <button id="btn-nuevo-plan" onclick="openModalPlan()" class="viking-bg-red text-black px-8 py-4 rounded-2xl font-black uppercase italic text-[12px] shadow-xl flex items-center gap-3">
                         <i data-lucide="plus" class="w-4 h-4"></i> Alta de Plan
                     </button>
                 </div>
@@ -745,7 +745,7 @@
             <div id="view-clases" class="view-content">
                 <div class="flex justify-between items-center mb-8">
                     <h3 class="text-3xl font-black italic uppercase">Gestión de Clases</h3>
-                    <button id="btn-nueva-clase" onclick="openModalClase()" class="viking-bg-red text-black px-8 py-4 rounded-2xl font-black uppercase italic text-[11px] shadow-xl flex items-center gap-3">
+                    <button id="btn-nueva-clase" onclick="openModalClase()" class="viking-bg-red text-black px-8 py-4 rounded-2xl font-black uppercase italic text-[12px] shadow-xl flex items-center gap-3">
                         <i data-lucide="presentation" class="w-4 h-4"></i> Alta de Clase
                     </button>
                 </div>
@@ -757,7 +757,7 @@
                     <h3 class="text-3xl font-black italic uppercase text-left">Agenda Vikinga</h3>
                     <div class="flex gap-4">
                         <div class="flex bg-white/5 p-1 rounded-2xl border border-white/5">
-                            <button class="px-6 py-2 bg-red-600 text-black rounded-xl text-[10px] font-black uppercase italic">Semana Actual</button>
+                            <button class="px-6 py-2 bg-red-600 text-black rounded-xl text-[11px] font-black uppercase italic">Semana Actual</button>
                         </div>
                     </div>
                 </div>
@@ -770,7 +770,7 @@
                     <div id="musculacion-student-view" class="hidden space-y-8">
                         <div class="bg-red-600/10 p-6 rounded-3xl border border-red-600/20" id="student-plan-header">
                             <h4 class="text-xl font-black italic uppercase mb-2">MI RUTINA DEL VALHALLA</h4>
-                            <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest" id="al-rutina-objetivo">Cargando objetivo...</p>
+                            <p class="text-[11px] text-gray-400 font-bold uppercase tracking-widest" id="al-rutina-objetivo">Cargando objetivo...</p>
                         </div>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6" id="student-routine-exercises">
                         </div>
@@ -781,37 +781,59 @@
         </div>
     </main>
 
-    <!-- MODAL EDITAR RUTINA (MEJORADO) -->
+    <!-- MODAL EDITAR RUTINA (MEJORADO CON BUSCADOR Y NUEVO EJERCICIO) -->
     <div id="modal-rutina-editor" class="viking-modal">
-        <div class="glass-card p-10 rounded-[3rem] w-full max-w-4xl text-left overflow-y-auto max-h-[90vh] custom-scrollbar">
-            <h3 class="text-2xl font-black uppercase italic mb-4">Gestionar Rutina de Musculación</h3>
-            <p id="rutina-editor-alumno" class="text-red-600 font-black uppercase italic text-xs mb-8"></p>
+        <div class="glass-card p-10 rounded-[3rem] w-full max-w-5xl text-left overflow-y-auto max-h-[95vh] custom-scrollbar">
+            <div class="flex justify-between items-start mb-6">
+                <div>
+                    <h3 class="text-2xl font-black uppercase italic mb-1">Gestionar Rutina de Musculación</h3>
+                    <p id="rutina-editor-alumno" class="text-red-600 font-black uppercase italic text-sm"></p>
+                </div>
+                <button onclick="openModalNewExercise()" class="viking-bg-red text-black px-4 py-2 rounded-xl font-black uppercase italic text-[10px] shadow-lg">+ Crear Nuevo Ejercicio</button>
+            </div>
             
             <form id="form-rutina-editor" class="space-y-6">
                 <input type="hidden" id="rutina-editor-alumno-id">
                 
-                <div class="grid grid-cols-2 gap-4 mb-8">
+                <div class="grid grid-cols-2 gap-6 mb-8">
                     <div class="space-y-1">
-                        <label class="text-[9px] font-black uppercase text-gray-500 italic">Objetivo del Plan</label>
+                        <label class="text-[10px] font-black uppercase text-gray-500 italic">Objetivo del Plan</label>
                         <input type="text" id="rutina-objetivo" placeholder="Ej: Hipertrofia, Fuerza, Definición" class="viking-input" required>
                     </div>
                     <div class="space-y-1">
-                        <label class="text-[9px] font-black uppercase text-gray-500 italic">Vencimiento de Rutina</label>
+                        <label class="text-[10px] font-black uppercase text-gray-500 italic">Vencimiento de Rutina (Seleccionar en Calendario)</label>
                         <input type="date" id="rutina-vencimiento" class="viking-input" required>
                     </div>
                 </div>
 
-                <div id="rutina-editor-container" class="space-y-6">
+                <div id="rutina-editor-container" class="space-y-8">
                     <!-- Los días se agregan aquí dinámicamente -->
                 </div>
                 
-                <button type="button" onclick="addRoutineDay()" class="w-full py-4 border border-dashed border-white/20 rounded-2xl text-gray-500 hover:text-red-600 hover:border-red-600 transition-all font-black uppercase italic text-[10px]">
-                    + Agregar Día de Entrenamiento
+                <button type="button" onclick="addRoutineDay()" class="w-full py-4 border border-dashed border-white/20 rounded-2xl text-gray-500 hover:text-red-600 hover:border-red-600 transition-all font-black uppercase italic text-[12px]">
+                    + Agregar Día de Entrenamiento (A, B, C...)
                 </button>
 
-                <div class="flex gap-4 pt-6">
-                    <button type="button" onclick="closeModal('modal-rutina-editor')" class="flex-1 py-4 bg-white/5 rounded-2xl font-black uppercase italic text-[10px]">Cancelar</button>
-                    <button type="submit" class="flex-1 py-4 viking-bg-red text-black rounded-2xl font-black uppercase italic text-[10px]">Guardar Plan de Rutina</button>
+                <div class="flex gap-4 pt-6 border-t border-white/5">
+                    <button type="button" onclick="closeModal('modal-rutina-editor')" class="flex-1 py-4 bg-white/5 rounded-2xl font-black uppercase italic text-[11px]">Cancelar</button>
+                    <button type="submit" class="flex-1 py-4 viking-bg-red text-black rounded-2xl font-black uppercase italic text-[11px] shadow-xl">Guardar Plan Completo</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL PARA CREAR NUEVO EJERCICIO EN LIBRERÍA -->
+    <div id="modal-nuevo-ejercicio" class="viking-modal">
+        <div class="glass-card p-10 rounded-[3rem] w-full max-w-md text-left">
+            <h3 class="text-xl font-black uppercase italic mb-6">Nuevo Ejercicio en Librería</h3>
+            <form id="form-nuevo-ejercicio-lib" class="space-y-4">
+                <input type="text" id="lib-ex-nombre" placeholder="Nombre del Ejercicio (ej: Sentadilla)" required class="viking-input">
+                <select id="lib-ex-grupo" required class="viking-input">
+                    <option value="">Seleccionar Grupo Muscular</option>
+                </select>
+                <div class="flex gap-4 pt-4">
+                    <button type="button" onclick="closeModal('modal-nuevo-ejercicio')" class="flex-1 py-3 bg-white/5 rounded-xl font-black uppercase italic text-[10px]">Cancelar</button>
+                    <button type="submit" class="flex-1 py-3 viking-bg-red text-black rounded-xl font-black uppercase italic text-[10px]">Crear Ejercicio</button>
                 </div>
             </form>
         </div>
@@ -831,7 +853,7 @@
                 </div>
                 
                 <div class="space-y-2">
-                    <label class="text-[9px] font-black uppercase text-gray-500 italic">Días de la Clase</label>
+                    <label class="text-[10px] font-black uppercase text-gray-500 italic">Días de la Clase</label>
                     <div class="multi-select-container" id="cl-dias-container">
                         <label class="multi-option"><input type="checkbox" name="cl-dias-check" value="1" onchange="renderScheduleInputs()"><span>Lunes</span></label>
                         <label class="multi-option"><input type="checkbox" name="cl-dias-check" value="2" onchange="renderScheduleInputs()"><span>Martes</span></label>
@@ -843,28 +865,28 @@
                 </div>
 
                 <div id="cl-schedule-container" class="space-y-2">
-                    <label class="text-[9px] font-black uppercase text-red-600 italic">Horarios por Día</label>
+                    <label class="text-[10px] font-black uppercase text-red-600 italic">Horarios por Día</label>
                     <div id="cl-schedule-slots">
                         <!-- Se llena dinámicamente -->
-                        <p class="text-[8px] text-gray-600 italic">Selecciona días arriba para asignar horarios</p>
+                        <p class="text-[9px] text-gray-600 italic">Selecciona días arriba para asignar horarios</p>
                     </div>
                 </div>
 
                 <div class="grid grid-cols-2 gap-4">
                     <div class="space-y-1">
-                        <label class="text-[8px] font-black text-gray-500 uppercase italic">Cupo Máximo</label>
+                        <label class="text-[9px] font-black text-gray-500 uppercase italic">Cupo Máximo</label>
                         <input type="number" id="cl-cupo" placeholder="Cupo" class="viking-input" value="40">
                     </div>
                     <div class="space-y-1">
-                        <label class="text-[8px] font-black text-gray-500 uppercase italic">Color</label>
+                        <label class="text-[9px] font-black text-gray-500 uppercase italic">Color</label>
                         <input type="color" id="cl-color" class="viking-input h-14 p-2 cursor-pointer" value="#FF0000">
                     </div>
                 </div>
 
                 <div class="flex gap-4 pt-4">
-                    <button type="button" onclick="closeModal('modal-clase')" class="flex-1 py-4 bg-white/5 rounded-2xl font-black uppercase italic text-[10px]">Cancelar</button>
-                    <button type="button" id="btn-delete-clase" class="hidden py-4 px-4 bg-red-900/40 rounded-2xl font-black uppercase italic text-[10px] text-red-500">Eliminar</button>
-                    <button type="submit" id="btn-save-clase-modal" class="flex-1 py-4 viking-bg-red text-black rounded-2xl font-black uppercase italic text-[10px]">Guardar Clase</button>
+                    <button type="button" onclick="closeModal('modal-clase')" class="flex-1 py-4 bg-white/5 rounded-2xl font-black uppercase italic text-[11px]">Cancelar</button>
+                    <button type="button" id="btn-delete-clase" class="hidden py-4 px-4 bg-red-900/40 rounded-2xl font-black uppercase italic text-[11px] text-red-500">Eliminar</button>
+                    <button type="submit" id="btn-save-clase-modal" class="flex-1 py-4 viking-bg-red text-black rounded-2xl font-black uppercase italic text-[11px]">Guardar Clase</button>
                 </div>
             </form>
         </div>
@@ -876,25 +898,25 @@
             <div class="flex justify-between items-start mb-8">
                 <div>
                     <h3 class="text-2xl font-black uppercase italic" id="ficha-nombre">-</h3>
-                    <p class="text-[10px] viking-red font-black uppercase" id="ficha-dni">DNI: -</p>
+                    <p class="text-[11px] viking-red font-black uppercase" id="ficha-dni">DNI: -</p>
                 </div>
                 <div class="text-right">
-                    <p class="text-[9px] text-gray-500 font-black uppercase italic" id="ficha-plan">Plan: -</p>
-                    <p class="text-[9px] text-gray-500 font-black uppercase italic" id="ficha-cuenta">Estado: -</p>
+                    <p class="text-[10px] text-gray-500 font-black uppercase italic" id="ficha-plan">Plan: -</p>
+                    <p class="text-[10px] text-gray-500 font-black uppercase italic" id="ficha-cuenta">Estado: -</p>
                 </div>
             </div>
             
             <div class="grid grid-cols-3 gap-4 mb-8">
                 <div class="bg-white/5 p-4 rounded-2xl border border-white/5 text-center">
-                    <p class="text-[8px] text-gray-500 font-black uppercase italic mb-1">Peso</p>
+                    <p class="text-[9px] text-gray-500 font-black uppercase italic mb-1">Peso</p>
                     <p class="text-lg font-black italic" id="ficha-peso">0 kg</p>
                 </div>
                 <div class="bg-white/5 p-4 rounded-2xl border border-white/5 text-center">
-                    <p class="text-[8px] text-gray-500 font-black uppercase italic mb-1">Altura</p>
+                    <p class="text-[9px] text-gray-500 font-black uppercase italic mb-1">Altura</p>
                     <p class="text-lg font-black italic" id="ficha-altura">0 cm</p>
                 </div>
                 <div class="bg-white/5 p-4 rounded-2xl border border-white/5 text-center">
-                    <p class="text-[8px] text-gray-500 font-black uppercase italic mb-1">IMC</p>
+                    <p class="text-[9px] text-gray-500 font-black uppercase italic mb-1">IMC</p>
                     <p class="text-lg font-black italic viking-red" id="ficha-imc">0</p>
                 </div>
             </div>
@@ -906,7 +928,7 @@
             </div>
 
             <div class="flex gap-4 pt-10">
-                <button onclick="closeModal('modal-ficha-tecnica')" class="w-full py-4 viking-bg-red text-black rounded-2xl font-black uppercase italic text-[11px] shadow-lg">Cerrar Ficha</button>
+                <button onclick="closeModal('modal-ficha-tecnica')" class="w-full py-4 viking-bg-red text-black rounded-2xl font-black uppercase italic text-[12px] shadow-lg">Cerrar Ficha</button>
             </div>
         </div>
     </div>
@@ -923,25 +945,25 @@
                 </div>
                 <div class="grid grid-cols-3 gap-4">
                     <div class="space-y-1">
-                        <label class="text-[8px] font-black text-gray-500 uppercase italic">Peso (kg)</label>
+                        <label class="text-[9px] font-black text-gray-500 uppercase italic">Peso (kg)</label>
                         <input type="number" step="0.01" id="al-peso" placeholder="0.00" class="viking-input" oninput="calculateIMC()">
                     </div>
                     <div class="space-y-1">
-                        <label class="text-[8px] font-black text-gray-500 uppercase italic">Altura (cm)</label>
+                        <label class="text-[9px] font-black text-gray-500 uppercase italic">Altura (cm)</label>
                         <input type="number" step="0.01" id="al-altura" placeholder="0.00" class="viking-input" oninput="calculateIMC()">
                     </div>
                     <div class="space-y-1">
-                        <label class="text-[8px] font-black text-red-600 uppercase italic">IMC</label>
+                        <label class="text-[9px] font-black text-red-600 uppercase italic">IMC</label>
                         <input type="text" id="al-imc" placeholder="-" readonly class="viking-input opacity-60">
                     </div>
                 </div>
                 <div class="grid grid-cols-2 gap-4">
                     <div class="space-y-1">
-                        <label class="text-[8px] font-black text-gray-500 uppercase italic">Fecha Renovación</label>
+                        <label class="text-[9px] font-black text-gray-500 uppercase italic">Fecha Renovación</label>
                         <input type="date" id="al-fecha-renovacion" class="viking-input" onchange="autoCalculateExpiry()">
                     </div>
                     <div class="space-y-1">
-                        <label class="text-[8px] font-black text-gray-500 uppercase italic">Fecha Vencimiento</label>
+                        <label class="text-[9px] font-black text-gray-500 uppercase italic">Fecha Vencimiento</label>
                         <input type="date" id="al-fecha-vencimiento" class="viking-input">
                     </div>
                 </div>
@@ -950,9 +972,9 @@
                     <input type="password" id="al-pass" placeholder="Contraseña de Acceso" class="viking-input">
                 </div>
                 <div class="flex gap-4 pt-4">
-                    <button type="button" onclick="closeModal('modal-alumno')" class="flex-1 py-4 bg-white/5 rounded-2xl font-black uppercase italic text-[10px]">Cancelar</button>
-                    <button type="button" id="btn-delete-alumno" class="hidden py-4 px-4 bg-red-900/40 rounded-2xl font-black uppercase italic text-[10px] text-red-500">Eliminar</button>
-                    <button type="submit" id="btn-save-alumno-modal" class="flex-1 py-4 viking-bg-red text-black rounded-2xl font-black uppercase italic text-[10px]">Guardar</button>
+                    <button type="button" onclick="closeModal('modal-alumno')" class="flex-1 py-4 bg-white/5 rounded-2xl font-black uppercase italic text-[11px]">Cancelar</button>
+                    <button type="button" id="btn-delete-alumno" class="hidden py-4 px-4 bg-red-900/40 rounded-2xl font-black uppercase italic text-[11px] text-red-500">Eliminar</button>
+                    <button type="submit" id="btn-save-alumno-modal" class="flex-1 py-4 viking-bg-red text-black rounded-2xl font-black uppercase italic text-[11px]">Guardar</button>
                 </div>
             </form>
         </div>
@@ -969,8 +991,8 @@
                 <input type="number" id="mov-monto" placeholder="Monto ($)" required class="viking-input">
                 <input type="text" id="mov-desc" placeholder="Descripción" required class="viking-input">
                 <div class="flex gap-4 pt-4">
-                    <button type="button" onclick="closeModal('modal-movimiento')" class="flex-1 py-4 bg-white/5 rounded-2xl font-black uppercase italic text-[10px]">Cancelar</button>
-                    <button type="submit" id="btn-save-mov-modal" class="flex-1 py-4 viking-bg-red text-black rounded-2xl font-black uppercase italic text-[10px]">Cargar</button>
+                    <button type="button" onclick="closeModal('modal-movimiento')" class="flex-1 py-4 bg-white/5 rounded-2xl font-black uppercase italic text-[11px]">Cancelar</button>
+                    <button type="submit" id="btn-save-mov-modal" class="flex-1 py-4 viking-bg-red text-black rounded-2xl font-black uppercase italic text-[11px]">Cargar</button>
                 </div>
             </form>
         </div>
@@ -988,13 +1010,13 @@
                     <input type="text" id="stf-esp" placeholder="Especialidad / Cargo" class="viking-input">
                 </div>
                 <div class="space-y-4">
-                    <label class="text-[9px] font-black text-red-600 uppercase italic">Seguridad</label>
+                    <label class="text-[10px] font-black text-red-600 uppercase italic">Seguridad</label>
                     <input type="password" id="stf-pass" placeholder="Nueva Contraseña" class="viking-input">
                 </div>
                 <div class="flex gap-4 pt-6">
-                    <button type="button" onclick="closeModal('modal-staff')" class="flex-1 py-4 bg-white/5 rounded-2xl font-black uppercase italic text-[10px]">Cancelar</button>
-                    <button type="button" id="btn-delete-staff" class="hidden py-4 px-4 bg-red-900/40 rounded-2xl font-black uppercase italic text-[10px] text-red-500">Eliminar</button>
-                    <button type="submit" id="btn-save-staff-modal" class="flex-1 py-4 viking-bg-red text-black rounded-2xl font-black uppercase italic text-[10px]">Guardar Staff</button>
+                    <button type="button" onclick="closeModal('modal-staff')" class="flex-1 py-4 bg-white/5 rounded-2xl font-black uppercase italic text-[11px]">Cancelar</button>
+                    <button type="button" id="btn-delete-staff" class="hidden py-4 px-4 bg-red-900/40 rounded-2xl font-black uppercase italic text-[11px] text-red-500">Eliminar</button>
+                    <button type="submit" id="btn-save-staff-modal" class="flex-1 py-4 viking-bg-red text-black rounded-2xl font-black uppercase italic text-[11px]">Guardar Staff</button>
                 </div>
             </form>
         </div>
@@ -1011,9 +1033,9 @@
                     <input type="number" id="stock-precio" placeholder="Precio Unidad ($)" required class="viking-input">
                 </div>
                 <div class="flex gap-4 pt-4">
-                    <button type="button" onclick="closeModal('modal-stock')" class="flex-1 py-4 bg-white/5 rounded-2xl font-black uppercase italic text-[10px]">Cancelar</button>
-                    <button type="button" id="btn-delete-stock" class="hidden py-4 px-4 bg-red-900/40 rounded-2xl font-black uppercase italic text-[10px] text-red-500">Eliminar</button>
-                    <button type="submit" id="btn-save-stock-modal" class="flex-1 py-4 viking-bg-red text-black rounded-2xl font-black uppercase italic text-[10px]">Guardar Mercadería</button>
+                    <button type="button" onclick="closeModal('modal-stock')" class="flex-1 py-4 bg-white/5 rounded-2xl font-black uppercase italic text-[11px]">Cancelar</button>
+                    <button type="button" id="btn-delete-stock" class="hidden py-4 px-4 bg-red-900/40 rounded-2xl font-black uppercase italic text-[11px] text-red-500">Eliminar</button>
+                    <button type="submit" id="btn-save-stock-modal" class="flex-1 py-4 viking-bg-red text-black rounded-2xl font-black uppercase italic text-[11px]">Guardar Mercadería</button>
                 </div>
             </form>
         </div>
@@ -1030,9 +1052,9 @@
                     <input type="number" id="plan-precio" placeholder="Precio ($)" required class="viking-input">
                 </div>
                 <div class="flex gap-4 pt-4">
-                    <button type="button" onclick="closeModal('modal-plan')" class="flex-1 py-4 bg-white/5 rounded-2xl font-black uppercase italic text-[10px]">Cancelar</button>
-                    <button type="button" id="btn-delete-plan" class="hidden py-4 px-4 bg-red-900/40 rounded-2xl font-black uppercase italic text-[10px] text-red-500">Eliminar</button>
-                    <button type="submit" id="btn-save-plan-modal" class="flex-1 py-4 viking-bg-red text-black rounded-2xl font-black uppercase italic text-[10px]">Guardar Plan</button>
+                    <button type="button" onclick="closeModal('modal-plan')" class="flex-1 py-4 bg-white/5 rounded-2xl font-black uppercase italic text-[11px]">Cancelar</button>
+                    <button type="button" id="btn-delete-plan" class="hidden py-4 px-4 bg-red-900/40 rounded-2xl font-black uppercase italic text-[11px] text-red-500">Eliminar</button>
+                    <button type="submit" id="btn-save-plan-modal" class="flex-1 py-4 viking-bg-red text-black rounded-2xl font-black uppercase italic text-[11px]">Guardar Plan</button>
                 </div>
             </form>
         </div>
@@ -1042,7 +1064,7 @@
         <div class="glass-card p-10 rounded-[3rem] w-full max-w-lg text-left">
             <h3 class="text-2xl font-black uppercase italic mb-6">Alumnos Inscriptos</h3>
             <div id="inscriptos-lista" class="space-y-3 max-h-96 overflow-y-auto custom-scrollbar mb-8"></div>
-            <button onclick="closeModal('modal-inscriptos')" class="w-full py-4 viking-bg-red text-black rounded-2xl font-black uppercase italic text-[10px]">Cerrar</button>
+            <button onclick="closeModal('modal-inscriptos')" class="w-full py-4 viking-bg-red text-black rounded-2xl font-black uppercase italic text-[11px]">Cerrar</button>
         </div>
     </div>
 
@@ -1143,12 +1165,12 @@
                 <div class="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-red-600/20">
                     <div>
                         <p class="text-xs font-black uppercase italic viking-red">${r.clase_nombre}</p>
-                        <p class="text-[9px] text-gray-500 font-bold uppercase">${r.dia_nombre || 'Hoy'} - ${r.horario.toString().replace('.', ':').replace(':5', ':30')} HS</p>
+                        <p class="text-[10px] text-gray-400 font-bold uppercase">${r.dia_nombre || 'Hoy'} - ${r.horario.toString().replace('.', ':').replace(':5', ':30')} HS</p>
                     </div>
-                    <button onclick="cancelBooking(${r.id})" class="text-[8px] font-black uppercase italic text-gray-500 hover:text-red-600">Cancelar</button>
-                </div>`).join('') : '<p class="text-gray-500 italic text-[10px]">No tienes reservas próximas. ¡Ve al calendario!</p>';
+                    <button onclick="cancelBooking(${r.id})" class="text-[9px] font-black uppercase italic text-gray-500 hover:text-red-600">Cancelar</button>
+                </div>`).join('') : '<p class="text-gray-500 italic text-[11px]">No tienes reservas próximas. ¡Ve al calendario!</p>';
 
-            historyList.innerHTML = '<p class="text-gray-500 italic text-[10px]">Las clases asistidas aparecerán aquí.</p>';
+            historyList.innerHTML = '<p class="text-gray-500 italic text-[11px]">Las clases asistidas aparecerán aquí.</p>';
         }
 
         async function fetchReservas() {
@@ -1204,8 +1226,8 @@
                 return `
                 <div class="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5">
                     <div>
-                        <p class="text-[11px] font-black uppercase italic text-left">${r.alumno_dni}</p>
-                        <p class="text-[8px] text-gray-500 font-bold">Reserva #${r.id}</p>
+                        <p class="text-[12px] font-black uppercase italic text-left">${r.alumno_dni}</p>
+                        <p class="text-[9px] text-gray-500 font-bold">Reserva #${r.id}</p>
                     </div>
                     <button onclick="deleteBookingAdmin(${r.id}, ${claseId})" class="text-red-600 hover:text-white"><i data-lucide="user-minus" class="w-4 h-4"></i></button>
                 </div>`;
@@ -1234,7 +1256,7 @@
             
             for(let h=7; h<=21.5; h+=0.5) {
                 const label = h % 1 === 0 ? `${h}:00` : `${Math.floor(h)}:30`;
-                cal.innerHTML += `<div class="cal-cell flex items-center justify-center font-black text-[7px] text-white/40 bg-white/5 border-r border-white/20">${label}</div>`;
+                cal.innerHTML += `<div class="cal-cell flex items-center justify-center font-black text-[9px] text-white/40 bg-white/5 border-r border-white/20">${label}</div>`;
                 for(let d=1; d<=6; d++) {
                     const isSat = d === 6; 
                     const isClosed = isSat && (h < 10 || h > 13);
@@ -1260,7 +1282,7 @@
                             badge.ondragstart = (e) => e.dataTransfer.setData("clase_id", c.id);
                         }
                     }
-                    badge.innerHTML = `<span class="text-[7px] mb-0.5 leading-none font-black uppercase">${c.nombre}</span><div class="bg-black/20 px-1 rounded-full text-[5px] font-black">${cupoActual}/${capMax}</div>`;
+                    badge.innerHTML = `<span class="text-[8px] mb-0.5 leading-none font-black uppercase">${c.nombre}</span><div class="bg-black/20 px-1 rounded-full text-[7px] font-black">${cupoActual}/${capMax}</div>`;
                     cell.appendChild(badge);
                 }
             });
@@ -1283,12 +1305,12 @@
                 catalog.innerHTML = filtered.map(s => `
                     <div class="glass-card p-4 rounded-3xl relative group cursor-pointer hover:border-red-600/50" onclick="addToCart(${s.id}, 'stock')">
                         <div class="w-full h-20 viking-bg-red/10 rounded-2xl mb-3 flex items-center justify-center"><i data-lucide="package" class="w-6 h-6 opacity-20 text-white"></i></div>
-                        <h4 class="text-[9px] font-black uppercase italic mb-1 truncate">${s.nombre_producto}</h4>
-                        <div class="flex items-center justify-between"><p class="text-[11px] font-black italic">$ ${s.precio_venta.toLocaleString()}</p><span class="text-[7px] font-bold ${s.stock_actual < 5 ? 'text-red-500' : 'text-gray-500'}">S: ${s.stock_actual}</span></div>
+                        <h4 class="text-[10px] font-black uppercase italic mb-1 truncate">${s.nombre_producto}</h4>
+                        <div class="flex items-center justify-between"><p class="text-[12px] font-black italic">$ ${s.precio_venta.toLocaleString()}</p><span class="text-[9px] font-bold ${s.stock_actual < 5 ? 'text-red-500' : 'text-gray-500'}">S: ${s.stock_actual}</span></div>
                     </div>`).join('');
             } else {
                 const filteredAl = state.alumnos.filter(a => a.nombre_completo.toLowerCase().includes(searchVal) || a.dni.includes(searchVal));
-                displayArea.innerHTML = `<div class="glass-card p-8 rounded-[2.5rem] h-[600px] flex flex-col"><h4 class="text-[10px] font-black uppercase italic text-red-600 mb-6 tracking-widest">Alumnos para Renovación</h4><div class="overflow-y-auto custom-scrollbar flex-1 space-y-3">${filteredAl.map(a => `<div class="flex flex-col gap-2 p-4 bg-white/5 rounded-2xl border border-white/5 hover:border-red-600/30 text-left"><div class="flex justify-between items-start"><div><p class="text-[11px] font-black italic uppercase leading-tight">${a.nombre_completo}</p><p class="text-[8px] text-gray-500">DNI: ${a.dni}</p></div></div><div class="flex gap-2 items-center mt-1"><select id="plan-select-${a.id}" class="viking-input py-1 text-[9px] h-8 bg-black/40 border-white/10 flex-1">${state.planes.map(p => `<option value="${p.id}" ${p.id === a.plan_id ? 'selected' : ''}>${p.nombre} ($${p.precio})</option>`).join('')}</select><button onclick="preparePlanCharge(${a.id})" class="px-4 py-2 rounded-xl text-[9px] font-black italic bg-green-600/20 text-green-500 hover:bg-green-600 hover:text-black transition-all">Cobrar</button></div></div>`).join('')}</div></div>`;
+                displayArea.innerHTML = `<div class="glass-card p-8 rounded-[2.5rem] h-[600px] flex flex-col"><h4 class="text-[11px] font-black uppercase italic text-red-600 mb-6 tracking-widest">Alumnos para Renovación</h4><div class="overflow-y-auto custom-scrollbar flex-1 space-y-3">${filteredAl.map(a => `<div class="flex flex-col gap-2 p-4 bg-white/5 rounded-2xl border border-white/5 hover:border-red-600/30 text-left"><div class="flex justify-between items-start"><div><p class="text-[12px] font-black italic uppercase leading-tight">${a.nombre_completo}</p><p class="text-[9px] text-gray-500">DNI: ${a.dni}</p></div></div><div class="flex gap-2 items-center mt-1"><select id="plan-select-${a.id}" class="viking-input py-1 text-[10px] h-8 bg-black/40 border-white/10 flex-1">${state.planes.map(p => `<option value="${p.id}" ${p.id === a.plan_id ? 'selected' : ''}>${p.nombre} ($${p.precio})</option>`).join('')}</select><button onclick="preparePlanCharge(${a.id})" class="px-4 py-2 rounded-xl text-[10px] font-black italic bg-green-600/20 text-green-500 hover:bg-green-600 hover:text-black transition-all">Cobrar</button></div></div>`).join('')}</div></div>`;
             }
             lucide.createIcons();
             updateCartUI();
@@ -1321,12 +1343,12 @@
         function updateCartUI() {
             const list = document.getElementById('cobrar-lista-carrito');
             if (state.cart.length === 0) {
-                list.innerHTML = '<p class="text-center text-gray-500 text-[10px] italic py-10">Sin ítems seleccionados</p>';
+                list.innerHTML = '<p class="text-center text-gray-500 text-[11px] italic py-10">Sin ítems seleccionados</p>';
                 document.getElementById('cobrar-subtotal').innerText = '$ 0';
                 document.getElementById('cobrar-total').innerText = '$ 0';
                 return;
             }
-            list.innerHTML = state.cart.map((c, idx) => `<div class="flex items-center justify-between bg-white/5 p-3 rounded-xl border border-white/5"><div class="overflow-hidden text-left"><p class="text-[9px] font-black uppercase italic truncate">${c.nombre_producto}</p><p class="text-[8px] text-gray-500 font-bold">VALOR: $ ${c.precio_venta.toLocaleString()}</p></div><button onclick="removeFromCart(${idx})" class="text-red-600 hover:text-white"><i data-lucide="trash-2" class="w-3 h-3"></i></button></div>`).join('');
+            list.innerHTML = state.cart.map((c, idx) => `<div class="flex items-center justify-between bg-white/5 p-3 rounded-xl border border-white/5"><div class="overflow-hidden text-left"><p class="text-[11px] font-black uppercase italic truncate">${c.nombre_producto}</p><p class="text-[10px] text-gray-500 font-bold">VALOR: $ ${c.precio_venta.toLocaleString()}</p></div><button onclick="removeFromCart(${idx})" class="text-red-600 hover:text-white"><i data-lucide="trash-2" class="w-3 h-3"></i></button></div>`).join('');
             const total = state.cart.reduce((acc, c) => acc + (c.qty * c.precio_venta), 0);
             document.getElementById('cobrar-subtotal').innerText = `$ ${total.toLocaleString()}`;
             document.getElementById('cobrar-total').innerText = `$ ${total.toLocaleString()}`;
@@ -1375,15 +1397,14 @@
             document.getElementById('ficha-imc').innerText = res.imc || 0;
 
             const rutinaContainer = document.getElementById('ficha-rutina-container');
-            // Cargar rutina desde el objeto real de PlanRutina
             const rutinaRes = await apiFetch(`/rutinas/usuario/${alumnoId}`);
             if (rutinaRes.error) {
                 rutinaContainer.innerHTML = '<p class="text-gray-500 italic py-4 col-span-2">Sin rutina activa asignada.</p>';
             } else {
                 rutinaContainer.innerHTML = (rutinaRes.dias || []).map(d => `
                     <div class="glass-card p-4 rounded-2xl border-red-600/10">
-                        <h5 class="text-[10px] font-black italic uppercase viking-red mb-3">${d.nombre_dia}</h5>
-                        <ul class="text-[9px] space-y-2 font-bold opacity-80">
+                        <h5 class="text-[12px] font-black italic uppercase viking-red mb-3">${d.nombre_dia}</h5>
+                        <ul class="text-[11px] space-y-2 font-bold opacity-80">
                             ${(d.ejercicios || []).map(ex => `<li><i data-lucide="chevron-right" class="w-3 h-3 inline mr-1 viking-red"></i> ${ex.ejercicio_libreria.nombre} (${ex.series}x${ex.repeticiones})</li>`).join('')}
                         </ul>
                     </div>
@@ -1413,11 +1434,11 @@
                             <div class="space-y-4">
                                 ${d.ejercicios.map(e => `
                                     <div class="bg-white/5 p-3 rounded-xl">
-                                        <p class="text-[11px] font-black uppercase italic">${e.ejercicio_libreria.nombre}</p>
-                                        <div class="grid grid-cols-3 gap-2 mt-2 text-[9px] font-bold text-gray-500 uppercase tracking-tighter">
+                                        <p class="text-[12px] font-black uppercase italic">${e.ejercicio_libreria.nombre}</p>
+                                        <div class="grid grid-cols-3 gap-2 mt-2 text-[10px] font-bold text-gray-500 uppercase tracking-tighter">
                                             <span>S: ${e.series}</span> <span>R: ${e.repeticiones}</span> <span>P: ${e.peso}</span>
                                         </div>
-                                        ${e.comentario ? `<p class="text-[8px] text-red-600 italic mt-1">* ${e.comentario}</p>` : ''}
+                                        ${e.comentario ? `<p class="text-[10px] text-red-600 italic mt-1">* ${e.comentario}</p>` : ''}
                                     </div>
                                 `).join('')}
                             </div>
@@ -1448,12 +1469,12 @@
                             <div class="w-10 h-10 rounded-xl viking-bg-red flex items-center justify-center font-black text-black text-sm italic">${a.nombre_completo[0]}</div>
                             <div>
                                 <h4 class="text-xs font-black uppercase italic leading-tight">${a.nombre_completo}</h4>
-                                <p class="text-[8px] text-gray-500 uppercase font-bold">DNI: ${a.dni}</p>
+                                <p class="text-[9px] text-gray-500 uppercase font-bold">DNI: ${a.dni}</p>
                             </div>
                         </div>
                         <div class="flex flex-col gap-2">
-                            <button onclick="openFichaTecnica(${a.id})" class="w-full py-3 border border-white/5 text-white rounded-xl text-[9px] font-black uppercase italic hover:bg-white/5">Ficha Técnica</button>
-                            <button onclick="openRoutineEditor(${a.id})" class="w-full py-3 bg-red-600 text-black rounded-xl text-[9px] font-black uppercase italic hover:scale-105 transition-all shadow-lg">Gestionar Rutina</button>
+                            <button onclick="openFichaTecnica(${a.id})" class="w-full py-3 border border-white/5 text-white rounded-xl text-[10px] font-black uppercase italic hover:bg-white/5">Ficha Técnica</button>
+                            <button onclick="openRoutineEditor(${a.id})" class="w-full py-3 bg-red-600 text-black rounded-xl text-[10px] font-black uppercase italic hover:scale-105 transition-all shadow-lg">Gestionar Rutina</button>
                         </div>
                     </div>`).join('');
             }
@@ -1464,6 +1485,13 @@
             const ejercicios = await apiFetch('/rutinas/ejercicios');
             state.gruposMusculares = Array.isArray(grupos) ? grupos : [];
             state.ejerciciosLibreria = Array.isArray(ejercicios) ? ejercicios : [];
+            
+            // Llenar select de grupos musculares en modal de creación
+            const selectLib = document.getElementById('lib-ex-grupo');
+            if(selectLib) {
+                selectLib.innerHTML = '<option value="">Seleccionar Grupo Muscular</option>' + 
+                    state.gruposMusculares.map(g => `<option value="${g.id}">${g.nombre}</option>`).join('');
+            }
         }
 
         async function openRoutineEditor(alumnoId) {
@@ -1472,7 +1500,7 @@
             
             await loadMusculacionMetadata();
             
-            document.getElementById('rutina-editor-alumno').innerText = al.nombre_completo;
+            document.getElementById('rutina-editor-alumno').innerText = "Alumno: " + al.nombre_completo;
             document.getElementById('rutina-editor-alumno-id').value = alumnoId;
             const container = document.getElementById('rutina-editor-container');
             container.innerHTML = "";
@@ -1501,16 +1529,16 @@
             
             dayCard.innerHTML = `
                 <div class="flex justify-between items-center gap-4">
-                    <input type="text" placeholder="Ej: Día 1 - Empuje" value="${nombre}" class="viking-input py-2 text-[10px] day-title" required>
-                    <button type="button" onclick="this.closest('.rutina-dia-card').remove()" class="text-red-900 hover:text-red-600"><i data-lucide="x-circle" class="w-5 h-5"></i></button>
+                    <input type="text" placeholder="Nombre del Día (ej: Pierna)" value="${nombre}" class="viking-input py-2 text-[12px] day-title" required>
+                    <button type="button" onclick="this.closest('.rutina-dia-card').remove()" class="text-red-900 hover:text-red-600"><i data-lucide="trash-2" class="w-5 h-5"></i></button>
                 </div>
                 <div class="exercises-list space-y-3">
-                    <div class="grid grid-cols-5 gap-2 px-2 text-[7px] font-black text-gray-600 uppercase italic">
-                        <span class="col-span-1">Ejercicio</span><span>Series</span><span>Reps</span><span>Peso</span><span>Descanso</span>
+                    <div class="grid grid-cols-5 gap-3 px-2 text-[10px] font-black text-gray-600 uppercase italic">
+                        <span class="col-span-1">Ejercicio / Grupo</span><span>Series</span><span>Reps</span><span>Peso</span><span>Descanso</span>
                     </div>
                     <div class="day-exercises-container space-y-2"></div>
                 </div>
-                <button type="button" onclick="addExerciseToDay('${dayId}')" class="text-[8px] font-black viking-red uppercase italic">+ Agregar Ejercicio</button>
+                <button type="button" onclick="addExerciseToDay('${dayId}')" class="text-[11px] font-black viking-red uppercase italic border-b border-red-600/20 pb-1 mt-2">+ Agregar Ejercicio al Día</button>
             `;
             container.appendChild(dayCard);
             
@@ -1525,29 +1553,89 @@
         function addExerciseToDay(dayId, data = null) {
             const container = document.querySelector(`[data-day-id="${dayId}"] .day-exercises-container`);
             const div = document.createElement('div');
-            div.className = "exercise-row space-y-2 pb-2 border-b border-white/5";
+            div.className = "exercise-row space-y-2 pb-3 border-b border-white/5";
             
-            const options = state.ejerciciosLibreria.map(ex => `<option value="${ex.id}" ${data && data.ejercicio_id == ex.id ? 'selected' : ''}>${ex.nombre} (${ex.grupo_muscular?.nombre || 'Gral'})</option>`).join('');
-
+            // Creamos los filtros de búsqueda y grupo muscular
             div.innerHTML = `
-                <div class="exercise-grid">
-                    <select class="viking-input py-2 text-[9px] exercise-select" required>
-                        <option value="">Seleccionar Ejercicio</option>
-                        ${options}
+                <div class="grid grid-cols-2 gap-2 mb-1">
+                    <select class="viking-input py-1 text-[10px] h-8 grupo-filter" onchange="filterExercisesByGroup(this)">
+                        <option value="all">Todos los grupos</option>
+                        ${state.gruposMusculares.map(g => `<option value="${g.id}">${g.nombre}</option>`).join('')}
                     </select>
-                    <input type="text" placeholder="Sets" value="${data?.series || '3'}" class="viking-input py-2 text-[9px] exercise-series" required>
-                    <input type="text" placeholder="Reps" value="${data?.repeticiones || '12'}" class="viking-input py-2 text-[9px] exercise-reps" required>
-                    <input type="text" placeholder="Peso" value="${data?.peso || '10kg'}" class="viking-input py-2 text-[9px] exercise-weight">
+                    <input type="text" placeholder="Buscar ejercicio..." class="viking-input py-1 text-[10px] h-8 ex-search" oninput="searchExercises(this)">
+                </div>
+                <div class="exercise-grid">
+                    <select class="viking-input py-2 text-[11px] exercise-select" required>
+                        <option value="">Seleccionar Ejercicio</option>
+                        ${state.ejerciciosLibreria.map(ex => `<option value="${ex.id}" data-grupo="${ex.grupo_muscular_id}" ${data && data.ejercicio_id == ex.id ? 'selected' : ''}>${ex.nombre}</option>`).join('')}
+                    </select>
+                    <input type="text" placeholder="S" value="${data?.series || '3'}" class="viking-input py-2 text-[11px] exercise-series" required>
+                    <input type="text" placeholder="R" value="${data?.repeticiones || '12'}" class="viking-input py-2 text-[11px] exercise-reps" required>
+                    <input type="text" placeholder="P" value="${data?.peso || '10kg'}" class="viking-input py-2 text-[11px] exercise-weight">
                     <div class="flex gap-2">
-                        <input type="text" placeholder="90s" value="${data?.descanso || '90s'}" class="viking-input py-2 text-[9px] exercise-rest">
-                        <button type="button" onclick="this.closest('.exercise-row').remove()" class="text-gray-600 hover:text-red-600"><i data-lucide="minus-circle" class="w-4 h-4"></i></button>
+                        <input type="text" placeholder="D" value="${data?.descanso || '90s'}" class="viking-input py-2 text-[11px] exercise-rest">
+                        <button type="button" onclick="this.closest('.exercise-row').remove()" class="text-gray-600 hover:text-red-600"><i data-lucide="minus-circle" class="w-5 h-5"></i></button>
                     </div>
                 </div>
-                <input type="text" placeholder="Comentario opcional..." value="${data?.comentario || ''}" class="viking-input py-1 text-[8px] exercise-comment bg-transparent border-dashed">
+                <input type="text" placeholder="Comentario para el alumno..." value="${data?.comentario || ''}" class="viking-input py-1 text-[10px] exercise-comment bg-transparent border-dashed">
             `;
             container.appendChild(div);
             lucide.createIcons();
         }
+
+        // Funciones de filtrado dinámico para ejercicios
+        function filterExercisesByGroup(select) {
+            const groupID = select.value;
+            const exSelect = select.closest('.exercise-row').querySelector('.exercise-select');
+            const searchInput = select.closest('.exercise-row').querySelector('.ex-search');
+            searchInput.value = ""; // Reset search
+            
+            Array.from(exSelect.options).forEach(opt => {
+                if (opt.value === "") return;
+                opt.style.display = (groupID === "all" || opt.dataset.grupo == groupID) ? "block" : "none";
+            });
+            exSelect.value = "";
+        }
+
+        function searchExercises(input) {
+            const query = input.value.toLowerCase();
+            const exSelect = input.closest('.exercise-row').querySelector('.exercise-select');
+            const groupID = input.closest('.exercise-row').querySelector('.grupo-filter').value;
+            
+            Array.from(exSelect.options).forEach(opt => {
+                if (opt.value === "") return;
+                const matchesSearch = opt.text.toLowerCase().includes(query);
+                const matchesGroup = (groupID === "all" || opt.dataset.grupo == groupID);
+                opt.style.display = (matchesSearch && matchesGroup) ? "block" : "none";
+            });
+            exSelect.value = "";
+        }
+
+        // Manejo de creación de nuevo ejercicio desde el editor
+        function openModalNewExercise() { openModal('modal-nuevo-ejercicio'); }
+        
+        document.getElementById('form-nuevo-ejercicio-lib').onsubmit = async (e) => {
+            e.preventDefault();
+            const nombre = document.getElementById('lib-ex-nombre').value;
+            const grupo_id = parseInt(document.getElementById('lib-ex-grupo').value);
+            
+            const res = await apiFetch('/rutinas/ejercicios', 'POST', { nombre, grupo_muscular_id: grupo_id });
+            if (!res.error) {
+                showVikingToast("Ejercicio creado en librería");
+                closeModal('modal-nuevo-ejercicio');
+                await loadMusculacionMetadata();
+                // Actualizamos todos los selects existentes con el nuevo ejercicio
+                document.querySelectorAll('.exercise-select').forEach(sel => {
+                    const opt = document.createElement('option');
+                    opt.value = res.id;
+                    opt.text = res.nombre;
+                    opt.dataset.grupo = res.grupo_muscular_id;
+                    sel.appendChild(opt);
+                });
+            } else {
+                showVikingToast("Error al crear: " + res.error, true);
+            }
+        };
 
         document.getElementById('form-rutina-editor').onsubmit = async (e) => {
             e.preventDefault();
@@ -1643,7 +1731,7 @@
                 f.reset();
                 if(id === 'modal-clase') {
                     document.querySelectorAll('input[name="cl-dias-check"]').forEach(c => c.checked = false);
-                    document.getElementById('cl-schedule-slots').innerHTML = '<p class="text-[8px] text-gray-600 italic">Selecciona días arriba para asignar horarios</p>';
+                    document.getElementById('cl-schedule-slots').innerHTML = '<p class="text-[10px] text-gray-600 italic">Selecciona días arriba para asignar horarios</p>';
                 }
             }
         }
@@ -1715,8 +1803,8 @@
         async function loadDashboard() {
             const res = await apiFetch('/caja/resumen');
             if(!res.error) document.getElementById('dash-ingresos').innerText = `$ ${res.ingresos.toLocaleString()}`;
-            document.getElementById('dash-checkins').innerHTML = [{n: "GONZALO L.", t: "14:22"}, {n: "LAGERTHA S.", t: "14:05"}].map(c => `<div class="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5"><span class="text-[10px] font-black italic">${c.n}</span><span class="text-[9px] text-red-600 font-bold italic">${c.t} HS</span></div>`).join('');
-            document.getElementById('dash-top-clases').innerHTML = [{n: "CROSSFIT", r: 45}, {n: "HIIT", r: 28}].map((c, i) => `<div class="flex items-center justify-between p-3 bg-white/5 rounded-xl border border-white/5"><span class="text-[9px] font-black italic">${i+1}. ${c.n}</span><span class="text-[8px] text-red-600 font-bold">${c.r} RES.</span></div>`).join('');
+            document.getElementById('dash-checkins').innerHTML = [{n: "GONZALO L.", t: "14:22"}, {n: "LAGERTHA S.", t: "14:05"}].map(c => `<div class="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5"><span class="text-[11px] font-black italic">${c.n}</span><span class="text-[10px] text-red-600 font-bold italic">${c.t} HS</span></div>`).join('');
+            document.getElementById('dash-top-clases').innerHTML = [{n: "CROSSFIT", r: 45}, {n: "HIIT", r: 28}].map((c, i) => `<div class="flex items-center justify-between p-3 bg-white/5 rounded-xl border border-white/5"><span class="text-[11px] font-black italic">${i+1}. ${c.n}</span><span class="text-[10px] text-red-600 font-bold">${c.r} RES.</span></div>`).join('');
         }
 
         async function fetchAlumnos() {
@@ -1727,8 +1815,8 @@
             const renderRow = (al) => `<tr class="viking-table-row">
                 <td class="py-6">${al.nombre_completo}</td>
                 <td class="py-6 text-gray-500">${al.dni}</td>
-                <td class="py-6 text-gray-500 text-[9px]">${al.email || '-'}</td>
-                <td class="py-6 text-gray-400 font-black italic text-[9px]">${al.plan?.nombre || 'SIN PLAN'}</td>
+                <td class="py-6 text-gray-500 text-[10px]">${al.email || '-'}</td>
+                <td class="py-6 text-gray-400 font-black italic text-[10px]">${al.plan?.nombre || 'SIN PLAN'}</td>
                 <td class="py-6"><span class="text-green-500 font-bold">AL DÍA</span></td>
                 <td class="py-6 text-red-600 font-black">${al.fecha_ultima_renovacion || '-'}</td>
                 <td class="py-6 text-gray-400 font-black">${al.fecha_vencimiento || '-'}</td>
@@ -1766,7 +1854,7 @@
             document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active');
             const filtered = state.planes.filter(p => p.tipo_plan_id === tipoId);
             const hideEdit = (state.user?.rol_nombre === "Profesor" || state.user?.rol_nombre === "Alumno" || state.user?.rol_nombre === "Administracion");
-            document.getElementById('planes-container').innerHTML = filtered.map(p => `<div class="glass-card p-8 rounded-[2.5rem] flex flex-col border-red-600/10 relative text-left">${hideEdit ? '' : `<button onclick="openEditPlan(${p.id})" class="absolute top-4 right-4 text-gray-600 hover:text-red-600"><i data-lucide="edit-3" class="w-4 h-4"></i></button>`}<span class="text-[8px] font-black viking-red uppercase italic tracking-widest mb-2">${p.tipo?.nombre || 'PLAN'}</span><h4 class="text-lg font-black uppercase italic mb-6 leading-tight">${p.nombre}</h4><p class="text-3xl font-black italic mb-8">$ ${p.precio.toLocaleString()}</p></div>`).join('');
+            document.getElementById('planes-container').innerHTML = filtered.map(p => `<div class="glass-card p-8 rounded-[2.5rem] flex flex-col border-red-600/10 relative text-left">${hideEdit ? '' : `<button onclick="openEditPlan(${p.id})" class="absolute top-4 right-4 text-gray-600 hover:text-red-600"><i data-lucide="edit-3" class="w-4 h-4"></i></button>`}<span class="text-[10px] font-black viking-red uppercase italic tracking-widest mb-2">${p.tipo?.nombre || 'PLAN'}</span><h4 class="text-lg font-black uppercase italic mb-6 leading-tight">${p.nombre}</h4><p class="text-3xl font-black italic mb-8">$ ${p.precio.toLocaleString()}</p></div>`).join('');
             lucide.createIcons();
             applyPermissions();
         }
@@ -1774,7 +1862,7 @@
         async function loadStock() {
             const data = await apiFetch('/stock'); state.stock = Array.isArray(data) ? data : [];
             const hideEdit = (state.user?.rol_nombre === "Profesor");
-            document.getElementById('stock-container').innerHTML = state.stock.map(s => `<div class="glass-card p-6 rounded-[2rem] relative group text-left">${hideEdit ? '' : `<button onclick="openEditStock(${s.id})" class="absolute top-4 right-4 text-gray-600 hover:text-red-600"><i data-lucide="edit-2" class="w-3 h-3"></i></button>`}<h4 class="text-sm font-black uppercase italic mb-4">${s.nombre_producto}</h4><p class="text-2xl font-black italic">$ ${s.precio_venta.toLocaleString()}</p><div class="mt-4 border-t border-white/5 pt-4"><span class="text-[9px] font-black text-gray-600 uppercase">Stock: ${s.stock_actual}</span></div></div>`).join('');
+            document.getElementById('stock-container').innerHTML = state.stock.map(s => `<div class="glass-card p-6 rounded-[2rem] relative group text-left">${hideEdit ? '' : `<button onclick="openEditStock(${s.id})" class="absolute top-4 right-4 text-gray-600 hover:text-red-600"><i data-lucide="edit-2" class="w-3 h-3"></i></button>`}<h4 class="text-sm font-black uppercase italic mb-4">${s.nombre_producto}</h4><p class="text-2xl font-black italic">$ ${s.precio_venta.toLocaleString()}</p><div class="mt-4 border-t border-white/5 pt-4"><span class="text-[10px] font-black text-gray-600 uppercase">Stock: ${s.stock_actual}</span></div></div>`).join('');
             lucide.createIcons();
             applyPermissions();
         }
@@ -1783,7 +1871,7 @@
             const data = await apiFetch('/clases'); state.clases = Array.isArray(data) ? data : [];
             const hideEdit = (state.user?.rol_nombre === "Profesor" || state.user?.rol_nombre === "Administracion" || state.user?.rol_nombre === "Alumno");
             const isAdmin = (state.user?.rol_nombre === "Administrador" || state.user?.rol_nombre === "Supervisor");
-            document.getElementById('clases-container').innerHTML = state.clases.map(c => `<div class="glass-card p-8 rounded-[2.5rem] relative text-left">${hideEdit ? '' : `<button onclick="openEditClase(${c.id})" class="absolute top-4 right-4 text-gray-600 hover:text-red-600"><i data-lucide="settings" class="w-4 h-4"></i></button>`}<div class="flex items-center gap-2 mb-2"><div class="w-3 h-3 rounded-full" style="background-color: ${c.color || '#FF0000'}"></div><h4 class="text-lg font-black uppercase italic">${c.nombre}</h4></div><p class="text-[10px] font-black text-red-600 uppercase italic">Coach: ${c.coach || 'Vikingo'}</p><div class="flex justify-between items-center mt-4"><p class="text-[9px] text-gray-500 font-bold uppercase">Cupo: ${state.reservas.filter(r => r.clase_id === c.id).length}/${c.capacidad_max || 40}</p>${isAdmin ? `<button onclick="openInscriptos(${c.id})" class="text-[8px] font-black viking-red uppercase underline italic">Ver Inscriptos</button>` : ''}</div></div>`).join('');
+            document.getElementById('clases-container').innerHTML = state.clases.map(c => `<div class="glass-card p-8 rounded-[2.5rem] relative text-left">${hideEdit ? '' : `<button onclick="openEditClase(${c.id})" class="absolute top-4 right-4 text-gray-600 hover:text-red-600"><i data-lucide="settings" class="w-4 h-4"></i></button>`}<div class="flex items-center gap-2 mb-2"><div class="w-3 h-3 rounded-full" style="background-color: ${c.color || '#FF0000'}"></div><h4 class="text-lg font-black uppercase italic">${c.nombre}</h4></div><p class="text-[11px] font-black text-red-600 uppercase italic">Coach: ${c.coach || 'Vikingo'}</p><div class="flex justify-between items-center mt-4"><p class="text-[10px] text-gray-500 font-bold uppercase">Cupo: ${state.reservas.filter(r => r.clase_id === c.id).length}/${c.capacidad_max || 40}</p>${isAdmin ? `<button onclick="openInscriptos(${c.id})" class="text-[10px] font-black viking-red uppercase underline italic">Ver Inscriptos</button>` : ''}</div></div>`).join('');
             lucide.createIcons();
             if(document.getElementById('view-calendario').classList.contains('active')) renderCalendar();
             applyPermissions();
@@ -1893,7 +1981,7 @@
             const diasMap = {1: 'Lunes', 2: 'Martes', 3: 'Miércoles', 4: 'Jueves', 5: 'Viernes', 6: 'Sábado'};
 
             if (checkboxes.length === 0) {
-                container.innerHTML = '<p class="text-[8px] text-gray-600 italic">Selecciona días arriba para asignar horarios</p>';
+                container.innerHTML = '<p class="text-[9px] text-gray-600 italic">Selecciona días arriba para asignar horarios</p>';
                 return;
             }
 
@@ -1917,8 +2005,8 @@
                 }
 
                 row.innerHTML = `
-                    <span class="text-[9px] font-black uppercase italic">${diaNombre}</span>
-                    <select class="viking-input py-1 h-8 text-[9px] w-24 schedule-select-day" data-dia="${dia}">
+                    <span class="text-[10px] font-black uppercase italic">${diaNombre}</span>
+                    <select class="viking-input py-1 h-8 text-[10px] w-24 schedule-select-day" data-dia="${dia}">
                         ${optionsHtml}
                     </select>
                 `;
