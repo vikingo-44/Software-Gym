@@ -930,23 +930,22 @@
                 </div>
             </div>
 
-            <!-- Sección de Rutina Personalizada (Visualización) -->
-            <div class="space-y-6">
-                <div class="flex items-center justify-between border-l-4 border-red-600 pl-4">
-                    <h4 class="text-sm font-black uppercase italic tracking-widest">Rutina Personalizada</h4>
-                    <span class="text-[10px] text-gray-600 font-bold uppercase italic">Solo Lectura</span>
+            <!-- Sección de Rutina Personalizada -->
+            <div class="space-y-4">
+                <div class="flex items-center justify-between border-l-4 border-red-600 pl-4 mb-2">
+                    <h4 class="text-sm font-black uppercase italic tracking-widest">Plan de Entrenamiento</h4>
                 </div>
                 
-                <!-- Contenedor Dinámico: Aquí se inyectan los días y ejercicios -->
-                <div id="ficha-rutina-container" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <p class="text-[10px] text-gray-600 italic col-span-2">No hay rutina asignada o está cargando...</p>
-                </div>				
+                <!-- Este es el contenedor donde se inyecta la rutina agrupada y los días desplegables -->
+                <div id="ficha-rutina-container" class="flex flex-col gap-2">
+                    <p class="text-[10px] text-gray-600 italic text-center py-4">Cargando rutina...</p>
+                </div>
             </div>
 
             <!-- Botón de Cierre -->
             <div class="flex gap-4 pt-10">
                 <button onclick="closeModal('modal-ficha-tecnica')" class="w-full py-4 viking-bg-red text-black rounded-2xl font-black uppercase italic text-[12px] shadow-lg hover:scale-[1.02] transition-transform">
-                    Cerrar Ficha
+                    Cerrar Ficha del Guerrero
                 </button>
             </div>
         </div>
@@ -1401,18 +1400,16 @@
         }
 
         async function openFichaTecnica(alumnoId) {
-            // 1. Limpiar el contenedor antes de empezar para que no se vea la rutina del alumno anterior
             const rutinaContainer = document.getElementById('ficha-rutina-container');
-            rutinaContainer.innerHTML = '<p class="text-[10px] text-gray-500 italic col-span-2 animate-pulse">Cargando datos del guerrero...</p>';
+            rutinaContainer.innerHTML = '<p class="text-[10px] text-gray-500 italic col-span-2 animate-pulse text-center py-4">Cargando datos del guerrero...</p>';
 
-            // 2. Traer datos básicos del alumno
             const res = await apiFetch(`/alumnos/${alumnoId}/ficha`);
             if (res.error) {
                 showVikingToast("Error al cargar la ficha", true);
                 return;
             }
 
-            // 3. Llenar encabezado del modal
+            // Llenar datos básicos
             document.getElementById('ficha-nombre').innerText = res.nombre_completo;
             document.getElementById('ficha-dni').innerText = "DNI: " + res.dni;
             document.getElementById('ficha-plan').innerText = "Plan: " + (res.plan || 'Sin Plan');
@@ -1421,38 +1418,77 @@
             document.getElementById('ficha-altura').innerText = (res.altura || 0) + " cm";
             document.getElementById('ficha-imc').innerText = res.imc || 0;
 
-            // 4. Traer la rutina detallada
             const rutinaRes = await apiFetch(`/rutinas/usuario/${alumnoId}`);
             
-            // Verificamos si hay rutina y si tiene días cargados
             if (rutinaRes && !rutinaRes.error && rutinaRes.dias && rutinaRes.dias.length > 0) {
-                rutinaContainer.innerHTML = rutinaRes.dias.map(d => `
-                    <div class="glass-card p-5 rounded-2xl border-red-600/20 bg-black/40">
-                        <h5 class="text-[12px] font-black italic uppercase viking-red mb-3 border-b border-white/5 pb-1">${d.nombre_dia}</h5>
-                        <div class="space-y-3">
+                // Título del Objetivo/Grupo
+                const objetivoHTML = `
+                    <div class="col-span-2 mb-4">
+                        <div class="bg-red-600/10 border border-red-600/20 p-3 rounded-xl">
+                            <p class="text-[9px] text-red-600 font-black uppercase tracking-[0.2em] mb-1">Grupo de Rutina / Objetivo</p>
+                            <h5 class="text-sm font-black italic uppercase">${rutinaRes.objetivo || 'Entrenamiento General'}</h5>
+                        </div>
+                    </div>
+                `;
+
+                // Renderizado de días desplegables
+                const diasHTML = rutinaRes.dias.map((d, index) => {
+                    const diaId = `ficha-dia-${index}`;
+                    return `
+                    <div class="col-span-2 glass-card rounded-2xl border-white/5 overflow-hidden mb-2">
+                        <button onclick="toggleFichaDay('${diaId}')" class="w-full flex items-center justify-between p-4 bg-white/5 hover:bg-white/10 transition-colors">
+                            <span class="text-[11px] font-black italic uppercase viking-red">${d.nombre_dia}</span>
+                            <i data-lucide="chevron-down" class="w-4 h-4 text-gray-500 transition-transform duration-300" id="icon-${diaId}"></i>
+                        </button>
+                        <div id="${diaId}" class="hidden p-4 space-y-3 bg-black/20 border-t border-white/5">
                             ${(d.ejercicios || []).map(ex => `
-                                <div class="border-l-2 border-red-600/30 pl-3">
+                                <div class="flex flex-col border-l-2 border-red-600/40 pl-3 py-1">
                                     <p class="text-[11px] font-black uppercase italic text-white">${ex.ejercicio_libreria?.nombre || 'Ejercicio'}</p>
-                                    <p class="text-[9px] font-bold text-gray-400 uppercase">
-                                        ${ex.series} series x ${ex.repeticiones} reps 
-                                        ${ex.peso ? ` | <span class="text-red-500">${ex.peso}</span>` : ''}
-                                    </p>
-                                    ${ex.comentario ? `<p class="text-[8px] text-gray-500 italic mt-0.5">* ${ex.comentario}</p>` : ''}
+                                    <div class="flex gap-3 text-[9px] font-bold text-gray-500 uppercase mt-1">
+                                        <span>Series: <b class="text-white">${ex.series}</b></span>
+                                        <span>Reps: <b class="text-white">${ex.repeticiones}</b></span>
+                                        ${ex.peso ? `<span>Peso: <b class="text-red-600">${ex.peso}</b></span>` : ''}
+                                        ${ex.descanso ? `<span>Descanso: <b class="text-gray-400">${ex.descanso}</b></span>` : ''}
+                                    </div>
+                                    ${ex.comentario ? `<p class="text-[8px] text-gray-500 italic mt-1 bg-white/5 p-1 rounded font-medium">* ${ex.comentario}</p>` : ''}
                                 </div>
                             `).join('')}
                         </div>
                     </div>
-                `).join('');
+                `}).join('');
+
+                rutinaContainer.innerHTML = objetivoHTML + diasHTML;
             } else {
                 rutinaContainer.innerHTML = `
-                    <div class="col-span-2 p-6 border border-dashed border-white/10 rounded-2xl text-center">
-                        <p class="text-[11px] text-gray-600 font-bold uppercase italic">El alumno no tiene una rutina activa asignada</p>
+                    <div class="col-span-2 p-10 border border-dashed border-white/10 rounded-[2rem] text-center">
+                        <i data-lucide="dumbbell" class="w-8 h-8 mx-auto mb-3 opacity-20 text-white"></i>
+                        <p class="text-[11px] text-gray-600 font-bold uppercase italic">Sin rutina de musculación asignada</p>
                     </div>
                 `;
             }
 
             lucide.createIcons();
             openModal('modal-ficha-tecnica');
+        }
+
+        // Función auxiliar para el efecto de abrir/cerrar
+        function toggleFichaDay(id) {
+            const content = document.getElementById(id);
+            const icon = document.getElementById('icon-' + id);
+            const isHidden = content.classList.contains('hidden');
+            
+            // Cerrar todos los demás para efecto acordeón (opcional)
+            // document.querySelectorAll('[id^="ficha-dia-"]').forEach(el => el.classList.add('hidden'));
+            
+            if (isHidden) {
+                content.classList.remove('hidden');
+                icon.style.transform = 'rotate(180deg)';
+                icon.style.color = '#FF0000';
+            } else {
+                content.classList.add('hidden');
+                icon.style.transform = 'rotate(0deg)';
+                icon.style.color = '#6b7280';
+            }
         }
 
         async function renderRutinas() {
