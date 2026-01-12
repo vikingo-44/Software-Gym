@@ -613,14 +613,12 @@ def create_plan_rutina(data: PlanRutinaCreate, db: Session = Depends(database.ge
         activo=True
     )
     db.add(nuevo_plan)
-    db.commit()
-    db.refresh(nuevo_plan)
+    db.flush() # Flush para obtener el ID antes del commit definitivo
     
     for d in data.dias:
         nuevo_dia = models.DiaRutina(plan_rutina_id=nuevo_plan.id, nombre_dia=d.nombre_dia)
         db.add(nuevo_dia)
-        db.commit()
-        db.refresh(nuevo_dia)
+        db.flush()
         
         for e in d.ejercicios:
             ej_en_rut = models.EjercicioEnRutina(

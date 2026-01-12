@@ -253,6 +253,12 @@
             padding: 1.5rem;
             border-radius: 1.5rem;
         }
+        .exercise-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr 1fr 1fr;
+            gap: 8px;
+            align-items: end;
+        }
     </style>
 </head>
 <body class="flex h-screen w-screen overflow-hidden text-left">
@@ -762,9 +768,9 @@
                 <h3 class="text-3xl font-black italic uppercase mb-8" id="rutina-title">Rutinas de Alumnos</h3>
                 <div class="glass-card p-10 rounded-[3rem]">
                     <div id="musculacion-student-view" class="hidden space-y-8">
-                        <div class="bg-red-600/10 p-6 rounded-3xl border border-red-600/20">
+                        <div class="bg-red-600/10 p-6 rounded-3xl border border-red-600/20" id="student-plan-header">
                             <h4 class="text-xl font-black italic uppercase mb-2">MI RUTINA DEL VALHALLA</h4>
-                            <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Enfocada en hipertrofia y fuerza vikinga</p>
+                            <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest" id="al-rutina-objetivo">Cargando objetivo...</p>
                         </div>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6" id="student-routine-exercises">
                         </div>
@@ -775,14 +781,26 @@
         </div>
     </main>
 
-    <!-- MODAL EDITAR RUTINA (NUEVO) -->
+    <!-- MODAL EDITAR RUTINA (MEJORADO) -->
     <div id="modal-rutina-editor" class="viking-modal">
-        <div class="glass-card p-10 rounded-[3rem] w-full max-w-2xl text-left overflow-y-auto max-h-[90vh] custom-scrollbar">
-            <h3 class="text-2xl font-black uppercase italic mb-4">Gestionar Rutina</h3>
+        <div class="glass-card p-10 rounded-[3rem] w-full max-w-4xl text-left overflow-y-auto max-h-[90vh] custom-scrollbar">
+            <h3 class="text-2xl font-black uppercase italic mb-4">Gestionar Rutina de Musculación</h3>
             <p id="rutina-editor-alumno" class="text-red-600 font-black uppercase italic text-xs mb-8"></p>
             
             <form id="form-rutina-editor" class="space-y-6">
                 <input type="hidden" id="rutina-editor-alumno-id">
+                
+                <div class="grid grid-cols-2 gap-4 mb-8">
+                    <div class="space-y-1">
+                        <label class="text-[9px] font-black uppercase text-gray-500 italic">Objetivo del Plan</label>
+                        <input type="text" id="rutina-objetivo" placeholder="Ej: Hipertrofia, Fuerza, Definición" class="viking-input" required>
+                    </div>
+                    <div class="space-y-1">
+                        <label class="text-[9px] font-black uppercase text-gray-500 italic">Vencimiento de Rutina</label>
+                        <input type="date" id="rutina-vencimiento" class="viking-input" required>
+                    </div>
+                </div>
+
                 <div id="rutina-editor-container" class="space-y-6">
                     <!-- Los días se agregan aquí dinámicamente -->
                 </div>
@@ -793,13 +811,13 @@
 
                 <div class="flex gap-4 pt-6">
                     <button type="button" onclick="closeModal('modal-rutina-editor')" class="flex-1 py-4 bg-white/5 rounded-2xl font-black uppercase italic text-[10px]">Cancelar</button>
-                    <button type="submit" class="flex-1 py-4 viking-bg-red text-black rounded-2xl font-black uppercase italic text-[10px]">Guardar Rutina</button>
+                    <button type="submit" class="flex-1 py-4 viking-bg-red text-black rounded-2xl font-black uppercase italic text-[10px]">Guardar Plan de Rutina</button>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- MODAL CLASE ACTUALIZADO -->
+    <!-- MODAL CLASE -->
     <div id="modal-clase" class="viking-modal">
         <div class="glass-card p-10 rounded-[3rem] w-full max-w-lg text-left">
             <h3 class="text-2xl font-black uppercase italic mb-6" id="modal-clase-title">Configurar Clase</h3>
@@ -1039,7 +1057,8 @@
             profesores: [], administrativos: [], tiposPlanes: [],
             reservas: [], 
             cart: [], currentPaymentMethod: '',
-            cobrarTab: 'mercaderia'
+            cobrarTab: 'mercaderia',
+            gruposMusculares: [], ejerciciosLibreria: []
         };
 
         function showVikingToast(msg, error = false) {
@@ -1356,14 +1375,20 @@
             document.getElementById('ficha-imc').innerText = res.imc || 0;
 
             const rutinaContainer = document.getElementById('ficha-rutina-container');
-            rutinaContainer.innerHTML = (res.rutina || []).map(r => `
-                <div class="glass-card p-4 rounded-2xl border-red-600/10">
-                    <h5 class="text-[10px] font-black italic uppercase viking-red mb-3">${r.dia}</h5>
-                    <ul class="text-[9px] space-y-2 font-bold opacity-80">
-                        ${(r.ejercicios || []).map(ex => `<li><i data-lucide="chevron-right" class="w-3 h-3 inline mr-1 viking-red"></i> ${ex}</li>`).join('')}
-                    </ul>
-                </div>
-            `).join('');
+            // Cargar rutina desde el objeto real de PlanRutina
+            const rutinaRes = await apiFetch(`/rutinas/usuario/${alumnoId}`);
+            if (rutinaRes.error) {
+                rutinaContainer.innerHTML = '<p class="text-gray-500 italic py-4 col-span-2">Sin rutina activa asignada.</p>';
+            } else {
+                rutinaContainer.innerHTML = (rutinaRes.dias || []).map(d => `
+                    <div class="glass-card p-4 rounded-2xl border-red-600/10">
+                        <h5 class="text-[10px] font-black italic uppercase viking-red mb-3">${d.nombre_dia}</h5>
+                        <ul class="text-[9px] space-y-2 font-bold opacity-80">
+                            ${(d.ejercicios || []).map(ex => `<li><i data-lucide="chevron-right" class="w-3 h-3 inline mr-1 viking-red"></i> ${ex.ejercicio_libreria.nombre} (${ex.series}x${ex.repeticiones})</li>`).join('')}
+                        </ul>
+                    </div>
+                `).join('');
+            }
 
             lucide.createIcons();
             openModal('modal-ficha-tecnica');
@@ -1379,23 +1404,28 @@
                 studentView.classList.remove('hidden');
                 document.getElementById('rutina-title').innerText = "Mi Rutina Musculación";
                 
-                const planNombre = state.user.plan?.nombre?.toLowerCase() || "";
-                const normalized = planNombre.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-                
-                if (normalized.includes('musculacion') || normalized.includes('completo')) {
-                    const res = await apiFetch(`/alumnos/${state.user.id}/ficha`);
-                    const rutina = res.rutina || [];
-                    
-                    document.getElementById('student-routine-exercises').innerHTML = rutina.length ? rutina.map(r => `
+                const res = await apiFetch(`/rutinas/usuario/${state.user.id}`);
+                if (!res.error && res.id) {
+                    document.getElementById('al-rutina-objetivo').innerText = "OBJETIVO: " + res.objetivo.toUpperCase();
+                    document.getElementById('student-routine-exercises').innerHTML = (res.dias || []).map(d => `
                         <div class="glass-card p-6 rounded-2xl border-red-600/10">
-                            <h5 class="font-black italic uppercase viking-red mb-2">${r.dia}</h5>
-                            <ul class="text-[11px] space-y-2 opacity-80 font-bold">
-                                ${r.ejercicios.map(ex => `<li>- ${ex}</li>`).join('')}
-                            </ul>
+                            <h5 class="font-black italic uppercase viking-red mb-4 border-b border-white/5 pb-2">${d.nombre_dia}</h5>
+                            <div class="space-y-4">
+                                ${d.ejercicios.map(e => `
+                                    <div class="bg-white/5 p-3 rounded-xl">
+                                        <p class="text-[11px] font-black uppercase italic">${e.ejercicio_libreria.nombre}</p>
+                                        <div class="grid grid-cols-3 gap-2 mt-2 text-[9px] font-bold text-gray-500 uppercase tracking-tighter">
+                                            <span>S: ${e.series}</span> <span>R: ${e.repeticiones}</span> <span>P: ${e.peso}</span>
+                                        </div>
+                                        ${e.comentario ? `<p class="text-[8px] text-red-600 italic mt-1">* ${e.comentario}</p>` : ''}
+                                    </div>
+                                `).join('')}
+                            </div>
                         </div>
-                    `).join('') : '<p class="text-gray-500 italic py-10 text-center col-span-2">Aún no tienes una rutina asignada. Consulta con tu profesor.</p>';
+                    `).join('');
                 } else {
-                     studentView.innerHTML = '<p class="text-gray-500 italic py-10 text-center">Debes tener un plan de Musculación activo para ver tus rutinas.</p>';
+                    document.getElementById('al-rutina-objetivo').innerText = "SIN RUTINA ACTIVA";
+                    document.getElementById('student-routine-exercises').innerHTML = '<p class="text-gray-500 italic py-10 text-center col-span-2">Aún no tienes una rutina asignada. Consulta con tu profesor.</p>';
                 }
             } else {
                 list.style.display = 'grid'; studentView.classList.add('hidden');
@@ -1429,29 +1459,40 @@
             }
         }
 
-        // --- LÓGICA DEL EDITOR DE RUTINAS ---
+        async function loadMusculacionMetadata() {
+            const grupos = await apiFetch('/rutinas/grupos-musculares');
+            const ejercicios = await apiFetch('/rutinas/ejercicios');
+            state.gruposMusculares = Array.isArray(grupos) ? grupos : [];
+            state.ejerciciosLibreria = Array.isArray(ejercicios) ? ejercicios : [];
+        }
+
         async function openRoutineEditor(alumnoId) {
             const al = state.alumnos.find(a => a.id === alumnoId);
             if (!al) return;
+            
+            await loadMusculacionMetadata();
             
             document.getElementById('rutina-editor-alumno').innerText = al.nombre_completo;
             document.getElementById('rutina-editor-alumno-id').value = alumnoId;
             const container = document.getElementById('rutina-editor-container');
             container.innerHTML = "";
 
-            const res = await apiFetch(`/alumnos/${alumnoId}/ficha`);
-            const rutina = res.rutina || [];
-
-            if (rutina.length > 0) {
-                rutina.forEach(r => addRoutineDay(r.dia, r.ejercicios));
+            const rutinaRes = await apiFetch(`/rutinas/usuario/${alumnoId}`);
+            
+            if (!rutinaRes.error && rutinaRes.id) {
+                document.getElementById('rutina-objetivo').value = rutinaRes.objetivo;
+                document.getElementById('rutina-vencimiento').value = rutinaRes.fecha_vencimiento;
+                rutinaRes.dias.forEach(d => addRoutineDay(d.nombre_dia, d.ejercicios));
             } else {
-                addRoutineDay(); // Uno vacío por defecto
+                document.getElementById('rutina-objetivo').value = "";
+                document.getElementById('rutina-vencimiento').value = new Date(Date.now() + 30*24*60*60*1000).toISOString().split('T')[0];
+                addRoutineDay("Día 1", []); 
             }
 
             openModal('modal-rutina-editor');
         }
 
-        function addRoutineDay(dia = "", ejercicios = [""]) {
+        function addRoutineDay(nombre = "", ejercicios = []) {
             const container = document.getElementById('rutina-editor-container');
             const dayId = Date.now() + Math.random();
             const dayCard = document.createElement('div');
@@ -1460,54 +1501,90 @@
             
             dayCard.innerHTML = `
                 <div class="flex justify-between items-center gap-4">
-                    <input type="text" placeholder="Ej: Lunes - Piernas" value="${dia}" class="viking-input py-2 text-[10px] day-title" required>
+                    <input type="text" placeholder="Ej: Día 1 - Empuje" value="${nombre}" class="viking-input py-2 text-[10px] day-title" required>
                     <button type="button" onclick="this.closest('.rutina-dia-card').remove()" class="text-red-900 hover:text-red-600"><i data-lucide="x-circle" class="w-5 h-5"></i></button>
                 </div>
-                <div class="exercises-list space-y-2">
-                    ${ejercicios.map(ex => `
-                        <div class="flex gap-2">
-                            <input type="text" placeholder="Ejercicio, series, reps..." value="${ex}" class="viking-input py-2 text-[9px] exercise-input">
-                            <button type="button" onclick="this.parentElement.remove()" class="text-gray-600"><i data-lucide="minus-circle" class="w-4 h-4"></i></button>
-                        </div>
-                    `).join('')}
+                <div class="exercises-list space-y-3">
+                    <div class="grid grid-cols-5 gap-2 px-2 text-[7px] font-black text-gray-600 uppercase italic">
+                        <span class="col-span-1">Ejercicio</span><span>Series</span><span>Reps</span><span>Peso</span><span>Descanso</span>
+                    </div>
+                    <div class="day-exercises-container space-y-2"></div>
                 </div>
                 <button type="button" onclick="addExerciseToDay('${dayId}')" class="text-[8px] font-black viking-red uppercase italic">+ Agregar Ejercicio</button>
             `;
             container.appendChild(dayCard);
+            
+            if (ejercicios.length > 0) {
+                ejercicios.forEach(e => addExerciseToDay(dayId, e));
+            } else {
+                addExerciseToDay(dayId);
+            }
             lucide.createIcons();
         }
 
-        function addExerciseToDay(dayId) {
-            const card = document.querySelector(`[data-day-id="${dayId}"] .exercises-list`);
+        function addExerciseToDay(dayId, data = null) {
+            const container = document.querySelector(`[data-day-id="${dayId}"] .day-exercises-container`);
             const div = document.createElement('div');
-            div.className = "flex gap-2";
+            div.className = "exercise-row space-y-2 pb-2 border-b border-white/5";
+            
+            const options = state.ejerciciosLibreria.map(ex => `<option value="${ex.id}" ${data && data.ejercicio_id == ex.id ? 'selected' : ''}>${ex.nombre} (${ex.grupo_muscular?.nombre || 'Gral'})</option>`).join('');
+
             div.innerHTML = `
-                <input type="text" placeholder="Ejercicio, series, reps..." class="viking-input py-2 text-[9px] exercise-input">
-                <button type="button" onclick="this.parentElement.remove()" class="text-gray-600"><i data-lucide="minus-circle" class="w-4 h-4"></i></button>
+                <div class="exercise-grid">
+                    <select class="viking-input py-2 text-[9px] exercise-select" required>
+                        <option value="">Seleccionar Ejercicio</option>
+                        ${options}
+                    </select>
+                    <input type="text" placeholder="Sets" value="${data?.series || '3'}" class="viking-input py-2 text-[9px] exercise-series" required>
+                    <input type="text" placeholder="Reps" value="${data?.repeticiones || '12'}" class="viking-input py-2 text-[9px] exercise-reps" required>
+                    <input type="text" placeholder="Peso" value="${data?.peso || '10kg'}" class="viking-input py-2 text-[9px] exercise-weight">
+                    <div class="flex gap-2">
+                        <input type="text" placeholder="90s" value="${data?.descanso || '90s'}" class="viking-input py-2 text-[9px] exercise-rest">
+                        <button type="button" onclick="this.closest('.exercise-row').remove()" class="text-gray-600 hover:text-red-600"><i data-lucide="minus-circle" class="w-4 h-4"></i></button>
+                    </div>
+                </div>
+                <input type="text" placeholder="Comentario opcional..." value="${data?.comentario || ''}" class="viking-input py-1 text-[8px] exercise-comment bg-transparent border-dashed">
             `;
-            card.appendChild(div);
+            container.appendChild(div);
             lucide.createIcons();
         }
 
         document.getElementById('form-rutina-editor').onsubmit = async (e) => {
             e.preventDefault();
-            const alumnoId = document.getElementById('rutina-editor-alumno-id').value;
-            const daysCards = document.querySelectorAll('.rutina-dia-card');
+            const alumnoId = parseInt(document.getElementById('rutina-editor-alumno-id').value);
+            const objetivo = document.getElementById('rutina-objetivo').value;
+            const vencimiento = document.getElementById('rutina-vencimiento').value;
+            const dayCards = document.querySelectorAll('.rutina-dia-card');
             
-            const rutinaData = Array.from(daysCards).map(card => {
-                const dia = card.querySelector('.day-title').value;
-                const ejercicios = Array.from(card.querySelectorAll('.exercise-input')).map(i => i.value).filter(v => v.trim() !== "");
-                return { dia, ejercicios };
+            const dias = Array.from(dayCards).map(card => {
+                const nombre_dia = card.querySelector('.day-title').value;
+                const exercisesRows = card.querySelectorAll('.exercise-row');
+                const ejercicios = Array.from(exercisesRows).map(row => ({
+                    ejercicio_id: parseInt(row.querySelector('.exercise-select').value),
+                    series: row.querySelector('.exercise-series').value,
+                    repeticiones: row.querySelector('.exercise-reps').value,
+                    peso: row.querySelector('.exercise-weight').value,
+                    descanso: row.querySelector('.exercise-rest').value,
+                    comentario: row.querySelector('.exercise-comment').value
+                })).filter(ex => !isNaN(ex.ejercicio_id));
+                
+                return { nombre_dia, ejercicios };
             });
 
-            // Usamos un endpoint específico o la actualización de alumno
-            const res = await apiFetch(`/alumnos/${alumnoId}/rutina`, 'POST', { rutina: rutinaData });
+            const payload = {
+                usuario_id: alumnoId,
+                objetivo: objetivo,
+                fecha_vencimiento: vencimiento,
+                dias: dias
+            };
+
+            const res = await apiFetch('/rutinas/plan', 'POST', payload);
             if (!res.error) {
                 closeModal('modal-rutina-editor');
-                showVikingToast("Rutina Vikinga Actualizada");
+                showVikingToast("¡Plan de Rutina Vikingo Guardado!");
                 renderRutinas();
             } else {
-                showVikingToast("Error al guardar rutina", true);
+                showVikingToast("Error al guardar: " + res.error, true);
             }
         };
 
@@ -1587,10 +1664,8 @@
                 const u = state.user;
                 document.getElementById('prof-name').innerText = u.nombre_completo || "Usuario Vikingo";
                 document.getElementById('prof-role').innerText = u.rol_nombre || "Staff";
-                
                 const initials = u.nombre_completo ? u.nombre_completo.split(' ').filter(n => n).map(n => n[0]).join('').toUpperCase() : "??";
                 document.getElementById('prof-initials-view').innerText = initials;
-                
                 document.getElementById('prof-input-name').value = u.nombre_completo || "";
                 document.getElementById('prof-input-dni').value = u.dni || "";
                 document.getElementById('prof-input-email').value = u.email || "";
@@ -1624,20 +1699,17 @@
                 document.getElementById('login-overlay').style.display = 'none';
                 document.getElementById('sidebar').classList.remove('hidden');
                 document.getElementById('main-content').classList.remove('hidden');
-                
                 document.getElementById('side-user-name').innerText = res.nombre_completo || "Usuario";
                 document.getElementById('side-user-role').innerText = res.rol_nombre || 'Staff';
-                
                 const initials = res.nombre_completo ? res.nombre_completo.split(' ').filter(n => n).map(n => n[0]).join('').toUpperCase() : "??";
                 document.getElementById('user-initials').innerText = initials;
-                
                 await initApp();
                 switchView('dashboard');
             } else document.getElementById('login-error').classList.remove('hidden');
         }
 
         async function initApp() {
-            await Promise.all([fetchAlumnos(), loadStaff(), loadPlanes(), loadStock(), loadClases(), fetchReservas(), loadDashboard()]);
+            await Promise.all([fetchAlumnos(), loadStaff(), loadPlanes(), loadStock(), loadClases(), fetchReservas(), loadDashboard(), loadMusculacionMetadata()]);
         }
 
         async function loadDashboard() {
@@ -1746,7 +1818,7 @@
             document.getElementById('stf-nombre').value = user.nombre_completo; document.getElementById('stf-dni').value = user.dni; document.getElementById('stf-esp').value = user.especialidad || "";
             const delBtn = document.getElementById('btn-delete-staff'); if(state.user.rol_nombre === "Administrador" || state.user.rol_nombre === "Supervisor") delBtn.classList.remove('hidden');
             delBtn.onclick = () => deleteRecord('staff', id, 'modal-staff', loadStaff);
-            openModal('staff');
+            openModal('modal-staff');
         }
 
         document.getElementById('form-staff').onsubmit = async (e) => {
@@ -1891,7 +1963,7 @@
 
         async function handleDrop(e, dia, horario) { e.preventDefault(); const id = e.dataTransfer.getData("clase_id"); if (!id) return; const res = await apiFetch(`/clases/${id}/move`, 'PUT', { dia, horario }); if (!res.error) { loadClases(); showVikingToast("Clase Reubicada"); } }
         
-        async function deleteRecord(entity, id, modalId, callback) { if(!confirm("¿Deseas eliminar este registro?")) return; const res = await apiFetch(`/${entity}/${id}`, 'DELETE'); if(!res.error) { closeModal(modalId); callback(); showVikingToast("Registro Elimnado", true); } }
+        async function deleteRecord(entity, id, modalId, callback) { if(!confirm("¿Deseas eliminar este registro?")) return; const res = await apiFetch(`/${entity}/${id}`, 'DELETE'); if(!res.error) { closeModal(modalId); callback(); showVikingToast("Registro Eliminado", true); } }
         
         async function handleProfileUpdate(e) { 
             e.preventDefault(); 

@@ -92,7 +92,7 @@ class MovimientoCaja(Base):
     fecha = Column(DateTime, default=datetime.datetime.now)
 
 # =========================================
-# TABLAS MUSCULACIÓN (PostgreSQL ready)
+# TABLAS MUSCULACIÓN (ACTUALIZADAS)
 # =========================================
 
 class GrupoMuscular(Base):
@@ -112,6 +112,8 @@ class PlanRutina(Base):
     __tablename__ = "planes_rutina"
     id = Column(Integer, primary_key=True)
     usuario_id = Column(Integer, ForeignKey("usuarios.id"))
+    nombre_grupo = Column(String) # Ej: "Fase de Volumen"
+    descripcion = Column(Text, nullable=True)
     fecha_creacion = Column(Date, default=datetime.date.today)
     fecha_vencimiento = Column(Date)
     objetivo = Column(String)
