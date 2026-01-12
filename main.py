@@ -126,14 +126,13 @@ class ReservaCreate(BaseModel):
     usuario_id: int
     clase_id: int
 
-# --- NUEVOS SCHEMAS MUSCULACIÓN ---
+# --- SCHEMAS MUSCULACIÓN ---
 
 class GrupoMuscularSchema(BaseModel):
     id: int
     nombre: str
     class Config: from_attributes = True
 
-# SOLUCIÓN AL ERROR: Definición de EjercicioCreate faltante
 class EjercicioCreate(BaseModel):
     nombre: str
     grupo_muscular_id: int
@@ -159,6 +158,8 @@ class DiaRutinaCreate(BaseModel):
 
 class PlanRutinaCreate(BaseModel):
     usuario_id: int
+    nombre_grupo: Optional[str] = "Nueva Rutina"
+    descripcion: Optional[str] = ""
     objetivo: str
     fecha_vencimiento: date
     dias: List[DiaRutinaCreate]
@@ -240,8 +241,7 @@ def get_ficha_tecnica(id: int, db: Session = Depends(database.get_db)):
         "peso": al.peso,
         "altura": al.altura,
         "imc": al.imc,
-        "estado_cuenta": al.estado_cuenta,
-        "rutina": [] # Se cargará desde las tablas nuevas en el frontend
+        "estado_cuenta": al.estado_cuenta
     }
 
 @app.post("/api/alumnos", tags=["Alumnos"])
@@ -301,7 +301,7 @@ def delete_alumno(id: int, db: Session = Depends(database.get_db)):
     return {"status": "success"}
 
 # ==========================================
-# MÓDULO 3: RESERVAS (PERSISTENCIA Y CANCELACIÓN)
+# MÓDULO 3: RESERVAS
 # ==========================================
 
 @app.get("/api/reservas", tags=["Reservas"])
@@ -488,6 +488,7 @@ def update_plan(id: int, data: PlanUpdate, db: Session = Depends(database.get_db
 
 @app.delete("/api/planes/{id}", tags=["Planes"])
 def delete_plan(id: int, db: Session = Depends(database.get_db)):
+    db.query(models.Usuario).filter(models.Usuario.plan_id == id).update({"plan_id": None}) # Desvincular alumnos
     db.query(models.Plan).filter(models.Plan.id == id).delete()
     db.commit()
     return {"status": "success"}
@@ -603,17 +604,19 @@ def create_ejercicio_lib(data: EjercicioCreate, db: Session = Depends(database.g
 
 @app.post("/api/rutinas/plan", tags=["Musculación"])
 def create_plan_rutina(data: PlanRutinaCreate, db: Session = Depends(database.get_db)):
-    # Desactivar rutinas anteriores
+    # Desactivar rutinas anteriores para este usuario
     db.query(models.PlanRutina).filter(models.PlanRutina.usuario_id == data.usuario_id).update({"activo": False})
     
     nuevo_plan = models.PlanRutina(
         usuario_id=data.usuario_id,
+        nombre_grupo=data.nombre_grupo,
+        descripcion=data.descripcion,
         objetivo=data.objetivo,
         fecha_vencimiento=data.fecha_vencimiento,
         activo=True
     )
     db.add(nuevo_plan)
-    db.flush() # Flush para obtener el ID antes del commit definitivo
+    db.flush() 
     
     for d in data.dias:
         nuevo_dia = models.DiaRutina(plan_rutina_id=nuevo_plan.id, nombre_dia=d.nombre_dia)
@@ -641,7 +644,9 @@ def get_rutina_activa(id: int, db: Session = Depends(database.get_db)):
         models.PlanRutina.usuario_id == id, 
         models.PlanRutina.activo == True
     ).options(
-        joinedload(models.PlanRutina.dias).joinedload(models.DiaRutina.ejercicios).joinedload(models.EjercicioEnRutina.ejercicio_libreria)
+        joinedload(models.PlanRutina.dias)
+        .joinedload(models.DiaRutina.ejercicios)
+        .joinedload(models.EjercicioEnRutina.ejercicio_libreria)
     ).first()
     
     if not rutina:

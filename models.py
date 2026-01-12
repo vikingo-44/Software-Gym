@@ -35,7 +35,7 @@ class Usuario(Base):
     perfil_id = Column(Integer, ForeignKey("perfiles.id"))
     plan_id = Column(Integer, ForeignKey("planes.id"), nullable=True)
     
-    # Datos físicos
+    # Datos físicos y de salud
     fecha_nacimiento = Column(Date, nullable=True)
     edad = Column(Integer, nullable=True)
     peso = Column(Float, nullable=True)
@@ -43,8 +43,9 @@ class Usuario(Base):
     imc = Column(Float, nullable=True)
     certificado_entregado = Column(Boolean, default=False)
     fecha_certificado = Column(Date, nullable=True)
-    especialidad = Column(String, nullable=True) # Para Staff
+    especialidad = Column(String, nullable=True) # Para Staff/Profesores
     
+    # Gestión de membresía
     fecha_ultima_renovacion = Column(Date, nullable=True)
     fecha_vencimiento = Column(Date, nullable=True)
     estado_cuenta = Column(String, default="Al día")
@@ -92,7 +93,7 @@ class MovimientoCaja(Base):
     fecha = Column(DateTime, default=datetime.datetime.now)
 
 # =========================================
-# TABLAS MUSCULACIÓN (ACTUALIZADAS)
+# TABLAS MUSCULACIÓN
 # =========================================
 
 class GrupoMuscular(Base):
@@ -140,7 +141,7 @@ class EjercicioEnRutina(Base):
     repeticiones = Column(String)
     peso = Column(String)
     descanso = Column(String)
-    comentario = Column(Text)
+    comentario = Column(Text, nullable=True)
     
     dia = relationship("DiaRutina", back_populates="ejercicios")
     ejercicio_libreria = relationship("Ejercicio")
