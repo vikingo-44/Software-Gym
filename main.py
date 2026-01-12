@@ -122,11 +122,16 @@ class MovimientoCajaCreate(BaseModel):
     monto: float
     descripcion: str
 
+# Schema específico para resolver el error 500 de Reservas
+class ReservaCreate(BaseModel):
+    usuario_id: int
+    clase_id: int
+
 # ==========================================
 # ENDPOINTS DE ACCESO Y FRONTEND
 # ==========================================
 
-@app.get("/")
+@app.get("/", tags=["Sistema"])
 def api_root():
     return {
         "status": "Vikingo Strength Hub API is running",
@@ -134,7 +139,7 @@ def api_root():
         "frontend_app": "/app"
     }
 
-@app.get("/app")
+@app.get("/app", tags=["Sistema"])
 async def serve_app():
     return FileResponse("index.html")
 
@@ -174,7 +179,7 @@ def login(data: UsuarioLogin, db: Session = Depends(database.get_db)):
 # MÓDULO 2: GESTIÓN DE ALUMNOS Y FICHAS
 # ==========================================
 
-@app.get("/api/alumnos", response_model=List[UsuarioResponse])
+@app.get("/api/alumnos", response_model=List[UsuarioResponse], tags=["Alumnos"])
 def get_alumnos(db: Session = Depends(database.get_db)):
     alumnos = db.query(models.Usuario).options(
         joinedload(models.Usuario.perfil),
@@ -186,13 +191,12 @@ def get_alumnos(db: Session = Depends(database.get_db)):
         
     return alumnos
 
-@app.get("/api/alumnos/{id}/ficha")
+@app.get("/api/alumnos/{id}/ficha", tags=["Alumnos"])
 def get_ficha_tecnica(id: int, db: Session = Depends(database.get_db)):
     al = db.query(models.Usuario).options(joinedload(models.Usuario.plan)).filter(models.Usuario.id == id).first()
     if not al:
         raise HTTPException(status_code=404, detail="Alumno no encontrado")
     
-    # Aquí retornamos los datos físicos y una rutina estática (o dinámica si tuvieras tabla de rutinas)
     return {
         "nombre_completo": al.nombre_completo,
         "dni": al.dni,
@@ -207,7 +211,7 @@ def get_ficha_tecnica(id: int, db: Session = Depends(database.get_db)):
         ]
     }
 
-@app.post("/api/alumnos")
+@app.post("/api/alumnos", tags=["Alumnos"])
 def create_alumno(alumno: AlumnoUpdate, db: Session = Depends(database.get_db)):
     perfil = db.query(models.Perfil).filter(func.lower(models.Perfil.nombre) == "alumno").first()
     if not perfil:
@@ -234,7 +238,7 @@ def create_alumno(alumno: AlumnoUpdate, db: Session = Depends(database.get_db)):
     db.commit()
     return {"status": "success"}
 
-@app.put("/api/alumnos/{id}")
+@app.put("/api/alumnos/{id}", tags=["Alumnos"])
 def update_alumno(id: int, data: AlumnoUpdate, db: Session = Depends(database.get_db)):
     al = db.query(models.Usuario).filter(models.Usuario.id == id).first()
     if not al:
@@ -257,7 +261,7 @@ def update_alumno(id: int, data: AlumnoUpdate, db: Session = Depends(database.ge
     db.commit()
     return {"status": "success"}
 
-@app.delete("/api/alumnos/{id}")
+@app.delete("/api/alumnos/{id}", tags=["Alumnos"])
 def delete_alumno(id: int, db: Session = Depends(database.get_db)):
     db.query(models.Usuario).filter(models.Usuario.id == id).delete()
     db.commit()
@@ -267,58 +271,58 @@ def delete_alumno(id: int, db: Session = Depends(database.get_db)):
 # MÓDULO 3: RESERVAS (PERSISTENCIA Y CANCELACIÓN)
 # ==========================================
 
-@app.get("/api/reservas")
+@app.get("/api/reservas", tags=["Reservas"])
 def get_reservas(db: Session = Depends(database.get_db)):
     res = db.query(models.Reserva).options(
         joinedload(models.Reserva.usuario),
         joinedload(models.Reserva.clase)
     ).all()
-    # Retornamos la lista con info legible para el front
     return [{
         "id": r.id,
         "usuario_id": r.usuario_id,
         "clase_id": r.clase_id,
-        "alumno_dni": r.usuario.dni,
-        "clase_nombre": r.clase.nombre,
-        "horario": r.clase.horario,
-        "dia": r.clase.dia
+        "alumno_dni": r.usuario.dni if r.usuario else "N/A",
+        "clase_nombre": r.clase.nombre if r.clase else "Eliminada",
+        "horario": r.clase.horario if r.clase else 0,
+        "dia": r.clase.dia if r.clase else 0
     } for r in res]
 
-@app.post("/api/reservas")
-def book_clase(data: dict, db: Session = Depends(database.get_db)):
-    # Verificar si ya existe reserva para el mismo alumno y clase hoy
+@app.post("/api/reservas", tags=["Reservas"])
+def book_clase(data: ReservaCreate, db: Session = Depends(database.get_db)):
+    # 1. Verificar si ya existe reserva para el mismo alumno y clase hoy
     exists = db.query(models.Reserva).filter(
-        models.Reserva.usuario_id == data['usuario_id'],
-        models.Reserva.clase_id == data['clase_id'],
+        models.Reserva.usuario_id == data.usuario_id,
+        models.Reserva.clase_id == data.clase_id,
         models.Reserva.fecha_reserva == date.today()
     ).first()
     
     if exists:
         raise HTTPException(status_code=400, detail="Ya tienes una reserva para esta clase hoy")
     
-    # Verificar cupo disponible
-    clase = db.query(models.Clase).filter(models.Clase.id == data['clase_id']).first()
+    # 2. Verificar cupo disponible
+    clase = db.query(models.Clase).filter(models.Clase.id == data.clase_id).first()
     if not clase:
         raise HTTPException(status_code=404, detail="Clase no encontrada")
         
     cupo_actual = db.query(models.Reserva).filter(
-        models.Reserva.clase_id == data['clase_id'],
+        models.Reserva.clase_id == data.clase_id,
         models.Reserva.fecha_reserva == date.today()
     ).count()
     
     if cupo_actual >= clase.capacidad_max:
         raise HTTPException(status_code=400, detail="Clase sin cupos disponibles")
 
+    # 3. Guardar en la tabla de NeonDB
     new_res = models.Reserva(
-        usuario_id=data['usuario_id'],
-        clase_id=data['clase_id'],
+        usuario_id=data.usuario_id,
+        clase_id=data.clase_id,
         fecha_reserva=date.today()
     )
     db.add(new_res)
     db.commit()
     return {"status": "success"}
 
-@app.delete("/api/reservas/{id}")
+@app.delete("/api/reservas/{id}", tags=["Reservas"])
 def cancel_reserva(id: int, db: Session = Depends(database.get_db)):
     reserva = db.query(models.Reserva).filter(models.Reserva.id == id).first()
     if not reserva:
@@ -331,19 +335,19 @@ def cancel_reserva(id: int, db: Session = Depends(database.get_db)):
 # MÓDULO 4: STAFF (PROFESORES / ADM)
 # ==========================================
 
-@app.get("/api/profesores", response_model=List[UsuarioResponse])
+@app.get("/api/profesores", response_model=List[UsuarioResponse], tags=["Staff"])
 def list_profesores(db: Session = Depends(database.get_db)):
     profs = db.query(models.Usuario).options(joinedload(models.Usuario.perfil)).join(models.Perfil).filter(func.lower(models.Perfil.nombre) == "profesor").all()
     for p in profs: p.rol_nombre = p.perfil.nombre
     return profs
 
-@app.get("/api/administrativos", response_model=List[UsuarioResponse])
+@app.get("/api/administrativos", response_model=List[UsuarioResponse], tags=["Staff"])
 def list_admins(db: Session = Depends(database.get_db)):
     admins = db.query(models.Usuario).options(joinedload(models.Usuario.perfil)).join(models.Perfil).filter(func.lower(models.Perfil.nombre) == "administracion").all()
     for a in admins: a.rol_nombre = a.perfil.nombre
     return admins
 
-@app.post("/api/staff")
+@app.post("/api/staff", tags=["Staff"])
 def create_staff(data: dict, db: Session = Depends(database.get_db)):
     perfil = db.query(models.Perfil).filter(models.Perfil.nombre == data['perfil_nombre']).first()
     if not perfil:
@@ -361,7 +365,7 @@ def create_staff(data: dict, db: Session = Depends(database.get_db)):
     db.commit()
     return {"status": "success"}
 
-@app.put("/api/staff/{id}")
+@app.put("/api/staff/{id}", tags=["Staff"])
 def update_staff(id: int, data: StaffUpdate, db: Session = Depends(database.get_db)):
     st = db.query(models.Usuario).filter(models.Usuario.id == id).first()
     if not st:
@@ -381,7 +385,7 @@ def update_staff(id: int, data: StaffUpdate, db: Session = Depends(database.get_
     db.commit()
     return {"status": "success"}
 
-@app.delete("/api/staff/{id}")
+@app.delete("/api/staff/{id}", tags=["Staff"])
 def delete_staff(id: int, db: Session = Depends(database.get_db)):
     db.query(models.Usuario).filter(models.Usuario.id == id).delete()
     db.commit()
@@ -391,11 +395,11 @@ def delete_staff(id: int, db: Session = Depends(database.get_db)):
 # MÓDULO 5: PRODUCTOS Y STOCK
 # ==========================================
 
-@app.get("/api/stock")
+@app.get("/api/stock", tags=["Inventario"])
 def get_stock(db: Session = Depends(database.get_db)):
     return db.query(models.Stock).all()
 
-@app.post("/api/stock")
+@app.post("/api/stock", tags=["Inventario"])
 def create_stock(data: StockUpdate, db: Session = Depends(database.get_db)):
     new_s = models.Stock(
         nombre_producto=data.nombre_producto, 
@@ -407,7 +411,7 @@ def create_stock(data: StockUpdate, db: Session = Depends(database.get_db)):
     db.commit()
     return {"status": "success"}
 
-@app.put("/api/stock/{id}")
+@app.put("/api/stock/{id}", tags=["Inventario"])
 def update_stock(id: int, data: StockUpdate, db: Session = Depends(database.get_db)):
     s = db.query(models.Stock).filter(models.Stock.id == id).first()
     if s:
@@ -417,7 +421,7 @@ def update_stock(id: int, data: StockUpdate, db: Session = Depends(database.get_
         db.commit()
     return {"status": "success"}
 
-@app.delete("/api/stock/{id}")
+@app.delete("/api/stock/{id}", tags=["Inventario"])
 def delete_stock(id: int, db: Session = Depends(database.get_db)):
     db.query(models.Stock).filter(models.Stock.id == id).delete()
     db.commit()
@@ -427,11 +431,11 @@ def delete_stock(id: int, db: Session = Depends(database.get_db)):
 # MÓDULO 6: PLANES DE ENTRENAMIENTO
 # ==========================================
 
-@app.get("/api/planes")
+@app.get("/api/planes", tags=["Planes"])
 def get_planes(db: Session = Depends(database.get_db)):
     return db.query(models.Plan).options(joinedload(models.Plan.tipo)).all()
 
-@app.post("/api/planes")
+@app.post("/api/planes", tags=["Planes"])
 def create_plan(data: PlanUpdate, db: Session = Depends(database.get_db)):
     new_p = models.Plan(
         nombre=data.nombre,
@@ -442,7 +446,7 @@ def create_plan(data: PlanUpdate, db: Session = Depends(database.get_db)):
     db.commit()
     return {"status": "success"}
 
-@app.put("/api/planes/{id}")
+@app.put("/api/planes/{id}", tags=["Planes"])
 def update_plan(id: int, data: PlanUpdate, db: Session = Depends(database.get_db)):
     p = db.query(models.Plan).filter(models.Plan.id == id).first()
     if p:
@@ -452,13 +456,13 @@ def update_plan(id: int, data: PlanUpdate, db: Session = Depends(database.get_db
         db.commit()
     return {"status": "success"}
 
-@app.delete("/api/planes/{id}")
+@app.delete("/api/planes/{id}", tags=["Planes"])
 def delete_plan(id: int, db: Session = Depends(database.get_db)):
     db.query(models.Plan).filter(models.Plan.id == id).delete()
     db.commit()
     return {"status": "success"}
 
-@app.get("/api/tipos-planes")
+@app.get("/api/tipos-planes", tags=["Planes"])
 def get_tipos(db: Session = Depends(database.get_db)):
     return db.query(models.TipoPlan).all()
 
@@ -466,11 +470,11 @@ def get_tipos(db: Session = Depends(database.get_db)):
 # MÓDULO 7: CLASES Y AGENDA
 # ==========================================
 
-@app.get("/api/clases")
+@app.get("/api/clases", tags=["Clases"])
 def get_clases(db: Session = Depends(database.get_db)):
     return db.query(models.Clase).all()
 
-@app.post("/api/clases")
+@app.post("/api/clases", tags=["Clases"])
 def create_clase(data: ClaseUpdate, db: Session = Depends(database.get_db)):
     new_c = models.Clase(
         nombre=data.nombre,
@@ -484,7 +488,7 @@ def create_clase(data: ClaseUpdate, db: Session = Depends(database.get_db)):
     db.commit()
     return {"status": "success"}
 
-@app.put("/api/clases/{id}")
+@app.put("/api/clases/{id}", tags=["Clases"])
 def update_clase(id: int, data: ClaseUpdate, db: Session = Depends(database.get_db)):
     c = db.query(models.Clase).filter(models.Clase.id == id).first()
     if c:
@@ -498,7 +502,7 @@ def update_clase(id: int, data: ClaseUpdate, db: Session = Depends(database.get_
         return {"status": "success"}
     return {"status": "error", "message": "Clase no encontrada"}
 
-@app.put("/api/clases/{id}/move")
+@app.put("/api/clases/{id}/move", tags=["Clases"])
 def move_clase(id: int, data: ClaseMove, db: Session = Depends(database.get_db)):
     c = db.query(models.Clase).filter(models.Clase.id == id).first()
     if c:
@@ -508,7 +512,7 @@ def move_clase(id: int, data: ClaseMove, db: Session = Depends(database.get_db))
         return {"status": "success"}
     return {"status": "error", "message": "Clase no encontrada"}
 
-@app.delete("/api/clases/{id}")
+@app.delete("/api/clases/{id}", tags=["Clases"])
 def delete_clase(id: int, db: Session = Depends(database.get_db)):
     db.query(models.Clase).filter(models.Clase.id == id).delete()
     db.commit()
@@ -518,17 +522,17 @@ def delete_clase(id: int, db: Session = Depends(database.get_db)):
 # MÓDULO 8: CAJA Y FINANZAS
 # ==========================================
 
-@app.get("/api/caja/resumen")
+@app.get("/api/caja/resumen", tags=["Finanzas"])
 def get_caja_resumen(db: Session = Depends(database.get_db)):
     ing = db.query(func.sum(models.MovimientoCaja.monto)).filter(models.MovimientoCaja.tipo == "Ingreso").scalar() or 0
     egr = db.query(func.sum(models.MovimientoCaja.monto)).filter(models.MovimientoCaja.tipo == "Egreso").scalar() or 0
     return {"ingresos": float(ing), "gastos": float(egr), "balance": float(ing - egr)}
 
-@app.get("/api/caja/movimientos")
+@app.get("/api/caja/movimientos", tags=["Finanzas"])
 def get_movimientos(db: Session = Depends(database.get_db)):
     return db.query(models.MovimientoCaja).order_by(models.MovimientoCaja.fecha.desc()).limit(15).all()
 
-@app.post("/api/caja/movimiento")
+@app.post("/api/caja/movimiento", tags=["Finanzas"])
 def create_movimiento(data: MovimientoCajaCreate, db: Session = Depends(database.get_db)):
     new_mov = models.MovimientoCaja(
         tipo=data.tipo,

@@ -1009,6 +1009,9 @@
             state.reservas = Array.isArray(data) ? data : [];
         }
 
+        // ==========================================
+        // CORRECCIÓN PUNTO 2: RESERVA POR ID
+        // ==========================================
         async function bookClass(claseId) {
             if (state.user.rol_nombre !== "Alumno") return;
 
@@ -1023,18 +1026,17 @@
                 return;
             }
 
+            // Verificamos por DNI para la validación visual en el front
             const yaReservado = state.reservas.find(r => r.clase_id === claseId && r.alumno_dni === state.user.dni);
             if (yaReservado) {
                 showVikingToast("Ya estás anotado en esta clase.", true);
                 return;
             }
 
-            const diasSemana = ["", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
+            // CORRECCIÓN: El objeto data debe enviar IDs numéricos para cumplir con las FK de la DB
             const data = {
-                clase_id: parseInt(clase.id),
-                alumno_dni: String(state.user.dni),
-                dia_nombre: diasSemana[clase.dia],
-                horario: parseInt(clase.horario)
+                usuario_id: parseInt(state.user.id),
+                clase_id: parseInt(clase.id)
             };
 
             const res = await apiFetch('/reservas', 'POST', data);
@@ -1119,7 +1121,6 @@
                     if (esAlumno) {
                         badge.onclick = () => bookClass(c.id);
                     } else {
-                        // Admins pueden ver inscriptos haciendo clic
                         badge.onclick = () => openInscriptos(c.id);
                         if (canMove) {
                             badge.draggable = true; 
@@ -1376,12 +1377,10 @@
                 document.getElementById('sidebar').classList.remove('hidden');
                 document.getElementById('main-content').classList.remove('hidden');
                 
-                // Sidebar info
                 document.getElementById('side-user-name').innerText = res.nombre_completo;
                 document.getElementById('side-user-role').innerText = res.rol_nombre || 'Staff';
                 document.getElementById('user-initials').innerText = res.nombre_completo.split(' ').map(n => n[0]).join('').toUpperCase();
                 
-                // Profile page data
                 document.getElementById('prof-initials-view').innerText = res.nombre_completo.split(' ').map(n => n[0]).join('').toUpperCase();
                 document.getElementById('prof-name').innerText = res.nombre_completo;
                 document.getElementById('prof-role').innerText = res.rol_nombre;
@@ -1395,7 +1394,7 @@
                     document.getElementById('plan-alumno-info').classList.remove('hidden');
                     document.getElementById('perfil-plan-nombre').innerText = res.plan?.nombre || "SIN PLAN";
                     document.getElementById('perfil-vencimiento').innerText = "Vence: " + (res.fecha_vencimiento || "-");
-                    switchView('dashboard'); // El alumno va directo a su Panel Personal
+                    switchView('dashboard');
                 } else {
                     switchView('dashboard');
                 }
@@ -1601,7 +1600,7 @@
 
         async function handleDrop(e, dia, horario) { e.preventDefault(); const id = e.dataTransfer.getData("clase_id"); if (!id) return; const res = await apiFetch(`/clases/${id}/move`, 'PUT', { dia, horario }); if (!res.error) { loadClases(); showVikingToast("Clase Reubicada"); } }
         function updateHourOptions() { const dia = document.getElementById('cl-dia').value; const select = document.getElementById('cl-horario'); select.innerHTML = ""; let start = 7, end = 21; if (dia == "6") { start = 10; end = 13; } for(let i=start; i<=end; i++) select.innerHTML += `<option value="${i}">${i}:00 hs</option>`; }
-        async function deleteRecord(entity, id, modalId, callback) { if(!confirm("¿Deseas eliminar este registro?")) return; const res = await apiFetch(`/${entity}/${id}`, 'DELETE'); if(!res.error) { closeModal(modalId); callback(); showVikingToast("Registro Eliminado", true); } }
+        async function deleteRecord(entity, id, modalId, callback) { if(!confirm("¿Deseas eliminar este registro?")) return; const res = await apiFetch(`/${entity}/${id}`, 'DELETE'); if(!res.error) { closeModal(modalId); callback(); showVikingToast("Registro Eliminar", true); } }
         
         async function handleProfileUpdate(e) { 
             e.preventDefault(); 
@@ -1611,13 +1610,9 @@
                 dni: String(document.getElementById('prof-input-dni').value), 
                 email: document.getElementById('prof-input-email').value
             }; 
-            
             if(pass) data.password = pass; 
-            
-            // Si es Alumno, usamos endpoint de alumnos, sino staff
             const endpoint = state.user.rol_nombre === 'Alumno' ? `/alumnos/${state.user.id}` : `/staff/${state.user.id}`;
             const res = await apiFetch(endpoint, 'PUT', data); 
-            
             if(!res.error) { 
                 state.user.nombre_completo = data.nombre_completo; 
                 state.user.email = data.email;
