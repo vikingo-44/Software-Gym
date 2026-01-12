@@ -44,7 +44,16 @@
             to { filter: drop-shadow(0 0 25px rgba(255, 0, 0, 0.8)); transform: scale(1.05); }
         }
 
-        .nav-item { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); position: relative; white-space: nowrap; }
+        /* CORRECCIÓN DE ALINEACIÓN GLOBAL DEL MENÚ */
+        .nav-item { 
+            display: flex !important;
+            align-items: center !important;
+            gap: 1.25rem !important; /* gap-5 */
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
+            position: relative; 
+            white-space: nowrap; 
+            text-align: left !important;
+        }
         .nav-item:hover, .nav-item.active { 
             color: #FF0000; 
             background: linear-gradient(90deg, rgba(255, 0, 0, 0.1) 0%, transparent 100%);
@@ -97,7 +106,7 @@
         .sidebar-collapsed .nav-text, 
         .sidebar-collapsed .nav-section-title,
         .sidebar-collapsed .chevron-icon { display: none; }
-        .sidebar-collapsed .nav-item { justify-content: center; padding-left: 0; padding-right: 0; }
+        .sidebar-collapsed .nav-item { justify-content: center !important; padding-left: 0; padding-right: 0; gap: 0 !important; }
         
         .viking-input {
             background: rgba(0, 0, 0, 0.5);
@@ -199,6 +208,7 @@
 
     <!-- OVERLAY DE LOGIN -->
     <div id="login-overlay">
+        <!-- LOGIN CARD FIXED WIDTH -->
         <div class="glass-card p-12 rounded-[3rem] w-full max-w-md border-red-600/20 text-center mx-4">
             <div class="w-32 h-32 mx-auto mb-8 logo-viking-glow bg-black rounded-full flex items-center justify-center overflow-hidden">
                 <img src="https://github.com/vikingo-44/Software-Gym/blob/main/logo.png?raw=true" alt="Vikingo Logo" class="w-full h-full object-cover" onerror="this.src='https://via.placeholder.com/150/FF0000/000000?text=VIKINGO'">
@@ -240,13 +250,13 @@
         <nav class="flex-1 px-4 space-y-1 overflow-y-auto custom-scrollbar pb-10">
             <div id="nav-section-admin">
                 <p class="nav-section-title text-[9px] font-black text-gray-600 uppercase tracking-widest px-6 mb-2 mt-4">Administración</p>
-                <button onclick="switchView('dashboard')" id="nav-dashboard" class="nav-btn w-full nav-item active flex items-center gap-5 px-6 py-4 rounded-2xl font-black uppercase text-[10px] italic text-left">
+                <button onclick="switchView('dashboard')" id="nav-dashboard" class="nav-btn w-full nav-item active px-6 py-4 rounded-2xl font-black uppercase text-[10px] italic">
                     <i data-lucide="layout-grid" class="w-4 h-4"></i> <span class="nav-text">Dashboard</span>
                 </button>
-                <button onclick="switchView('perfil')" id="nav-perfil" class="nav-btn w-full nav-item flex items-center gap-5 px-6 py-4 rounded-2xl font-black uppercase text-[10px] italic text-left">
+                <button onclick="switchView('perfil')" id="nav-perfil" class="nav-btn w-full nav-item px-6 py-4 rounded-2xl font-black uppercase text-[10px] italic">
                     <i data-lucide="user-cog" class="w-4 h-4"></i> <span class="nav-text">Mi Perfil</span>
                 </button>
-                <button onclick="switchView('alumnos')" id="nav-alumnos" class="nav-btn w-full nav-item flex items-center gap-5 px-6 py-4 rounded-2xl font-black uppercase text-[10px] italic text-left">
+                <button onclick="switchView('alumnos')" id="nav-alumnos" class="nav-btn w-full nav-item px-6 py-4 rounded-2xl font-black uppercase text-[10px] italic">
                     <i data-lucide="users" class="w-4 h-4"></i> <span class="nav-text">Alumnos</span>
                 </button>
             </div>
@@ -279,16 +289,17 @@
 
             <div id="nav-section-gestion">
                 <p class="nav-section-title text-[9px] font-black text-gray-600 uppercase tracking-widest px-6 mb-2 mt-8">Gestión</p>
-                <button onclick="switchView('planes')" id="nav-planes" class="nav-btn w-full nav-item flex items-center gap-5 px-6 py-4 rounded-2xl font-black uppercase text-[10px] italic text-left">
+                <!-- CORRECCIÓN DE CLASES PARA ALINEACIÓN -->
+                <button onclick="switchView('planes')" id="nav-planes" class="nav-btn w-full nav-item px-6 py-4 rounded-2xl font-black uppercase text-[10px] italic">
                     <i data-lucide="clipboard-list" class="w-4 h-4"></i> <span class="nav-text">Planes</span>
                 </button>
-                <button onclick="switchView('clases')" id="nav-clases" class="nav-btn w-full nav-item flex items-center gap-5 px-6 py-4 rounded-2xl font-black uppercase text-[10px] italic text-left">
+                <button onclick="switchView('clases')" id="nav-clases" class="nav-btn w-full nav-item px-6 py-4 rounded-2xl font-black uppercase text-[10px] italic">
                     <i data-lucide="presentation" class="w-4 h-4"></i> <span class="nav-text">Clases</span>
                 </button>
-                <button onclick="switchView('calendario')" id="nav-calendario" class="nav-btn w-full nav-item flex items-center gap-5 px-6 py-4 rounded-2xl font-black uppercase text-[10px] italic text-left">
+                <button onclick="switchView('calendario')" id="nav-calendario" class="nav-btn w-full nav-item px-6 py-4 rounded-2xl font-black uppercase text-[10px] italic">
                     <i data-lucide="calendar" class="w-4 h-4"></i> <span class="nav-text">Calendario</span>
                 </button>
-                <button id="nav-rutinas" onclick="switchView('rutinas')" class="nav-btn w-full nav-item flex items-center gap-5 px-6 py-4 rounded-2xl font-black uppercase text-[10px] italic text-left">
+                <button id="nav-rutinas" onclick="switchView('rutinas')" class="nav-btn w-full nav-item px-6 py-4 rounded-2xl font-black uppercase text-[10px] italic">
                     <i data-lucide="dumbbell" class="w-4 h-4"></i> <span class="nav-text">Rutinas Musc.</span>
                 </button>
             </div>
@@ -491,7 +502,7 @@
                 </div>
             </div>
 
-            <!-- MI PERFIL (ACTUALIZADO PARA EDICIÓN COMPLETA DEL ALUMNO) -->
+            <!-- MI PERFIL (CARGA DE DATOS CORREGIDA) -->
             <div id="view-perfil" class="view-content">
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-10">
                     <div class="glass-card p-10 rounded-[3rem] flex flex-col items-center">
@@ -977,7 +988,6 @@
             document.getElementById('admin-dashboard-layout').style.display = isAlumno ? 'none' : 'block';
             document.getElementById('alumno-dashboard-layout').style.display = isAlumno ? 'block' : 'none';
 
-            // CORRECCIÓN VISIBILIDAD DASHBOARD Y PERFIL PARA TODOS LOS USUARIOS
             document.getElementById('nav-section-admin').style.display = 'block'; 
             document.getElementById('nav-alumnos').style.display = isAlumno ? 'none' : 'flex';
             
@@ -1023,7 +1033,9 @@
             document.getElementById('al-dash-plan').innerText = u.plan?.nombre || 'SIN PLAN ACTIVO';
             document.getElementById('al-dash-vencimiento').innerText = u.fecha_vencimiento || 'PENDIENTE';
             document.getElementById('al-dash-renovacion').innerText = u.fecha_ultima_renovacion || 'SIN DATOS';
-            document.getElementById('al-dash-initials').innerText = u.nombre_completo.split(' ').map(n => n[0]).join('').toUpperCase();
+            
+            const initials = u.nombre_completo ? u.nombre_completo.split(' ').filter(n => n).map(n => n[0]).join('').toUpperCase() : "??";
+            document.getElementById('al-dash-initials').innerText = initials;
             
             document.getElementById('al-dash-peso').innerText = u.peso || '0';
             document.getElementById('al-dash-altura').innerText = u.altura || '0';
@@ -1406,14 +1418,17 @@
             if(view === 'rutinas') renderRutinas();
             if(view === 'dashboard' && state.user?.rol_nombre === "Alumno") renderStudentDashboard();
             
+            // CORRECCIÓN DE CARGA DE PERFIL
             if(view === 'perfil' && state.user) {
                 const u = state.user;
-                document.getElementById('prof-name').innerText = u.nombre_completo;
-                document.getElementById('prof-role').innerText = u.rol_nombre;
-                document.getElementById('prof-initials-view').innerText = u.nombre_completo.split(' ').map(n => n[0]).join('').toUpperCase();
+                document.getElementById('prof-name').innerText = u.nombre_completo || "Usuario Vikingo";
+                document.getElementById('prof-role').innerText = u.rol_nombre || "Staff";
                 
-                document.getElementById('prof-input-name').value = u.nombre_completo;
-                document.getElementById('prof-input-dni').value = u.dni;
+                const initials = u.nombre_completo ? u.nombre_completo.split(' ').filter(n => n).map(n => n[0]).join('').toUpperCase() : "??";
+                document.getElementById('prof-initials-view').innerText = initials;
+                
+                document.getElementById('prof-input-name').value = u.nombre_completo || "";
+                document.getElementById('prof-input-dni').value = u.dni || "";
                 document.getElementById('prof-input-email').value = u.email || "";
                 
                 if (u.rol_nombre === "Alumno") {
@@ -1446,9 +1461,11 @@
                 document.getElementById('sidebar').classList.remove('hidden');
                 document.getElementById('main-content').classList.remove('hidden');
                 
-                document.getElementById('side-user-name').innerText = res.nombre_completo;
+                document.getElementById('side-user-name').innerText = res.nombre_completo || "Usuario";
                 document.getElementById('side-user-role').innerText = res.rol_nombre || 'Staff';
-                document.getElementById('user-initials').innerText = res.nombre_completo.split(' ').map(n => n[0]).join('').toUpperCase();
+                
+                const initials = res.nombre_completo ? res.nombre_completo.split(' ').filter(n => n).map(n => n[0]).join('').toUpperCase() : "??";
+                document.getElementById('user-initials').innerText = initials;
                 
                 await initApp();
                 switchView('dashboard');
@@ -1668,8 +1685,9 @@
 
                 document.getElementById('side-user-name').innerText = data.nombre_completo; 
                 document.getElementById('prof-name').innerText = data.nombre_completo;
-                document.getElementById('user-initials').innerText = data.nombre_completo.split(' ').map(n => n[0]).join('').toUpperCase();
-                document.getElementById('prof-initials-view').innerText = data.nombre_completo.split(' ').map(n => n[0]).join('').toUpperCase();
+                const initials = data.nombre_completo.split(' ').filter(n => n).map(n => n[0]).join('').toUpperCase();
+                document.getElementById('user-initials').innerText = initials;
+                document.getElementById('prof-initials-view').innerText = initials;
                 
                 showVikingToast("Perfil Vikingo Actualizado"); 
                 if(isAlumno) renderStudentDashboard();
