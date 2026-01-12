@@ -933,8 +933,8 @@
             document.getElementById('nav-section-admin').style.display = isAlumno ? 'none' : 'block';
             document.getElementById('nav-section-staff').style.display = isAdmin ? 'block' : 'none';
             document.getElementById('nav-section-operativa').style.display = (isAdmin || isAdm) ? 'block' : 'none';
-            document.getElementById('nav-planes').style.display = isAdmin ? 'flex' : 'none';
-            document.getElementById('nav-clases').style.display = isAdmin ? 'flex' : 'none';
+            document.getElementById('nav-planes').style.display = isAdmin ? 'block' : 'none';
+            document.getElementById('nav-clases').style.display = isAdmin ? 'block' : 'none';
             
             if (isAlumno) {
                 document.getElementById('nav-perfil').style.display = 'flex';
@@ -1054,7 +1054,6 @@
 
         // GESTION DE CUPOS PARA ADMIN
         function openInscriptos(claseId) {
-            const clase = state.clases.find(c => c.id === claseId);
             const inscriptos = state.reservas.filter(r => r.clase_id === claseId);
             const listaDiv = document.getElementById('inscriptos-lista');
             
@@ -1592,7 +1591,7 @@
 
         async function handleDrop(e, dia, horario) { e.preventDefault(); const id = e.dataTransfer.getData("clase_id"); if (!id) return; const res = await apiFetch(`/clases/${id}/move`, 'PUT', { dia, horario }); if (!res.error) { loadClases(); showVikingToast("Clase Reubicada"); } }
         function updateHourOptions() { const dia = document.getElementById('cl-dia').value; const select = document.getElementById('cl-horario'); select.innerHTML = ""; let start = 7, end = 21; if (dia == "6") { start = 10; end = 13; } for(let i=start; i<=end; i++) select.innerHTML += `<option value="${i}">${i}:00 hs</option>`; }
-        async function deleteRecord(entity, id, modalId, callback) { if(!confirm("¿Deseas eliminar este registro?")) return; const res = await apiFetch(`/${entity}/${id}`, 'DELETE'); if(!res.error) { closeModal(modalId); callback(); showVikingToast("Registro Eliminar", true); } }
+        async function deleteRecord(entity, id, modalId, callback) { if(!confirm("¿Deseas eliminar este registro?")) return; const res = await apiFetch(`/${entity}/${id}`, 'DELETE'); if(!res.error) { closeModal(modalId); callback(); showVikingToast("Registro Eliminado", true); } }
         async function handleProfileUpdate(e) { e.preventDefault(); const pass = document.getElementById('prof-input-pass').value; const data = { nombre_completo: document.getElementById('prof-input-name').value, dni: document.getElementById('prof-input-dni').value, email: document.getElementById('prof-input-email').value, perfil_nombre: state.user.rol_nombre }; if(pass) data.password = pass; const res = await apiFetch(`/staff/${state.user.id}`, 'PUT', data); if(!res.error) { state.user.nombre_completo = data.nombre_completo; document.getElementById('side-user-name').innerText = data.nombre_completo; showVikingToast("Perfil Actualizado"); } }
         
         window.onload = () => { lucide.createIcons(); };
