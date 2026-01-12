@@ -2073,53 +2073,85 @@
             }
         }
 
-        document.getElementById('form-rutina-editor').onsubmit = async (e) => {
-            e.preventDefault();
-            const rawAlumnoId = document.getElementById('rutina-editor-alumno-id').value;
-            const alumnoId = parseInt(rawAlumnoId);
-            const objetivo = document.getElementById('rutina-objetivo').value;
-            const vencimiento = document.getElementById('rutina-vencimiento').value;
-            const dayCards = document.querySelectorAll('.rutina-dia-card');
-            
-            if (isNaN(alumnoId)) {
-                showVikingToast("Error: ID de alumno no válido", true);
-                return;
-            }
+				document.getElementById('form-rutina-editor').onsubmit = async (e) => {
+			e.preventDefault();
+			
+			// 1. Obtener ID del usuario (asegurarse de que sea número)
+			const userId = parseInt(document.getElementById('edit-rutina-user-id').value);
+			if (!userId || isNaN(userId)) {
+				showVikingToast("Error: Debes seleccionar un alumno válido", true);
+				return;
+			}
 
-            const dias = Array.from(dayCards).map(card => {
-                const nombre_dia = card.querySelector('.day-title').value;
-                const exercisesRows = card.querySelectorAll('.exercise-row');
-                const ejercicios = Array.from(exercisesRows).map(row => {
-                    const exId = parseInt(row.querySelector('.exercise-id').value);
-                    return {
-                        ejercicio_id: exId,
-                        series: row.querySelector('.exercise-series').value,
-                        repeticiones: row.querySelector('.exercise-reps').value,
-                        peso: row.querySelector('.exercise-weight').value || "-",
-                        descanso: row.querySelector('.exercise-rest').value || "-",
-                        comentario: row.querySelector('.exercise-comment').value || ""
-                    };
-                }).filter(ex => !isNaN(ex.ejercicio_id));
-                
-                return { nombre_dia, ejercicios };
-            });
+			// 2. Construir el objeto inicial (Match exacto con PlanRutinaCreate en main.py)
+			const payload = {
+				usuario_id: userId,
+				nombre_grupo: document.getElementById('edit-rutina-nombre-grupo')?.value || "Rutina General",
+				descripcion: document.getElementById('edit-rutina-descripcion')?.value || "",
+				objetivo: document.getElementById('edit-rutina-objetivo').value,
+				fecha_vencimiento: document.getElementById('edit-rutina-vencimiento').value, // Formato YYYY-MM-DD
+				dias: []
+			};
 
-            const payload = {
-                usuario_id: alumnoId,
-                objetivo: objetivo,
-                fecha_vencimiento: vencimiento,
-                dias: dias
-            };
+			const dayBlocks = document.querySelectorAll('.day-block');
+			let validationError = false;
 
-            const res = await apiFetch('/rutinas/plan', 'POST', payload);
-            if (!res.error) {
-                closeModal('modal-rutina-editor');
-                showVikingToast("¡Plan de Rutina Vikingo Guardado!");
-                renderRutinas();
-            } else {
-                showVikingToast("Error al guardar: " + res.error, true);
-            }
-        };
+			dayBlocks.forEach(dayBlock => {
+				const diaObj = {
+					nombre_dia: dayBlock.querySelector('.day-name-input').value || "Día",
+					ejercicios: []
+				};
+
+				const exerciseBlocks = dayBlock.querySelectorAll('.exercise-block');
+				exerciseBlocks.forEach(block => {
+					// CRUCIAL: Obtener el ID del ejercicio del atributo de datos
+					const exIdRaw = block.getAttribute('data-exercise-id');
+					const exId = parseInt(exIdRaw);
+					
+					// Si el ID no es válido, marcamos error para no enviar basura al server
+					if (!exIdRaw || isNaN(exId)) {
+						validationError = true;
+						block.classList.add('border-2', 'border-red-500'); // Feedback visual
+					}
+
+					diaObj.ejercicios.push({
+						ejercicio_id: exId,
+						series: block.querySelector('.ex-series').value || "0",
+						repeticiones: block.querySelector('.ex-reps').value || "0",
+						peso: block.querySelector('.ex-weight').value || "0",
+						descanso: block.querySelector('.ex-rest').value || "0",
+						comentario: block.querySelector('.ex-note').value || ""
+					});
+				});
+
+				if (diaObj.ejercicios.length > 0) {
+					payload.dias.push(diaObj);
+				}
+			});
+
+			// 3. Validaciones antes de disparar el fetch
+			if (validationError) {
+				showVikingToast("Error: Tienes ejercicios sin seleccionar en la lista", true);
+				return;
+			}
+
+			if (payload.dias.length === 0) {
+				showVikingToast("Error: La rutina debe tener al menos un ejercicio", true);
+				return;
+			}
+
+			// 4. Envío al servidor
+			const res = await apiFetch('/rutinas/plan', 'POST', payload);
+
+			if (!res.error) {
+				closeModal('modal-rutina-editor');
+				showVikingToast("¡Plan de Rutina Vikingo Guardado!");
+				if (typeof renderRutinas === 'function') renderRutinas();
+			} else {
+				// El servidor ahora devuelve el error detallado gracias al log del backend
+				showVikingToast("Error del Servidor: " + res.error, true);
+			}
+		};
 
         function openModalNewExercise() {
             openModal('modal-nuevo-ejercicio');

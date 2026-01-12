@@ -1,12 +1,18 @@
 import os
+import logging
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy import func
 from typing import List, Optional
 from pydantic import BaseModel
 from datetime import date, datetime
+
+# Configuración de logs para ver errores en Render/Producción
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Importamos nuestros módulos locales
 import models
@@ -111,13 +117,13 @@ class ClaseUpdate(BaseModel):
     nombre: str
     coach: str
     dia: int
-    horario: float # Sincronizado con models.py
+    horario: float 
     color: Optional[str] = "#FF0000"
     capacidad_max: Optional[int] = 40
 
 class ClaseMove(BaseModel):
     dia: int
-    horario: float # Sincronizado con models.py
+    horario: float 
 
 class MovimientoCajaCreate(BaseModel):
     tipo: str
@@ -463,7 +469,7 @@ def delete_stock(id: int, db: Session = Depends(database.get_db)):
     return {"status": "success"}
 
 # ==========================================
-# MÓDULO 6: PLANES DE ENTRENAMIENTO
+# MÓDULO 6: PLANES DE MEMBRESÍA
 # ==========================================
 
 @app.get("/api/planes", tags=["Planes"])
@@ -493,7 +499,7 @@ def update_plan(id: int, data: PlanUpdate, db: Session = Depends(database.get_db
 
 @app.delete("/api/planes/{id}", tags=["Planes"])
 def delete_plan(id: int, db: Session = Depends(database.get_db)):
-    db.query(models.Usuario).filter(models.Usuario.plan_id == id).update({"plan_id": None}) # Desvincular alumnos
+    db.query(models.Usuario).filter(models.Usuario.plan_id == id).update({"plan_id": None}) 
     db.query(models.Plan).filter(models.Plan.id == id).delete()
     db.commit()
     return {"status": "success"}
@@ -580,7 +586,7 @@ def create_movimiento(data: MovimientoCajaCreate, db: Session = Depends(database
     return {"status": "success"}
 
 # ==========================================
-# MÓDULO 9: MUSCULACIÓN AVANZADA
+# MÓDULO 9: MUSCULACIÓN AVANZADA (CORREGIDO)
 # ==========================================
 
 @app.get("/api/rutinas/grupos-musculares", tags=["Musculación"])
@@ -589,6 +595,7 @@ def get_grupos(db: Session = Depends(database.get_db)):
 
 @app.get("/api/rutinas/ejercicios", tags=["Musculación"])
 def get_ejercicios(db: Session = Depends(database.get_db)):
+    # Nota: He actualizado el joinload para que coincida con la clase Ejercicio en models.py
     return db.query(models.Ejercicio).options(joinedload(models.Ejercicio.grupo_muscular)).all()
 
 @app.post("/api/rutinas/grupos-musculares", tags=["Musculación"])
@@ -609,39 +616,62 @@ def create_ejercicio_lib(data: EjercicioCreate, db: Session = Depends(database.g
 
 @app.post("/api/rutinas/plan", tags=["Musculación"])
 def create_plan_rutina(data: PlanRutinaCreate, db: Session = Depends(database.get_db)):
-    # Desactivar rutinas anteriores para este usuario
-    db.query(models.PlanRutina).filter(models.PlanRutina.usuario_id == data.usuario_id).update({"activo": False})
-    
-    nuevo_plan = models.PlanRutina(
-        usuario_id=data.usuario_id,
-        nombre_grupo=data.nombre_grupo,
-        descripcion=data.descripcion,
-        objetivo=data.objetivo,
-        fecha_vencimiento=data.fecha_vencimiento,
-        activo=True
-    )
-    db.add(nuevo_plan)
-    db.flush() 
-    
-    for d in data.dias:
-        nuevo_dia = models.DiaRutina(plan_rutina_id=nuevo_plan.id, nombre_dia=d.nombre_dia)
-        db.add(nuevo_dia)
-        db.flush()
+    try:
+        # VALIDACIÓN: Usuario existe
+        user = db.query(models.Usuario).filter(models.Usuario.id == data.usuario_id).first()
+        if not user:
+            raise HTTPException(status_code=404, detail="Usuario no encontrado")
+
+        # ARREGLO 500: Desactivar rutinas anteriores con synchronize_session=False
+        db.query(models.PlanRutina).filter(
+            models.PlanRutina.usuario_id == data.usuario_id
+        ).update({"activo": False}, synchronize_session=False)
         
-        for e in d.ejercicios:
-            ej_en_rut = models.EjercicioEnRutina(
-                dia_id=nuevo_dia.id,
-                ejercicio_id=e.ejercicio_id,
-                series=e.series,
-                repeticiones=e.repeticiones,
-                peso=e.peso,
-                descanso=e.descanso,
-                comentario=e.comentario
-            )
-            db.add(ej_en_rut)
-    
-    db.commit()
-    return {"status": "success", "id": nuevo_plan.id}
+        nuevo_plan = models.PlanRutina(
+            usuario_id=data.usuario_id,
+            nombre_grupo=data.nombre_grupo,
+            descripcion=data.descripcion,
+            objetivo=data.objetivo,
+            fecha_vencimiento=data.fecha_vencimiento,
+            activo=True
+        )
+        db.add(nuevo_plan)
+        db.flush() 
+        
+        for d in data.dias:
+            nuevo_dia = models.DiaRutina(plan_rutina_id=nuevo_plan.id, nombre_dia=d.nombre_dia)
+            db.add(nuevo_dia)
+            db.flush()
+            
+            for e in d.ejercicios:
+                # Verificamos si el ejercicio existe en la librería para evitar error de FK
+                ej_exists = db.query(models.Ejercicio).filter(models.Ejercicio.id == e.ejercicio_id).first()
+                if not ej_exists:
+                    logger.warning(f"Salteando ejercicio ID {e.ejercicio_id}: No existe en librería.")
+                    continue
+
+                ej_en_rut = models.EjercicioEnRutina(
+                    dia_id=nuevo_dia.id,
+                    ejercicio_id=e.ejercicio_id,
+                    series=e.series,
+                    repeticiones=e.repeticiones,
+                    peso=e.peso,
+                    descanso=e.descanso,
+                    comentario=e.comentario
+                )
+                db.add(ej_en_rut)
+        
+        db.commit()
+        return {"status": "success", "id": nuevo_plan.id}
+
+    except IntegrityError as ie:
+        db.rollback()
+        logger.error(f"Error de Integridad: {str(ie)}")
+        raise HTTPException(status_code=400, detail="Error de base de datos. Verifica IDs de ejercicios.")
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error Grave: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/rutinas/usuario/{id}", tags=["Musculación"])
 def get_rutina_activa(id: int, db: Session = Depends(database.get_db)):
@@ -651,7 +681,7 @@ def get_rutina_activa(id: int, db: Session = Depends(database.get_db)):
     ).options(
         joinedload(models.PlanRutina.dias)
         .joinedload(models.DiaRutina.ejercicios)
-        .joinedload(models.EjercicioEnRutina.ejercicio_libreria)
+        .joinedload(models.EjercicioEnRutina.ejercicio_obj)
     ).first()
     
     if not rutina:

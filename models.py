@@ -62,7 +62,7 @@ class Clase(Base):
     coach = Column(String)
     capacidad_max = Column(Integer, default=20)
     dia = Column(Integer)
-    horario = Column(Float) # Se usa Float para soportar medias horas
+    horario = Column(Float) 
     color = Column(String, default="#FF0000")
     reservas = relationship("Reserva", back_populates="clase", cascade="all, delete-orphan")
 
@@ -108,13 +108,14 @@ class Ejercicio(Base):
     nombre = Column(String)
     grupo_muscular_id = Column(Integer, ForeignKey("grupos_musculares.id"))
     grupo_muscular = relationship("GrupoMuscular", back_populates="ejercicios")
+    ejercicios_en_rutina = relationship("EjercicioEnRutina", back_populates="ejercicio_obj")
 
 class PlanRutina(Base):
     __tablename__ = "planes_rutina"
     id = Column(Integer, primary_key=True)
     usuario_id = Column(Integer, ForeignKey("usuarios.id"))
-    nombre_grupo = Column(String, nullable=True) # Campo agregado
-    descripcion = Column(Text, nullable=True) # Campo agregado
+    nombre_grupo = Column(String, nullable=True)
+    descripcion = Column(Text, nullable=True)
     fecha_creacion = Column(Date, default=datetime.date.today)
     fecha_vencimiento = Column(Date)
     objetivo = Column(String)
@@ -144,4 +145,4 @@ class EjercicioEnRutina(Base):
     comentario = Column(Text, nullable=True)
     
     dia = relationship("DiaRutina", back_populates="ejercicios")
-    ejercicio_libreria = relationship("Ejercicio")
+    ejercicio_obj = relationship("Ejercicio", back_populates="ejercicios_en_rutina")
