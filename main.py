@@ -133,6 +133,11 @@ class GrupoMuscularSchema(BaseModel):
     nombre: str
     class Config: from_attributes = True
 
+# SOLUCIÓN AL ERROR: Definición de EjercicioCreate faltante
+class EjercicioCreate(BaseModel):
+    nombre: str
+    grupo_muscular_id: int
+
 class EjercicioLibreriaSchema(BaseModel):
     id: int
     nombre: str

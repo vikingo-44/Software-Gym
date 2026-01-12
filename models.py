@@ -31,7 +31,7 @@ class Usuario(Base):
     dni = Column(String, unique=True, index=True)
     password_hash = Column(String)
     nombre_completo = Column(String)
-    email = Column(String)
+    email = Column(String, nullable=True)
     perfil_id = Column(Integer, ForeignKey("perfiles.id"))
     plan_id = Column(Integer, ForeignKey("planes.id"), nullable=True)
     
@@ -43,15 +43,15 @@ class Usuario(Base):
     imc = Column(Float, nullable=True)
     certificado_entregado = Column(Boolean, default=False)
     fecha_certificado = Column(Date, nullable=True)
+    especialidad = Column(String, nullable=True) # Para Staff
     
     fecha_ultima_renovacion = Column(Date, nullable=True)
     fecha_vencimiento = Column(Date, nullable=True)
+    estado_cuenta = Column(String, default="Al día")
     
     perfil = relationship("Perfil", back_populates="usuarios")
     plan = relationship("Plan", back_populates="usuarios")
-    # Relación con reservas
     reservas = relationship("Reserva", back_populates="usuario", cascade="all, delete-orphan")
-    # Relación con planes de rutina de musculación
     planes_rutina = relationship("PlanRutina", back_populates="usuario", cascade="all, delete-orphan")
 
 class Clase(Base):
@@ -63,7 +63,6 @@ class Clase(Base):
     dia = Column(Integer)
     horario = Column(Integer)
     color = Column(String, default="#FF0000")
-    # Relación con reservas para contar cupos
     reservas = relationship("Reserva", back_populates="clase", cascade="all, delete-orphan")
 
 class Reserva(Base):
@@ -93,7 +92,7 @@ class MovimientoCaja(Base):
     fecha = Column(DateTime, default=datetime.datetime.now)
 
 # =========================================
-# NUEVAS TABLAS PARA MUSCULACIÓN AVANZADA
+# TABLAS MUSCULACIÓN (PostgreSQL ready)
 # =========================================
 
 class GrupoMuscular(Base):
@@ -115,7 +114,7 @@ class PlanRutina(Base):
     usuario_id = Column(Integer, ForeignKey("usuarios.id"))
     fecha_creacion = Column(Date, default=datetime.date.today)
     fecha_vencimiento = Column(Date)
-    objetivo = Column(String) # Hipertrofia, Fuerza, Definicion, etc.
+    objetivo = Column(String)
     activo = Column(Boolean, default=True)
     
     usuario = relationship("Usuario", back_populates="planes_rutina")
@@ -125,7 +124,7 @@ class DiaRutina(Base):
     __tablename__ = "rutina_dias"
     id = Column(Integer, primary_key=True)
     plan_rutina_id = Column(Integer, ForeignKey("planes_rutina.id"))
-    nombre_dia = Column(String) # Ej: Día 1: Pecho y Tríceps
+    nombre_dia = Column(String)
     
     plan_rutina = relationship("PlanRutina", back_populates="dias")
     ejercicios = relationship("EjercicioEnRutina", back_populates="dia", cascade="all, delete-orphan")
