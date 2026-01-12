@@ -199,7 +199,7 @@
 
     <!-- OVERLAY DE LOGIN -->
     <div id="login-overlay">
-        <div class="glass-card p-12 rounded-[3rem] w-full max-md border-red-600/20 text-center mx-4">
+        <div class="glass-card p-12 rounded-[3rem] w-full max-w-md border-red-600/20 text-center mx-4">
             <div class="w-32 h-32 mx-auto mb-8 logo-viking-glow bg-black rounded-full flex items-center justify-center overflow-hidden">
                 <img src="https://github.com/vikingo-44/Software-Gym/blob/main/logo.png?raw=true" alt="Vikingo Logo" class="w-full h-full object-cover" onerror="this.src='https://via.placeholder.com/150/FF0000/000000?text=VIKINGO'">
             </div>
@@ -240,13 +240,13 @@
         <nav class="flex-1 px-4 space-y-1 overflow-y-auto custom-scrollbar pb-10">
             <div id="nav-section-admin">
                 <p class="nav-section-title text-[9px] font-black text-gray-600 uppercase tracking-widest px-6 mb-2 mt-4">Administración</p>
-                <button onclick="switchView('dashboard')" id="nav-dashboard" class="nav-btn w-full nav-item active flex items-center gap-5 px-6 py-4 rounded-2xl font-black uppercase text-[10px] italic">
+                <button onclick="switchView('dashboard')" id="nav-dashboard" class="nav-btn w-full nav-item active flex items-center gap-5 px-6 py-4 rounded-2xl font-black uppercase text-[10px] italic text-left">
                     <i data-lucide="layout-grid" class="w-4 h-4"></i> <span class="nav-text">Dashboard</span>
                 </button>
-                <button onclick="switchView('perfil')" id="nav-perfil" class="nav-btn w-full nav-item flex items-center gap-5 px-6 py-4 rounded-2xl font-black uppercase text-[10px] italic">
+                <button onclick="switchView('perfil')" id="nav-perfil" class="nav-btn w-full nav-item flex items-center gap-5 px-6 py-4 rounded-2xl font-black uppercase text-[10px] italic text-left">
                     <i data-lucide="user-cog" class="w-4 h-4"></i> <span class="nav-text">Mi Perfil</span>
                 </button>
-                <button onclick="switchView('alumnos')" id="nav-alumnos" class="nav-btn w-full nav-item flex items-center gap-5 px-6 py-4 rounded-2xl font-black uppercase text-[10px] italic">
+                <button onclick="switchView('alumnos')" id="nav-alumnos" class="nav-btn w-full nav-item flex items-center gap-5 px-6 py-4 rounded-2xl font-black uppercase text-[10px] italic text-left">
                     <i data-lucide="users" class="w-4 h-4"></i> <span class="nav-text">Alumnos</span>
                 </button>
             </div>
@@ -277,19 +277,21 @@
                 </div>
             </div>
 
-            <p class="nav-section-title text-[9px] font-black text-gray-600 uppercase tracking-widest px-6 mb-2 mt-8">Gestión</p>
-            <button onclick="switchView('planes')" id="nav-planes" class="nav-btn w-full nav-item flex items-center gap-5 px-6 py-4 rounded-2xl font-black uppercase text-[10px] italic">
-                <i data-lucide="clipboard-list" class="w-4 h-4"></i> <span class="nav-text">Planes</span>
-            </button>
-            <button onclick="switchView('clases')" id="nav-clases" class="nav-btn w-full nav-item flex items-center gap-5 px-6 py-4 rounded-2xl font-black uppercase text-[10px] italic">
-                <i data-lucide="presentation" class="w-4 h-4"></i> <span class="nav-text">Clases</span>
-            </button>
-            <button onclick="switchView('calendario')" id="nav-calendario" class="nav-btn w-full nav-item flex items-center gap-5 px-6 py-4 rounded-2xl font-black uppercase text-[10px] italic">
-                <i data-lucide="calendar" class="w-4 h-4"></i> <span class="nav-text">Calendario</span>
-            </button>
-            <button id="nav-rutinas" onclick="switchView('rutinas')" class="nav-btn w-full nav-item flex items-center gap-5 px-6 py-4 rounded-2xl font-black uppercase text-[10px] italic">
-                <i data-lucide="dumbbell" class="w-4 h-4"></i> <span class="nav-text">Rutinas Musc.</span>
-            </button>
+            <div id="nav-section-gestion">
+                <p class="nav-section-title text-[9px] font-black text-gray-600 uppercase tracking-widest px-6 mb-2 mt-8">Gestión</p>
+                <button onclick="switchView('planes')" id="nav-planes" class="nav-btn w-full nav-item flex items-center gap-5 px-6 py-4 rounded-2xl font-black uppercase text-[10px] italic text-left">
+                    <i data-lucide="clipboard-list" class="w-4 h-4"></i> <span class="nav-text">Planes</span>
+                </button>
+                <button onclick="switchView('clases')" id="nav-clases" class="nav-btn w-full nav-item flex items-center gap-5 px-6 py-4 rounded-2xl font-black uppercase text-[10px] italic text-left">
+                    <i data-lucide="presentation" class="w-4 h-4"></i> <span class="nav-text">Clases</span>
+                </button>
+                <button onclick="switchView('calendario')" id="nav-calendario" class="nav-btn w-full nav-item flex items-center gap-5 px-6 py-4 rounded-2xl font-black uppercase text-[10px] italic text-left">
+                    <i data-lucide="calendar" class="w-4 h-4"></i> <span class="nav-text">Calendario</span>
+                </button>
+                <button id="nav-rutinas" onclick="switchView('rutinas')" class="nav-btn w-full nav-item flex items-center gap-5 px-6 py-4 rounded-2xl font-black uppercase text-[10px] italic text-left">
+                    <i data-lucide="dumbbell" class="w-4 h-4"></i> <span class="nav-text">Rutinas Musc.</span>
+                </button>
+            </div>
         </nav>
 
         <div class="p-8">
@@ -358,6 +360,7 @@
                                     <tr class="text-[9px] font-black uppercase text-gray-500 italic border-b border-white/5">
                                         <th class="pb-5">Nombre Completo</th>
                                         <th class="pb-5">DNI</th>
+                                        <th class="pb-5">Email</th>
                                         <th class="pb-5">Plan</th>
                                         <th class="pb-5">Status</th>
                                         <th class="pb-5">Renovación</th>
@@ -562,6 +565,7 @@
                                 <tr class="text-[9px] font-black uppercase text-gray-500 italic border-b border-white/5">
                                     <th class="pb-5">Nombre Completo</th>
                                     <th class="pb-5">DNI</th>
+                                    <th class="pb-5">Email</th>
                                     <th class="pb-5">Plan</th>
                                     <th class="pb-5">Status</th>
                                     <th class="pb-5">Renovación</th>
@@ -973,7 +977,7 @@
             document.getElementById('admin-dashboard-layout').style.display = isAlumno ? 'none' : 'block';
             document.getElementById('alumno-dashboard-layout').style.display = isAlumno ? 'block' : 'none';
 
-            // CORRECCIÓN VISIBILIDAD DASHBOARD Y PERFIL PARA ALUMNOS
+            // CORRECCIÓN VISIBILIDAD DASHBOARD Y PERFIL PARA TODOS LOS USUARIOS
             document.getElementById('nav-section-admin').style.display = 'block'; 
             document.getElementById('nav-alumnos').style.display = isAlumno ? 'none' : 'flex';
             
@@ -1024,14 +1028,6 @@
             document.getElementById('al-dash-peso').innerText = u.peso || '0';
             document.getElementById('al-dash-altura').innerText = u.altura || '0';
             document.getElementById('al-dash-imc').innerText = u.imc || '0';
-
-            // Actualizar datos de edición de perfil
-            document.getElementById('prof-input-name').value = u.nombre_completo;
-            document.getElementById('prof-input-dni').value = u.dni;
-            document.getElementById('prof-input-email').value = u.email || "";
-            document.getElementById('prof-input-peso').value = u.peso || "";
-            document.getElementById('prof-input-altura').value = u.altura || "";
-            document.getElementById('prof-input-imc').value = u.imc || "";
 
             const upcomingList = document.getElementById('al-dash-upcoming');
             const historyList = document.getElementById('al-dash-history');
@@ -1254,7 +1250,7 @@
             }
         }
 
-        // --- GESTIÓN DE RUTINAS (PUNTO 1: VISTA DE FICHA PARA STAFF) ---
+        // --- GESTIÓN DE RUTINAS ---
         async function openFichaTecnica(alumnoId) {
             const res = await apiFetch(`/alumnos/${alumnoId}/ficha`);
             if (res.error) {
@@ -1298,7 +1294,6 @@
                 const normalized = planNombre.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
                 
                 if (normalized.includes('musculacion') || normalized.includes('completo')) {
-                    // Carga estática de rutina ejemplo para el alumno
                     document.getElementById('student-routine-exercises').innerHTML = `
                         <div class="glass-card p-6 rounded-2xl border-red-600/10">
                             <h5 class="font-black italic uppercase viking-red mb-2">Día 1: Empuje</h5>
@@ -1405,13 +1400,38 @@
             document.getElementById('view-' + view).classList.add('active');
             const n = document.getElementById('nav-' + view); if (n) n.classList.add('active');
             document.getElementById('view-title').innerText = view.replace('-', ' ').toUpperCase();
+            
             if(view === 'calendario') renderCalendar();
             if(view === 'cobrar') renderCobrar();
             if(view === 'rutinas') renderRutinas();
             if(view === 'dashboard' && state.user?.rol_nombre === "Alumno") renderStudentDashboard();
-            if(view === 'perfil') {
-                document.getElementById('perfil-datos-fisicos').style.display = state.user?.rol_nombre === "Alumno" ? 'grid' : 'none';
+            
+            if(view === 'perfil' && state.user) {
+                const u = state.user;
+                document.getElementById('prof-name').innerText = u.nombre_completo;
+                document.getElementById('prof-role').innerText = u.rol_nombre;
+                document.getElementById('prof-initials-view').innerText = u.nombre_completo.split(' ').map(n => n[0]).join('').toUpperCase();
+                
+                document.getElementById('prof-input-name').value = u.nombre_completo;
+                document.getElementById('prof-input-dni').value = u.dni;
+                document.getElementById('prof-input-email').value = u.email || "";
+                
+                if (u.rol_nombre === "Alumno") {
+                    document.getElementById('perfil-datos-fisicos').classList.remove('hidden');
+                    document.getElementById('perfil-datos-fisicos').style.display = 'grid';
+                    document.getElementById('prof-input-peso').value = u.peso || "";
+                    document.getElementById('prof-input-altura').value = u.altura || "";
+                    document.getElementById('prof-input-imc').value = u.imc || "";
+                    document.getElementById('plan-alumno-info').classList.remove('hidden');
+                    document.getElementById('perfil-plan-nombre').innerText = u.plan?.nombre || "SIN PLAN";
+                    document.getElementById('perfil-vencimiento').innerText = "Vence: " + (u.fecha_vencimiento || "-");
+                } else {
+                    document.getElementById('perfil-datos-fisicos').classList.add('hidden');
+                    document.getElementById('perfil-datos-fisicos').style.display = 'none';
+                    document.getElementById('plan-alumno-info').classList.add('hidden');
+                }
             }
+            
             applyPermissions();
             lucide.createIcons();
         }
@@ -1431,16 +1451,7 @@
                 document.getElementById('user-initials').innerText = res.nombre_completo.split(' ').map(n => n[0]).join('').toUpperCase();
                 
                 await initApp();
-                
-                if (res.rol_nombre === "Alumno") {
-                    document.getElementById('plan-alumno-info').classList.remove('hidden');
-                    document.getElementById('perfil-plan-nombre').innerText = res.plan?.nombre || "SIN PLAN";
-                    document.getElementById('perfil-vencimiento').innerText = "Vence: " + (res.fecha_vencimiento || "-");
-                    switchView('dashboard');
-                } else {
-                    switchView('dashboard');
-                }
-                
+                switchView('dashboard');
             } else document.getElementById('login-error').classList.remove('hidden');
         }
 
@@ -1460,7 +1471,18 @@
             const data = await apiFetch('/alumnos');
             state.alumnos = Array.isArray(data) ? data : [];
             const hideEdit = (state.user?.rol_nombre === "Profesor" || state.user?.rol_nombre === "Alumno");
-            const renderRow = (al) => `<tr class="viking-table-row"><td class="py-6">${al.nombre_completo}</td><td class="py-6 text-gray-500">${al.dni}</td><td class="py-6 text-gray-400 font-black italic text-[9px]">${al.plan?.nombre || 'SIN PLAN'}</td><td class="py-6"><span class="text-green-500 font-bold">AL DÍA</span></td><td class="py-6 text-red-600 font-black">${al.fecha_ultima_renovacion || '-'}</td><td class="py-6 text-gray-400 font-black">${al.fecha_vencimiento || '-'}</td><td class="py-6 text-right action-col">${hideEdit ? '' : `<button onclick="openEditAlumno(${al.id})" class="hover:text-red-600"><i data-lucide="edit-2" class="w-4 h-4"></i></button>`}</td></tr>`;
+            
+            const renderRow = (al) => `<tr class="viking-table-row">
+                <td class="py-6">${al.nombre_completo}</td>
+                <td class="py-6 text-gray-500">${al.dni}</td>
+                <td class="py-6 text-gray-500 text-[9px]">${al.email || '-'}</td>
+                <td class="py-6 text-gray-400 font-black italic text-[9px]">${al.plan?.nombre || 'SIN PLAN'}</td>
+                <td class="py-6"><span class="text-green-500 font-bold">AL DÍA</span></td>
+                <td class="py-6 text-red-600 font-black">${al.fecha_ultima_renovacion || '-'}</td>
+                <td class="py-6 text-gray-400 font-black">${al.fecha_vencimiento || '-'}</td>
+                <td class="py-6 text-right action-col">${hideEdit ? '' : `<button onclick="openEditAlumno(${al.id})" class="hover:text-red-600"><i data-lucide="edit-2" class="w-4 h-4"></i></button>`}</td>
+            </tr>`;
+            
             document.getElementById('dash-table-alumnos-mini').innerHTML = [...state.alumnos].sort((a,b)=>a.nombre_completo.localeCompare(b.nombre_completo)).slice(0, 10).map(renderRow).join('');
             document.getElementById('table-alumnos-full').innerHTML = state.alumnos.map(renderRow).join('');
             lucide.createIcons();
@@ -1607,16 +1629,13 @@
 
         async function handleDrop(e, dia, horario) { e.preventDefault(); const id = e.dataTransfer.getData("clase_id"); if (!id) return; const res = await apiFetch(`/clases/${id}/move`, 'PUT', { dia, horario }); if (!res.error) { loadClases(); showVikingToast("Clase Reubicada"); } }
         function updateHourOptions() { const dia = document.getElementById('cl-dia').value; const select = document.getElementById('cl-horario'); select.innerHTML = ""; let start = 7, end = 21; if (dia == "6") { start = 10; end = 13; } for(let i=start; i<=end; i++) select.innerHTML += `<option value="${i}">${i}:00 hs</option>`; }
-        async function deleteRecord(entity, id, modalId, callback) { if(!confirm("¿Deseas eliminar este registro?")) return; const res = await apiFetch(`/${entity}/${id}`, 'DELETE'); if(!res.error) { closeModal(modalId); callback(); showVikingToast("Registro Eliminado", true); } }
+        async function deleteRecord(entity, id, modalId, callback) { if(!confirm("¿Deseas eliminar este registro?")) return; const res = await apiFetch(`/${entity}/${id}`, 'DELETE'); if(!res.error) { closeModal(modalId); callback(); showVikingToast("Registro Elimnado", true); } }
         
-        // --- PUNTO 2: ACTUALIZACIÓN DE PERFIL (STAFF Y ALUMNO) ---
         async function handleProfileUpdate(e) { 
             e.preventDefault(); 
             const pass = document.getElementById('prof-input-pass').value; 
-            
             const isAlumno = state.user.rol_nombre === 'Alumno';
             
-            // Construcción del objeto de datos base
             let data = { 
                 nombre_completo: document.getElementById('prof-input-name').value, 
                 dni: String(document.getElementById('prof-input-dni').value), 
@@ -1624,25 +1643,21 @@
             }; 
 
             if(pass) data.password = pass; 
-
             let endpoint = "";
 
             if (isAlumno) {
-                // Para alumnos usamos AlumnoUpdate schema
                 endpoint = `/alumnos/${state.user.id}`;
                 data.plan_id = state.user.plan_id || state.user.plan?.id;
                 data.peso = parseFloat(document.getElementById('prof-input-peso').value) || null;
                 data.altura = parseFloat(document.getElementById('prof-input-altura').value) || null;
                 data.imc = parseFloat(document.getElementById('prof-input-imc').value) || null;
             } else {
-                // Para staff usamos StaffUpdate schema
                 endpoint = `/staff/${state.user.id}`;
                 data.perfil_nombre = state.user.rol_nombre;
             }
 
             const res = await apiFetch(endpoint, 'PUT', data); 
             if(!res.error) { 
-                // Actualizar estado local
                 state.user.nombre_completo = data.nombre_completo; 
                 state.user.email = data.email;
                 if (isAlumno) {
@@ -1653,6 +1668,9 @@
 
                 document.getElementById('side-user-name').innerText = data.nombre_completo; 
                 document.getElementById('prof-name').innerText = data.nombre_completo;
+                document.getElementById('user-initials').innerText = data.nombre_completo.split(' ').map(n => n[0]).join('').toUpperCase();
+                document.getElementById('prof-initials-view').innerText = data.nombre_completo.split(' ').map(n => n[0]).join('').toUpperCase();
+                
                 showVikingToast("Perfil Vikingo Actualizado"); 
                 if(isAlumno) renderStudentDashboard();
             } else {
