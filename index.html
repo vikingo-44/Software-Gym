@@ -92,7 +92,7 @@
         .cal-cell { 
             border-right: 1px solid rgba(255,255,255,0.15); 
             border-bottom: 1px solid rgba(255,255,255,0.15); 
-            min-height: 65px;
+            min-height: 45px;
             position: relative; 
         }
         .cal-cell-closed {
@@ -132,7 +132,7 @@
 
         .class-badge {
             color: black; font-weight: 900;
-            padding: 6px; text-transform: uppercase; font-style: italic;
+            padding: 4px; text-transform: uppercase; font-style: italic;
             cursor: pointer;
             display: flex; flex-direction: column; justify-content: center; align-items: center;
             text-align: center; height: 100%; width: 100%;
@@ -199,6 +199,37 @@
         .notification-toast.show { transform: translateY(0); }
 
         .restricted-action { display: none !important; }
+
+        /* Estilos nuevos para selección múltiple de días y horarios */
+        .multi-select-container {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            background: rgba(255,255,255,0.05);
+            padding: 15px;
+            border-radius: 15px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .multi-option {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 9px;
+            font-weight: 900;
+            text-transform: uppercase;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 8px;
+            background: rgba(0,0,0,0.3);
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+        .multi-option input { display: none; }
+        .multi-option:has(input:checked) {
+            border-color: #FF0000;
+            background: rgba(255,0,0,0.1);
+            color: #FF0000;
+        }
     </style>
 </head>
 <body class="flex h-screen w-screen overflow-hidden text-left">
@@ -913,29 +944,46 @@
 
     <div id="modal-clase" class="viking-modal">
         <div class="glass-card p-10 rounded-[3rem] w-full max-w-lg text-left">
-            <h3 class="text-2xl font-black uppercase italic mb-8" id="modal-clase-title">Clase</h3>
+            <h3 class="text-2xl font-black uppercase italic mb-6" id="modal-clase-title">Configurar Clase</h3>
             <form id="form-clase" class="space-y-4">
                 <input type="hidden" id="cl-id">
-                <input type="text" id="cl-nombre" placeholder="Nombre de la Clase" required class="viking-input">
-                <select id="cl-coach-select" required class="viking-input">
-                    <option value="">Seleccionar Profesor</option>
-                </select>
-                <div class="grid grid-cols-3 gap-4">
-                    <select id="cl-dia" required class="viking-input" onchange="updateHourOptions()">
-                        <option value="1">Lunes</option>
-                        <option value="2">Martes</option>
-                        <option value="3">Miércoles</option>
-                        <option value="4">Jueves</option>
-                        <option value="5">Viernes</option>
-                        <option value="6">Sábado</option>
+                <div class="grid grid-cols-2 gap-4">
+                    <input type="text" id="cl-nombre" placeholder="Nombre de la Clase" required class="viking-input">
+                    <select id="cl-coach-select" required class="viking-input">
+                        <option value="">Seleccionar Profesor</option>
                     </select>
-                    <select id="cl-horario" required class="viking-input"></select>
-                    <input type="number" id="cl-cupo" placeholder="Cupo Max" class="viking-input" value="40">
                 </div>
+                
                 <div class="space-y-2">
-                    <label class="text-[9px] font-black uppercase text-gray-500 italic">Color de Identificación</label>
-                    <input type="color" id="cl-color" class="viking-input h-14 p-2 cursor-pointer" value="#FF0000">
+                    <label class="text-[9px] font-black uppercase text-gray-500 italic">Días de la Clase</label>
+                    <div class="multi-select-container" id="cl-dias-container">
+                        <label class="multi-option"><input type="checkbox" name="cl-dias-check" value="1"><span>Lunes</span></label>
+                        <label class="multi-option"><input type="checkbox" name="cl-dias-check" value="2"><span>Martes</span></label>
+                        <label class="multi-option"><input type="checkbox" name="cl-dias-check" value="3"><span>Miércoles</span></label>
+                        <label class="multi-option"><input type="checkbox" name="cl-dias-check" value="4"><span>Jueves</span></label>
+                        <label class="multi-option"><input type="checkbox" name="cl-dias-check" value="5"><span>Viernes</span></label>
+                        <label class="multi-option"><input type="checkbox" name="cl-dias-check" value="6"><span>Sábado</span></label>
+                    </div>
                 </div>
+
+                <div class="space-y-2">
+                    <label class="text-[9px] font-black uppercase text-gray-500 italic">Horarios (Franjas de 30 min)</label>
+                    <div class="multi-select-container" id="cl-horarios-container">
+                        <!-- Se llena dinámicamente -->
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="space-y-1">
+                        <label class="text-[8px] font-black text-gray-500 uppercase italic">Cupo Máximo</label>
+                        <input type="number" id="cl-cupo" placeholder="Cupo" class="viking-input" value="40">
+                    </div>
+                    <div class="space-y-1">
+                        <label class="text-[8px] font-black text-gray-500 uppercase italic">Color</label>
+                        <input type="color" id="cl-color" class="viking-input h-14 p-2 cursor-pointer" value="#FF0000">
+                    </div>
+                </div>
+
                 <div class="flex gap-4 pt-4">
                     <button type="button" onclick="closeModal('modal-clase')" class="flex-1 py-4 bg-white/5 rounded-2xl font-black uppercase italic text-[10px]">Cancelar</button>
                     <button type="button" id="btn-delete-clase" class="hidden py-4 px-4 bg-red-900/40 rounded-2xl font-black uppercase italic text-[10px] text-red-500">Eliminar</button>
@@ -1050,7 +1098,7 @@
                 <div class="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-red-600/20">
                     <div>
                         <p class="text-xs font-black uppercase italic viking-red">${r.clase_nombre}</p>
-                        <p class="text-[9px] text-gray-500 font-bold uppercase">${r.dia_nombre || 'Hoy'} - ${r.horario}:00 HS</p>
+                        <p class="text-[9px] text-gray-500 font-bold uppercase">${r.dia_nombre || 'Hoy'} - ${r.horario.toString().replace('.', ':').replace(':5', ':30')} HS</p>
                     </div>
                     <button onclick="cancelBooking(${r.id})" class="text-[8px] font-black uppercase italic text-gray-500 hover:text-red-600">Cancelar</button>
                 </div>`).join('') : '<p class="text-gray-500 italic text-[10px]">No tienes reservas próximas. ¡Ve al calendario!</p>';
@@ -1139,16 +1187,21 @@
 
             cal.innerHTML = `<div class="cal-header">HORA</div><div class="cal-header">LUNES</div><div class="cal-header">MARTES</div><div class="cal-header">MIÉRCOLES</div><div class="cal-header">JUEVES</div><div class="cal-header">VIERNES</div><div class="cal-header">SÁBADO</div>`;
             
-            for(let h=7; h<=21; h++) {
-                cal.innerHTML += `<div class="cal-cell flex items-center justify-center font-black text-[9px] text-white/40 bg-white/5 border-r border-white/20">${h}:00</div>`;
+            // Renderizado con saltos de 30 minutos
+            for(let h=7; h<=21.5; h+=0.5) {
+                const label = h % 1 === 0 ? `${h}:00` : `${Math.floor(h)}:30`;
+                cal.innerHTML += `<div class="cal-cell flex items-center justify-center font-black text-[9px] text-white/40 bg-white/5 border-r border-white/20">${label}</div>`;
                 for(let d=1; d<=6; d++) {
-                    const isSat = d === 6; const isClosed = isSat && (h < 10 || h > 13);
-                    cal.innerHTML += `<div id="cell-${d}-${h}" class="cal-cell ${isClosed ? 'cal-cell-closed' : ''}" ondragover="event.preventDefault()" ondrop="${canMove ? `handleDrop(event, ${d}, ${h})` : ''}"></div>`;
+                    const isSat = d === 6; 
+                    const isClosed = isSat && (h < 10 || h > 13);
+                    const cellId = `cell-${d}-${h.toString().replace('.','_')}`;
+                    cal.innerHTML += `<div id="${cellId}" class="cal-cell ${isClosed ? 'cal-cell-closed' : ''}" ondragover="event.preventDefault()" ondrop="${canMove ? `handleDrop(event, ${d}, ${h})` : ''}"></div>`;
                 }
             }
 
             state.clases.forEach(c => {
-                const cell = document.getElementById(`cell-${c.dia}-${c.horario}`);
+                const hKey = c.horario.toString().replace('.', '_');
+                const cell = document.getElementById(`cell-${c.dia}-${hKey}`);
                 if (cell) {
                     const capMax = c.capacidad_max || 40;
                     const cupoActual = state.reservas.filter(r => r.clase_id === c.id).length;
@@ -1163,7 +1216,7 @@
                             badge.ondragstart = (e) => e.dataTransfer.setData("clase_id", c.id);
                         }
                     }
-                    badge.innerHTML = `<span class="text-[10px] mb-0.5 leading-none font-black uppercase">${c.nombre}</span><span class="text-[8px] opacity-70 font-black italic mb-1">${c.coach}</span><div class="bg-black/20 px-2 py-0.5 rounded-full text-[7px] font-black">${cupoActual}/${capMax}</div>`;
+                    badge.innerHTML = `<span class="text-[9px] mb-0.5 leading-none font-black uppercase">${c.nombre}</span><span class="text-[7px] opacity-70 font-black italic mb-0.5">${c.coach}</span><div class="bg-black/20 px-2 py-0.5 rounded-full text-[6px] font-black">${cupoActual}/${capMax}</div>`;
                     cell.appendChild(badge);
                 }
             });
@@ -1404,7 +1457,18 @@
         function toggleSidebar() { document.getElementById('sidebar').classList.toggle('sidebar-collapsed'); lucide.createIcons(); }
         function toggleSub(id) { document.getElementById(id).classList.toggle('hidden'); }
         function openModal(id) { document.getElementById(id).style.display = 'flex'; }
-        function closeModal(id) { document.getElementById(id).style.display = 'none'; const f = document.querySelector(`#${id} form`); if (f) f.reset(); }
+        function closeModal(id) { 
+            document.getElementById(id).style.display = 'none'; 
+            const f = document.querySelector(`#${id} form`); 
+            if (f) {
+                f.reset();
+                // Limpiar checkboxes de días y horarios si es el modal de clase
+                if(id === 'modal-clase') {
+                    document.querySelectorAll('input[name="cl-dias-check"]').forEach(c => c.checked = false);
+                    document.querySelectorAll('input[name="cl-hora-check"]').forEach(c => c.checked = false);
+                }
+            }
+        }
 
         function switchView(view) {
             document.querySelectorAll('.view-content').forEach(v => v.classList.remove('active'));
@@ -1626,26 +1690,102 @@
             if(!res.error) { closeModal('modal-stock'); loadStock(); showVikingToast("Stock Actualizado"); }
         };
 
-        function openModalClase() { document.getElementById('cl-id').value = ""; openModal('modal-clase'); }
+        function openModalClase() { 
+            document.getElementById('cl-id').value = ""; 
+            document.getElementById('modal-clase-title').innerText = "Alta de Clase";
+            updateHourOptions();
+            openModal('modal-clase'); 
+        }
+
         function openEditClase(id) {
             const c = state.clases.find(x => x.id == id); if(!c) return;
-            document.getElementById('cl-id').value = c.id; document.getElementById('cl-nombre').value = c.nombre; document.getElementById('cl-coach-select').value = c.coach; document.getElementById('cl-dia').value = c.dia;
+            document.getElementById('cl-id').value = c.id; 
+            document.getElementById('modal-clase-title').innerText = "Editar Clase";
+            document.getElementById('cl-nombre').value = c.nombre; 
+            document.getElementById('cl-coach-select').value = c.coach; 
             document.getElementById('cl-cupo').value = c.capacidad_max || 40;
-            updateHourOptions(); document.getElementById('cl-horario').value = c.horario; document.getElementById('cl-color').value = c.color || "#FF0000";
-            const delBtn = document.getElementById('btn-delete-clase'); if(state.user.rol_nombre === "Administrador" || state.user.rol_nombre === "Supervisor") delBtn.classList.remove('hidden');
+            document.getElementById('cl-color').value = c.color || "#FF0000";
+            
+            updateHourOptions();
+
+            // Pre-marcar el día y horario actual
+            document.querySelectorAll('input[name="cl-dias-check"]').forEach(checkbox => {
+                checkbox.checked = (checkbox.value == c.dia);
+            });
+            setTimeout(() => {
+                const hourCheck = document.querySelector(`input[name="cl-hora-check"][value="${c.horario}"]`);
+                if(hourCheck) hourCheck.checked = true;
+            }, 50);
+
+            const delBtn = document.getElementById('btn-delete-clase'); 
+            if(state.user.rol_nombre === "Administrador" || state.user.rol_nombre === "Supervisor") delBtn.classList.remove('hidden');
             delBtn.onclick = () => deleteRecord('clases', c.id, 'modal-clase', loadClases);
             openModal('modal-clase');
         }
 
         document.getElementById('form-clase').onsubmit = async (e) => {
-            e.preventDefault(); const id = document.getElementById('cl-id').value;
-            const data = { nombre: document.getElementById('cl-nombre').value, coach: document.getElementById('cl-coach-select').value, dia: parseInt(document.getElementById('cl-dia').value), horario: parseInt(document.getElementById('cl-horario').value), color: document.getElementById('cl-color').value, capacidad_max: parseInt(document.getElementById('cl-cupo').value) };
-            const res = await apiFetch(id ? `/clases/${id}` : '/clases', id ? 'PUT' : 'POST', data);
-            if(!res.error) { closeModal('modal-clase'); loadClases(); showVikingToast("Clase Guardada"); }
+            e.preventDefault(); 
+            const id = document.getElementById('cl-id').value;
+            
+            const diasSeleccionados = Array.from(document.querySelectorAll('input[name="cl-dias-check"]:checked')).map(cb => parseInt(cb.value));
+            const horasSeleccionadas = Array.from(document.querySelectorAll('input[name="cl-hora-check"]:checked')).map(cb => parseFloat(cb.value));
+
+            if(diasSeleccionados.length === 0 || horasSeleccionadas.length === 0) {
+                showVikingToast("Selecciona al menos un día y un horario", true);
+                return;
+            }
+
+            // Si es edición, actualizamos solo la clase actual (por lógica de base de datos relacional estándar)
+            // Si es alta nueva, enviamos múltiples registros para cada combinación de día y hora
+            const baseData = {
+                nombre: document.getElementById('cl-nombre').value,
+                coach: document.getElementById('cl-coach-select').value,
+                color: document.getElementById('cl-color').value,
+                capacidad_max: parseInt(document.getElementById('cl-cupo').value)
+            };
+
+            let success = true;
+
+            if (id) {
+                // Edición (solo modificamos la actual)
+                const res = await apiFetch(`/clases/${id}`, 'PUT', { ...baseData, dia: diasSeleccionados[0], horario: horasSeleccionadas[0] });
+                if(res.error) success = false;
+            } else {
+                // Alta múltiple
+                for(let d of diasSeleccionados) {
+                    for(let h of horasSeleccionadas) {
+                        const res = await apiFetch('/clases', 'POST', { ...baseData, dia: d, horario: h });
+                        if(res.error) success = false;
+                    }
+                }
+            }
+
+            if(success) {
+                closeModal('modal-clase'); 
+                loadClases(); 
+                showVikingToast(id ? "Clase Actualizada" : "Clases Generadas con Éxito"); 
+            } else {
+                showVikingToast("Hubo un error al procesar la solicitud", true);
+            }
         };
 
         async function handleDrop(e, dia, horario) { e.preventDefault(); const id = e.dataTransfer.getData("clase_id"); if (!id) return; const res = await apiFetch(`/clases/${id}/move`, 'PUT', { dia, horario }); if (!res.error) { loadClases(); showVikingToast("Clase Reubicada"); } }
-        function updateHourOptions() { const dia = document.getElementById('cl-dia').value; const select = document.getElementById('cl-horario'); select.innerHTML = ""; let start = 7, end = 21; if (dia == "6") { start = 10; end = 13; } for(let i=start; i<=end; i++) select.innerHTML += `<option value="${i}">${i}:00 hs</option>`; }
+        
+        function updateHourOptions() { 
+            const container = document.getElementById('cl-horarios-container');
+            container.innerHTML = "";
+            
+            // Generamos franjas desde las 7 hasta las 21:30 (intervalos de 0.5)
+            for(let i=7; i<=21.5; i+=0.5) {
+                const label = i % 1 === 0 ? `${i}:00` : `${Math.floor(i)}:30`;
+                container.innerHTML += `
+                    <label class="multi-option">
+                        <input type="checkbox" name="cl-hora-check" value="${i}">
+                        <span>${label}</span>
+                    </label>`;
+            }
+        }
+
         async function deleteRecord(entity, id, modalId, callback) { if(!confirm("¿Deseas eliminar este registro?")) return; const res = await apiFetch(`/${entity}/${id}`, 'DELETE'); if(!res.error) { closeModal(modalId); callback(); showVikingToast("Registro Elimnado", true); } }
         
         async function handleProfileUpdate(e) { 
