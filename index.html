@@ -278,6 +278,7 @@
             </div>
 
             <p class="nav-section-title text-[9px] font-black text-gray-600 uppercase tracking-widest px-6 mb-2 mt-8">Gestión</p>
+            <!-- CORRECCIÓN ALINEACIÓN PLANES Y CLASES -->
             <button onclick="switchView('planes')" id="nav-planes" class="nav-btn w-full nav-item flex items-center gap-5 px-6 py-4 rounded-2xl font-black uppercase text-[10px] italic text-gray-400">
                 <i data-lucide="clipboard-list" class="w-4 h-4"></i> <span class="nav-text">Planes</span>
             </button>
@@ -317,7 +318,6 @@
         <div id="views-container" class="p-10">
             <!-- DASHBOARD -->
             <div id="view-dashboard" class="view-content active">
-                <!-- Layout Administrador/Staff -->
                 <div id="admin-dashboard-layout">
                     <div class="grid grid-cols-1 lg:grid-cols-4 gap-8 mb-10">
                         <div class="glass-card p-8 rounded-[2.5rem]">
@@ -372,7 +372,6 @@
                     </div>
                 </div>
 
-                <!-- Layout Alumno (DASHBOARD PERSONALIZADO) -->
                 <div id="alumno-dashboard-layout" class="hidden">
                     <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-10">
                         <div class="glass-card p-8 rounded-[3rem] lg:col-span-2">
@@ -490,7 +489,7 @@
                 </div>
             </div>
 
-            <!-- MI PERFIL -->
+            <!-- MI PERFIL (ACTUALIZADO PARA EDICIÓN COMPLETA DEL ALUMNO) -->
             <div id="view-perfil" class="view-content">
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-10">
                     <div class="glass-card p-10 rounded-[3rem] flex flex-col items-center">
@@ -520,12 +519,29 @@
                                 <label class="text-[9px] font-black uppercase text-gray-500 italic">Correo Electrónico</label>
                                 <input type="email" id="prof-input-email" class="viking-input">
                             </div>
-                            <div class="space-y-2">
+                            
+                            <!-- SECCIÓN DATOS FÍSICOS (VISIBLE PARA ALUMNOS) -->
+                            <div id="perfil-datos-fisicos" class="md:col-span-2 grid grid-cols-3 gap-4 border-t border-white/5 pt-6 mt-4 hidden">
+                                <div class="space-y-2">
+                                    <label class="text-[9px] font-black uppercase text-gray-500 italic">Peso (kg)</label>
+                                    <input type="number" step="0.1" id="prof-input-peso" class="viking-input" oninput="calculateIMCProfile()">
+                                </div>
+                                <div class="space-y-2">
+                                    <label class="text-[9px] font-black uppercase text-gray-500 italic">Altura (cm)</label>
+                                    <input type="number" step="0.1" id="prof-input-altura" class="viking-input" oninput="calculateIMCProfile()">
+                                </div>
+                                <div class="space-y-2">
+                                    <label class="text-[9px] font-black uppercase text-red-600 italic">IMC</label>
+                                    <input type="text" id="prof-input-imc" readonly class="viking-input opacity-50">
+                                </div>
+                            </div>
+
+                            <div class="space-y-2 md:col-span-2">
                                 <label class="text-[9px] font-black uppercase text-gray-500 italic">Nueva Contraseña</label>
                                 <input type="password" id="prof-input-pass" placeholder="Dejar vacío para no cambiar" class="viking-input">
                             </div>
                             <div class="md:col-span-2 pt-6 text-left">
-                                <button type="submit" id="btn-save-profile" class="px-10 py-4 viking-bg-red text-black rounded-2xl font-black uppercase italic tracking-widest hover:scale-105 transition-transform">Guardar Cambios</button>
+                                <button type="submit" id="btn-save-profile" class="px-10 py-4 viking-bg-red text-black rounded-2xl font-black uppercase italic tracking-widest hover:scale-105 transition-transform shadow-lg shadow-red-600/20">Guardar Cambios</button>
                             </div>
                         </form>
                     </div>
@@ -701,14 +717,7 @@
                             <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Enfocada en hipertrofia y fuerza vikinga</p>
                         </div>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6" id="student-routine-exercises">
-                            <div class="glass-card p-6 rounded-2xl border-white/5">
-                                <h5 class="font-black italic uppercase viking-red mb-2">Día 1: Empuje</h5>
-                                <ul class="text-[11px] space-y-2 opacity-80">
-                                    <li>- Press de Banca 4x10</li>
-                                    <li>- Sentadilla 4x8</li>
-                                    <li>- Press Militar 3x12</li>
-                                </ul>
-                            </div>
+                            <!-- Ejemplo de contenido si el alumno tiene musculación -->
                         </div>
                     </div>
                     <!-- Lista de alumnos para profesores/admin -->
@@ -719,6 +728,48 @@
     </main>
 
     <!-- MODALES VARIOS -->
+    <!-- FICHA TÉCNICA (NUEVO MODAL PARA GESTIÓN DE RUTINAS POR PARTE DEL STAFF) -->
+    <div id="modal-ficha-tecnica" class="viking-modal">
+        <div class="glass-card p-10 rounded-[3rem] w-full max-w-2xl text-left overflow-y-auto max-h-[90vh] custom-scrollbar">
+            <div class="flex justify-between items-start mb-8">
+                <div>
+                    <h3 class="text-2xl font-black uppercase italic" id="ficha-nombre">-</h3>
+                    <p class="text-[10px] viking-red font-black uppercase" id="ficha-dni">DNI: -</p>
+                </div>
+                <div class="text-right">
+                    <p class="text-[9px] text-gray-500 font-black uppercase italic" id="ficha-plan">Plan: -</p>
+                    <p class="text-[9px] text-gray-500 font-black uppercase italic" id="ficha-cuenta">Estado: -</p>
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-3 gap-4 mb-8">
+                <div class="bg-white/5 p-4 rounded-2xl border border-white/5 text-center">
+                    <p class="text-[8px] text-gray-500 font-black uppercase italic mb-1">Peso</p>
+                    <p class="text-lg font-black italic" id="ficha-peso">0 kg</p>
+                </div>
+                <div class="bg-white/5 p-4 rounded-2xl border border-white/5 text-center">
+                    <p class="text-[8px] text-gray-500 font-black uppercase italic mb-1">Altura</p>
+                    <p class="text-lg font-black italic" id="ficha-altura">0 cm</p>
+                </div>
+                <div class="bg-white/5 p-4 rounded-2xl border border-white/5 text-center">
+                    <p class="text-[8px] text-gray-500 font-black uppercase italic mb-1">IMC</p>
+                    <p class="text-lg font-black italic viking-red" id="ficha-imc">0</p>
+                </div>
+            </div>
+
+            <div class="space-y-6">
+                <h4 class="text-sm font-black uppercase italic border-l-4 border-red-600 pl-4 tracking-widest">Rutina Personalizada</h4>
+                <div id="ficha-rutina-container" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Dinámico -->
+                </div>
+            </div>
+
+            <div class="flex gap-4 pt-10">
+                <button onclick="closeModal('modal-ficha-tecnica')" class="w-full py-4 viking-bg-red text-black rounded-2xl font-black uppercase italic text-[11px] shadow-lg">Cerrar Ficha</button>
+            </div>
+        </div>
+    </div>
+
     <div id="modal-alumno" class="viking-modal">
         <div class="glass-card p-10 rounded-[3rem] w-full max-w-lg text-left">
             <h3 class="text-2xl font-black uppercase italic mb-8" id="modal-alumno-title">Alumno</h3>
@@ -880,20 +931,16 @@
         </div>
     </div>
 
-    <!-- MODAL LISTA DE INSCRIPTOS (AGREGADO PARA GESTION DE CUPOS) -->
     <div id="modal-inscriptos" class="viking-modal">
         <div class="glass-card p-10 rounded-[3rem] w-full max-w-lg text-left">
             <h3 class="text-2xl font-black uppercase italic mb-6">Alumnos Inscriptos</h3>
-            <div id="inscriptos-lista" class="space-y-3 max-h-96 overflow-y-auto custom-scrollbar mb-8">
-                <!-- Se llena dinamicamente -->
-            </div>
+            <div id="inscriptos-lista" class="space-y-3 max-h-96 overflow-y-auto custom-scrollbar mb-8"></div>
             <button onclick="closeModal('modal-inscriptos')" class="w-full py-4 viking-bg-red text-black rounded-2xl font-black uppercase italic text-[10px]">Cerrar</button>
         </div>
     </div>
 
     <!-- SCRIPTS INTEGRADOS -->
     <script>
-        // CONFIGURACIÓN DE URL
         const PRODUCTION_URL = "/api"; 
         const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.protocol === 'file:'
             ? (PRODUCTION_URL === "/api" ? "http://localhost:8000/api" : PRODUCTION_URL)
@@ -907,7 +954,6 @@
             cobrarTab: 'mercaderia'
         };
 
-        // --- SISTEMA DE NOTIFICACIONES ---
         function showVikingToast(msg, error = false) {
             const toast = document.getElementById('viking-toast');
             toast.innerText = msg;
@@ -917,7 +963,6 @@
             setTimeout(() => toast.classList.remove('show'), 3000);
         }
 
-        // --- SISTEMA DE PERMISOS (RBAC) ---
         function applyPermissions() {
             if (!state.user) return;
             const rol = state.user.rol_nombre || "";
@@ -926,7 +971,6 @@
             const isAlumno = rol === "Alumno";
             const isAdmin = rol === "Administrador" || rol === "Supervisor";
 
-            // Mostrar/Ocultar Dashboard layouts
             document.getElementById('admin-dashboard-layout').style.display = isAlumno ? 'none' : 'block';
             document.getElementById('alumno-dashboard-layout').style.display = isAlumno ? 'block' : 'none';
 
@@ -963,12 +1007,10 @@
             lucide.createIcons();
         }
 
-        // --- DASHBOARD ALUMNO ---
         function renderStudentDashboard() {
             const u = state.user;
             if (!u) return;
 
-            // Datos Vista
             document.getElementById('al-dash-name').innerText = u.nombre_completo;
             document.getElementById('al-dash-dni').innerText = u.dni;
             document.getElementById('al-dash-email').innerText = u.email || 'SIN EMAIL';
@@ -981,10 +1023,13 @@
             document.getElementById('al-dash-altura').innerText = u.altura || '0';
             document.getElementById('al-dash-imc').innerText = u.imc || '0';
 
-            // Actualizar inputs del formulario perfil por si acaso
+            // Actualizar datos de edición de perfil
             document.getElementById('prof-input-name').value = u.nombre_completo;
             document.getElementById('prof-input-dni').value = u.dni;
             document.getElementById('prof-input-email').value = u.email || "";
+            document.getElementById('prof-input-peso').value = u.peso || "";
+            document.getElementById('prof-input-altura').value = u.altura || "";
+            document.getElementById('prof-input-imc').value = u.imc || "";
 
             const upcomingList = document.getElementById('al-dash-upcoming');
             const historyList = document.getElementById('al-dash-history');
@@ -995,7 +1040,7 @@
                 <div class="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-red-600/20">
                     <div>
                         <p class="text-xs font-black uppercase italic viking-red">${r.clase_nombre}</p>
-                        <p class="text-[9px] text-gray-500 font-bold uppercase">${r.dia_nombre} - ${r.horario}:00 HS</p>
+                        <p class="text-[9px] text-gray-500 font-bold uppercase">${r.dia_nombre || 'Hoy'} - ${r.horario}:00 HS</p>
                     </div>
                     <button onclick="cancelBooking(${r.id})" class="text-[8px] font-black uppercase italic text-gray-500 hover:text-red-600">Cancelar</button>
                 </div>`).join('') : '<p class="text-gray-500 italic text-[10px]">No tienes reservas próximas. ¡Ve al calendario!</p>';
@@ -1003,18 +1048,13 @@
             historyList.innerHTML = '<p class="text-gray-500 italic text-[10px]">Las clases asistidas aparecerán aquí.</p>';
         }
 
-        // --- SISTEMA DE RESERVAS Y CUPOS ---
         async function fetchReservas() {
             const data = await apiFetch('/reservas');
             state.reservas = Array.isArray(data) ? data : [];
         }
 
-        // ==========================================
-        // CORRECCIÓN PUNTO 2: RESERVA POR ID
-        // ==========================================
         async function bookClass(claseId) {
             if (state.user.rol_nombre !== "Alumno") return;
-
             const clase = state.clases.find(c => c.id === claseId);
             if (!clase) return;
 
@@ -1026,19 +1066,13 @@
                 return;
             }
 
-            // Verificamos por DNI para la validación visual en el front
             const yaReservado = state.reservas.find(r => r.clase_id === claseId && r.alumno_dni === state.user.dni);
             if (yaReservado) {
                 showVikingToast("Ya estás anotado en esta clase.", true);
                 return;
             }
 
-            // CORRECCIÓN: El objeto data debe enviar IDs numéricos para cumplir con las FK de la DB
-            const data = {
-                usuario_id: parseInt(state.user.id),
-                clase_id: parseInt(clase.id)
-            };
-
+            const data = { usuario_id: parseInt(state.user.id), clase_id: parseInt(clase.id) };
             const res = await apiFetch('/reservas', 'POST', data);
             if (!res.error) {
                 showVikingToast("¡Reserva confirmada!");
@@ -1060,23 +1094,19 @@
             }
         }
 
-        // GESTION DE CUPOS PARA ADMIN
         function openInscriptos(claseId) {
             const inscriptos = state.reservas.filter(r => r.clase_id === claseId);
             const listaDiv = document.getElementById('inscriptos-lista');
-            
             listaDiv.innerHTML = inscriptos.length ? inscriptos.map(r => {
-                const al = state.alumnos.find(a => a.dni === r.alumno_dni);
                 return `
                 <div class="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5">
                     <div>
-                        <p class="text-[11px] font-black uppercase italic text-left">${al ? al.nombre_completo : 'Alumno DNI: ' + r.alumno_dni}</p>
-                        <p class="text-[8px] text-gray-500 font-bold">DNI: ${r.alumno_dni}</p>
+                        <p class="text-[11px] font-black uppercase italic text-left">${r.alumno_dni}</p>
+                        <p class="text-[8px] text-gray-500 font-bold">Reserva #${r.id}</p>
                     </div>
                     <button onclick="deleteBookingAdmin(${r.id}, ${claseId})" class="text-red-600 hover:text-white"><i data-lucide="user-minus" class="w-4 h-4"></i></button>
                 </div>`;
             }).join('') : '<p class="text-center text-gray-500 italic py-10">No hay alumnos anotados aún.</p>';
-            
             lucide.createIcons();
             openModal('modal-inscriptos');
         }
@@ -1092,7 +1122,6 @@
             }
         }
 
-        // --- CALENDARIO ACTUALIZADO CON CUPOS ---
         function renderCalendar() {
             const cal = document.getElementById('calendar-grid'); if (!cal) return;
             const canMove = (state.user?.rol_nombre === "Administrador" || state.user?.rol_nombre === "Supervisor");
@@ -1113,32 +1142,23 @@
                 if (cell) {
                     const capMax = c.capacidad_max || 40;
                     const cupoActual = state.reservas.filter(r => r.clase_id === c.id).length;
-                    
                     const badge = document.createElement('div'); 
                     badge.className = "class-badge"; 
                     badge.style.backgroundColor = c.color || '#FF0000';
-                    
-                    if (esAlumno) {
-                        badge.onclick = () => bookClass(c.id);
-                    } else {
+                    if (esAlumno) badge.onclick = () => bookClass(c.id);
+                    else {
                         badge.onclick = () => openInscriptos(c.id);
                         if (canMove) {
                             badge.draggable = true; 
                             badge.ondragstart = (e) => e.dataTransfer.setData("clase_id", c.id);
                         }
                     }
-
-                    badge.innerHTML = `
-                        <span class="text-[10px] mb-0.5 leading-none font-black uppercase">${c.nombre}</span>
-                        <span class="text-[8px] opacity-70 font-black italic mb-1">${c.coach}</span>
-                        <div class="bg-black/20 px-2 py-0.5 rounded-full text-[7px] font-black">CUPO: ${cupoActual}/${capMax}</div>
-                    `;
+                    badge.innerHTML = `<span class="text-[10px] mb-0.5 leading-none font-black uppercase">${c.nombre}</span><span class="text-[8px] opacity-70 font-black italic mb-1">${c.coach}</span><div class="bg-black/20 px-2 py-0.5 rounded-full text-[7px] font-black">${cupoActual}/${capMax}</div>`;
                     cell.appendChild(badge);
                 }
             });
         }
 
-        // --- PUNTO DE VENTA (COBRAR) ---
         function setCobrarTab(tab) {
             state.cobrarTab = tab;
             document.querySelectorAll('.cobrar-tab').forEach(t => t.classList.remove('active'));
@@ -1155,38 +1175,13 @@
                 const catalog = document.getElementById('cobrar-catalogo');
                 catalog.innerHTML = filtered.map(s => `
                     <div class="glass-card p-4 rounded-3xl relative group cursor-pointer hover:border-red-600/50" onclick="addToCart(${s.id}, 'stock')">
-                        <div class="w-full h-20 viking-bg-red/10 rounded-2xl mb-3 flex items-center justify-center">
-                            <i data-lucide="package" class="w-6 h-6 opacity-20 text-white"></i>
-                        </div>
+                        <div class="w-full h-20 viking-bg-red/10 rounded-2xl mb-3 flex items-center justify-center"><i data-lucide="package" class="w-6 h-6 opacity-20 text-white"></i></div>
                         <h4 class="text-[9px] font-black uppercase italic mb-1 truncate">${s.nombre_producto}</h4>
-                        <div class="flex items-center justify-between">
-                            <p class="text-[11px] font-black italic">$ ${s.precio_venta.toLocaleString()}</p>
-                            <span class="text-[7px] font-bold ${s.stock_actual < 5 ? 'text-red-500' : 'text-gray-500'}">S: ${s.stock_actual}</span>
-                        </div>
+                        <div class="flex items-center justify-between"><p class="text-[11px] font-black italic">$ ${s.precio_venta.toLocaleString()}</p><span class="text-[7px] font-bold ${s.stock_actual < 5 ? 'text-red-500' : 'text-gray-500'}">S: ${s.stock_actual}</span></div>
                     </div>`).join('');
             } else {
                 const filteredAl = state.alumnos.filter(a => a.nombre_completo.toLowerCase().includes(searchVal) || a.dni.includes(searchVal));
-                displayArea.innerHTML = `
-                    <div class="glass-card p-8 rounded-[2.5rem] h-[600px] flex flex-col">
-                        <h4 class="text-[10px] font-black uppercase italic text-red-600 mb-6 tracking-widest">Alumnos para Renovación</h4>
-                        <div class="overflow-y-auto custom-scrollbar flex-1 space-y-3">
-                            ${filteredAl.map(a => `
-                                <div class="flex flex-col gap-2 p-4 bg-white/5 rounded-2xl border border-white/5 hover:border-red-600/30 text-left">
-                                    <div class="flex justify-between items-start">
-                                        <div>
-                                            <p class="text-[11px] font-black italic uppercase leading-tight">${a.nombre_completo}</p>
-                                            <p class="text-[8px] text-gray-500">DNI: ${a.dni}</p>
-                                        </div>
-                                    </div>
-                                    <div class="flex gap-2 items-center mt-1">
-                                        <select id="plan-select-${a.id}" class="viking-input py-1 text-[9px] h-8 bg-black/40 border-white/10 flex-1">
-                                            ${state.planes.map(p => `<option value="${p.id}" ${p.id === a.plan_id ? 'selected' : ''}>${p.nombre} ($${p.precio})</option>`).join('')}
-                                        </select>
-                                        <button onclick="preparePlanCharge(${a.id})" class="px-4 py-2 rounded-xl text-[9px] font-black italic bg-green-600/20 text-green-500 hover:bg-green-600 hover:text-black transition-all">Cobrar</button>
-                                    </div>
-                                </div>`).join('')}
-                        </div>
-                    </div>`;
+                displayArea.innerHTML = `<div class="glass-card p-8 rounded-[2.5rem] h-[600px] flex flex-col"><h4 class="text-[10px] font-black uppercase italic text-red-600 mb-6 tracking-widest">Alumnos para Renovación</h4><div class="overflow-y-auto custom-scrollbar flex-1 space-y-3">${filteredAl.map(a => `<div class="flex flex-col gap-2 p-4 bg-white/5 rounded-2xl border border-white/5 hover:border-red-600/30 text-left"><div class="flex justify-between items-start"><div><p class="text-[11px] font-black italic uppercase leading-tight">${a.nombre_completo}</p><p class="text-[8px] text-gray-500">DNI: ${a.dni}</p></div></div><div class="flex gap-2 items-center mt-1"><select id="plan-select-${a.id}" class="viking-input py-1 text-[9px] h-8 bg-black/40 border-white/10 flex-1">${state.planes.map(p => `<option value="${p.id}" ${p.id === a.plan_id ? 'selected' : ''}>${p.nombre} ($${p.precio})</option>`).join('')}</select><button onclick="preparePlanCharge(${a.id})" class="px-4 py-2 rounded-xl text-[9px] font-black italic bg-green-600/20 text-green-500 hover:bg-green-600 hover:text-black transition-all">Cobrar</button></div></div>`).join('')}</div></div>`;
             }
             lucide.createIcons();
             updateCartUI();
@@ -1211,9 +1206,8 @@
             const selectedPlanId = parseInt(document.getElementById(`plan-select-${alumnoId}`).value);
             const plan = state.planes.find(p => p.id === selectedPlanId);
             if (!plan) return;
-            const item = { id: `plan-${al.id}`, nombre_producto: `RENOV: ${al.nombre_completo} (${plan.nombre})`, precio_venta: plan.precio, qty: 1, type: 'plan', alumno_id: al.id, plan_id_cobrado: plan.id };
             state.cart = state.cart.filter(c => c.type !== 'plan');
-            state.cart.push(item);
+            state.cart.push({ id: `plan-${al.id}`, nombre_producto: `RENOV: ${al.nombre_completo} (${plan.nombre})`, precio_venta: plan.precio, qty: 1, type: 'plan', alumno_id: al.id, plan_id_cobrado: plan.id });
             updateCartUI();
         }
 
@@ -1225,14 +1219,7 @@
                 document.getElementById('cobrar-total').innerText = '$ 0';
                 return;
             }
-            list.innerHTML = state.cart.map((c, idx) => `
-                <div class="flex items-center justify-between bg-white/5 p-3 rounded-xl border border-white/5">
-                    <div class="overflow-hidden text-left">
-                        <p class="text-[9px] font-black uppercase italic truncate">${c.nombre_producto}</p>
-                        <p class="text-[8px] text-gray-500 font-bold">VALOR: $ ${c.precio_venta.toLocaleString()}</p>
-                    </div>
-                    <button onclick="removeFromCart(${idx})" class="text-red-600 hover:text-white"><i data-lucide="trash-2" class="w-3 h-3"></i></button>
-                </div>`).join('');
+            list.innerHTML = state.cart.map((c, idx) => `<div class="flex items-center justify-between bg-white/5 p-3 rounded-xl border border-white/5"><div class="overflow-hidden text-left"><p class="text-[9px] font-black uppercase italic truncate">${c.nombre_producto}</p><p class="text-[8px] text-gray-500 font-bold">VALOR: $ ${c.precio_venta.toLocaleString()}</p></div><button onclick="removeFromCart(${idx})" class="text-red-600 hover:text-white"><i data-lucide="trash-2" class="w-3 h-3"></i></button></div>`).join('');
             const total = state.cart.reduce((acc, c) => acc + (c.qty * c.precio_venta), 0);
             document.getElementById('cobrar-subtotal').innerText = `$ ${total.toLocaleString()}`;
             document.getElementById('cobrar-total').innerText = `$ ${total.toLocaleString()}`;
@@ -1254,7 +1241,7 @@
                 for (let item of state.cart) {
                     if (item.type === 'plan' && item.alumno_id) {
                         const hoy = new Date().toISOString().split('T')[0];
-                        await apiFetch(`/alumnos/${item.alumno_id}`, 'PUT', { plan_id: item.plan_id_cobrado, fecha_ultima_renovacion: hoy });
+                        await apiFetch(`/alumnos/${item.alumno_id}`, 'PUT', { plan_id: item.plan_id_cobrado, fecha_ultima_renovacion: hoy, nombre_completo: "Actualizado", dni: "Actualizado" });
                     }
                 }
                 state.cart = []; state.currentPaymentMethod = '';
@@ -1265,7 +1252,36 @@
             }
         }
 
-        // --- RUTINAS ---
+        // --- GESTIÓN DE RUTINAS (PUNTO 1: VISTA DE FICHA PARA STAFF) ---
+        async function openFichaTecnica(alumnoId) {
+            const res = await apiFetch(`/alumnos/${alumnoId}/ficha`);
+            if (res.error) {
+                showVikingToast("Error al cargar la ficha", true);
+                return;
+            }
+
+            document.getElementById('ficha-nombre').innerText = res.nombre_completo;
+            document.getElementById('ficha-dni').innerText = "DNI: " + res.dni;
+            document.getElementById('ficha-plan').innerText = "Plan: " + res.plan;
+            document.getElementById('ficha-cuenta').innerText = "Estado: " + res.estado_cuenta;
+            document.getElementById('ficha-peso').innerText = (res.peso || 0) + " kg";
+            document.getElementById('ficha-altura').innerText = (res.altura || 0) + " cm";
+            document.getElementById('ficha-imc').innerText = res.imc || 0;
+
+            const rutinaContainer = document.getElementById('ficha-rutina-container');
+            rutinaContainer.innerHTML = res.rutina.map(r => `
+                <div class="glass-card p-4 rounded-2xl border-red-600/10">
+                    <h5 class="text-[10px] font-black italic uppercase viking-red mb-3">${r.dia}</h5>
+                    <ul class="text-[9px] space-y-2 font-bold opacity-80">
+                        ${r.ejercicios.map(ex => `<li><i data-lucide="chevron-right" class="w-3 h-3 inline mr-1 viking-red"></i> ${ex}</li>`).join('')}
+                    </ul>
+                </div>
+            `).join('');
+
+            lucide.createIcons();
+            openModal('modal-ficha-tecnica');
+        }
+
         function renderRutinas() {
             const rol = state.user?.rol_nombre;
             const list = document.getElementById('rutinas-lista');
@@ -1279,7 +1295,27 @@
                 const planNombre = state.user.plan?.nombre?.toLowerCase() || "";
                 const normalized = planNombre.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
                 
-                if (!(normalized.includes('musculacion') || normalized.includes('completo'))) {
+                if (normalized.includes('musculacion') || normalized.includes('completo')) {
+                    // Carga estática de rutina ejemplo para el alumno
+                    document.getElementById('student-routine-exercises').innerHTML = `
+                        <div class="glass-card p-6 rounded-2xl border-red-600/10">
+                            <h5 class="font-black italic uppercase viking-red mb-2">Día 1: Empuje</h5>
+                            <ul class="text-[11px] space-y-2 opacity-80 font-bold">
+                                <li>- Press de Banca 4x10</li>
+                                <li>- Sentadilla 4x8</li>
+                                <li>- Press Militar 3x12</li>
+                            </ul>
+                        </div>
+                        <div class="glass-card p-6 rounded-2xl border-white/5 opacity-60">
+                            <h5 class="font-black italic uppercase text-gray-500 mb-2">Día 2: Tracción</h5>
+                            <ul class="text-[11px] space-y-2 font-bold">
+                                <li>- Peso Muerto 3x5</li>
+                                <li>- Dominadas 4x10</li>
+                                <li>- Remo c/ Barra 4x12</li>
+                            </ul>
+                        </div>
+                    `;
+                } else {
                      studentView.innerHTML = '<p class="text-gray-500 italic py-10 text-center">Debes tener un plan de Musculación activo para ver tus rutinas.</p>';
                 }
             } else {
@@ -1303,15 +1339,14 @@
                             <div class="w-10 h-10 rounded-xl viking-bg-red flex items-center justify-center font-black text-black text-sm italic">${a.nombre_completo[0]}</div>
                             <div>
                                 <h4 class="text-xs font-black uppercase italic leading-tight">${a.nombre_completo}</h4>
-                                <p class="text-[8px] text-gray-500 uppercase font-bold">Plan: ${a.plan?.nombre || 'General'}</p>
+                                <p class="text-[8px] text-gray-500 uppercase font-bold">DNI: ${a.dni}</p>
                             </div>
                         </div>
-                        <button class="w-full py-3 bg-white/5 rounded-xl text-[9px] font-black uppercase italic hover:bg-red-600 hover:text-black transition-colors">Abrir Ficha Técnica</button>
+                        <button onclick="openFichaTecnica(${a.id})" class="w-full py-3 bg-red-600 text-black rounded-xl text-[9px] font-black uppercase italic hover:scale-105 transition-all shadow-lg">Abrir Ficha Técnica</button>
                     </div>`).join('');
             }
         }
 
-        // --- LÓGICA GENERAL ---
         async function apiFetch(endpoint, method = 'GET', body = null) {
             const options = { method, headers: { 'Content-Type': 'application/json' } };
             if (body) options.body = JSON.stringify(body);
@@ -1329,6 +1364,15 @@
                 const alturaM = alturaCm / 100;
                 document.getElementById('al-imc').value = (peso / (alturaM * alturaM)).toFixed(2);
             } else document.getElementById('al-imc').value = "";
+        }
+
+        function calculateIMCProfile() {
+            const peso = parseFloat(document.getElementById('prof-input-peso').value);
+            const alturaCm = parseFloat(document.getElementById('prof-input-altura').value);
+            if (peso > 5 && alturaCm > 50) {
+                const alturaM = alturaCm / 100;
+                document.getElementById('prof-input-imc').value = (peso / (alturaM * alturaM)).toFixed(2);
+            } else document.getElementById('prof-input-imc').value = "";
         }
 
         function autoCalculateExpiry() {
@@ -1363,6 +1407,9 @@
             if(view === 'cobrar') renderCobrar();
             if(view === 'rutinas') renderRutinas();
             if(view === 'dashboard' && state.user?.rol_nombre === "Alumno") renderStudentDashboard();
+            if(view === 'perfil') {
+                document.getElementById('perfil-datos-fisicos').style.display = state.user?.rol_nombre === "Alumno" ? 'grid' : 'none';
+            }
             applyPermissions();
             lucide.createIcons();
         }
@@ -1380,13 +1427,6 @@
                 document.getElementById('side-user-name').innerText = res.nombre_completo;
                 document.getElementById('side-user-role').innerText = res.rol_nombre || 'Staff';
                 document.getElementById('user-initials').innerText = res.nombre_completo.split(' ').map(n => n[0]).join('').toUpperCase();
-                
-                document.getElementById('prof-initials-view').innerText = res.nombre_completo.split(' ').map(n => n[0]).join('').toUpperCase();
-                document.getElementById('prof-name').innerText = res.nombre_completo;
-                document.getElementById('prof-role').innerText = res.rol_nombre;
-                document.getElementById('prof-input-name').value = res.nombre_completo;
-                document.getElementById('prof-input-dni').value = res.dni;
-                document.getElementById('prof-input-email').value = res.email || "";
                 
                 await initApp();
                 
@@ -1418,17 +1458,7 @@
             const data = await apiFetch('/alumnos');
             state.alumnos = Array.isArray(data) ? data : [];
             const hideEdit = (state.user?.rol_nombre === "Profesor" || state.user?.rol_nombre === "Alumno");
-            const renderRow = (al) => `
-                <tr class="viking-table-row">
-                    <td class="py-6">${al.nombre_completo}</td><td class="py-6 text-gray-500">${al.dni}</td>
-                    <td class="py-6 text-gray-400 font-black italic text-[9px]">${al.plan?.nombre || 'SIN PLAN'}</td>
-                    <td class="py-6"><span class="text-green-500 font-bold">AL DÍA</span></td>
-                    <td class="py-6 text-red-600 font-black">${al.fecha_ultima_renovacion || '-'}</td>
-                    <td class="py-6 text-gray-400 font-black">${al.fecha_vencimiento || '-'}</td>
-                    <td class="py-6 text-right action-col">
-                        ${hideEdit ? '' : `<button onclick="openEditAlumno(${al.id})" class="hover:text-red-600"><i data-lucide="edit-2" class="w-4 h-4"></i></button>`}
-                    </td>
-                </tr>`;
+            const renderRow = (al) => `<tr class="viking-table-row"><td class="py-6">${al.nombre_completo}</td><td class="py-6 text-gray-500">${al.dni}</td><td class="py-6 text-gray-400 font-black italic text-[9px]">${al.plan?.nombre || 'SIN PLAN'}</td><td class="py-6"><span class="text-green-500 font-bold">AL DÍA</span></td><td class="py-6 text-red-600 font-black">${al.fecha_ultima_renovacion || '-'}</td><td class="py-6 text-gray-400 font-black">${al.fecha_vencimiento || '-'}</td><td class="py-6 text-right action-col">${hideEdit ? '' : `<button onclick="openEditAlumno(${al.id})" class="hover:text-red-600"><i data-lucide="edit-2" class="w-4 h-4"></i></button>`}</td></tr>`;
             document.getElementById('dash-table-alumnos-mini').innerHTML = [...state.alumnos].sort((a,b)=>a.nombre_completo.localeCompare(b.nombre_completo)).slice(0, 10).map(renderRow).join('');
             document.getElementById('table-alumnos-full').innerHTML = state.alumnos.map(renderRow).join('');
             lucide.createIcons();
@@ -1440,12 +1470,8 @@
             state.profesores = Array.isArray(profs) ? profs : []; state.administrativos = Array.isArray(admins) ? admins : [];
             const hideEdit = state.user?.rol_nombre !== "Administrador" && state.user?.rol_nombre !== "Supervisor";
             document.getElementById('cl-coach-select').innerHTML = '<option value="">Seleccionar Profesor</option>' + state.profesores.map(p => `<option value="${p.nombre_completo}">${p.nombre_completo}</option>`).join('');
-            document.getElementById('table-profesores').innerHTML = state.profesores.map(p => `
-                <tr class="viking-table-row"><td class="py-6 text-left">${p.nombre_completo}</td><td class="py-6 text-gray-500">${p.dni}</td><td class="py-6 text-red-600 font-black">${p.especialidad || 'Gral.'}</td>
-                <td class="py-6 text-right action-col">${hideEdit ? '' : `<button onclick="openEditStaff(${p.id}, 'Profesor')" class="hover:text-red-600"><i data-lucide="edit-3" class="w-4 h-4"></i></button>`}</td></tr>`).join('');
-            document.getElementById('table-administrativos').innerHTML = state.administrativos.map(a => `
-                <tr class="viking-table-row"><td class="py-6 text-left">${a.nombre_completo}</td><td class="py-6 text-gray-500">${a.dni}</td><td class="py-6 text-gray-500 lowercase">${a.email || '-'}</td>
-                <td class="py-6 text-right action-col">${hideEdit ? '' : `<button onclick="openEditStaff(${a.id}, 'Administracion')" class="hover:text-red-600"><i data-lucide="user-cog" class="w-4 h-4"></i></button>`}</td></tr>`).join('');
+            document.getElementById('table-profesores').innerHTML = state.profesores.map(p => `<tr class="viking-table-row"><td class="py-6 text-left">${p.nombre_completo}</td><td class="py-6 text-gray-500">${p.dni}</td><td class="py-6 text-red-600 font-black">${p.especialidad || 'Gral.'}</td><td class="py-6 text-right action-col">${hideEdit ? '' : `<button onclick="openEditStaff(${p.id}, 'Profesor')" class="hover:text-red-600"><i data-lucide="edit-3" class="w-4 h-4"></i></button>`}</td></tr>`).join('');
+            document.getElementById('table-administrativos').innerHTML = state.administrativos.map(a => `<tr class="viking-table-row"><td class="py-6 text-left">${a.nombre_completo}</td><td class="py-6 text-gray-500">${a.dni}</td><td class="py-6 text-gray-500 lowercase">${a.email || '-'}</td><td class="py-6 text-right action-col">${hideEdit ? '' : `<button onclick="openEditStaff(${a.id}, 'Administracion')" class="hover:text-red-600"><i data-lucide="user-cog" class="w-4 h-4"></i></button>`}</td></tr>`).join('');
             lucide.createIcons();
             applyPermissions();
         }
@@ -1464,13 +1490,7 @@
             document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active');
             const filtered = state.planes.filter(p => p.tipo_plan_id === tipoId);
             const hideEdit = (state.user?.rol_nombre === "Profesor" || state.user?.rol_nombre === "Alumno" || state.user?.rol_nombre === "Administracion");
-            document.getElementById('planes-container').innerHTML = filtered.map(p => `
-                <div class="glass-card p-8 rounded-[2.5rem] flex flex-col border-red-600/10 relative text-left">
-                    ${hideEdit ? '' : `<button onclick="openEditPlan(${p.id})" class="absolute top-4 right-4 text-gray-600 hover:text-red-600"><i data-lucide="edit-3" class="w-4 h-4"></i></button>`}
-                    <span class="text-[8px] font-black viking-red uppercase italic tracking-widest mb-2">${p.tipo?.nombre || 'PLAN'}</span>
-                    <h4 class="text-lg font-black uppercase italic mb-6 leading-tight">${p.nombre}</h4>
-                    <p class="text-3xl font-black italic mb-8">$ ${p.precio.toLocaleString()}</p>
-                </div>`).join('');
+            document.getElementById('planes-container').innerHTML = filtered.map(p => `<div class="glass-card p-8 rounded-[2.5rem] flex flex-col border-red-600/10 relative text-left">${hideEdit ? '' : `<button onclick="openEditPlan(${p.id})" class="absolute top-4 right-4 text-gray-600 hover:text-red-600"><i data-lucide="edit-3" class="w-4 h-4"></i></button>`}<span class="text-[8px] font-black viking-red uppercase italic tracking-widest mb-2">${p.tipo?.nombre || 'PLAN'}</span><h4 class="text-lg font-black uppercase italic mb-6 leading-tight">${p.nombre}</h4><p class="text-3xl font-black italic mb-8">$ ${p.precio.toLocaleString()}</p></div>`).join('');
             lucide.createIcons();
             applyPermissions();
         }
@@ -1478,12 +1498,7 @@
         async function loadStock() {
             const data = await apiFetch('/stock'); state.stock = Array.isArray(data) ? data : [];
             const hideEdit = (state.user?.rol_nombre === "Profesor");
-            document.getElementById('stock-container').innerHTML = state.stock.map(s => `
-                <div class="glass-card p-6 rounded-[2rem] relative group text-left">
-                    ${hideEdit ? '' : `<button onclick="openEditStock(${s.id})" class="absolute top-4 right-4 text-gray-600 hover:text-red-600"><i data-lucide="edit-2" class="w-3 h-3"></i></button>`}
-                    <h4 class="text-sm font-black uppercase italic mb-4">${s.nombre_producto}</h4><p class="text-2xl font-black italic">$ ${s.precio_venta.toLocaleString()}</p>
-                    <div class="mt-4 border-t border-white/5 pt-4"><span class="text-[9px] font-black text-gray-600 uppercase">Stock: ${s.stock_actual}</span></div>
-                </div>`).join('');
+            document.getElementById('stock-container').innerHTML = state.stock.map(s => `<div class="glass-card p-6 rounded-[2rem] relative group text-left">${hideEdit ? '' : `<button onclick="openEditStock(${s.id})" class="absolute top-4 right-4 text-gray-600 hover:text-red-600"><i data-lucide="edit-2" class="w-3 h-3"></i></button>`}<h4 class="text-sm font-black uppercase italic mb-4">${s.nombre_producto}</h4><p class="text-2xl font-black italic">$ ${s.precio_venta.toLocaleString()}</p><div class="mt-4 border-t border-white/5 pt-4"><span class="text-[9px] font-black text-gray-600 uppercase">Stock: ${s.stock_actual}</span></div></div>`).join('');
             lucide.createIcons();
             applyPermissions();
         }
@@ -1492,17 +1507,7 @@
             const data = await apiFetch('/clases'); state.clases = Array.isArray(data) ? data : [];
             const hideEdit = (state.user?.rol_nombre === "Profesor" || state.user?.rol_nombre === "Administracion" || state.user?.rol_nombre === "Alumno");
             const isAdmin = (state.user?.rol_nombre === "Administrador" || state.user?.rol_nombre === "Supervisor");
-
-            document.getElementById('clases-container').innerHTML = state.clases.map(c => `
-                <div class="glass-card p-8 rounded-[2.5rem] relative text-left">
-                    ${hideEdit ? '' : `<button onclick="openEditClase(${c.id})" class="absolute top-4 right-4 text-gray-600 hover:text-red-600"><i data-lucide="settings" class="w-4 h-4"></i></button>`}
-                    <div class="flex items-center gap-2 mb-2"><div class="w-3 h-3 rounded-full" style="background-color: ${c.color || '#FF0000'}"></div><h4 class="text-lg font-black uppercase italic">${c.nombre}</h4></div>
-                    <p class="text-[10px] font-black text-red-600 uppercase italic">Coach: ${c.coach || 'Vikingo'}</p>
-                    <div class="flex justify-between items-center mt-4">
-                        <p class="text-[9px] text-gray-500 font-bold uppercase">Cupo: ${state.reservas.filter(r => r.clase_id === c.id).length}/${c.capacidad_max || 40}</p>
-                        ${isAdmin ? `<button onclick="openInscriptos(${c.id})" class="text-[8px] font-black viking-red uppercase underline italic">Ver Inscriptos</button>` : ''}
-                    </div>
-                </div>`).join('');
+            document.getElementById('clases-container').innerHTML = state.clases.map(c => `<div class="glass-card p-8 rounded-[2.5rem] relative text-left">${hideEdit ? '' : `<button onclick="openEditClase(${c.id})" class="absolute top-4 right-4 text-gray-600 hover:text-red-600"><i data-lucide="settings" class="w-4 h-4"></i></button>`}<div class="flex items-center gap-2 mb-2"><div class="w-3 h-3 rounded-full" style="background-color: ${c.color || '#FF0000'}"></div><h4 class="text-lg font-black uppercase italic">${c.nombre}</h4></div><p class="text-[10px] font-black text-red-600 uppercase italic">Coach: ${c.coach || 'Vikingo'}</p><div class="flex justify-between items-center mt-4"><p class="text-[9px] text-gray-500 font-bold uppercase">Cupo: ${state.reservas.filter(r => r.clase_id === c.id).length}/${c.capacidad_max || 40}</p>${isAdmin ? `<button onclick="openInscriptos(${c.id})" class="text-[8px] font-black viking-red uppercase underline italic">Ver Inscriptos</button>` : ''}</div></div>`).join('');
             lucide.createIcons();
             if(document.getElementById('view-calendario').classList.contains('active')) renderCalendar();
             applyPermissions();
@@ -1600,28 +1605,56 @@
 
         async function handleDrop(e, dia, horario) { e.preventDefault(); const id = e.dataTransfer.getData("clase_id"); if (!id) return; const res = await apiFetch(`/clases/${id}/move`, 'PUT', { dia, horario }); if (!res.error) { loadClases(); showVikingToast("Clase Reubicada"); } }
         function updateHourOptions() { const dia = document.getElementById('cl-dia').value; const select = document.getElementById('cl-horario'); select.innerHTML = ""; let start = 7, end = 21; if (dia == "6") { start = 10; end = 13; } for(let i=start; i<=end; i++) select.innerHTML += `<option value="${i}">${i}:00 hs</option>`; }
-        async function deleteRecord(entity, id, modalId, callback) { if(!confirm("¿Deseas eliminar este registro?")) return; const res = await apiFetch(`/${entity}/${id}`, 'DELETE'); if(!res.error) { closeModal(modalId); callback(); showVikingToast("Registro Eliminar", true); } }
+        async function deleteRecord(entity, id, modalId, callback) { if(!confirm("¿Deseas eliminar este registro?")) return; const res = await apiFetch(`/${entity}/${id}`, 'DELETE'); if(!res.error) { closeModal(modalId); callback(); showVikingToast("Registro Eliminado", true); } }
         
+        // --- PUNTO 2: ACTUALIZACIÓN DE PERFIL (STAFF Y ALUMNO) ---
         async function handleProfileUpdate(e) { 
             e.preventDefault(); 
             const pass = document.getElementById('prof-input-pass').value; 
-            const data = { 
+            
+            const isAlumno = state.user.rol_nombre === 'Alumno';
+            
+            // Construcción del objeto de datos base
+            let data = { 
                 nombre_completo: document.getElementById('prof-input-name').value, 
                 dni: String(document.getElementById('prof-input-dni').value), 
                 email: document.getElementById('prof-input-email').value
             }; 
+
             if(pass) data.password = pass; 
-            const endpoint = state.user.rol_nombre === 'Alumno' ? `/alumnos/${state.user.id}` : `/staff/${state.user.id}`;
+
+            let endpoint = "";
+
+            if (isAlumno) {
+                // Para alumnos usamos AlumnoUpdate schema
+                endpoint = `/alumnos/${state.user.id}`;
+                data.plan_id = state.user.plan_id || state.user.plan?.id;
+                data.peso = parseFloat(document.getElementById('prof-input-peso').value) || null;
+                data.altura = parseFloat(document.getElementById('prof-input-altura').value) || null;
+                data.imc = parseFloat(document.getElementById('prof-input-imc').value) || null;
+            } else {
+                // Para staff usamos StaffUpdate schema
+                endpoint = `/staff/${state.user.id}`;
+                data.perfil_nombre = state.user.rol_nombre;
+            }
+
             const res = await apiFetch(endpoint, 'PUT', data); 
             if(!res.error) { 
+                // Actualizar estado local
                 state.user.nombre_completo = data.nombre_completo; 
                 state.user.email = data.email;
+                if (isAlumno) {
+                    state.user.peso = data.peso;
+                    state.user.altura = data.altura;
+                    state.user.imc = data.imc;
+                }
+
                 document.getElementById('side-user-name').innerText = data.nombre_completo; 
                 document.getElementById('prof-name').innerText = data.nombre_completo;
                 showVikingToast("Perfil Vikingo Actualizado"); 
-                if(state.user.rol_nombre === "Alumno") renderStudentDashboard();
+                if(isAlumno) renderStudentDashboard();
             } else {
-                showVikingToast("Error al actualizar: " + res.error, true);
+                showVikingToast("Error: " + res.error, true);
             }
         }
         
