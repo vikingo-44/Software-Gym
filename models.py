@@ -34,25 +34,25 @@ class Usuario(Base):
     email = Column(String)
     perfil_id = Column(Integer, ForeignKey("perfiles.id"))
     plan_id = Column(Integer, ForeignKey("planes.id"), nullable=True)
-    estado_cuenta = Column(String, default="Al día")
-    fecha_ultima_renovacion = Column(Date)
-    fecha_vencimiento = Column(Date)
-    especialidad = Column(String)
     
-    # Datos físicos y médicos
+    # Datos físicos
     fecha_nacimiento = Column(Date, nullable=True)
+    edad = Column(Integer, nullable=True)
     peso = Column(Float, nullable=True)
     altura = Column(Float, nullable=True)
     imc = Column(Float, nullable=True)
-    edad = Column(Integer, nullable=True)
     certificado_entregado = Column(Boolean, default=False)
     fecha_certificado = Column(Date, nullable=True)
     
-    fecha_creacion = Column(DateTime, default=datetime.datetime.utcnow)
+    fecha_ultima_renovacion = Column(Date, nullable=True)
+    fecha_vencimiento = Column(Date, nullable=True)
+    
     perfil = relationship("Perfil", back_populates="usuarios")
     plan = relationship("Plan", back_populates="usuarios")
     # Relación con reservas
     reservas = relationship("Reserva", back_populates="usuario", cascade="all, delete-orphan")
+    # Relación con planes de rutina de musculación
+    planes_rutina = relationship("PlanRutina", back_populates="usuario", cascade="all, delete-orphan")
 
 class Clase(Base):
     __tablename__ = "clases"
@@ -87,7 +87,59 @@ class Stock(Base):
 class MovimientoCaja(Base):
     __tablename__ = "caja"
     id = Column(Integer, primary_key=True)
-    tipo = Column(String) 
+    tipo = Column(String) # Ingreso / Egreso
     monto = Column(Float)
-    descripcion = Column(Text)
-    fecha = Column(DateTime, default=datetime.datetime.utcnow)
+    descripcion = Column(String)
+    fecha = Column(DateTime, default=datetime.datetime.now)
+
+# =========================================
+# NUEVAS TABLAS PARA MUSCULACIÓN AVANZADA
+# =========================================
+
+class GrupoMuscular(Base):
+    __tablename__ = "grupos_musculares"
+    id = Column(Integer, primary_key=True)
+    nombre = Column(String, unique=True)
+    ejercicios = relationship("Ejercicio", back_populates="grupo_muscular")
+
+class Ejercicio(Base):
+    __tablename__ = "ejercicios_libreria"
+    id = Column(Integer, primary_key=True)
+    nombre = Column(String)
+    grupo_muscular_id = Column(Integer, ForeignKey("grupos_musculares.id"))
+    grupo_muscular = relationship("GrupoMuscular", back_populates="ejercicios")
+
+class PlanRutina(Base):
+    __tablename__ = "planes_rutina"
+    id = Column(Integer, primary_key=True)
+    usuario_id = Column(Integer, ForeignKey("usuarios.id"))
+    fecha_creacion = Column(Date, default=datetime.date.today)
+    fecha_vencimiento = Column(Date)
+    objetivo = Column(String) # Hipertrofia, Fuerza, Definicion, etc.
+    activo = Column(Boolean, default=True)
+    
+    usuario = relationship("Usuario", back_populates="planes_rutina")
+    dias = relationship("DiaRutina", back_populates="plan_rutina", cascade="all, delete-orphan")
+
+class DiaRutina(Base):
+    __tablename__ = "rutina_dias"
+    id = Column(Integer, primary_key=True)
+    plan_rutina_id = Column(Integer, ForeignKey("planes_rutina.id"))
+    nombre_dia = Column(String) # Ej: Día 1: Pecho y Tríceps
+    
+    plan_rutina = relationship("PlanRutina", back_populates="dias")
+    ejercicios = relationship("EjercicioEnRutina", back_populates="dia", cascade="all, delete-orphan")
+
+class EjercicioEnRutina(Base):
+    __tablename__ = "ejercicios_en_rutina"
+    id = Column(Integer, primary_key=True)
+    dia_id = Column(Integer, ForeignKey("rutina_dias.id"))
+    ejercicio_id = Column(Integer, ForeignKey("ejercicios_libreria.id"))
+    series = Column(String)
+    repeticiones = Column(String)
+    peso = Column(String)
+    descanso = Column(String)
+    comentario = Column(Text)
+    
+    dia = relationship("DiaRutina", back_populates="ejercicios")
+    ejercicio_libreria = relationship("Ejercicio")

@@ -122,10 +122,41 @@ class MovimientoCajaCreate(BaseModel):
     monto: float
     descripcion: str
 
-# Schema específico para resolver el error 500 de Reservas
 class ReservaCreate(BaseModel):
     usuario_id: int
     clase_id: int
+
+# --- NUEVOS SCHEMAS MUSCULACIÓN ---
+
+class GrupoMuscularSchema(BaseModel):
+    id: int
+    nombre: str
+    class Config: from_attributes = True
+
+class EjercicioLibreriaSchema(BaseModel):
+    id: int
+    nombre: str
+    grupo_muscular_id: int
+    grupo_muscular: Optional[GrupoMuscularSchema] = None
+    class Config: from_attributes = True
+
+class EjercicioEnRutinaCreate(BaseModel):
+    ejercicio_id: int
+    series: str
+    repeticiones: str
+    peso: str
+    descanso: str
+    comentario: Optional[str] = ""
+
+class DiaRutinaCreate(BaseModel):
+    nombre_dia: str
+    ejercicios: List[EjercicioEnRutinaCreate]
+
+class PlanRutinaCreate(BaseModel):
+    usuario_id: int
+    objetivo: str
+    fecha_vencimiento: date
+    dias: List[DiaRutinaCreate]
 
 # ==========================================
 # ENDPOINTS DE ACCESO Y FRONTEND
@@ -205,10 +236,7 @@ def get_ficha_tecnica(id: int, db: Session = Depends(database.get_db)):
         "altura": al.altura,
         "imc": al.imc,
         "estado_cuenta": al.estado_cuenta,
-        "rutina": [
-            {"dia": "Día 1: Empuje", "ejercicios": ["Press Banca 4x10", "Sentadilla 4x8", "Press Militar 3x12"]},
-            {"dia": "Día 2: Tracción", "ejercicios": ["Peso Muerto 3x5", "Dominadas 4x10", "Remo c/ Barra 4x12"]}
-        ]
+        "rutina": [] # Se cargará desde las tablas nuevas en el frontend
     }
 
 @app.post("/api/alumnos", tags=["Alumnos"])
@@ -289,7 +317,6 @@ def get_reservas(db: Session = Depends(database.get_db)):
 
 @app.post("/api/reservas", tags=["Reservas"])
 def book_clase(data: ReservaCreate, db: Session = Depends(database.get_db)):
-    # 1. Verificar si ya existe reserva para el mismo alumno y clase hoy
     exists = db.query(models.Reserva).filter(
         models.Reserva.usuario_id == data.usuario_id,
         models.Reserva.clase_id == data.clase_id,
@@ -299,7 +326,6 @@ def book_clase(data: ReservaCreate, db: Session = Depends(database.get_db)):
     if exists:
         raise HTTPException(status_code=400, detail="Ya tienes una reserva para esta clase hoy")
     
-    # 2. Verificar cupo disponible
     clase = db.query(models.Clase).filter(models.Clase.id == data.clase_id).first()
     if not clase:
         raise HTTPException(status_code=404, detail="Clase no encontrada")
@@ -312,7 +338,6 @@ def book_clase(data: ReservaCreate, db: Session = Depends(database.get_db)):
     if cupo_actual >= clase.capacidad_max:
         raise HTTPException(status_code=400, detail="Clase sin cupos disponibles")
 
-    # 3. Guardar en la tabla de NeonDB
     new_res = models.Reserva(
         usuario_id=data.usuario_id,
         clase_id=data.clase_id,
@@ -542,6 +567,87 @@ def create_movimiento(data: MovimientoCajaCreate, db: Session = Depends(database
     db.add(new_mov)
     db.commit()
     return {"status": "success"}
+
+# ==========================================
+# MÓDULO 9: MUSCULACIÓN AVANZADA
+# ==========================================
+
+@app.get("/api/rutinas/grupos-musculares", tags=["Musculación"])
+def get_grupos(db: Session = Depends(database.get_db)):
+    return db.query(models.GrupoMuscular).all()
+
+@app.get("/api/rutinas/ejercicios", tags=["Musculación"])
+def get_ejercicios(db: Session = Depends(database.get_db)):
+    return db.query(models.Ejercicio).options(joinedload(models.Ejercicio.grupo_muscular)).all()
+
+@app.post("/api/rutinas/grupos-musculares", tags=["Musculación"])
+def create_grupo(data: dict, db: Session = Depends(database.get_db)):
+    nuevo = models.GrupoMuscular(nombre=data['nombre'])
+    db.add(nuevo)
+    db.commit()
+    db.refresh(nuevo)
+    return nuevo
+
+@app.post("/api/rutinas/ejercicios", tags=["Musculación"])
+def create_ejercicio_lib(data: EjercicioCreate, db: Session = Depends(database.get_db)):
+    nuevo = models.Ejercicio(nombre=data.nombre, grupo_muscular_id=data.grupo_muscular_id)
+    db.add(nuevo)
+    db.commit()
+    db.refresh(nuevo)
+    return nuevo
+
+@app.post("/api/rutinas/plan", tags=["Musculación"])
+def create_plan_rutina(data: PlanRutinaCreate, db: Session = Depends(database.get_db)):
+    # Desactivar rutinas anteriores
+    db.query(models.PlanRutina).filter(models.PlanRutina.usuario_id == data.usuario_id).update({"activo": False})
+    
+    nuevo_plan = models.PlanRutina(
+        usuario_id=data.usuario_id,
+        objetivo=data.objetivo,
+        fecha_vencimiento=data.fecha_vencimiento,
+        activo=True
+    )
+    db.add(nuevo_plan)
+    db.commit()
+    db.refresh(nuevo_plan)
+    
+    for d in data.dias:
+        nuevo_dia = models.DiaRutina(plan_rutina_id=nuevo_plan.id, nombre_dia=d.nombre_dia)
+        db.add(nuevo_dia)
+        db.commit()
+        db.refresh(nuevo_dia)
+        
+        for e in d.ejercicios:
+            ej_en_rut = models.EjercicioEnRutina(
+                dia_id=nuevo_dia.id,
+                ejercicio_id=e.ejercicio_id,
+                series=e.series,
+                repeticiones=e.repeticiones,
+                peso=e.peso,
+                descanso=e.descanso,
+                comentario=e.comentario
+            )
+            db.add(ej_en_rut)
+    
+    db.commit()
+    return {"status": "success", "id": nuevo_plan.id}
+
+@app.get("/api/rutinas/usuario/{id}", tags=["Musculación"])
+def get_rutina_activa(id: int, db: Session = Depends(database.get_db)):
+    rutina = db.query(models.PlanRutina).filter(
+        models.PlanRutina.usuario_id == id, 
+        models.PlanRutina.activo == True
+    ).options(
+        joinedload(models.PlanRutina.dias).joinedload(models.DiaRutina.ejercicios).joinedload(models.EjercicioEnRutina.ejercicio_libreria)
+    ).first()
+    
+    if not rutina:
+        return {"error": "No hay rutina activa"}
+    return rutina
+
+@app.get("/api/rutinas/historial/{id}", tags=["Musculación"])
+def get_historial_rutinas(id: int, db: Session = Depends(database.get_db)):
+    return db.query(models.PlanRutina).filter(models.PlanRutina.usuario_id == id).order_by(models.PlanRutina.fecha_creacion.desc()).all()
 
 # ==========================================
 # EJECUCIÓN DEL SERVIDOR
