@@ -199,9 +199,9 @@
 
     <!-- OVERLAY DE LOGIN -->
     <div id="login-overlay">
-        <div class="glass-card p-12 rounded-[3rem] w-full max-w-md border-red-600/20 text-center mx-4">
+        <div class="glass-card p-12 rounded-[3rem] w-full max-md border-red-600/20 text-center mx-4">
             <div class="w-32 h-32 mx-auto mb-8 logo-viking-glow bg-black rounded-full flex items-center justify-center overflow-hidden">
-                <img src="logo.png" alt="Vikingo Logo" class="w-full h-full object-cover" onerror="this.src='https://via.placeholder.com/150/FF0000/000000?text=VIKINGO'">
+                <img src="https://github.com/vikingo-44/Software-Gym/blob/main/logo.png?raw=true" alt="Vikingo Logo" class="w-full h-full object-cover" onerror="this.src='https://via.placeholder.com/150/FF0000/000000?text=VIKINGO'">
             </div>
             <h1 class="text-4xl font-black italic uppercase mb-2">Vikingo <span class="viking-red">Hub</span></h1>
             <p class="text-[9px] tracking-[0.5em] text-gray-500 uppercase mb-10">Acceso al Sistema</p>
@@ -218,7 +218,7 @@
     <!-- BARRA LATERAL -->
     <aside id="sidebar" class="w-72 h-full glass-sidebar flex flex-col hidden z-50">
         <div class="p-8 flex items-center gap-4">
-            <img src="logo.png" alt="Vikingo Hub" class="w-10 h-10 object-contain logo-viking-glow brand-text" onerror="this.style.display='none'">
+            <img src="https://github.com/vikingo-44/Software-Gym/blob/main/logo.png?raw=true" alt="Vikingo Hub" class="w-10 h-10 object-contain logo-viking-glow brand-text" onerror="this.style.display='none'">
             <h1 class="brand-text text-xl font-black italic uppercase leading-none">
                 VIKINGO<br><span class="viking-red text-xs tracking-[0.4em] font-bold">STRENGTH HUB</span>
             </h1>
@@ -243,10 +243,10 @@
                 <button onclick="switchView('dashboard')" id="nav-dashboard" class="nav-btn w-full nav-item active flex items-center gap-5 px-6 py-4 rounded-2xl font-black uppercase text-[10px] italic">
                     <i data-lucide="layout-grid" class="w-4 h-4"></i> <span class="nav-text">Dashboard</span>
                 </button>
-                <button onclick="switchView('perfil')" id="nav-perfil" class="nav-btn w-full nav-item flex items-center gap-5 px-6 py-4 rounded-2xl font-black uppercase text-[10px] italic text-gray-400">
+                <button onclick="switchView('perfil')" id="nav-perfil" class="nav-btn w-full nav-item flex items-center gap-5 px-6 py-4 rounded-2xl font-black uppercase text-[10px] italic">
                     <i data-lucide="user-cog" class="w-4 h-4"></i> <span class="nav-text">Mi Perfil</span>
                 </button>
-                <button onclick="switchView('alumnos')" id="nav-alumnos" class="nav-btn w-full nav-item flex items-center gap-5 px-6 py-4 rounded-2xl font-black uppercase text-[10px] italic text-gray-400">
+                <button onclick="switchView('alumnos')" id="nav-alumnos" class="nav-btn w-full nav-item flex items-center gap-5 px-6 py-4 rounded-2xl font-black uppercase text-[10px] italic">
                     <i data-lucide="users" class="w-4 h-4"></i> <span class="nav-text">Alumnos</span>
                 </button>
             </div>
@@ -278,17 +278,16 @@
             </div>
 
             <p class="nav-section-title text-[9px] font-black text-gray-600 uppercase tracking-widest px-6 mb-2 mt-8">Gestión</p>
-            <!-- CORRECCIÓN ALINEACIÓN PLANES Y CLASES -->
-            <button onclick="switchView('planes')" id="nav-planes" class="nav-btn w-full nav-item flex items-center gap-5 px-6 py-4 rounded-2xl font-black uppercase text-[10px] italic text-gray-400">
+            <button onclick="switchView('planes')" id="nav-planes" class="nav-btn w-full nav-item flex items-center gap-5 px-6 py-4 rounded-2xl font-black uppercase text-[10px] italic">
                 <i data-lucide="clipboard-list" class="w-4 h-4"></i> <span class="nav-text">Planes</span>
             </button>
-            <button onclick="switchView('clases')" id="nav-clases" class="nav-btn w-full nav-item flex items-center gap-5 px-6 py-4 rounded-2xl font-black uppercase text-[10px] italic text-gray-400">
+            <button onclick="switchView('clases')" id="nav-clases" class="nav-btn w-full nav-item flex items-center gap-5 px-6 py-4 rounded-2xl font-black uppercase text-[10px] italic">
                 <i data-lucide="presentation" class="w-4 h-4"></i> <span class="nav-text">Clases</span>
             </button>
-            <button onclick="switchView('calendario')" id="nav-calendario" class="nav-btn w-full nav-item flex items-center gap-5 px-6 py-4 rounded-2xl font-black uppercase text-[10px] italic text-gray-400">
+            <button onclick="switchView('calendario')" id="nav-calendario" class="nav-btn w-full nav-item flex items-center gap-5 px-6 py-4 rounded-2xl font-black uppercase text-[10px] italic">
                 <i data-lucide="calendar" class="w-4 h-4"></i> <span class="nav-text">Calendario</span>
             </button>
-            <button id="nav-rutinas" onclick="switchView('rutinas')" class="nav-btn w-full nav-item flex items-center gap-5 px-6 py-4 rounded-2xl font-black uppercase text-[10px] italic text-gray-400">
+            <button id="nav-rutinas" onclick="switchView('rutinas')" class="nav-btn w-full nav-item flex items-center gap-5 px-6 py-4 rounded-2xl font-black uppercase text-[10px] italic">
                 <i data-lucide="dumbbell" class="w-4 h-4"></i> <span class="nav-text">Rutinas Musc.</span>
             </button>
         </nav>
@@ -974,7 +973,10 @@
             document.getElementById('admin-dashboard-layout').style.display = isAlumno ? 'none' : 'block';
             document.getElementById('alumno-dashboard-layout').style.display = isAlumno ? 'block' : 'none';
 
-            document.getElementById('nav-section-admin').style.display = isAlumno ? 'none' : 'block';
+            // CORRECCIÓN VISIBILIDAD DASHBOARD Y PERFIL PARA ALUMNOS
+            document.getElementById('nav-section-admin').style.display = 'block'; 
+            document.getElementById('nav-alumnos').style.display = isAlumno ? 'none' : 'flex';
+            
             document.getElementById('nav-section-staff').style.display = isAdmin ? 'block' : 'none';
             document.getElementById('nav-section-operativa').style.display = (isAdmin || isAdm) ? 'block' : 'none';
             document.getElementById('nav-planes').style.display = isAdmin ? 'block' : 'none';
