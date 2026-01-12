@@ -1400,150 +1400,173 @@
         }
 
         /**
-		 * Abre la ficha técnica del alumno, cargando sus datos físicos y 
-		 * su rutina actual agrupada por objetivo con estados automáticos.
-		 */
-		async function openFichaTecnica(alumnoId) {
-			const rutinaContainer = document.getElementById('ficha-rutina-container');
-			
-			// Limpieza inicial y estado de carga
-			rutinaContainer.innerHTML = '<p class="text-[10px] text-gray-500 italic col-span-2 animate-pulse text-center py-6 uppercase tracking-widest">Iniciando escaneo del guerrero...</p>';
+ * Abre la ficha técnica del alumno, cargando sus datos físicos y 
+ * su rutina actual agrupada por objetivo con estados automáticos.
+ */
+async function openFichaTecnica(alumnoId) {
+    const rutinaContainer = document.getElementById('ficha-rutina-container');
+    
+    // Limpieza inicial y estado de carga
+    rutinaContainer.innerHTML = `
+        <div class="col-span-2 py-10 flex flex-col items-center justify-center space-y-4">
+            <div class="w-8 h-8 border-4 border-red-600 border-t-transparent rounded-full animate-spin"></div>
+            <p class="text-[10px] text-gray-500 italic uppercase tracking-widest animate-pulse text-center">Iniciando escaneo del guerrero...</p>
+        </div>
+    `;
 
-			// 1. Obtener datos de perfil y métricas físicas
-			const res = await apiFetch(`/alumnos/${alumnoId}/ficha`);
-			if (res.error) {
-				showVikingToast("Error al conectar con el servidor", true);
-				return;
-			}
+    // 1. Obtener datos de perfil y métricas físicas
+    const res = await apiFetch(`/alumnos/${alumnoId}/ficha`);
+    if (res.error) {
+        showVikingToast("Error al conectar con el servidor", true);
+        return;
+    }
 
-			// Actualizar UI del encabezado del modal
-			document.getElementById('ficha-nombre').innerText = res.nombre_completo;
-			document.getElementById('ficha-dni').innerText = "DNI: " + res.dni;
-			document.getElementById('ficha-plan').innerText = "Plan: " + (res.plan || 'Sin Plan Activo');
-			document.getElementById('ficha-cuenta').innerText = "Estado: " + (res.estado_cuenta || 'Inactivo');
-			document.getElementById('ficha-peso').innerText = (res.peso || 0) + " kg";
-			document.getElementById('ficha-altura').innerText = (res.altura || 0) + " cm";
-			document.getElementById('ficha-imc').innerText = res.imc || 0;
+    // Actualizar UI del encabezado del modal
+    document.getElementById('ficha-nombre').innerText = res.nombre_completo || 'Sin Nombre';
+    document.getElementById('ficha-dni').innerText = "DNI: " + (res.dni || '---');
+    document.getElementById('ficha-plan').innerText = "Plan: " + (res.plan || 'Sin Plan Activo');
+    document.getElementById('ficha-cuenta').innerText = "Estado: " + (res.estado_cuenta || 'Inactivo');
+    document.getElementById('ficha-peso').innerText = (res.peso || 0) + " kg";
+    document.getElementById('ficha-altura').innerText = (res.altura || 0) + " cm";
+    document.getElementById('ficha-imc').innerText = res.imc || 0;
 
-			// 2. Obtener la rutina de musculación
-			const rutinaRes = await apiFetch(`/rutinas/usuario/${alumnoId}`);
-			
-			if (rutinaRes && !rutinaRes.error && rutinaRes.dias && rutinaRes.dias.length > 0) {
-				
-				// --- LÓGICA DE ESTADO POR FECHA ---
-				const hoy = new Date();
-				hoy.setHours(0, 0, 0, 0); // Normalizar fecha actual
-				
-				// Se asume que fecha_vencimiento viene en formato YYYY-MM-DD
-				const fechaVenc = new Date(rutinaRes.fecha_vencimiento + 'T23:59:59'); 
-				const esActiva = hoy <= fechaVenc;
+    // 2. Obtener la rutina de musculación
+    let rutinaData = await apiFetch(`/rutinas/usuario/${alumnoId}`);
+    
+    // Normalizar: Si el servidor devuelve un objeto único, lo convertimos en array para la lógica de agrupación
+    const rutinas = Array.isArray(rutinaData) ? rutinaData : (rutinaData && !rutinaData.error ? [rutinaData] : []);
 
-				const statusBadge = esActiva 
-					? `<div class="flex flex-col items-end">
-						<span class="bg-green-600/20 text-green-500 border border-green-500/30 px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest animate-pulse">Activa</span>
-					   </div>`
-					: `<div class="flex flex-col items-end">
-						<span class="bg-red-600/20 text-red-500 border border-red-500/30 px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest">Vencida / Inactiva</span>
-					   </div>`;
+    if (rutinas.length > 0) {
+        const hoy = new Date();
+        hoy.setHours(0, 0, 0, 0);
 
-				// Encabezado del Objetivo/Grupo de Rutina
-				const objetivoHTML = `
-					<div class="col-span-2 mb-6">
-						<div class="bg-white/5 border border-white/10 p-6 rounded-[2.5rem] flex justify-between items-center shadow-2xl relative overflow-hidden">
-							<div class="absolute top-0 left-0 w-1 h-full bg-red-600"></div>
-							<div>
-								<p class="text-[9px] text-gray-500 font-black uppercase tracking-[0.3em] mb-2">Objetivo del Plan Actual</p>
-								<h5 class="text-xl font-black italic uppercase viking-red leading-none">${rutinaRes.objetivo || 'Rutina de Musculación'}</h5>
-								<div class="flex items-center gap-2 mt-2 text-[10px] text-gray-400 font-bold italic">
-									<i data-lucide="calendar" class="w-3 h-3"></i>
-									Vence el: ${rutinaRes.fecha_vencimiento || 'Indefinido'}
-								</div>
-							</div>
-							${statusBadge}
-						</div>
-					</div>
-				`;
+        const mainHTML = rutinas.map((rutina, rIdx) => {
+            const objetivoId = `obj-group-${rIdx}`;
+            const fechaVenc = new Date(rutina.fecha_vencimiento + 'T23:59:59'); 
+            const esActiva = hoy <= fechaVenc;
 
-				// Renderizado de días agrupados con lógica de acordeón
-				const diasHTML = rutinaRes.dias.map((d, index) => {
-					const diaId = `ficha-dia-${index}`;
-					return `
-					<div class="col-span-2 glass-card rounded-3xl border-white/5 overflow-hidden mb-3 transition-all">
-						<button onclick="toggleFichaDay('${diaId}')" class="w-full flex items-center justify-between p-5 bg-white/5 hover:bg-white/10 transition-colors group">
-							<div class="flex items-center gap-4">
-								<div class="w-3 h-3 rounded-full ${esActiva ? 'bg-green-600 shadow-[0_0_10px_#16a34a]' : 'bg-red-600 shadow-[0_0_10px_#dc2626]'}"></div>
-								<span class="text-[12px] font-black italic uppercase tracking-wider text-white group-hover:text-red-600 transition-colors">${d.nombre_dia}</span>
-							</div>
-							<i data-lucide="chevron-down" class="w-5 h-5 text-gray-500 transition-transform duration-500" id="icon-${diaId}"></i>
-						</button>
-						
-						<div id="${diaId}" class="hidden p-5 space-y-4 bg-black/40 border-t border-white/5">
-							${(d.ejercicios || []).map(ex => {
-								// Selección inteligente del nombre del ejercicio
-								const nombreEjercicio = ex.ejercicio_libreria?.nombre || ex.nombre_ejercicio || ex.ejercicio?.nombre || "Ejercicio Sin Nombre";
-								
-								return `
-								<div class="flex flex-col border-l-2 border-red-600/40 pl-4 py-2 hover:bg-white/5 rounded-r-2xl transition-all">
-									<p class="text-[12px] font-black uppercase italic text-white tracking-tight">${nombreEjercicio}</p>
-									<div class="flex flex-wrap gap-x-5 gap-y-2 text-[10px] font-bold text-gray-500 uppercase mt-2">
-										<span class="flex items-center gap-1.5"><i data-lucide="layers" class="w-3 h-3 text-red-600"></i> Series: <b class="text-white">${ex.series}</b></span>
-										<span class="flex items-center gap-1.5"><i data-lucide="refresh-cw" class="w-3 h-3 text-red-600"></i> Reps: <b class="text-white">${ex.repeticiones}</b></span>
-										${ex.peso ? `<span class="flex items-center gap-1.5"><i data-lucide="dumbbell" class="w-3 h-3 text-red-600"></i> Carga: <b class="text-red-500">${ex.peso}</b></span>` : ''}
-										${ex.descanso ? `<span class="flex items-center gap-1.5"><i data-lucide="timer" class="w-3 h-3 text-red-600"></i> Descanso: <b class="text-gray-400">${ex.descanso}</b></span>` : ''}
-									</div>
-									${ex.comentario ? `
-										<div class="mt-2.5 bg-black/50 p-3 rounded-xl border border-white/5 flex gap-2 items-start">
-											<i data-lucide="info" class="w-3 h-3 text-red-600 mt-0.5 shrink-0"></i>
-											<p class="text-[9px] text-gray-400 italic font-medium leading-relaxed">${ex.comentario}</p>
-										</div>
-									` : ''}
-								</div>
-							`;}).join('')}
-						</div>
-					</div>
-				`}).join('');
+            const statusBadge = esActiva 
+                ? `<span class="bg-green-600/20 text-green-500 border border-green-500/30 px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest animate-pulse">Activa</span>`
+                : `<span class="bg-red-600/20 text-red-500 border border-red-500/30 px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest">Vencida</span>`;
 
-				rutinaContainer.innerHTML = objetivoHTML + diasHTML;
-			} else {
-				// Estado vacío si no hay rutina
-				rutinaContainer.innerHTML = `
-					<div class="col-span-2 p-16 border border-dashed border-white/10 rounded-[3rem] text-center bg-white/2">
-						<div class="w-16 h-16 viking-bg-red/10 rounded-full flex items-center justify-center mx-auto mb-6">
-							<i data-lucide="skull" class="w-8 h-8 opacity-40 text-red-600"></i>
-						</div>
-						<p class="text-[12px] text-gray-600 font-black uppercase italic tracking-[0.2em]">No se ha detectado un plan de batalla activo</p>
-						<p class="text-[10px] text-gray-700 mt-2 font-bold">Asigna una rutina desde el gestor para ver los datos aquí.</p>
-					</div>
-				`;
-			}
+            // Renderizado de días dentro de este objetivo
+            const diasHTML = (rutina.dias || []).map((d, dIdx) => {
+                const diaId = `ficha-dia-${rIdx}-${dIdx}`;
+                return `
+                <div class="glass-card rounded-2xl border-white/5 overflow-hidden mb-2 transition-all">
+                    <button onclick="toggleFichaElement('${diaId}')" class="w-full flex items-center justify-between p-4 bg-white/2 hover:bg-white/5 transition-colors group">
+                        <div class="flex items-center gap-3">
+                            <div class="w-2 h-2 rounded-full ${esActiva ? 'bg-green-600 shadow-[0_0_8px_#16a34a]' : 'bg-red-600 shadow-[0_0_8px_#dc2626]'}"></div>
+                            <span class="text-[11px] font-black italic uppercase tracking-wider text-gray-300 group-hover:text-red-500 transition-colors">${d.nombre_dia}</span>
+                        </div>
+                        <i data-lucide="chevron-down" class="w-4 h-4 text-gray-600 transition-transform duration-500" id="icon-${diaId}"></i>
+                    </button>
+                    
+                    <div id="${diaId}" class="hidden p-4 space-y-4 bg-black/20 border-t border-white/5">
+                        ${(d.ejercicios || []).map(ex => {
+                            // Búsqueda exhaustiva del nombre del ejercicio
+                            const nombreEjercicio = 
+                                ex.nombre || 
+                                (ex.ejercicio && typeof ex.ejercicio === 'string' ? ex.ejercicio : null) ||
+                                ex.ejercicio?.nombre || 
+                                ex.ejercicio_libreria?.nombre || 
+                                ex.nombre_ejercicio || 
+                                "Ejercicio Sin Nombre";
+                            
+                            return `
+                            <div class="flex flex-col border-l-2 border-red-600/40 pl-4 py-1.5 hover:bg-white/5 rounded-r-xl transition-all">
+                                <p class="text-[11px] font-black uppercase italic text-white tracking-tight">${nombreEjercicio}</p>
+                                <div class="flex flex-wrap gap-x-4 gap-y-1 text-[9px] font-bold text-gray-500 uppercase mt-1">
+                                    <span class="flex items-center gap-1"><i data-lucide="layers" class="w-2.5 h-2.5 text-red-600"></i> Ser: <b class="text-white">${ex.series || '-'}</b></span>
+                                    <span class="flex items-center gap-1"><i data-lucide="refresh-cw" class="w-2.5 h-2.5 text-red-600"></i> Rep: <b class="text-white">${ex.repeticiones || '-'}</b></span>
+                                    ${ex.peso ? `<span class="flex items-center gap-1"><i data-lucide="dumbbell" class="w-2.5 h-2.5 text-red-600"></i> <b class="text-red-500">${ex.peso}</b></span>` : ''}
+                                    ${ex.descanso ? `<span class="flex items-center gap-1"><i data-lucide="timer" class="w-2.5 h-2.5 text-red-600"></i> <b class="text-gray-400">${ex.descanso}</b></span>` : ''}
+                                </div>
+                                ${ex.comentario ? `
+                                    <div class="mt-2 bg-black/40 p-2 rounded-lg border border-white/5 flex gap-2">
+                                        <i data-lucide="info" class="w-2.5 h-2.5 text-red-600 mt-0.5 shrink-0"></i>
+                                        <p class="text-[8px] text-gray-400 italic font-medium leading-tight">${ex.comentario}</p>
+                                    </div>
+                                ` : ''}
+                            </div>
+                        `;}).join('')}
+                    </div>
+                </div>
+                `;
+            }).join('');
 
-			// Reinicializar iconos y mostrar modal
-			lucide.createIcons();
-			openModal('modal-ficha-tecnica');
-		}
+            return `
+            <div class="col-span-2 mb-4">
+                <!-- ACORDEÓN PRINCIPAL: OBJETIVO -->
+                <div class="bg-white/5 border border-white/10 rounded-[2rem] overflow-hidden shadow-xl">
+                    <button onclick="toggleFichaElement('${objetivoId}')" class="w-full flex items-center justify-between p-6 hover:bg-white/5 transition-all text-left">
+                        <div class="flex items-center gap-4">
+                            <div class="w-1 h-10 bg-red-600 rounded-full"></div>
+                            <div>
+                                <p class="text-[8px] text-gray-500 font-black uppercase tracking-[0.3em] mb-1">Plan de Entrenamiento</p>
+                                <h5 class="text-lg font-black italic uppercase viking-red leading-none">${rutina.objetivo || 'Rutina de Musculación'}</h5>
+                                <p class="text-[9px] text-gray-400 font-bold italic mt-1 flex items-center gap-1">
+                                    <i data-lucide="calendar" class="w-3 h-3"></i> Vence: ${rutina.fecha_vencimiento || 'Indefinido'}
+                                </p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-4">
+                            ${statusBadge}
+                            <i data-lucide="chevron-down" class="w-6 h-6 text-red-600 transition-transform duration-500" id="icon-${objetivoId}"></i>
+                        </div>
+                    </button>
 
-		/**
-		 * Controla el despliegue de los días en la ficha técnica.
-		 */
-		function toggleFichaDay(id) {
-			const content = document.getElementById(id);
-			const icon = document.getElementById('icon-' + id);
-			const isHidden = content.classList.contains('hidden');
-			
-			// Podrías cerrar los otros si quieres efecto de un solo abierto:
-			// document.querySelectorAll('[id^="ficha-dia-"]').forEach(el => { if(el.id !== id) el.classList.add('hidden'); });
+                    <!-- CONTENIDO DE DÍAS (ACORDEÓN ANIDADO) -->
+                    <div id="${objetivoId}" class="hidden p-4 bg-black/30 border-t border-white/5">
+                        ${diasHTML}
+                    </div>
+                </div>
+            </div>
+            `;
+        }).join('');
 
-			if (isHidden) {
-				content.classList.remove('hidden');
-				content.classList.add('animate-in', 'fade-in', 'slide-in-from-top-2');
-				icon.style.transform = 'rotate(180deg)';
-				icon.style.color = '#FF0000';
-			} else {
-				content.classList.add('hidden');
-				icon.style.transform = 'rotate(0deg)';
-				icon.style.color = '#6b7280';
-			}
-		}
+        rutinaContainer.innerHTML = mainHTML;
+    } else {
+        rutinaContainer.innerHTML = `
+            <div class="col-span-2 p-16 border border-dashed border-white/10 rounded-[3rem] text-center bg-white/2">
+                <div class="w-16 h-16 viking-bg-red/10 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <i data-lucide="skull" class="w-8 h-8 opacity-40 text-red-600"></i>
+                </div>
+                <p class="text-[12px] text-gray-600 font-black uppercase italic tracking-[0.2em]">No se ha detectado un plan de batalla activo</p>
+                <p class="text-[10px] text-gray-700 mt-2 font-bold">Asigna una rutina desde el gestor para ver los datos aquí.</p>
+            </div>
+        `;
+    }
+
+    lucide.createIcons();
+    openModal('modal-ficha-tecnica');
+}
+
+/**
+ * Controla el despliegue de elementos (Objetivos o Días) en la ficha técnica.
+ */
+function toggleFichaElement(id) {
+    const content = document.getElementById(id);
+    const icon = document.getElementById('icon-' + id);
+    if (!content) return;
+
+    const isHidden = content.classList.contains('hidden');
+    
+    if (isHidden) {
+        content.classList.remove('hidden');
+        content.classList.add('animate-in', 'fade-in', 'slide-in-from-top-2');
+        if (icon) {
+            icon.style.transform = 'rotate(180deg)';
+            icon.style.color = '#FF0000';
+        }
+    } else {
+        content.classList.add('hidden');
+        if (icon) {
+            icon.style.transform = 'rotate(0deg)';
+            icon.style.color = id.startsWith('obj-') ? '#dc2626' : '#6b7280';
+        }
+    }
+}
 
         async function renderRutinas() {
             const rol = state.user?.rol_nombre;
