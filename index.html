@@ -192,14 +192,14 @@
         .restricted-action { display: none !important; }
     </style>
 </head>
-<body class="flex h-screen w-screen overflow-hidden">
+<body class="flex h-screen w-screen overflow-hidden text-left">
 
     <!-- TOAST DE NOTIFICACIONES -->
     <div id="viking-toast" class="notification-toast">¡Acción Completada!</div>
 
     <!-- OVERLAY DE LOGIN -->
     <div id="login-overlay">
-        <div class="glass-card p-12 rounded-[3rem] w-full max-w-md border-red-600/20 text-center">
+        <div class="glass-card p-12 rounded-[3rem] w-full max-w-md border-red-600/20 text-center mx-4">
             <div class="w-32 h-32 mx-auto mb-8 logo-viking-glow bg-black rounded-full flex items-center justify-center overflow-hidden">
                 <img src="logo.png" alt="Vikingo Logo" class="w-full h-full object-cover" onerror="this.src='https://via.placeholder.com/150/FF0000/000000?text=VIKINGO'">
             </div>
@@ -300,7 +300,7 @@
     </aside>
 
     <!-- PANEL PRINCIPAL -->
-    <main id="main-content" class="flex-1 h-full overflow-y-auto hidden relative text-left">
+    <main id="main-content" class="flex-1 h-full overflow-y-auto hidden relative">
         <header class="h-24 border-b border-white/5 px-12 flex items-center justify-between sticky top-0 bg-black/70 backdrop-blur-2xl z-40">
             <div>
                 <p id="breadcrumb" class="text-[9px] font-black text-red-600 uppercase tracking-[0.4em] italic">Vikingo Strength Hub</p>
@@ -314,7 +314,7 @@
             </div>
         </header>
 
-        <div id="views-container" class="p-10 text-left">
+        <div id="views-container" class="p-10">
             <!-- DASHBOARD -->
             <div id="view-dashboard" class="view-content active">
                 <!-- Layout Administrador/Staff -->
@@ -495,7 +495,7 @@
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-10">
                     <div class="glass-card p-10 rounded-[3rem] flex flex-col items-center">
                         <div class="w-32 h-32 rounded-[2.5rem] viking-bg-red flex items-center justify-center font-black text-black text-4xl italic shadow-2xl mb-6" id="prof-initials-view">??</div>
-                        <h3 class="text-xl font-black uppercase italic" id="prof-name">Cargando...</h3>
+                        <h3 class="text-xl font-black uppercase italic text-center" id="prof-name">Cargando...</h3>
                         <p class="text-red-600 text-xs font-black uppercase tracking-widest mb-8" id="prof-role">Rol</p>
                         <div id="plan-alumno-info" class="w-full space-y-2 mt-4 hidden">
                             <p class="text-[9px] font-black uppercase text-gray-500 italic text-center">Plan Actual</p>
@@ -968,6 +968,7 @@
             const u = state.user;
             if (!u) return;
 
+            // Datos Vista
             document.getElementById('al-dash-name').innerText = u.nombre_completo;
             document.getElementById('al-dash-dni').innerText = u.dni;
             document.getElementById('al-dash-email').innerText = u.email || 'SIN EMAIL';
@@ -979,6 +980,11 @@
             document.getElementById('al-dash-peso').innerText = u.peso || '0';
             document.getElementById('al-dash-altura').innerText = u.altura || '0';
             document.getElementById('al-dash-imc').innerText = u.imc || '0';
+
+            // Actualizar inputs del formulario perfil por si acaso
+            document.getElementById('prof-input-name').value = u.nombre_completo;
+            document.getElementById('prof-input-dni').value = u.dni;
+            document.getElementById('prof-input-email').value = u.email || "";
 
             const upcomingList = document.getElementById('al-dash-upcoming');
             const historyList = document.getElementById('al-dash-history');
@@ -992,7 +998,7 @@
                         <p class="text-[9px] text-gray-500 font-bold uppercase">${r.dia_nombre} - ${r.horario}:00 HS</p>
                     </div>
                     <button onclick="cancelBooking(${r.id})" class="text-[8px] font-black uppercase italic text-gray-500 hover:text-red-600">Cancelar</button>
-                </div>`).join('') : '<p class="text-gray-500 italic text-[10px]">No tienes reservas próximas.</p>';
+                </div>`).join('') : '<p class="text-gray-500 italic text-[10px]">No tienes reservas próximas. ¡Ve al calendario!</p>';
 
             historyList.innerHTML = '<p class="text-gray-500 italic text-[10px]">Las clases asistidas aparecerán aquí.</p>';
         }
@@ -1033,7 +1039,8 @@
 
             const res = await apiFetch('/reservas', 'POST', data);
             if (!res.error) {
-                showVikingToast("¡Reserva confirmada en " + clase.nombre + "!");
+                showVikingToast("¡Reserva confirmada!");
+                // Corregimos aquí: Recargamos todo tras reservar
                 await fetchReservas();
                 renderCalendar();
                 renderStudentDashboard();
@@ -1062,7 +1069,7 @@
                 return `
                 <div class="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5">
                     <div>
-                        <p class="text-[11px] font-black uppercase italic">${al ? al.nombre_completo : 'Alumno DNI: ' + r.alumno_dni}</p>
+                        <p class="text-[11px] font-black uppercase italic text-left">${al ? al.nombre_completo : 'Alumno DNI: ' + r.alumno_dni}</p>
                         <p class="text-[8px] text-gray-500 font-bold">DNI: ${r.alumno_dni}</p>
                     </div>
                     <button onclick="deleteBookingAdmin(${r.id}, ${claseId})" class="text-red-600 hover:text-white"><i data-lucide="user-minus" class="w-4 h-4"></i></button>
@@ -1164,7 +1171,7 @@
                         <h4 class="text-[10px] font-black uppercase italic text-red-600 mb-6 tracking-widest">Alumnos para Renovación</h4>
                         <div class="overflow-y-auto custom-scrollbar flex-1 space-y-3">
                             ${filteredAl.map(a => `
-                                <div class="flex flex-col gap-2 p-4 bg-white/5 rounded-2xl border border-white/5 hover:border-red-600/30">
+                                <div class="flex flex-col gap-2 p-4 bg-white/5 rounded-2xl border border-white/5 hover:border-red-600/30 text-left">
                                     <div class="flex justify-between items-start">
                                         <div>
                                             <p class="text-[11px] font-black italic uppercase leading-tight">${a.nombre_completo}</p>
@@ -1220,7 +1227,7 @@
             }
             list.innerHTML = state.cart.map((c, idx) => `
                 <div class="flex items-center justify-between bg-white/5 p-3 rounded-xl border border-white/5">
-                    <div class="overflow-hidden">
+                    <div class="overflow-hidden text-left">
                         <p class="text-[9px] font-black uppercase italic truncate">${c.nombre_producto}</p>
                         <p class="text-[8px] text-gray-500 font-bold">VALOR: $ ${c.precio_venta.toLocaleString()}</p>
                     </div>
@@ -1291,7 +1298,7 @@
                 }
 
                 list.innerHTML = alRutinas.map(a => `
-                    <div class="glass-card p-6 rounded-3xl border-red-600/10">
+                    <div class="glass-card p-6 rounded-3xl border-red-600/10 text-left">
                         <div class="flex items-center gap-4 mb-4">
                             <div class="w-10 h-10 rounded-xl viking-bg-red flex items-center justify-center font-black text-black text-sm italic">${a.nombre_completo[0]}</div>
                             <div>
@@ -1369,9 +1376,13 @@
                 document.getElementById('login-overlay').style.display = 'none';
                 document.getElementById('sidebar').classList.remove('hidden');
                 document.getElementById('main-content').classList.remove('hidden');
+                
+                // Sidebar info
                 document.getElementById('side-user-name').innerText = res.nombre_completo;
                 document.getElementById('side-user-role').innerText = res.rol_nombre || 'Staff';
                 document.getElementById('user-initials').innerText = res.nombre_completo.split(' ').map(n => n[0]).join('').toUpperCase();
+                
+                // Profile page data
                 document.getElementById('prof-initials-view').innerText = res.nombre_completo.split(' ').map(n => n[0]).join('').toUpperCase();
                 document.getElementById('prof-name').innerText = res.nombre_completo;
                 document.getElementById('prof-role').innerText = res.rol_nombre;
@@ -1385,7 +1396,7 @@
                     document.getElementById('plan-alumno-info').classList.remove('hidden');
                     document.getElementById('perfil-plan-nombre').innerText = res.plan?.nombre || "SIN PLAN";
                     document.getElementById('perfil-vencimiento').innerText = "Vence: " + (res.fecha_vencimiento || "-");
-                    switchView('dashboard');
+                    switchView('dashboard'); // El alumno va directo a su Panel Personal
                 } else {
                     switchView('dashboard');
                 }
@@ -1432,10 +1443,10 @@
             const hideEdit = state.user?.rol_nombre !== "Administrador" && state.user?.rol_nombre !== "Supervisor";
             document.getElementById('cl-coach-select').innerHTML = '<option value="">Seleccionar Profesor</option>' + state.profesores.map(p => `<option value="${p.nombre_completo}">${p.nombre_completo}</option>`).join('');
             document.getElementById('table-profesores').innerHTML = state.profesores.map(p => `
-                <tr class="viking-table-row"><td class="py-6">${p.nombre_completo}</td><td class="py-6 text-gray-500">${p.dni}</td><td class="py-6 text-red-600 font-black">${p.especialidad || 'Gral.'}</td>
+                <tr class="viking-table-row"><td class="py-6 text-left">${p.nombre_completo}</td><td class="py-6 text-gray-500">${p.dni}</td><td class="py-6 text-red-600 font-black">${p.especialidad || 'Gral.'}</td>
                 <td class="py-6 text-right action-col">${hideEdit ? '' : `<button onclick="openEditStaff(${p.id}, 'Profesor')" class="hover:text-red-600"><i data-lucide="edit-3" class="w-4 h-4"></i></button>`}</td></tr>`).join('');
             document.getElementById('table-administrativos').innerHTML = state.administrativos.map(a => `
-                <tr class="viking-table-row"><td class="py-6">${a.nombre_completo}</td><td class="py-6 text-gray-500">${a.dni}</td><td class="py-6 text-gray-500 lowercase">${a.email || '-'}</td>
+                <tr class="viking-table-row"><td class="py-6 text-left">${a.nombre_completo}</td><td class="py-6 text-gray-500">${a.dni}</td><td class="py-6 text-gray-500 lowercase">${a.email || '-'}</td>
                 <td class="py-6 text-right action-col">${hideEdit ? '' : `<button onclick="openEditStaff(${a.id}, 'Administracion')" class="hover:text-red-600"><i data-lucide="user-cog" class="w-4 h-4"></i></button>`}</td></tr>`).join('');
             lucide.createIcons();
             applyPermissions();
@@ -1456,7 +1467,7 @@
             const filtered = state.planes.filter(p => p.tipo_plan_id === tipoId);
             const hideEdit = (state.user?.rol_nombre === "Profesor" || state.user?.rol_nombre === "Alumno" || state.user?.rol_nombre === "Administracion");
             document.getElementById('planes-container').innerHTML = filtered.map(p => `
-                <div class="glass-card p-8 rounded-[2.5rem] flex flex-col border-red-600/10 relative">
+                <div class="glass-card p-8 rounded-[2.5rem] flex flex-col border-red-600/10 relative text-left">
                     ${hideEdit ? '' : `<button onclick="openEditPlan(${p.id})" class="absolute top-4 right-4 text-gray-600 hover:text-red-600"><i data-lucide="edit-3" class="w-4 h-4"></i></button>`}
                     <span class="text-[8px] font-black viking-red uppercase italic tracking-widest mb-2">${p.tipo?.nombre || 'PLAN'}</span>
                     <h4 class="text-lg font-black uppercase italic mb-6 leading-tight">${p.nombre}</h4>
@@ -1592,7 +1603,26 @@
         async function handleDrop(e, dia, horario) { e.preventDefault(); const id = e.dataTransfer.getData("clase_id"); if (!id) return; const res = await apiFetch(`/clases/${id}/move`, 'PUT', { dia, horario }); if (!res.error) { loadClases(); showVikingToast("Clase Reubicada"); } }
         function updateHourOptions() { const dia = document.getElementById('cl-dia').value; const select = document.getElementById('cl-horario'); select.innerHTML = ""; let start = 7, end = 21; if (dia == "6") { start = 10; end = 13; } for(let i=start; i<=end; i++) select.innerHTML += `<option value="${i}">${i}:00 hs</option>`; }
         async function deleteRecord(entity, id, modalId, callback) { if(!confirm("¿Deseas eliminar este registro?")) return; const res = await apiFetch(`/${entity}/${id}`, 'DELETE'); if(!res.error) { closeModal(modalId); callback(); showVikingToast("Registro Eliminado", true); } }
-        async function handleProfileUpdate(e) { e.preventDefault(); const pass = document.getElementById('prof-input-pass').value; const data = { nombre_completo: document.getElementById('prof-input-name').value, dni: document.getElementById('prof-input-dni').value, email: document.getElementById('prof-input-email').value, perfil_nombre: state.user.rol_nombre }; if(pass) data.password = pass; const res = await apiFetch(`/staff/${state.user.id}`, 'PUT', data); if(!res.error) { state.user.nombre_completo = data.nombre_completo; document.getElementById('side-user-name').innerText = data.nombre_completo; showVikingToast("Perfil Actualizado"); } }
+        
+        async function handleProfileUpdate(e) { 
+            e.preventDefault(); 
+            const pass = document.getElementById('prof-input-pass').value; 
+            const data = { 
+                nombre_completo: document.getElementById('prof-input-name').value, 
+                dni: document.getElementById('prof-input-dni').value, 
+                email: document.getElementById('prof-input-email').value, 
+                perfil_nombre: state.user.rol_nombre 
+            }; 
+            if(pass) data.password = pass; 
+            const res = await apiFetch(`/staff/${state.user.id}`, 'PUT', data); 
+            if(!res.error) { 
+                state.user.nombre_completo = data.nombre_completo; 
+                document.getElementById('side-user-name').innerText = data.nombre_completo; 
+                showVikingToast("Perfil Actualizado"); 
+                // Si es alumno, actualizamos su dashboard
+                if(state.user.rol_nombre === "Alumno") renderStudentDashboard();
+            } 
+        }
         
         window.onload = () => { lucide.createIcons(); };
     </script>
