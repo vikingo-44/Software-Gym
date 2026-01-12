@@ -2076,80 +2076,97 @@
 				document.getElementById('form-rutina-editor').onsubmit = async (e) => {
 			e.preventDefault();
 			
-			// 1. Obtener ID del usuario (asegurarse de que sea número)
-			const userId = parseInt(document.getElementById('edit-rutina-user-id').value);
-			if (!userId || isNaN(userId)) {
-				showVikingToast("Error: Debes seleccionar un alumno válido", true);
+			// 1. Intentar obtener el ID del alumno (probamos los dos IDs posibles para evitar el error de 'null')
+			const elAlumnoId = document.getElementById('rutina-editor-alumno-id') || document.getElementById('edit-rutina-user-id');
+			const elObjetivo = document.getElementById('rutina-objetivo') || document.getElementById('edit-rutina-objetivo');
+			const elVencimiento = document.getElementById('rutina-vencimiento') || document.getElementById('edit-rutina-vencimiento');
+			const elNombreGrupo = document.getElementById('rutina-nombre-grupo');
+			const elDescripcion = document.getElementById('rutina-descripcion');
+
+			// Validación de seguridad para el programador
+			if (!elAlumnoId) {
+				console.error("No se encontró el input del ID del alumno. Revisa que el ID en el HTML sea 'rutina-editor-alumno-id'");
+				showVikingToast("Error técnico: Campo de ID no encontrado en el HTML", true);
 				return;
 			}
 
-			// 2. Construir el objeto inicial (Match exacto con PlanRutinaCreate en main.py)
+			const alumnoId = parseInt(elAlumnoId.value);
+			
+			if (isNaN(alumnoId)) {
+				showVikingToast("Error: Debes seleccionar un alumno de la lista", true);
+				return;
+			}
+
+			// 2. Capturar metadatos (objetivo, vencimiento, etc.)
 			const payload = {
-				usuario_id: userId,
-				nombre_grupo: document.getElementById('edit-rutina-nombre-grupo')?.value || "Rutina General",
-				descripcion: document.getElementById('edit-rutina-descripcion')?.value || "",
-				objetivo: document.getElementById('edit-rutina-objetivo').value,
-				fecha_vencimiento: document.getElementById('edit-rutina-vencimiento').value, // Formato YYYY-MM-DD
+				usuario_id: alumnoId,
+				nombre_grupo: elNombreGrupo ? elNombreGrupo.value : "Rutina Nueva",
+				descripcion: elDescripcion ? elDescripcion.value : "",
+				objetivo: elObjetivo ? elObjetivo.value : "Mejora general",
+				fecha_vencimiento: elVencimiento ? elVencimiento.value : null,
 				dias: []
 			};
 
-			const dayBlocks = document.querySelectorAll('.day-block');
-			let validationError = false;
+			const dayCards = document.querySelectorAll('.rutina-dia-card') || document.querySelectorAll('.day-block');
+			let hasValidationError = false;
 
-			dayBlocks.forEach(dayBlock => {
-				const diaObj = {
-					nombre_dia: dayBlock.querySelector('.day-name-input').value || "Día",
-					ejercicios: []
-				};
+			// 3. Mapear los días y ejercicios
+			payload.dias = Array.from(dayCards).map(card => {
+				const inputNombreDia = card.querySelector('.day-title') || card.querySelector('.day-name-input');
+				const nombre_dia = inputNombreDia ? inputNombreDia.value : "Día";
+				
+				const exercisesRows = card.querySelectorAll('.exercise-row') || card.querySelectorAll('.exercise-block');
+				
+				const ejercicios = Array.from(exercisesRows).map(row => {
+					const inputExId = row.querySelector('.exercise-id') || row.querySelector('input[type="hidden"]');
+					// Si el ID viene de un atributo data-exercise-id
+					const dataExId = row.getAttribute('data-exercise-id');
+					const exId = inputExId ? parseInt(inputExId.value) : (dataExId ? parseInt(dataExId) : NaN);
 
-				const exerciseBlocks = dayBlock.querySelectorAll('.exercise-block');
-				exerciseBlocks.forEach(block => {
-					// CRUCIAL: Obtener el ID del ejercicio del atributo de datos
-					const exIdRaw = block.getAttribute('data-exercise-id');
-					const exId = parseInt(exIdRaw);
-					
-					// Si el ID no es válido, marcamos error para no enviar basura al server
-					if (!exIdRaw || isNaN(exId)) {
-						validationError = true;
-						block.classList.add('border-2', 'border-red-500'); // Feedback visual
+					if (isNaN(exId)) {
+						hasValidationError = true;
+						row.style.borderLeft = "4px solid #FF0000"; // Marca visual de error
 					}
 
-					diaObj.ejercicios.push({
+					return {
 						ejercicio_id: exId,
-						series: block.querySelector('.ex-series').value || "0",
-						repeticiones: block.querySelector('.ex-reps').value || "0",
-						peso: block.querySelector('.ex-weight').value || "0",
-						descanso: block.querySelector('.ex-rest').value || "0",
-						comentario: block.querySelector('.ex-note').value || ""
-					});
+						series: (row.querySelector('.exercise-series') || row.querySelector('.ex-series'))?.value || "0",
+						repeticiones: (row.querySelector('.exercise-reps') || row.querySelector('.ex-reps'))?.value || "0",
+						peso: (row.querySelector('.exercise-weight') || row.querySelector('.ex-weight'))?.value || "0",
+						descanso: (row.querySelector('.exercise-rest') || row.querySelector('.ex-rest'))?.value || "0",
+						comentario: (row.querySelector('.exercise-comment') || row.querySelector('.ex-note'))?.value || ""
+					};
 				});
-
-				if (diaObj.ejercicios.length > 0) {
-					payload.dias.push(diaObj);
-				}
+				
+				return { nombre_dia, ejercicios };
 			});
 
-			// 3. Validaciones antes de disparar el fetch
-			if (validationError) {
+			// 4. Validaciones finales
+			if (hasValidationError) {
 				showVikingToast("Error: Tienes ejercicios sin seleccionar en la lista", true);
 				return;
 			}
 
-			if (payload.dias.length === 0) {
+			if (payload.dias.length === 0 || payload.dias.every(d => d.ejercicios.length === 0)) {
 				showVikingToast("Error: La rutina debe tener al menos un ejercicio", true);
 				return;
 			}
 
-			// 4. Envío al servidor
+			// 5. Envío al servidor
+			console.log("Enviando Plan:", payload);
 			const res = await apiFetch('/rutinas/plan', 'POST', payload);
-
+			
 			if (!res.error) {
 				closeModal('modal-rutina-editor');
 				showVikingToast("¡Plan de Rutina Vikingo Guardado!");
 				if (typeof renderRutinas === 'function') renderRutinas();
 			} else {
-				// El servidor ahora devuelve el error detallado gracias al log del backend
-				showVikingToast("Error del Servidor: " + res.error, true);
+				let msg = res.error;
+				try { 
+					const parsed = JSON.parse(res.error);
+					if (parsed.detail) msg = parsed.detail;
+				} catch(e) {}
+				showVikingToast("Error Vikingo: " + msg, true);
 			}
 		};
 
