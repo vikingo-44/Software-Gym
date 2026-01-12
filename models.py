@@ -114,8 +114,8 @@ class PlanRutina(Base):
     __tablename__ = "planes_rutina"
     id = Column(Integer, primary_key=True)
     usuario_id = Column(Integer, ForeignKey("usuarios.id"))
-    nombre_grupo = Column(String, nullable=True)
-    descripcion = Column(Text, nullable=True)
+    nombre_grupo = Column(String, nullable=True) 
+    descripcion = Column(Text, nullable=True) 
     fecha_creacion = Column(Date, default=datetime.date.today)
     fecha_vencimiento = Column(Date)
     objetivo = Column(String)

@@ -595,7 +595,6 @@ def get_grupos(db: Session = Depends(database.get_db)):
 
 @app.get("/api/rutinas/ejercicios", tags=["Musculación"])
 def get_ejercicios(db: Session = Depends(database.get_db)):
-    # Nota: He actualizado el joinload para que coincida con la clase Ejercicio en models.py
     return db.query(models.Ejercicio).options(joinedload(models.Ejercicio.grupo_muscular)).all()
 
 @app.post("/api/rutinas/grupos-musculares", tags=["Musculación"])
@@ -622,7 +621,7 @@ def create_plan_rutina(data: PlanRutinaCreate, db: Session = Depends(database.ge
         if not user:
             raise HTTPException(status_code=404, detail="Usuario no encontrado")
 
-        # ARREGLO 500: Desactivar rutinas anteriores con synchronize_session=False
+        # ARREGLO 500: Desactivar rutinas anteriores con synchronize_session=False para evitar conflictos de memoria
         db.query(models.PlanRutina).filter(
             models.PlanRutina.usuario_id == data.usuario_id
         ).update({"activo": False}, synchronize_session=False)
