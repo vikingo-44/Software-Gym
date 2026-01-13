@@ -161,9 +161,6 @@ class SerieCreate(BaseModel):
 class EjercicioEnRutinaCreate(BaseModel):
     ejercicio_id: int
     series: List[SerieCreate]
-    repeticiones: str
-    peso: str
-    descanso: str
     comentario: Optional[str] = ""
 
 class DiaRutinaCreate(BaseModel):
