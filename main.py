@@ -194,32 +194,41 @@ async def serve_app():
 
 @app.post("/api/login", tags=["Autenticacion"])
 def login(data: UsuarioLogin, db: Session = Depends(database.get_db)):
-    user = db.query(models.Usuario).options(
-        joinedload(models.Usuario.perfil),
-        joinedload(models.Usuario.plan).joinedload(models.Plan.tipo)
-    ).filter(models.Usuario.dni == data.dni).first()
-    
-    if not user or user.password_hash != data.password:
-        raise HTTPException(status_code=401, detail="Credenciales incorrectas")
-    
-    return {
-        "id": user.id, 
-        "nombre_completo": user.nombre_completo, 
-        "dni": user.dni, 
-        "email": user.email,
-        "rol_nombre": user.perfil.nombre if user.perfil else "Usuario",
-        "plan": {
-            "id": user.plan.id,
-            "nombre": user.plan.nombre,
-            "precio": user.plan.precio
-        } if user.plan else None,
-        "plan_id": user.plan_id,
-        "fecha_vencimiento": user.fecha_vencimiento.isoformat() if user.fecha_vencimiento else None,
-        "fecha_ultima_renovacion": user.fecha_ultima_renovacion.isoformat() if user.fecha_ultima_renovacion else None,
-        "peso": user.peso,
-        "altura": user.altura,
-        "imc": user.imc
-    }
+    try:
+        # Buscamos al usuario con todas sus relaciones necesarias
+        user = db.query(models.Usuario).options(
+            joinedload(models.Usuario.perfil),
+            joinedload(models.Usuario.plan).joinedload(models.Plan.tipo)
+        ).filter(models.Usuario.dni == data.dni).first()
+        
+        # Verificación de credenciales
+        if not user or user.password_hash != data.password:
+            raise HTTPException(status_code=401, detail="Credenciales incorrectas")
+        
+        # Devolvemos el objeto completo para que el frontend tenga toda la info
+        return {
+            "id": user.id, 
+            "nombre_completo": user.nombre_completo, 
+            "dni": user.dni, 
+            "email": user.email,
+            "rol_nombre": user.perfil.nombre if user.perfil else "Usuario",
+            "plan": {
+                "id": user.plan.id,
+                "nombre": user.plan.nombre,
+                "precio": user.plan.precio
+            } if user.plan else None,
+            "plan_id": user.plan_id,
+            "fecha_vencimiento": user.fecha_vencimiento.isoformat() if user.fecha_vencimiento else None,
+            "fecha_ultima_renovacion": user.fecha_ultima_renovacion.isoformat() if user.fecha_ultima_renovacion else None,
+            "peso": user.peso,
+            "altura": user.altura,
+            "imc": user.imc,
+            "creditos_disponibles": getattr(user, 'creditos_disponibles', 0) # Por si la columna es nueva
+        }
+    except Exception as e:
+        # Esto imprimirá el error real en los logs de Render para que sepas qué falló
+        logger.error(f"Error crítico en Login: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error interno del servidor al procesar el ingreso")
 
 # ==========================================
 # MÓDULO 2: GESTIÓN DE ALUMNOS Y FICHAS
