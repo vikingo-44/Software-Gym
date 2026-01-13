@@ -1763,36 +1763,56 @@ function toggleFichaElement(id) {
         }
 
         function addExerciseToDay(dayId, data = null) {
-            const container = document.querySelector(`[data-day-id="${dayId}"] .day-exercises-container`);
-            const div = document.createElement('div');
-            div.className = "exercise-row bg-white/5 p-4 rounded-2xl border border-white/5 hover:border-red-600/20 transition-all";
-            
-            let exName = data?.exercise_name || "";
-            if (!exName && data?.ejercicio_id) {
-                const found = state.ejerciciosLibreria.find(e => e.id == data.ejercicio_id);
-                exName = found ? found.nombre : "Ejercicio Desconocido";
-            }
+			const container = document.querySelector(`[data-day-id="${dayId}"] .day-exercises-container`);
+			const div = document.createElement('div');
+			div.className = "exercise-row bg-white/5 p-4 rounded-2xl border border-white/5 mb-4";
+			
+			const randomId = Math.random().toString(36).substr(2, 9);
+			
+			div.innerHTML = `
+				<div class="flex justify-between items-center mb-4">
+					<div>
+						<input type="hidden" class="exercise-id" value="${data?.ejercicio_id}">
+						<span class="text-[14px] font-black viking-red uppercase italic">${data?.exercise_name || 'Ejercicio'}</span>
+					</div>
+					<div class="flex items-center gap-3">
+						<label class="text-[10px] font-bold text-gray-500 uppercase">Series:</label>
+						<select class="viking-input py-1 w-16 series-counter" onchange="generateSeriesRows('${randomId}', this.value)">
+							${[1,2,3,4,5,6,7,8,9].map(n => `<option value="${n}" ${data?.series?.length == n ? 'selected' : (n==3 ? 'selected' : '')}>${n}</option>`).join('')}
+						</select>
+						<button type="button" onclick="this.closest('.exercise-row').remove()" class="text-gray-600 hover:text-red-600"><i data-lucide="x-circle" class="w-5 h-5"></i></button>
+					</div>
+				</div>
+				<div id="series-container-${randomId}" class="space-y-2 ml-4 border-l-2 border-white/10 pl-4">
+					</div>
+				<div class="mt-3">
+					<input type="text" placeholder="Nota del ejercicio..." class="viking-input py-2 text-[10px] exercise-comment bg-transparent border-dashed border-white/10 italic">
+				</div>
+			`;
+			container.appendChild(div);
+			
+			// Generar series iniciales (por defecto 3 o las que traiga la data)
+			const initialSeries = data?.series?.length || 3;
+			generateSeriesRows(randomId, initialSeries, data?.series);
+			lucide.createIcons();
+		}
 
-            div.innerHTML = `
-                <div class="exercise-grid">
-                    <div class="flex flex-col">
-                        <input type="hidden" class="exercise-id" value="${data?.ejercicio_id}">
-                        <span class="text-[12px] font-black uppercase italic viking-red truncate">${exName}</span>
-                        <span class="text-[9px] text-gray-500 font-bold">MUSCULACIÓN</span>
-                    </div>
-                    <input type="text" placeholder="S" value="${data?.series || '4'}" class="viking-input py-2 text-center text-[12px] h-10 exercise-series" required>
-                    <input type="text" placeholder="R" value="${data?.repeticiones || '12'}" class="viking-input py-2 text-center text-[12px] h-10 exercise-reps" required>
-                    <input type="text" placeholder="P" value="${data?.peso || '-'}" class="viking-input py-2 text-center text-[12px] h-10 exercise-weight">
-                    <input type="text" placeholder="D" value="${data?.descanso || '90s'}" class="viking-input py-2 text-center text-[12px] h-10 exercise-rest">
-                    <button type="button" onclick="this.closest('.exercise-row').remove()" class="text-gray-600 hover:text-red-600 flex justify-center"><i data-lucide="x-circle" class="w-5 h-5"></i></button>
-                </div>
-                <div class="mt-3">
-                    <input type="text" placeholder="Agregar nota (ej: Fallo técnico en la última)..." value="${data?.comentario || ''}" class="viking-input py-2 text-[10px] exercise-comment bg-transparent border-dashed border-white/10 italic">
-                </div>
-            `;
-            container.appendChild(div);
-            lucide.createIcons();
-        }
+		function generateSeriesRows(containerId, numSeries, existingData = null) {
+			const container = document.getElementById(`series-container-${containerId}`);
+			container.innerHTML = "";
+			
+			for (let i = 1; i <= numSeries; i++) {
+				const rowData = existingData ? existingData[i-1] : null;
+				container.innerHTML += `
+					<div class="grid grid-cols-4 gap-2 items-center serie-row" data-serie-num="${i}">
+						<span class="text-[9px] font-black text-gray-500">SERIE ${i}</span>
+						<input type="text" placeholder="Reps" value="${rowData?.repeticiones || ''}" class="viking-input py-1 text-center text-[11px] serie-reps">
+						<input type="text" placeholder="Peso" value="${rowData?.peso || ''}" class="viking-input py-1 text-center text-[11px] serie-weight">
+						<input type="text" placeholder="Descanso" value="${rowData?.descanso || '90s'}" class="viking-input py-1 text-center text-[11px] serie-rest">
+					</div>
+				`;
+			}
+		}
 
         async function apiFetch(endpoint, method = 'GET', body = null) {
             const options = { method, headers: { 'Content-Type': 'application/json' } };

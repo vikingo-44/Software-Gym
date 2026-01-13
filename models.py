@@ -138,11 +138,19 @@ class EjercicioEnRutina(Base):
     id = Column(Integer, primary_key=True)
     dia_id = Column(Integer, ForeignKey("rutina_dias.id"))
     ejercicio_id = Column(Integer, ForeignKey("ejercicios_libreria.id"))
-    series = Column(String)
+    # Estos campos se vuelven opcionales o se eliminan porque ahora mandan las series
+    comentario = Column(Text, nullable=True)
+    dia = relationship("DiaRutina", back_populates="ejercicios")
+    ejercicio_obj = relationship("Ejercicio", back_populates="ejercicios_en_rutina")
+    # NUEVA RELACIÓN
+    series_detalle = relationship("SerieEjercicio", back_populates="ejercicio_en_rutina", cascade="all, delete-orphan")
+
+class SerieEjercicio(Base):
+    __tablename__ = "series_ejercicio"
+    id = Column(Integer, primary_key=True)
+    ejercicio_en_rutina_id = Column(Integer, ForeignKey("ejercicios_en_rutina.id"))
+    numero_serie = Column(Integer) # 1, 2, 3...
     repeticiones = Column(String)
     peso = Column(String)
     descanso = Column(String)
-    comentario = Column(Text, nullable=True)
-    
-    dia = relationship("DiaRutina", back_populates="ejercicios")
-    ejercicio_obj = relationship("Ejercicio", back_populates="ejercicios_en_rutina")
+    ejercicio_en_rutina = relationship("EjercicioEnRutina", back_populates="series_detalle")

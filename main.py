@@ -154,7 +154,7 @@ class EjercicioLibreriaSchema(BaseModel):
 
 class EjercicioEnRutinaCreate(BaseModel):
     ejercicio_id: int
-    series: str
+    series: List[SerieCreate]
     repeticiones: str
     peso: str
     descanso: str
@@ -171,6 +171,12 @@ class PlanRutinaCreate(BaseModel):
     objetivo: str
     fecha_vencimiento: date
     dias: List[DiaRutinaCreate]
+    
+class SerieCreate(BaseModel):
+    numero_serie: int
+    repeticiones: str
+    peso: str
+    descanso: str
 
 # ==========================================
 # ENDPOINTS DE ACCESO Y FRONTEND
@@ -616,16 +622,17 @@ def create_ejercicio_lib(data: EjercicioCreate, db: Session = Depends(database.g
 @app.post("/api/rutinas/plan", tags=["Musculación"])
 def create_plan_rutina(data: PlanRutinaCreate, db: Session = Depends(database.get_db)):
     try:
-        # VALIDACIÓN: Usuario existe
+        # 1. VALIDACIÓN: Usuario existe
         user = db.query(models.Usuario).filter(models.Usuario.id == data.usuario_id).first()
         if not user:
             raise HTTPException(status_code=404, detail="Usuario no encontrado")
 
-        # ARREGLO 500: Desactivar rutinas anteriores con synchronize_session=False para evitar conflictos de memoria
+        # 2. Desactivar rutinas anteriores
         db.query(models.PlanRutina).filter(
             models.PlanRutina.usuario_id == data.usuario_id
         ).update({"activo": False}, synchronize_session=False)
         
+        # 3. Crear el nuevo Plan
         nuevo_plan = models.PlanRutina(
             usuario_id=data.usuario_id,
             nombre_grupo=data.nombre_grupo,
@@ -637,28 +644,39 @@ def create_plan_rutina(data: PlanRutinaCreate, db: Session = Depends(database.ge
         db.add(nuevo_plan)
         db.flush() 
         
+        # 4. Recorrer los Días
         for d in data.dias:
             nuevo_dia = models.DiaRutina(plan_rutina_id=nuevo_plan.id, nombre_dia=d.nombre_dia)
             db.add(nuevo_dia)
             db.flush()
             
+            # 5. Recorrer los Ejercicios de cada día
             for e in d.ejercicios:
-                # Verificamos si el ejercicio existe en la librería para evitar error de FK
                 ej_exists = db.query(models.Ejercicio).filter(models.Ejercicio.id == e.ejercicio_id).first()
                 if not ej_exists:
-                    logger.warning(f"Salteando ejercicio ID {e.ejercicio_id}: No existe en librería.")
+                    logger.warning(f"Salteando ejercicio ID {e.ejercicio_id}: No existe.")
                     continue
 
+                # Creamos el registro del ejercicio en la rutina
                 ej_en_rut = models.EjercicioEnRutina(
                     dia_id=nuevo_dia.id,
                     ejercicio_id=e.ejercicio_id,
-                    series=e.series,
-                    repeticiones=e.repeticiones,
-                    peso=e.peso,
-                    descanso=e.descanso,
                     comentario=e.comentario
+                    # (Ya no guardamos series/reps/peso aquí, se guardan en la tabla nueva)
                 )
                 db.add(ej_en_rut)
+                db.flush() # Para obtener el ID de 'ej_en_rut'
+
+                # 6. NUEVO: Recorrer y guardar cada Serie individual
+                for s in e.series:
+                    nueva_serie = models.SerieEjercicio(
+                        ejercicio_en_rutina_id=ej_en_rut.id,
+                        numero_serie=s.numero_serie,
+                        repeticiones=s.repeticiones,
+                        peso=s.peso,
+                        descanso=s.descanso
+                    )
+                    db.add(nueva_serie)
         
         db.commit()
         return {"status": "success", "id": nuevo_plan.id}
@@ -666,7 +684,7 @@ def create_plan_rutina(data: PlanRutinaCreate, db: Session = Depends(database.ge
     except IntegrityError as ie:
         db.rollback()
         logger.error(f"Error de Integridad: {str(ie)}")
-        raise HTTPException(status_code=400, detail="Error de base de datos. Verifica IDs de ejercicios.")
+        raise HTTPException(status_code=400, detail="Error de base de datos. Verifica IDs.")
     except Exception as e:
         db.rollback()
         logger.error(f"Error Grave: {str(e)}")
@@ -681,6 +699,7 @@ def get_rutina_activa(id: int, db: Session = Depends(database.get_db)):
         joinedload(models.PlanRutina.dias)
         .joinedload(models.DiaRutina.ejercicios)
         .joinedload(models.EjercicioEnRutina.ejercicio_obj)
+        .joinedload(models.EjercicioEnRutina.series_detalle)
     ).first()
     
     if not rutina:
