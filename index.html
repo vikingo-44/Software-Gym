@@ -1765,35 +1765,45 @@ function toggleFichaElement(id) {
         function addExerciseToDay(dayId, data = null) {
 			const container = document.querySelector(`[data-day-id="${dayId}"] .day-exercises-container`);
 			const div = document.createElement('div');
+			// Generamos un ID único para este bloque de ejercicio para poder encontrar sus series después
+			const exerciseUniqueId = 'ex-' + Math.random().toString(36).substr(2, 9);
 			div.className = "exercise-row bg-white/5 p-4 rounded-2xl border border-white/5 mb-4";
-			
-			const randomId = Math.random().toString(36).substr(2, 9);
-			
+			div.dataset.exerciseRowId = exerciseUniqueId;
+
+			let exName = data?.exercise_name || "";
+			if (!exName && data?.ejercicio_id) {
+				const found = state.ejerciciosLibreria.find(e => e.id == data.ejercicio_id);
+				exName = found ? found.nombre : "Ejercicio";
+			}
+
 			div.innerHTML = `
 				<div class="flex justify-between items-center mb-4">
-					<div>
+					<div class="flex flex-col">
 						<input type="hidden" class="exercise-id" value="${data?.ejercicio_id}">
-						<span class="text-[14px] font-black viking-red uppercase italic">${data?.exercise_name || 'Ejercicio'}</span>
+						<span class="text-[12px] font-black uppercase italic viking-red">${exName}</span>
 					</div>
-					<div class="flex items-center gap-3">
-						<label class="text-[10px] font-bold text-gray-500 uppercase">Series:</label>
-						<select class="viking-input py-1 w-16 series-counter" onchange="generateSeriesRows('${randomId}', this.value)">
-							${[1,2,3,4,5,6,7,8,9].map(n => `<option value="${n}" ${data?.series?.length == n ? 'selected' : (n==3 ? 'selected' : '')}>${n}</option>`).join('')}
+					<div class="flex items-center gap-2">
+						<label class="text-[9px] font-black text-gray-500 uppercase">Series:</label>
+						<select class="viking-input py-1 w-14 h-8 text-[10px] series-select" 
+								onchange="renderSeriesInputs('${exerciseUniqueId}', this.value)">
+							${[1,2,3,4,5,6,7,8,9].map(n => `<option value="${n}" ${n==3 ? 'selected' : ''}>${n}</option>`).join('')}
 						</select>
-						<button type="button" onclick="this.closest('.exercise-row').remove()" class="text-gray-600 hover:text-red-600"><i data-lucide="x-circle" class="w-5 h-5"></i></button>
+						<button type="button" onclick="this.closest('.exercise-row').remove()" class="text-gray-600 hover:text-red-600 ml-2">
+							<i data-lucide="x-circle" class="w-5 h-5"></i>
+						</button>
 					</div>
 				</div>
-				<div id="series-container-${randomId}" class="space-y-2 ml-4 border-l-2 border-white/10 pl-4">
-					</div>
-				<div class="mt-3">
-					<input type="text" placeholder="Nota del ejercicio..." class="viking-input py-2 text-[10px] exercise-comment bg-transparent border-dashed border-white/10 italic">
+				
+				<div id="series-container-${exerciseUniqueId}" class="space-y-2 mb-3"></div>
+
+				<div class="mt-2">
+					<input type="text" placeholder="Comentario para este ejercicio..." 
+						   class="viking-input py-2 text-[10px] exercise-comment bg-transparent border-dashed border-white/10 italic">
 				</div>
 			`;
 			container.appendChild(div);
-			
-			// Generar series iniciales (por defecto 3 o las que traiga la data)
-			const initialSeries = data?.series?.length || 3;
-			generateSeriesRows(randomId, initialSeries, data?.series);
+			// Renderizamos las 3 series iniciales por defecto
+			renderSeriesInputs(exerciseUniqueId, 3);
 			lucide.createIcons();
 		}
 
@@ -2278,29 +2288,27 @@ function toggleFichaElement(id) {
 
 			// 3. Mapear los días y ejercicios
 			payload.dias = Array.from(dayCards).map(card => {
-				const inputNombreDia = card.querySelector('.day-title') || card.querySelector('.day-name-input');
-				const nombre_dia = inputNombreDia ? inputNombreDia.value : "Día";
-				
-				const exercisesRows = card.querySelectorAll('.exercise-row') || card.querySelectorAll('.exercise-block');
+				const nombre_dia = card.querySelector('.day-title').value;
+				const exercisesRows = card.querySelectorAll('.exercise-row');
 				
 				const ejercicios = Array.from(exercisesRows).map(row => {
-					const inputExId = row.querySelector('.exercise-id') || row.querySelector('input[type="hidden"]');
-					// Si el ID viene de un atributo data-exercise-id
-					const dataExId = row.getAttribute('data-exercise-id');
-					const exId = inputExId ? parseInt(inputExId.value) : (dataExId ? parseInt(dataExId) : NaN);
-
-					if (isNaN(exId)) {
-						hasValidationError = true;
-						row.style.borderLeft = "4px solid #FF0000"; // Marca visual de error
-					}
+					const exId = parseInt(row.querySelector('.exercise-id').value);
+					
+					// --- AQUÍ RECOLECTAMOS LAS SERIES RESPETANDO TU FUNCIÓN ---
+					const rowsDeSeries = row.querySelectorAll('.serie-row');
+					const seriesData = Array.from(rowsDeSeries).map(sRow => {
+						return {
+							numero_serie: parseInt(sRow.dataset.serieNum), // Usamos data-serie-num de tu función
+							repeticiones: sRow.querySelector('.serie-reps').value || "0",
+							peso: sRow.querySelector('.serie-weight').value || "0",
+							descanso: sRow.querySelector('.serie-rest').value || "0"
+						};
+					});
 
 					return {
 						ejercicio_id: exId,
-						series: (row.querySelector('.exercise-series') || row.querySelector('.ex-series'))?.value || "0",
-						repeticiones: (row.querySelector('.exercise-reps') || row.querySelector('.ex-reps'))?.value || "0",
-						peso: (row.querySelector('.exercise-weight') || row.querySelector('.ex-weight'))?.value || "0",
-						descanso: (row.querySelector('.exercise-rest') || row.querySelector('.ex-rest'))?.value || "0",
-						comentario: (row.querySelector('.exercise-comment') || row.querySelector('.ex-note'))?.value || ""
+						series: seriesData, // Ahora esto es una LISTA, lo que FastAPI espera
+						comentario: row.querySelector('.exercise-comment')?.value || ""
 					};
 				});
 				
