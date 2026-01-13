@@ -1399,177 +1399,171 @@
             }
         }
 
-        /**
- * Abre la ficha técnica del alumno, cargando sus datos físicos y 
- * su rutina actual agrupada por objetivo con estados automáticos.
- */
-async function openFichaTecnica(alumnoId) {
-    const rutinaContainer = document.getElementById('ficha-rutina-container');
-    
-    // Limpieza inicial y estado de carga
-    rutinaContainer.innerHTML = `
-        <div class="col-span-2 py-10 flex flex-col items-center justify-center space-y-4">
-            <div class="w-8 h-8 border-4 border-red-600 border-t-transparent rounded-full animate-spin"></div>
-            <p class="text-[10px] text-gray-500 italic uppercase tracking-widest animate-pulse text-center">Iniciando escaneo del guerrero...</p>
-        </div>
-    `;
-
-    // 1. Obtener datos de perfil y métricas físicas
-    const res = await apiFetch(`/alumnos/${alumnoId}/ficha`);
-    if (res.error) {
-        showVikingToast("Error al conectar con el servidor", true);
-        return;
-    }
-
-    // Actualizar UI del encabezado del modal (Asegúrate de que estos IDs existan en tu HTML)
-    if (document.getElementById('ficha-nombre')) document.getElementById('ficha-nombre').innerText = res.nombre_completo || 'Sin Nombre';
-    if (document.getElementById('ficha-dni')) document.getElementById('ficha-dni').innerText = "DNI: " + (res.dni || '---');
-    if (document.getElementById('ficha-plan')) document.getElementById('ficha-plan').innerText = "Plan: " + (res.plan || 'Sin Plan Activo');
-    if (document.getElementById('ficha-cuenta')) document.getElementById('ficha-cuenta').innerText = "Estado: " + (res.estado_cuenta || 'Inactivo');
-    if (document.getElementById('ficha-peso')) document.getElementById('ficha-peso').innerText = (res.peso || 0) + " kg";
-    if (document.getElementById('ficha-altura')) document.getElementById('ficha-altura').innerText = (res.altura || 0) + " cm";
-    if (document.getElementById('ficha-imc')) document.getElementById('ficha-imc').innerText = res.imc || 0;
-
-    // 2. Obtener la rutina de musculación
-    let rutinaData = await apiFetch(`/rutinas/usuario/${alumnoId}`);
-    
-    // Normalizar: Convertimos en array para manejar múltiples planes si fuera necesario
-    const rutinas = Array.isArray(rutinaData) ? rutinaData : (rutinaData && !rutinaData.error ? [rutinaData] : []);
-
-    if (rutinas.length > 0) {
-        const hoy = new Date();
-        hoy.setHours(0, 0, 0, 0);
-
-        const mainHTML = rutinas.map((rutina, rIdx) => {
-            const objetivoId = `obj-group-${rIdx}`;
-            const fechaVenc = rutina.fecha_vencimiento ? new Date(rutina.fecha_vencimiento + 'T23:59:59') : null;
-            const esActiva = fechaVenc ? hoy <= fechaVenc : true;
-
-            const statusBadge = esActiva 
-                ? `<span class="bg-green-600/20 text-green-500 border border-green-500/30 px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest animate-pulse">Activa</span>`
-                : `<span class="bg-red-600/20 text-red-500 border border-red-500/30 px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest">Vencida</span>`;
-
-            // Renderizado de días
-            const diasHTML = (rutina.dias || []).map((d, dIdx) => {
-                const diaId = `ficha-dia-${rIdx}-${dIdx}`;
-                return `
-                <div class="glass-card rounded-2xl border-white/5 overflow-hidden mb-2 transition-all">
-                    <button onclick="toggleFichaElement('${diaId}')" class="w-full flex items-center justify-between p-4 bg-white/2 hover:bg-white/5 transition-colors group text-left">
-                        <div class="flex items-center gap-3">
-                            <div class="w-2 h-2 rounded-full ${esActiva ? 'bg-green-600 shadow-[0_0_8px_#16a34a]' : 'bg-red-600 shadow-[0_0_8px_#dc2626]'}"></div>
-                            <span class="text-[11px] font-black italic uppercase tracking-wider text-gray-300 group-hover:text-red-500 transition-colors">${d.nombre_dia}</span>
-                        </div>
-                        <i data-lucide="chevron-down" class="w-4 h-4 text-gray-600 transition-transform duration-500" id="icon-${diaId}"></i>
-                    </button>
-                    
-                    <div id="${diaId}" class="hidden p-4 space-y-4 bg-black/20 border-t border-white/5">
-                        ${(d.ejercicios || d.ejercicios_list || []).map(ex => {
-                            const nombreEjercicio = ex.ejercicio_obj?.nombre || ex.nombre || ex.ejercicio?.nombre || "Ejercicio Sin Nombre";
-                            const series = ex.series_detalle || ex.series || [];
-                            
-                            return `
-                                <div class="flex flex-col border-l-2 border-red-600/40 pl-4 py-1.5 hover:bg-white/5 rounded-r-xl transition-all mb-4">
-                                    <p class="text-[11px] font-black uppercase italic text-white tracking-tight">${nombreEjercicio}</p>
-                                    
-                                    <div class="mt-2 space-y-1">
-                                        ${series
-                                            .sort((a, b) => (a.numero_serie || 0) - (b.numero_serie || 0))
-                                            .map(s => `
-                                                <div class="flex items-center gap-3 text-[9px] font-bold uppercase">
-                                                    <span class="text-red-600 w-12 text-left">SERIE ${s.numero_serie}:</span>
-                                                    <span class="text-white">${s.repeticiones} REPS</span>
-                                                    <span class="text-gray-400">|</span>
-                                                    <span class="text-white">${s.peso} KG</span>
-                                                    ${s.descanso ? `<span class="text-gray-400">|</span><span class="text-gray-500">DESC: ${s.descanso}</span>` : ''}
-                                                </div>
-                                            `).join('')}
-                                    </div>
-
-                                    ${ex.comentario ? `
-                                        <div class="mt-2 bg-black/40 p-2 rounded-lg border border-white/5 flex gap-2">
-                                            <i data-lucide="info" class="w-2.5 h-2.5 text-red-600 mt-0.5 shrink-0"></i>
-                                            <p class="text-[8px] text-gray-400 italic font-medium leading-tight">${ex.comentario}</p>
-                                        </div>
-                                    ` : ''}
-                                </div>
-                            `;
-                        }).join('')}
-                    </div>
+        async function openFichaTecnica(alumnoId) {
+            const rutinaContainer = document.getElementById('ficha-rutina-container');
+            
+            rutinaContainer.innerHTML = `
+                <div class="col-span-2 py-10 flex flex-col items-center justify-center space-y-4">
+                    <div class="w-8 h-8 border-4 border-red-600 border-t-transparent rounded-full animate-spin"></div>
+                    <p class="text-[10px] text-gray-500 italic uppercase tracking-widest animate-pulse text-center">Iniciando escaneo del guerrero...</p>
                 </div>
-                `;
-            }).join('');
+            `;
 
-            return `
-            <div class="col-span-2 mb-4">
-                <div class="bg-white/5 border border-white/10 rounded-[2rem] overflow-hidden shadow-xl">
-                    <button onclick="toggleFichaElement('${objetivoId}')" class="w-full flex items-center justify-between p-6 hover:bg-white/5 transition-all text-left">
-                        <div class="flex items-center gap-4">
-                            <div class="w-1 h-10 bg-red-600 rounded-full"></div>
-                            <div>
-                                <p class="text-[8px] text-gray-500 font-black uppercase tracking-[0.3em] mb-1">Plan de Entrenamiento</p>
-                                <h5 class="text-lg font-black italic uppercase viking-red leading-none">${rutina.objetivo || 'Rutina de Musculación'}</h5>
-                                <p class="text-[9px] text-gray-400 font-bold italic mt-1 flex items-center gap-1">
-                                    <i data-lucide="calendar" class="w-3 h-3"></i> Vence: ${rutina.fecha_vencimiento || 'Indefinido'}
-                                </p>
+            const res = await apiFetch(`/alumnos/${alumnoId}/ficha`);
+            if (res.error) {
+                showVikingToast("Error al conectar con el servidor", true);
+                return;
+            }
+
+            if (document.getElementById('ficha-nombre')) document.getElementById('ficha-nombre').innerText = res.nombre_completo || 'Sin Nombre';
+            if (document.getElementById('ficha-dni')) document.getElementById('ficha-dni').innerText = "DNI: " + (res.dni || '---');
+            if (document.getElementById('ficha-plan')) document.getElementById('ficha-plan').innerText = "Plan: " + (res.plan || 'Sin Plan Activo');
+            if (document.getElementById('ficha-cuenta')) document.getElementById('ficha-cuenta').innerText = "Estado: " + (res.estado_cuenta || 'Inactivo');
+            if (document.getElementById('ficha-peso')) document.getElementById('ficha-peso').innerText = (res.peso || 0) + " kg";
+            if (document.getElementById('ficha-altura')) document.getElementById('ficha-altura').innerText = (res.altura || 0) + " cm";
+            if (document.getElementById('ficha-imc')) document.getElementById('ficha-imc').innerText = res.imc || 0;
+
+            let rutinaData = await apiFetch(`/rutinas/usuario/${alumnoId}`);
+            
+            const rutinas = Array.isArray(rutinaData) ? rutinaData : (rutinaData && !rutinaData.error ? [rutinaData] : []);
+
+            if (rutinas.length > 0) {
+                const hoy = new Date();
+                hoy.setHours(0, 0, 0, 0);
+
+                const mainHTML = rutinas.map((rutina, rIdx) => {
+                    const objetivoId = `obj-group-${rIdx}`;
+                    const fechaVenc = rutina.fecha_vencimiento ? new Date(rutina.fecha_vencimiento + 'T23:59:59') : null;
+                    const esActiva = fechaVenc ? hoy <= fechaVenc : true;
+
+                    const statusBadge = esActiva 
+                        ? `<span class="bg-green-600/20 text-green-500 border border-green-500/30 px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest animate-pulse">Activa</span>`
+                        : `<span class="bg-red-600/20 text-red-500 border border-red-500/30 px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest">Vencida</span>`;
+
+                    const diasHTML = (rutina.dias || []).map((d, dIdx) => {
+                        const diaId = `ficha-dia-${rIdx}-${dIdx}`;
+                        return `
+                        <div class="glass-card rounded-2xl border-white/5 overflow-hidden mb-2 transition-all">
+                            <button onclick="toggleFichaElement('${diaId}')" class="w-full flex items-center justify-between p-4 bg-white/2 hover:bg-white/5 transition-colors group text-left">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-2 h-2 rounded-full ${esActiva ? 'bg-green-600 shadow-[0_0_8px_#16a34a]' : 'bg-red-600 shadow-[0_0_8px_#dc2626]'}"></div>
+                                    <span class="text-[11px] font-black italic uppercase tracking-wider text-gray-300 group-hover:text-red-500 transition-colors">${d.nombre_dia}</span>
+                                </div>
+                                <i data-lucide="chevron-down" class="w-4 h-4 text-gray-600 transition-transform duration-500" id="icon-${diaId}"></i>
+                            </button>
+                            
+                            <div id="${diaId}" class="hidden p-4 space-y-4 bg-black/20 border-t border-white/5">
+                                ${(d.ejercicios || d.ejercicios_list || []).map(ex => {
+                                    const nombreEjercicio = ex.ejercicio_obj?.nombre || ex.nombre || ex.ejercicio?.nombre || "Ejercicio Sin Nombre";
+                                    const series = ex.series_detalle || ex.series || [];
+                                    
+                                    return `
+                                        <div class="flex flex-col border-l-2 border-red-600/40 pl-4 py-1.5 hover:bg-white/5 rounded-r-xl transition-all mb-4">
+                                            <p class="text-[11px] font-black uppercase italic text-white tracking-tight">${nombreEjercicio}</p>
+                                            
+                                            <div class="mt-3 grid grid-cols-3 sm:grid-cols-4 gap-2">
+                                                ${series
+                                                    .sort((a, b) => (a.numero_serie || 0) - (b.numero_serie || 0))
+                                                    .map(s => `
+                                                        <div class="bg-black/40 border border-white/10 rounded-xl p-2 flex flex-col items-center justify-center relative overflow-hidden group hover:border-red-600/50 transition-colors">
+                                                            <div class="absolute top-0 left-0 w-1 h-full bg-red-600/20"></div>
+                                                            <p class="text-[7px] font-black text-red-500 uppercase tracking-widest mb-1">Serie ${s.numero_serie}</p>
+                                                            
+                                                            <div class="flex items-baseline gap-1">
+                                                                <span class="text-sm font-black italic text-white">${s.repeticiones}</span>
+                                                                <span class="text-[8px] text-gray-500 font-bold">REPS</span>
+                                                            </div>
+                                                            
+                                                            <div class="w-full h-px bg-white/5 my-1"></div>
+                                                            
+                                                            <div class="flex justify-between w-full px-1">
+                                                                <div class="text-[9px] font-bold text-gray-300">${s.peso} <span class="text-[7px] text-gray-600">KG</span></div>
+                                                                <div class="text-[9px] font-bold text-gray-500 italic">${s.descanso || '-'}</div>
+                                                            </div>
+                                                        </div>
+                                                    `).join('')}
+                                            </div>
+
+                                            ${ex.comentario ? `
+                                                <div class="mt-2 bg-black/40 p-2 rounded-lg border border-white/5 flex gap-2">
+                                                    <i data-lucide="info" class="w-2.5 h-2.5 text-red-600 mt-0.5 shrink-0"></i>
+                                                    <p class="text-[8px] text-gray-400 italic font-medium leading-tight">${ex.comentario}</p>
+                                                </div>
+                                            ` : ''}
+                                        </div>
+                                    `;
+                                }).join('')}
                             </div>
                         </div>
-                        <div class="flex items-center gap-4">
-                            ${statusBadge}
-                            <i data-lucide="chevron-down" class="w-6 h-6 text-red-600 transition-transform duration-500" id="icon-${objetivoId}"></i>
+                        `;
+                    }).join('');
+
+                    return `
+                    <div class="col-span-2 mb-4">
+                        <div class="bg-white/5 border border-white/10 rounded-[2rem] overflow-hidden shadow-xl">
+                            <button onclick="toggleFichaElement('${objetivoId}')" class="w-full flex items-center justify-between p-6 hover:bg-white/5 transition-all text-left">
+                                <div class="flex items-center gap-4">
+                                    <div class="w-1 h-10 bg-red-600 rounded-full"></div>
+                                    <div>
+                                        <p class="text-[8px] text-gray-500 font-black uppercase tracking-[0.3em] mb-1">Plan de Entrenamiento</p>
+                                        <h5 class="text-lg font-black italic uppercase viking-red leading-none">${rutina.objetivo || 'Rutina de Musculación'}</h5>
+                                        <p class="text-[9px] text-gray-400 font-bold italic mt-1 flex items-center gap-1">
+                                            <i data-lucide="calendar" class="w-3 h-3"></i> Vence: ${rutina.fecha_vencimiento || 'Indefinido'}
+                                        </p>
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-4">
+                                    ${statusBadge}
+                                    <i data-lucide="chevron-down" class="w-6 h-6 text-red-600 transition-transform duration-500" id="icon-${objetivoId}"></i>
+                                </div>
+                            </button>
+                            <div id="${objetivoId}" class="hidden p-4 bg-black/30 border-t border-white/5">
+                                ${diasHTML}
+                            </div>
                         </div>
-                    </button>
-                    <div id="${objetivoId}" class="hidden p-4 bg-black/30 border-t border-white/5">
-                        ${diasHTML}
                     </div>
-                </div>
-            </div>
-            `;
-        }).join('');
+                    `;
+                }).join('');
 
-        rutinaContainer.innerHTML = mainHTML;
-    } else {
-        rutinaContainer.innerHTML = `
-            <div class="col-span-2 p-16 border border-dashed border-white/10 rounded-[3rem] text-center bg-white/2">
-                <div class="w-16 h-16 viking-bg-red/10 rounded-full flex items-center justify-center mx-auto mb-6">
-                    <i data-lucide="skull" class="w-8 h-8 opacity-40 text-red-600"></i>
-                </div>
-                <p class="text-[12px] text-gray-600 font-black uppercase italic tracking-[0.2em]">No se ha detectado un plan de batalla activo</p>
-                <p class="text-[10px] text-gray-700 mt-2 font-bold">Asigna una rutina desde el gestor para ver los datos aquí.</p>
-            </div>
-        `;
-    }
+                rutinaContainer.innerHTML = mainHTML;
+            } else {
+                rutinaContainer.innerHTML = `
+                    <div class="col-span-2 p-16 border border-dashed border-white/10 rounded-[3rem] text-center bg-white/2">
+                        <div class="w-16 h-16 viking-bg-red/10 rounded-full flex items-center justify-center mx-auto mb-6">
+                            <i data-lucide="skull" class="w-8 h-8 opacity-40 text-red-600"></i>
+                        </div>
+                        <p class="text-[12px] text-gray-600 font-black uppercase italic tracking-[0.2em]">No se ha detectado un plan de batalla activo</p>
+                        <p class="text-[10px] text-gray-700 mt-2 font-bold">Asigna una rutina desde el gestor para ver los datos aquí.</p>
+                    </div>
+                `;
+            }
 
-    if (window.lucide) lucide.createIcons();
-    openModal('modal-ficha-tecnica');
-}
-
-/**
- * Controla el despliegue de elementos (Objetivos o Días) en la ficha técnica.
- */
-function toggleFichaElement(id) {
-    const content = document.getElementById(id);
-    const icon = document.getElementById('icon-' + id);
-    if (!content) return;
-
-    const isHidden = content.classList.contains('hidden');
-    
-    if (isHidden) {
-        content.classList.remove('hidden');
-        // Clases de animación de Tailwind (Asegúrate de que el config las soporte o usa transiciones simples)
-        content.classList.add('animate-in', 'fade-in', 'slide-in-from-top-2');
-        if (icon) {
-            icon.style.transform = 'rotate(180deg)';
-            icon.style.color = '#FF0000'; // Rojo Vikingo al abrir
+            if (window.lucide) lucide.createIcons();
+            openModal('modal-ficha-tecnica');
         }
-    } else {
-        content.classList.add('hidden');
-        if (icon) {
-            icon.style.transform = 'rotate(0deg)';
-            // Color original: Rojo oscuro para objetivos, gris para días
-            icon.style.color = id.startsWith('obj-group') ? '#dc2626' : '#6b7280';
+
+        function toggleFichaElement(id) {
+            const content = document.getElementById(id);
+            const icon = document.getElementById('icon-' + id);
+            if (!content) return;
+
+            const isHidden = content.classList.contains('hidden');
+            
+            if (isHidden) {
+                content.classList.remove('hidden');
+                content.classList.add('animate-in', 'fade-in', 'slide-in-from-top-2');
+                if (icon) {
+                    icon.style.transform = 'rotate(180deg)';
+                    icon.style.color = '#FF0000'; 
+                }
+            } else {
+                content.classList.add('hidden');
+                if (icon) {
+                    icon.style.transform = 'rotate(0deg)';
+                    icon.style.color = id.startsWith('obj-group') ? '#dc2626' : '#6b7280';
+                }
+            }
         }
-    }
-}
 
         async function renderRutinas() {
             const rol = state.user?.rol_nombre;
@@ -1650,51 +1644,44 @@ function toggleFichaElement(id) {
         }
 
         async function openRoutineEditor(alumnoId) {
-			const al = state.alumnos.find(a => a.id === alumnoId);
-			if (!al) return;
-			
-			// Cargamos grupos y ejercicios si no están cargados
-			await loadMusculacionMetadata();
-			
-			document.getElementById('rutina-editor-alumno').innerText = "Alumno: " + al.nombre_completo;
-			document.getElementById('rutina-editor-alumno-id').value = alumnoId;
-			const container = document.getElementById('rutina-editor-container');
-			container.innerHTML = "";
+            const al = state.alumnos.find(a => a.id === alumnoId);
+            if (!al) return;
+            
+            await loadMusculacionMetadata();
+            
+            document.getElementById('rutina-editor-alumno').innerText = "Alumno: " + al.nombre_completo;
+            document.getElementById('rutina-editor-alumno-id').value = alumnoId;
+            const container = document.getElementById('rutina-editor-container');
+            container.innerHTML = "";
 
-			const rutinaRes = await apiFetch(`/rutinas/usuario/${alumnoId}`);
-			
-			if (!rutinaRes.error && rutinaRes.id) {
-				// MODO EDICIÓN: Cargamos datos existentes
-				document.getElementById('rutina-objetivo').value = rutinaRes.objetivo;
-				document.getElementById('rutina-vencimiento').value = rutinaRes.fecha_vencimiento;
-				
-				rutinaRes.dias.forEach(d => {
-					// Preparamos los ejercicios para que addRoutineDay los entienda
-					const ejerciciosFormateados = d.ejercicios.map(e => {
-						return {
-							ejercicio_id: e.ejercicio_id,
-							// Buscamos el nombre en el objeto ejercicio_obj que viene de la DB
-							exercise_name: e.ejercicio_obj?.nombre || "Ejercicio",
-							// IMPORTANTE: Convertimos 'series_detalle' de la DB al 'series' que usa el JS
-							series: e.series_detalle || [],
-							comentario: e.comentario
-						};
-					});
-					addRoutineDay(d.nombre_dia, ejerciciosFormateados);
-				});
-			} else {
-				// MODO NUEVO: Valores por defecto
-				document.getElementById('rutina-objetivo').value = "";
-				// Seteamos vencimiento a 30 días por defecto
-				const defaultDate = new Date();
-				defaultDate.setDate(defaultDate.getDate() + 30);
-				document.getElementById('rutina-vencimiento').value = defaultDate.toISOString().split('T')[0];
-				
-				addRoutineDay("Día 1", []); 
-			}
+            const rutinaRes = await apiFetch(`/rutinas/usuario/${alumnoId}`);
+            
+            if (!rutinaRes.error && rutinaRes.id) {
+                document.getElementById('rutina-objetivo').value = rutinaRes.objetivo;
+                document.getElementById('rutina-vencimiento').value = rutinaRes.fecha_vencimiento;
+                
+                rutinaRes.dias.forEach(d => {
+                    const ejerciciosFormateados = d.ejercicios.map(e => {
+                        return {
+                            ejercicio_id: e.ejercicio_id,
+                            exercise_name: e.ejercicio_obj?.nombre || "Ejercicio",
+                            series: e.series_detalle || [],
+                            comentario: e.comentario
+                        };
+                    });
+                    addRoutineDay(d.nombre_dia, ejerciciosFormateados);
+                });
+            } else {
+                document.getElementById('rutina-objetivo').value = "";
+                const defaultDate = new Date();
+                defaultDate.setDate(defaultDate.getDate() + 30);
+                document.getElementById('rutina-vencimiento').value = defaultDate.toISOString().split('T')[0];
+                
+                addRoutineDay("Día 1", []); 
+            }
 
-			openModal('modal-rutina-editor');
-		}
+            openModal('modal-rutina-editor');
+        }
 
         function addRoutineDay(nombre = "", ejercicios = []) {
             const container = document.getElementById('rutina-editor-container');
@@ -1712,7 +1699,6 @@ function toggleFichaElement(id) {
                     <button type="button" onclick="this.closest('.rutina-dia-card').remove()" class="text-red-900 hover:text-red-600 transition-colors mt-4"><i data-lucide="trash-2" class="w-6 h-6"></i></button>
                 </div>
                 
-                <!-- BUSCADOR POR DÍA -->
                 <div class="bg-black/40 p-5 rounded-[1.5rem] border border-red-600/10 shadow-inner">
                     <p class="text-[10px] font-black text-red-600 uppercase italic mb-3 tracking-[0.2em]">Buscar y Añadir Ejercicio</p>
                     <div class="flex gap-3">
@@ -1809,7 +1795,7 @@ function toggleFichaElement(id) {
                     <div class="flex items-center gap-2">
                         <label class="text-[9px] font-black text-gray-500 uppercase">Series:</label>
                         <select class="viking-input py-1 w-14 h-8 text-[10px] series-select" 
-                                onchange="generateSeriesRows('${exerciseUniqueId}', this.value)">
+                                onchange="updateSeriesCount('${exerciseUniqueId}', this.value)">
                             ${[1,2,3,4,5,6,7,8,9].map(n => `<option value="${n}" ${data?.series?.length == n ? 'selected' : (n==3 ? 'selected' : '')}>${n}</option>`).join('')}
                         </select>
                         <button type="button" onclick="this.closest('.exercise-row').remove()" class="text-gray-600 hover:text-red-600 ml-2">
@@ -1820,34 +1806,51 @@ function toggleFichaElement(id) {
                 <div id="series-container-${exerciseUniqueId}" class="space-y-2 mb-3"></div>
                 <div class="mt-2 text-left">
                     <input type="text" placeholder="Comentario para este ejercicio..." 
-                           value="${data?.comentario || ''}"
-                           class="viking-input py-2 text-[10px] exercise-comment bg-transparent border-dashed border-white/10 italic">
+                        value="${data?.comentario || ''}"
+                        class="viking-input py-2 text-[10px] exercise-comment bg-transparent border-dashed border-white/10 italic">
                 </div>
             `;
             container.appendChild(div);
             
             const initialNumSeries = (data && data.series) ? data.series.length : 3;
             generateSeriesRows(exerciseUniqueId, initialNumSeries, data ? data.series : null);
-            lucide.createIcons();
+            if(window.lucide) lucide.createIcons();
         }
 
-				function generateSeriesRows(containerId, numSeries, existingData = null) {
-				const container = document.getElementById(`series-container-${containerId}`);
-				if (!container) return;
-				container.innerHTML = "";
-				
-				for (let i = 1; i <= numSeries; i++) {
-					const rowData = (existingData && existingData[i - 1]) ? existingData[i - 1] : null;
-					container.innerHTML += `
-						<div class="grid grid-cols-4 gap-2 items-center serie-row" data-serie-num="${i}">
-							<span class="text-[9px] font-black text-gray-500 uppercase italic">Serie ${i}</span>
-							<input type="text" placeholder="Reps" value="${rowData?.repeticiones || ''}" class="viking-input py-1 text-center text-[11px] serie-reps">
-							<input type="text" placeholder="Peso" value="${rowData?.peso || ''}" class="viking-input py-1 text-center text-[11px] serie-weight">
-							<input type="text" placeholder="Descanso" value="${rowData?.descanso || '90s'}" class="viking-input py-1 text-center text-[11px] serie-rest">
-						</div>
-					`;
-				}
-			}
+        function updateSeriesCount(containerId, newCount) {
+            const container = document.getElementById(`series-container-${containerId}`);
+            const currentRows = container.querySelectorAll('.serie-row');
+            let savedData = [];
+            
+            currentRows.forEach(row => {
+                savedData.push({
+                    repeticiones: row.querySelector('.serie-reps').value,
+                    peso: row.querySelector('.serie-weight').value,
+                    descanso: row.querySelector('.serie-rest').value
+                });
+            });
+
+            generateSeriesRows(containerId, newCount, savedData);
+        }
+
+        function generateSeriesRows(containerId, numSeries, existingData = null) {
+            const container = document.getElementById(`series-container-${containerId}`);
+            if (!container) return;
+            container.innerHTML = "";
+            
+            for (let i = 1; i <= numSeries; i++) {
+                const rowData = (existingData && existingData[i - 1]) ? existingData[i - 1] : null;
+                
+                container.innerHTML += `
+                    <div class="grid grid-cols-4 gap-2 items-center serie-row" data-serie-num="${i}">
+                        <span class="text-[9px] font-black text-gray-500 uppercase italic">Serie ${i}</span>
+                        <input type="text" placeholder="Reps" value="${rowData?.repeticiones || ''}" class="viking-input py-1 text-center text-[11px] serie-reps bg-white/5 border-white/10 focus:border-red-600 focus:bg-black transition-colors">
+                        <input type="text" placeholder="Peso" value="${rowData?.peso || ''}" class="viking-input py-1 text-center text-[11px] serie-weight bg-white/5 border-white/10 focus:border-red-600 focus:bg-black transition-colors">
+                        <input type="text" placeholder="Descanso" value="${rowData?.descanso || '90s'}" class="viking-input py-1 text-center text-[11px] serie-rest bg-white/5 border-white/10 focus:border-red-600 focus:bg-black transition-colors">
+                    </div>
+                `;
+            }
+        }
 
         async function apiFetch(endpoint, method = 'GET', body = null) {
             const options = { method, headers: { 'Content-Type': 'application/json' } };
@@ -1926,6 +1929,7 @@ function toggleFichaElement(id) {
                 document.getElementById('prof-name').innerText = u.nombre_completo || "Usuario Vikingo";
                 document.getElementById('prof-role').innerText = u.rol_nombre || "Staff";
                 const initials = u.nombre_completo ? u.nombre_completo.split(' ').filter(n => n).map(n => n[0]).join('').toUpperCase() : "??";
+                document.getElementById('user-initials').innerText = initials;
                 document.getElementById('prof-initials-view').innerText = initials;
                 document.getElementById('prof-input-name').value = u.nombre_completo || "";
                 document.getElementById('prof-input-dni').value = u.dni || "";
@@ -2274,103 +2278,95 @@ function toggleFichaElement(id) {
             }
         }
 
-				document.getElementById('form-rutina-editor').onsubmit = async (e) => {
-			e.preventDefault();
-			
-			// 1. Intentar obtener el ID del alumno (probamos los dos IDs posibles para evitar el error de 'null')
-			const elAlumnoId = document.getElementById('rutina-editor-alumno-id') || document.getElementById('edit-rutina-user-id');
-			const elObjetivo = document.getElementById('rutina-objetivo') || document.getElementById('edit-rutina-objetivo');
-			const elVencimiento = document.getElementById('rutina-vencimiento') || document.getElementById('edit-rutina-vencimiento');
-			const elNombreGrupo = document.getElementById('rutina-nombre-grupo');
-			const elDescripcion = document.getElementById('rutina-descripcion');
+        document.getElementById('form-rutina-editor').onsubmit = async (e) => {
+            e.preventDefault();
+            
+            const elAlumnoId = document.getElementById('rutina-editor-alumno-id') || document.getElementById('edit-rutina-user-id');
+            const elObjetivo = document.getElementById('rutina-objetivo') || document.getElementById('edit-rutina-objetivo');
+            const elVencimiento = document.getElementById('rutina-vencimiento') || document.getElementById('edit-rutina-vencimiento');
+            const elNombreGrupo = document.getElementById('rutina-nombre-grupo');
+            const elDescripcion = document.getElementById('rutina-descripcion');
 
-			// Validación de seguridad para el programador
-			if (!elAlumnoId) {
-				console.error("No se encontró el input del ID del alumno. Revisa que el ID en el HTML sea 'rutina-editor-alumno-id'");
-				showVikingToast("Error técnico: Campo de ID no encontrado en el HTML", true);
-				return;
-			}
+            if (!elAlumnoId) {
+                console.error("No se encontró el input del ID del alumno. Revisa que el ID en el HTML sea 'rutina-editor-alumno-id'");
+                showVikingToast("Error técnico: Campo de ID no encontrado en el HTML", true);
+                return;
+            }
 
-			const alumnoId = parseInt(elAlumnoId.value);
-			
-			if (isNaN(alumnoId)) {
-				showVikingToast("Error: Debes seleccionar un alumno de la lista", true);
-				return;
-			}
+            const alumnoId = parseInt(elAlumnoId.value);
+            
+            if (isNaN(alumnoId)) {
+                showVikingToast("Error: Debes seleccionar un alumno de la lista", true);
+                return;
+            }
 
-			// 2. Capturar metadatos (objetivo, vencimiento, etc.)
-			const payload = {
-				usuario_id: alumnoId,
-				nombre_grupo: elNombreGrupo ? elNombreGrupo.value : "Rutina Nueva",
-				descripcion: elDescripcion ? elDescripcion.value : "",
-				objetivo: elObjetivo ? elObjetivo.value : "Mejora general",
-				fecha_vencimiento: elVencimiento ? elVencimiento.value : null,
-				dias: []
-			};
+            const payload = {
+                usuario_id: alumnoId,
+                nombre_grupo: elNombreGrupo ? elNombreGrupo.value : "Rutina Nueva",
+                descripcion: elDescripcion ? elDescripcion.value : "",
+                objetivo: elObjetivo ? elObjetivo.value : "Mejora general",
+                fecha_vencimiento: elVencimiento ? elVencimiento.value : null,
+                dias: []
+            };
 
-			const dayCards = document.querySelectorAll('.rutina-dia-card') || document.querySelectorAll('.day-block');
-			let hasValidationError = false;
+            const dayCards = document.querySelectorAll('.rutina-dia-card') || document.querySelectorAll('.day-block');
+            let hasValidationError = false;
 
-			// 3. Mapear los días y ejercicios
-			payload.dias = Array.from(dayCards).map(card => {
-				const inputNombreDia = card.querySelector('.day-title');
-				const nombre_dia = inputNombreDia ? inputNombreDia.value : "Día";
-				
-				const exercisesRows = card.querySelectorAll('.exercise-row');
-				
-				const ejercicios = Array.from(exercisesRows).map(row => {
-					const inputExId = row.querySelector('.exercise-id');
-					const exId = parseInt(inputExId.value);
+            payload.dias = Array.from(dayCards).map(card => {
+                const inputNombreDia = card.querySelector('.day-title');
+                const nombre_dia = inputNombreDia ? inputNombreDia.value : "Día";
+                
+                const exercisesRows = card.querySelectorAll('.exercise-row');
+                
+                const ejercicios = Array.from(exercisesRows).map(row => {
+                    const inputExId = row.querySelector('.exercise-id');
+                    const exId = parseInt(inputExId.value);
 
-					// Recolectamos las series usando las clases de tu función
-					const rowsDeSeries = row.querySelectorAll('.serie-row');
-					const seriesData = Array.from(rowsDeSeries).map(sRow => {
-						return {
-							numero_serie: parseInt(sRow.dataset.serieNum),
-							repeticiones: sRow.querySelector('.serie-reps').value || "0",
-							peso: sRow.querySelector('.serie-weight').value || "0",
-							descanso: sRow.querySelector('.serie-rest').value || "0"
-						};
-					});
+                    const rowsDeSeries = row.querySelectorAll('.serie-row');
+                    const seriesData = Array.from(rowsDeSeries).map(sRow => {
+                        return {
+                            numero_serie: parseInt(sRow.dataset.serieNum),
+                            repeticiones: sRow.querySelector('.serie-reps').value || "0",
+                            peso: sRow.querySelector('.serie-weight').value || "0",
+                            descanso: sRow.querySelector('.serie-rest').value || "0"
+                        };
+                    });
 
-					return {
-						ejercicio_id: exId,
-						series: seriesData, 
-						comentario: row.querySelector('.exercise-comment')?.value || ""
-					};
-				});
-				
-				return { nombre_dia, ejercicios };
-			});
+                    return {
+                        ejercicio_id: exId,
+                        series: seriesData, 
+                        comentario: row.querySelector('.exercise-comment')?.value || ""
+                    };
+                });
+                
+                return { nombre_dia, ejercicios };
+            });
 
-			// 4. Validaciones finales
-			if (hasValidationError) {
-				showVikingToast("Error: Tienes ejercicios sin seleccionar en la lista", true);
-				return;
-			}
+            if (hasValidationError) {
+                showVikingToast("Error: Tienes ejercicios sin seleccionar en la lista", true);
+                return;
+            }
 
-			if (payload.dias.length === 0 || payload.dias.every(d => d.ejercicios.length === 0)) {
-				showVikingToast("Error: La rutina debe tener al menos un ejercicio", true);
-				return;
-			}
+            if (payload.dias.length === 0 || payload.dias.every(d => d.ejercicios.length === 0)) {
+                showVikingToast("Error: La rutina debe tener al menos un ejercicio", true);
+                return;
+            }
 
-			// 5. Envío al servidor
-			console.log("Enviando Plan:", payload);
-			const res = await apiFetch('/rutinas/plan', 'POST', payload);
-			
-			if (!res.error) {
-				closeModal('modal-rutina-editor');
-				showVikingToast("¡Plan de Rutina Vikingo Guardado!");
-				if (typeof renderRutinas === 'function') renderRutinas();
-			} else {
-				let msg = res.error;
-				try { 
-					const parsed = JSON.parse(res.error);
-					if (parsed.detail) msg = parsed.detail;
-				} catch(e) {}
-				showVikingToast("Error Vikingo: " + msg, true);
-			}
-		};
+            const res = await apiFetch('/rutinas/plan', 'POST', payload);
+            
+            if (!res.error) {
+                closeModal('modal-rutina-editor');
+                showVikingToast("¡Plan de Rutina Vikingo Guardado!");
+                if (typeof renderRutinas === 'function') renderRutinas();
+            } else {
+                let msg = res.error;
+                try { 
+                    const parsed = JSON.parse(res.error);
+                    if (parsed.detail) msg = parsed.detail;
+                } catch(e) {}
+                showVikingToast("Error Vikingo: " + msg, true);
+            }
+        };
 
         function openModalNewExercise() {
             openModal('modal-nuevo-ejercicio');
