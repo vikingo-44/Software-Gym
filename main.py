@@ -151,7 +151,13 @@ class EjercicioLibreriaSchema(BaseModel):
     grupo_muscular_id: int
     grupo_muscular: Optional[GrupoMuscularSchema] = None
     class Config: from_attributes = True
-
+    
+class SerieCreate(BaseModel):
+    numero_serie: int
+    repeticiones: str
+    peso: str
+    descanso: str
+    
 class EjercicioEnRutinaCreate(BaseModel):
     ejercicio_id: int
     series: List[SerieCreate]
@@ -163,7 +169,7 @@ class EjercicioEnRutinaCreate(BaseModel):
 class DiaRutinaCreate(BaseModel):
     nombre_dia: str
     ejercicios: List[EjercicioEnRutinaCreate]
-
+    
 class PlanRutinaCreate(BaseModel):
     usuario_id: int
     nombre_grupo: Optional[str] = "Nueva Rutina"
@@ -171,12 +177,6 @@ class PlanRutinaCreate(BaseModel):
     objetivo: str
     fecha_vencimiento: date
     dias: List[DiaRutinaCreate]
-    
-class SerieCreate(BaseModel):
-    numero_serie: int
-    repeticiones: str
-    peso: str
-    descanso: str
 
 # ==========================================
 # ENDPOINTS DE ACCESO Y FRONTEND
