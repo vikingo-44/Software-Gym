@@ -1463,42 +1463,44 @@ async function openFichaTecnica(alumnoId) {
                     </button>
                     
                     <div id="${diaId}" class="hidden p-4 space-y-4 bg-black/20 border-t border-white/5">
-                        ${(d.ejercicios || []).map(ex => {
-                            // Búsqueda exhaustiva del nombre del ejercicio
-                            const nombreEjercicio = 
-								ex.ejercicio_obj?.nombre ||  // <--- Prioridad 1: El objeto cargado por SQLAlchemy --->
+						${(d.ejercicios || []).map(ex => {
+							// Búsqueda exhaustiva del nombre del ejercicio
+							const nombreEjercicio = 
+								ex.ejercicio_obj?.nombre ||  // Prioridad 1
 								ex.nombre || 
 								ex.ejercicio?.nombre || 
 								ex.ejercicio_libreria?.nombre || 
 								"Ejercicio Sin Nombre";
-                            
-                            return `
-							<div class="flex flex-col border-l-2 border-red-600/40 pl-4 py-1.5 hover:bg-white/5 rounded-r-xl transition-all mb-4">
-								<p class="text-[11px] font-black uppercase italic text-white tracking-tight">${nombreEjercicio}</p>
-								
-								<div class="mt-2 space-y-1">
-									${(ex.series_detalle || []).sort((a, b) => a.numero_serie - b.numero_serie).map(s => `
-										<div class="flex items-center gap-3 text-[9px] font-bold uppercase">
-											<span class="text-red-600 w-12">SERIE ${s.numero_serie}:</span>
-											<span class="text-white">${s.repeticiones} REPS</span>
-											<span class="text-gray-400">|</span>
-											<span class="text-white">${s.peso} KG</span>
-											<span class="text-gray-400">|</span>
-											<span class="text-gray-500">DESC: ${s.descanso}</span>
-										</div>
-									`).join('')}
-								</div>
-
-								${ex.comentario ? `
-									<div class="mt-2 bg-black/40 p-2 rounded-lg border border-white/5 flex gap-2">
-										<i data-lucide="info" class="w-2.5 h-2.5 text-red-600 mt-0.5 shrink-0"></i>
-										<p class="text-[8px] text-gray-400 italic font-medium leading-tight">${ex.comentario}</p>
+							
+							return `
+								<div class="flex flex-col border-l-2 border-red-600/40 pl-4 py-1.5 hover:bg-white/5 rounded-r-xl transition-all mb-4">
+									<p class="text-[11px] font-black uppercase italic text-white tracking-tight">${nombreEjercicio}</p>
+									
+									<div class="mt-2 space-y-1">
+										${(ex.series_detalle || [])
+											.sort((a, b) => a.numero_serie - b.numero_serie)
+											.map(s => `
+												<div class="flex items-center gap-3 text-[9px] font-bold uppercase">
+													<span class="text-red-600 w-12">SERIE ${s.numero_serie}:</span>
+													<span class="text-white">${s.repeticiones} REPS</span>
+													<span class="text-gray-400">|</span>
+													<span class="text-white">${s.peso} KG</span>
+													<span class="text-gray-400">|</span>
+													<span class="text-gray-500">DESC: ${s.descanso}</span>
+												</div>
+											`).join('')}
 									</div>
-								` : ''}
-							</div>
+
+									${ex.comentario ? `
+										<div class="mt-2 bg-black/40 p-2 rounded-lg border border-white/5 flex gap-2">
+											<i data-lucide="info" class="w-2.5 h-2.5 text-red-600 mt-0.5 shrink-0"></i>
+											<p class="text-[8px] text-gray-400 italic font-medium leading-tight">${ex.comentario}</p>
+										</div>
+									` : ''}
+								</div>
 							`;
-                        `;}).join('')}
-                    </div>
+						}).join('')}
+					</div>
                 </div>
                 `;
             }).join('');
@@ -1793,81 +1795,66 @@ function toggleFichaElement(id) {
         }
 
         function addExerciseToDay(dayId, data = null) {
-			const container = document.querySelector(`[data-day-id="${dayId}"] .day-exercises-container`);
-			const div = document.createElement('div');
-			const exerciseUniqueId = 'ex-' + Math.random().toString(36).substr(2, 9);
-			div.className = "exercise-row bg-white/5 p-4 rounded-2xl border border-white/5 mb-4";
-			div.dataset.exerciseRowId = exerciseUniqueId;
+            const container = document.querySelector(`[data-day-id="${dayId}"] .day-exercises-container`);
+            const div = document.createElement('div');
+            const exerciseUniqueId = 'ex-' + Math.random().toString(36).substr(2, 9);
+            div.className = "exercise-row bg-white/5 p-4 rounded-2xl border border-white/5 mb-4";
+            div.dataset.exerciseRowId = exerciseUniqueId;
 
-			let exName = data?.exercise_name || "";
-			if (!exName && data?.ejercicio_id) {
-				const found = state.ejerciciosLibreria.find(e => e.id == data.ejercicio_id);
-				exName = found ? found.nombre : "Ejercicio";
-			}
+            let exName = data?.exercise_name || "";
+            if (!exName && data?.ejercicio_id) {
+                const found = state.ejerciciosLibreria.find(e => e.id == data.ejercicio_id);
+                exName = found ? found.nombre : "Ejercicio";
+            }
 
-			div.innerHTML = `
-				<div class="flex justify-between items-center mb-4">
-					<div class="flex flex-col text-left">
-						<input type="hidden" class="exercise-id" value="${data?.ejercicio_id}">
-						<span class="text-[12px] font-black uppercase italic viking-red">${exName}</span>
-					</div>
-					<div class="flex items-center gap-2">
-						<label class="text-[9px] font-black text-gray-500 uppercase">Series:</label>
-						<select class="viking-input py-1 w-14 h-8 text-[10px] series-select" 
-								onchange="generateSeriesRows('${exerciseUniqueId}', this.value)">
-							${[1,2,3,4,5,6,7,8,9].map(n => `<option value="${n}" ${n==3 ? 'selected' : ''}>${n}</option>`).join('')}
-						</select>
-						<button type="button" onclick="this.closest('.exercise-row').remove()" class="text-gray-600 hover:text-red-600 ml-2">
-							<i data-lucide="x-circle" class="w-5 h-5"></i>
-						</button>
-					</div>
-				</div>
-				
-				<div id="series-container-${exerciseUniqueId}" class="space-y-2 mb-3">
-					</div>
-
-				<div class="mt-2 text-left">
-					<input type="text" placeholder="Comentario para este ejercicio..." 
-						   class="viking-input py-2 text-[10px] exercise-comment bg-transparent border-dashed border-white/10 italic">
-				</div>
-			`;
-			container.appendChild(div);
-			
-			// Llamamos a la función que ya tenés (usando el nombre correcto)
-			const initialNumSeries = (data && data.series) ? data.series.length : 3;
-			generateSeriesRows(exerciseUniqueId, initialNumSeries, data ? data.series : null);
-			lucide.createIcons();
-			}
+            div.innerHTML = `
+                <div class="flex justify-between items-center mb-4">
+                    <div class="flex flex-col text-left">
+                        <input type="hidden" class="exercise-id" value="${data?.ejercicio_id}">
+                        <span class="text-[12px] font-black uppercase italic viking-red">${exName}</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <label class="text-[9px] font-black text-gray-500 uppercase">Series:</label>
+                        <select class="viking-input py-1 w-14 h-8 text-[10px] series-select" 
+                                onchange="generateSeriesRows('${exerciseUniqueId}', this.value)">
+                            ${[1,2,3,4,5,6,7,8,9].map(n => `<option value="${n}" ${data?.series?.length == n ? 'selected' : (n==3 ? 'selected' : '')}>${n}</option>`).join('')}
+                        </select>
+                        <button type="button" onclick="this.closest('.exercise-row').remove()" class="text-gray-600 hover:text-red-600 ml-2">
+                            <i data-lucide="x-circle" class="w-5 h-5"></i>
+                        </button>
+                    </div>
+                </div>
+                <div id="series-container-${exerciseUniqueId}" class="space-y-2 mb-3"></div>
+                <div class="mt-2 text-left">
+                    <input type="text" placeholder="Comentario para este ejercicio..." 
+                           value="${data?.comentario || ''}"
+                           class="viking-input py-2 text-[10px] exercise-comment bg-transparent border-dashed border-white/10 italic">
+                </div>
+            `;
+            container.appendChild(div);
+            
+            const initialNumSeries = (data && data.series) ? data.series.length : 3;
+            generateSeriesRows(exerciseUniqueId, initialNumSeries, data ? data.series : null);
+            lucide.createIcons();
+        }
 
 				function generateSeriesRows(containerId, numSeries, existingData = null) {
-					const container = document.getElementById(`series-container-${containerId}`);
-					if (!container) return;
-					
-					container.innerHTML = "";
-					
-					for (let i = 1; i <= numSeries; i++) {
-						const rowData = (existingData && existingData[i - 1]) ? existingData[i - 1] : null;
-						
-						container.innerHTML += `
-							<div class="grid grid-cols-4 gap-2 items-center serie-row" data-serie-num="${i}">
-								<span class="text-[9px] font-black text-gray-500 uppercase italic">Serie ${i}</span>
-								<input type="text" 
-									placeholder="Reps" 
-									value="${rowData?.repeticiones || ''}" 
-									class="viking-input py-1 text-center text-[11px] serie-reps">
-								<input type="text" 
-									placeholder="Peso" 
-									value="${rowData?.peso || ''}" 
-									class="viking-input py-1 text-center text-[11px] serie-weight">
-								<input type="text" 
-									placeholder="Descanso" 
-									value="${rowData?.descanso || '90s'}" 
-									class="viking-input py-1 text-center text-[11px] serie-rest">
-							</div>
-						`;
-					}
+				const container = document.getElementById(`series-container-${containerId}`);
+				if (!container) return;
+				container.innerHTML = "";
 				
-		}
+				for (let i = 1; i <= numSeries; i++) {
+					const rowData = (existingData && existingData[i - 1]) ? existingData[i - 1] : null;
+					container.innerHTML += `
+						<div class="grid grid-cols-4 gap-2 items-center serie-row" data-serie-num="${i}">
+							<span class="text-[9px] font-black text-gray-500 uppercase italic">Serie ${i}</span>
+							<input type="text" placeholder="Reps" value="${rowData?.repeticiones || ''}" class="viking-input py-1 text-center text-[11px] serie-reps">
+							<input type="text" placeholder="Peso" value="${rowData?.peso || ''}" class="viking-input py-1 text-center text-[11px] serie-weight">
+							<input type="text" placeholder="Descanso" value="${rowData?.descanso || '90s'}" class="viking-input py-1 text-center text-[11px] serie-rest">
+						</div>
+					`;
+				}
+			}
 
         async function apiFetch(endpoint, method = 'GET', body = null) {
             const options = { method, headers: { 'Content-Type': 'application/json' } };
