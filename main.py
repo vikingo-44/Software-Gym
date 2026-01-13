@@ -693,9 +693,15 @@ def get_rutina_activa(id: int, db: Session = Depends(database.get_db)):
         models.PlanRutina.usuario_id == id, 
         models.PlanRutina.activo == True
     ).options(
+        # RAMA 1: Cargar hasta el objeto Ejercicio (para saber el nombre)
         joinedload(models.PlanRutina.dias)
         .joinedload(models.DiaRutina.ejercicios)
-        .joinedload(models.EjercicioEnRutina.ejercicio_obj)
+        .joinedload(models.EjercicioEnRutina.ejercicio_obj),
+        
+        # RAMA 2: Cargar hasta el detalle de las Series (para saber reps/peso)
+        # SQLAlchemy es inteligente y une esto en una sola consulta eficiente
+        joinedload(models.PlanRutina.dias)
+        .joinedload(models.DiaRutina.ejercicios)
         .joinedload(models.EjercicioEnRutina.series_detalle)
     ).first()
     
