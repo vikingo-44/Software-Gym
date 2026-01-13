@@ -1765,7 +1765,6 @@ function toggleFichaElement(id) {
         function addExerciseToDay(dayId, data = null) {
 			const container = document.querySelector(`[data-day-id="${dayId}"] .day-exercises-container`);
 			const div = document.createElement('div');
-			// Generamos un ID único para este bloque de ejercicio para poder encontrar sus series después
 			const exerciseUniqueId = 'ex-' + Math.random().toString(36).substr(2, 9);
 			div.className = "exercise-row bg-white/5 p-4 rounded-2xl border border-white/5 mb-4";
 			div.dataset.exerciseRowId = exerciseUniqueId;
@@ -1778,14 +1777,14 @@ function toggleFichaElement(id) {
 
 			div.innerHTML = `
 				<div class="flex justify-between items-center mb-4">
-					<div class="flex flex-col">
+					<div class="flex flex-col text-left">
 						<input type="hidden" class="exercise-id" value="${data?.ejercicio_id}">
 						<span class="text-[12px] font-black uppercase italic viking-red">${exName}</span>
 					</div>
 					<div class="flex items-center gap-2">
 						<label class="text-[9px] font-black text-gray-500 uppercase">Series:</label>
 						<select class="viking-input py-1 w-14 h-8 text-[10px] series-select" 
-								onchange="renderSeriesInputs('${exerciseUniqueId}', this.value)">
+								onchange="generateSeriesRows('${exerciseUniqueId}', this.value)">
 							${[1,2,3,4,5,6,7,8,9].map(n => `<option value="${n}" ${n==3 ? 'selected' : ''}>${n}</option>`).join('')}
 						</select>
 						<button type="button" onclick="this.closest('.exercise-row').remove()" class="text-gray-600 hover:text-red-600 ml-2">
@@ -1794,16 +1793,18 @@ function toggleFichaElement(id) {
 					</div>
 				</div>
 				
-				<div id="series-container-${exerciseUniqueId}" class="space-y-2 mb-3"></div>
+				<div id="series-container-${exerciseUniqueId}" class="space-y-2 mb-3">
+					</div>
 
-				<div class="mt-2">
+				<div class="mt-2 text-left">
 					<input type="text" placeholder="Comentario para este ejercicio..." 
 						   class="viking-input py-2 text-[10px] exercise-comment bg-transparent border-dashed border-white/10 italic">
 				</div>
 			`;
 			container.appendChild(div);
-			// Renderizamos las 3 series iniciales por defecto
-			renderSeriesInputs(exerciseUniqueId, 3);
+			
+			// Llamamos a la función que ya tenés (usando el nombre correcto)
+			generateSeriesRows(exerciseUniqueId, 3, data?.series);
 			lucide.createIcons();
 		}
 
@@ -2288,17 +2289,20 @@ function toggleFichaElement(id) {
 
 			// 3. Mapear los días y ejercicios
 			payload.dias = Array.from(dayCards).map(card => {
-				const nombre_dia = card.querySelector('.day-title').value;
+				const inputNombreDia = card.querySelector('.day-title');
+				const nombre_dia = inputNombreDia ? inputNombreDia.value : "Día";
+				
 				const exercisesRows = card.querySelectorAll('.exercise-row');
 				
 				const ejercicios = Array.from(exercisesRows).map(row => {
-					const exId = parseInt(row.querySelector('.exercise-id').value);
-					
-					// --- AQUÍ RECOLECTAMOS LAS SERIES RESPETANDO TU FUNCIÓN ---
+					const inputExId = row.querySelector('.exercise-id');
+					const exId = parseInt(inputExId.value);
+
+					// Recolectamos las series usando las clases de tu función
 					const rowsDeSeries = row.querySelectorAll('.serie-row');
 					const seriesData = Array.from(rowsDeSeries).map(sRow => {
 						return {
-							numero_serie: parseInt(sRow.dataset.serieNum), // Usamos data-serie-num de tu función
+							numero_serie: parseInt(sRow.dataset.serieNum),
 							repeticiones: sRow.querySelector('.serie-reps').value || "0",
 							peso: sRow.querySelector('.serie-weight').value || "0",
 							descanso: sRow.querySelector('.serie-rest').value || "0"
@@ -2307,7 +2311,7 @@ function toggleFichaElement(id) {
 
 					return {
 						ejercicio_id: exId,
-						series: seriesData, // Ahora esto es una LISTA, lo que FastAPI espera
+						series: seriesData, 
 						comentario: row.querySelector('.exercise-comment')?.value || ""
 					};
 				});
