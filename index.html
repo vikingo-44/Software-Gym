@@ -1466,12 +1466,11 @@ async function openFichaTecnica(alumnoId) {
                         ${(d.ejercicios || []).map(ex => {
                             // Búsqueda exhaustiva del nombre del ejercicio
                             const nombreEjercicio = 
-                                ex.nombre || 
-                                (ex.ejercicio && typeof ex.ejercicio === 'string' ? ex.ejercicio : null) ||
-                                ex.ejercicio?.nombre || 
-                                ex.ejercicio_libreria?.nombre || 
-                                ex.nombre_ejercicio || 
-                                "Ejercicio Sin Nombre";
+								ex.ejercicio_obj?.nombre ||  // <--- Prioridad 1: El objeto cargado por SQLAlchemy --->
+								ex.nombre || 
+								ex.ejercicio?.nombre || 
+								ex.ejercicio_libreria?.nombre || 
+								"Ejercicio Sin Nombre";
                             
                             return `
                             <div class="flex flex-col border-l-2 border-red-600/40 pl-4 py-1.5 hover:bg-white/5 rounded-r-xl transition-all">
@@ -1587,7 +1586,7 @@ function toggleFichaElement(id) {
                             <div class="space-y-4">
                                 ${d.ejercicios.map(e => `
                                     <div class="bg-white/5 p-3 rounded-xl">
-                                        <p class="text-[12px] font-black uppercase italic">${e.ejercicio_libreria?.nombre || 'Ejercicio'}</p>
+                                        <p class="text-[12px] font-black uppercase italic">${e.ejercicio_obj ? e.ejercicio_obj.nombre : (e.ejercicio_libreria?.nombre || 'Ejercicio sin nombre')}</p>
                                         <div class="grid grid-cols-3 gap-2 mt-2 text-[10px] font-bold text-gray-500 uppercase tracking-tighter">
                                             <span>S: ${e.series}</span> <span>R: ${e.repeticiones}</span> <span>P: ${e.peso}</span>
                                         </div>
