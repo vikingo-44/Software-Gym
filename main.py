@@ -194,41 +194,32 @@ async def serve_app():
 
 @app.post("/api/login", tags=["Autenticacion"])
 def login(data: UsuarioLogin, db: Session = Depends(database.get_db)):
-    try:
-        # Buscamos al usuario con todas sus relaciones necesarias
-        user = db.query(models.Usuario).options(
-            joinedload(models.Usuario.perfil),
-            joinedload(models.Usuario.plan).joinedload(models.Plan.tipo)
-        ).filter(models.Usuario.dni == data.dni).first()
-        
-        # Verificación de credenciales
-        if not user or user.password_hash != data.password:
-            raise HTTPException(status_code=401, detail="Credenciales incorrectas")
-        
-        # Devolvemos el objeto completo para que el frontend tenga toda la info
-        return {
-            "id": user.id, 
-            "nombre_completo": user.nombre_completo, 
-            "dni": user.dni, 
-            "email": user.email,
-            "rol_nombre": user.perfil.nombre if user.perfil else "Usuario",
-            "plan": {
-                "id": user.plan.id,
-                "nombre": user.plan.nombre,
-                "precio": user.plan.precio
-            } if user.plan else None,
-            "plan_id": user.plan_id,
-            "fecha_vencimiento": user.fecha_vencimiento.isoformat() if user.fecha_vencimiento else None,
-            "fecha_ultima_renovacion": user.fecha_ultima_renovacion.isoformat() if user.fecha_ultima_renovacion else None,
-            "peso": user.peso,
-            "altura": user.altura,
-            "imc": user.imc,
-            "creditos_disponibles": getattr(user, 'creditos_disponibles', 0) # Por si la columna es nueva
-        }
-    except Exception as e:
-        # Esto imprimirá el error real en los logs de Render para que sepas qué falló
-        logger.error(f"Error crítico en Login: {str(e)}")
-        raise HTTPException(status_code=500, detail="Error interno del servidor al procesar el ingreso")
+    user = db.query(models.Usuario).options(
+        joinedload(models.Usuario.perfil),
+        joinedload(models.Usuario.plan).joinedload(models.Plan.tipo)
+    ).filter(models.Usuario.dni == data.dni).first()
+    
+    if not user or user.password_hash != data.password:
+        raise HTTPException(status_code=401, detail="Credenciales incorrectas")
+    
+    return {
+        "id": user.id, 
+        "nombre_completo": user.nombre_completo, 
+        "dni": user.dni, 
+        "email": user.email,
+        "rol_nombre": user.perfil.nombre if user.perfil else "Usuario",
+        "plan": {
+            "id": user.plan.id,
+            "nombre": user.plan.nombre,
+            "precio": user.plan.precio
+        } if user.plan else None,
+        "plan_id": user.plan_id,
+        "fecha_vencimiento": user.fecha_vencimiento.isoformat() if user.fecha_vencimiento else None,
+        "fecha_ultima_renovacion": user.fecha_ultima_renovacion.isoformat() if user.fecha_ultima_renovacion else None,
+        "peso": user.peso,
+        "altura": user.altura,
+        "imc": user.imc
+    }
 
 # ==========================================
 # MÓDULO 2: GESTIÓN DE ALUMNOS Y FICHAS
@@ -652,25 +643,22 @@ def create_plan_rutina(data: PlanRutinaCreate, db: Session = Depends(database.ge
             db.flush()
             
             for e in d.ejercicios:
-                # 1. Creamos el contenedor del ejercicio
+                # Verificamos si el ejercicio existe en la librería para evitar error de FK
+                ej_exists = db.query(models.Ejercicio).filter(models.Ejercicio.id == e.ejercicio_id).first()
+                if not ej_exists:
+                    logger.warning(f"Salteando ejercicio ID {e.ejercicio_id}: No existe en librería.")
+                    continue
+
                 ej_en_rut = models.EjercicioEnRutina(
                     dia_id=nuevo_dia.id,
                     ejercicio_id=e.ejercicio_id,
+                    series=e.series,
+                    repeticiones=e.repeticiones,
+                    peso=e.peso,
+                    descanso=e.descanso,
                     comentario=e.comentario
                 )
                 db.add(ej_en_rut)
-                db.flush() # Esto genera el ID del ejercicio para las series
-                
-                # 2. Creamos una fila por cada serie recibida
-                for s in e.series:
-                    nueva_serie = models.SerieEjercicio(
-                        ejercicio_en_rutina_id=ej_en_rut.id,
-                        numero_serie=s.numero_serie,
-                        repeticiones=s.repeticiones,
-                        peso=s.peso,
-                        descanso=s.descanso
-                    )
-                    db.add(nueva_serie)
         
         db.commit()
         return {"status": "success", "id": nuevo_plan.id}
@@ -702,29 +690,6 @@ def get_rutina_activa(id: int, db: Session = Depends(database.get_db)):
 @app.get("/api/rutinas/historial/{id}", tags=["Musculación"])
 def get_historial_rutinas(id: int, db: Session = Depends(database.get_db)):
     return db.query(models.PlanRutina).filter(models.PlanRutina.usuario_id == id).order_by(models.PlanRutina.fecha_creacion.desc()).all()
-
-@app.get("/api/accesos", tags=["Acceso Virtual"])
-def get_accesos(db: Session = Depends(database.get_db)):
-    # Traemos los últimos 50 accesos con los datos del alumno
-    accesos = db.query(models.Acceso).options(joinedload(models.Acceso.usuario)).order_by(models.Acceso.fecha_hora.desc()).limit(50).all()
-    return [{
-        "id": a.id,
-        "fecha": a.fecha_hora.strftime("%d/%m/%Y %H:%M:%S"),
-        "alumno": a.usuario.nombre_completo if a.usuario else "Desconocido",
-        "dni": a.usuario.dni if a.usuario else "N/A",
-        "plan": a.usuario.plan.nombre if a.usuario and a.usuario.plan else "Sin Plan"
-    } for a in accesos]
-
-@app.post("/api/accesos/{dni}", tags=["Acceso Virtual"])
-def registrar_acceso(dni: str, db: Session = Depends(database.get_db)):
-    user = db.query(models.Usuario).filter(models.Usuario.dni == dni).first()
-    if not user:
-        raise HTTPException(status_code=404, detail="Alumno no encontrado")
-    
-    nuevo_acceso = models.Acceso(usuario_id=user.id)
-    db.add(nuevo_acceso)
-    db.commit()
-    return {"status": "success", "nombre": user.nombre_completo}
 
 # ==========================================
 # EJECUCIÓN DEL SERVIDOR
