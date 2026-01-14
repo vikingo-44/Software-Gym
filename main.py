@@ -5,7 +5,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy import func, Column, Integer, String, JSON
+from sqlalchemy import func
+from sqlalchemy.orm.attributes import flag_modified
 from typing import List, Optional
 from pydantic import BaseModel
 from datetime import date, datetime
@@ -32,20 +33,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-# ==========================================
-# MODELO DE CLASE (Sobrescribimos/Aseguramos el campo JSON)
-# ==========================================
-
-class Clase(Base):
-    __tablename__ = "clases"
-    id = Column(Integer, primary_key=True, index=True)
-    nombre = Column(String)
-    coach = Column(String)
-    capacidad_max = Column(Integer, default=40)
-    color = Column(String, default="#FF0000")
-    # Este campo permite guardar una lista de horarios: [{"dia": 1, "horario": 7}, ...]
-    horarios_detalle = Column(JSON, nullable=True) 
 
 # ==========================================
 # MODELOS DE DATOS (PYDANTIC SCHEMAS)
@@ -363,7 +350,7 @@ def book_clase(data: ReservaCreate, db: Session = Depends(database.get_db)):
     if exists:
         raise HTTPException(status_code=400, detail="Ya tienes una reserva para esta clase hoy")
     
-    clase = db.query(Clase).filter(Clase.id == data.clase_id).first()
+    clase = db.query(models.Clase).filter(models.Clase.id == data.clase_id).first()
     if not clase:
         raise HTTPException(status_code=404, detail="Clase no encontrada")
         
@@ -535,11 +522,11 @@ def get_tipos(db: Session = Depends(database.get_db)):
 
 @app.get("/api/clases", tags=["Clases"])
 def get_clases(db: Session = Depends(database.get_db)):
-    return db.query(Clase).all()
+    return db.query(models.Clase).all()
 
 @app.post("/api/clases", tags=["Clases"])
 def create_clase(data: ClaseUpdate, db: Session = Depends(database.get_db)):
-    new_c = Clase(
+    new_c = models.Clase(
         nombre=data.nombre,
         coach=data.coach,
         color=data.color,
@@ -552,7 +539,7 @@ def create_clase(data: ClaseUpdate, db: Session = Depends(database.get_db)):
 
 @app.put("/api/clases/{id}", tags=["Clases"])
 def update_clase(id: int, data: ClaseUpdate, db: Session = Depends(database.get_db)):
-    c = db.query(Clase).filter(Clase.id == id).first()
+    c = db.query(models.Clase).filter(models.Clase.id == id).first()
     if c:
         c.nombre = data.nombre
         c.coach = data.coach
@@ -566,7 +553,7 @@ def update_clase(id: int, data: ClaseUpdate, db: Session = Depends(database.get_
 # --- ENDPOINT DE MOVIMIENTO (DRAG & DROP) ---
 @app.put("/api/clases/{id}/move", tags=["Clases"])
 def move_clase(id: int, data: ClaseMove, db: Session = Depends(database.get_db)):
-    c = db.query(Clase).filter(Clase.id == id).first()
+    c = db.query(models.Clase).filter(models.Clase.id == id).first()
     if not c:
         raise HTTPException(status_code=404, detail="Clase no encontrada")
     
@@ -595,7 +582,7 @@ def move_clase(id: int, data: ClaseMove, db: Session = Depends(database.get_db))
 
 @app.delete("/api/clases/{id}", tags=["Clases"])
 def delete_clase(id: int, db: Session = Depends(database.get_db)):
-    db.query(Clase).filter(Clase.id == id).delete()
+    db.query(models.Clase).filter(models.Clase.id == id).delete()
     db.commit()
     return {"status": "success"}
 

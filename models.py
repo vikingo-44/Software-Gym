@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, Date, DateTime, ForeignKey, Text, Boolean
+from sqlalchemy import Column, Integer, String, Float, Date, DateTime, ForeignKey, Text, Boolean, JSON
 from sqlalchemy.orm import relationship
 from database import Base
 import datetime
@@ -61,8 +61,8 @@ class Clase(Base):
     nombre = Column(String)
     coach = Column(String)
     capacidad_max = Column(Integer, default=20)
-    dia = Column(Integer)
-    horario = Column(Float) 
+    # Nueva estructura Vikingo Jefe (JSON para múltiples horarios)
+    horarios_detalle = Column(JSON, nullable=True) 
     color = Column(String, default="#FF0000")
     reservas = relationship("Reserva", back_populates="clase", cascade="all, delete-orphan")
 
@@ -138,11 +138,9 @@ class EjercicioEnRutina(Base):
     id = Column(Integer, primary_key=True)
     dia_id = Column(Integer, ForeignKey("rutina_dias.id"))
     ejercicio_id = Column(Integer, ForeignKey("ejercicios_libreria.id"))
-    # Estos campos se vuelven opcionales o se eliminan porque ahora mandan las series
     comentario = Column(Text, nullable=True)
     dia = relationship("DiaRutina", back_populates="ejercicios")
     ejercicio_obj = relationship("Ejercicio", back_populates="ejercicios_en_rutina")
-    # NUEVA RELACIÓN
     series_detalle = relationship("SerieEjercicio", back_populates="ejercicio_en_rutina", cascade="all, delete-orphan")
 
 class SerieEjercicio(Base):
