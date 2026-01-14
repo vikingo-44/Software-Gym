@@ -365,6 +365,13 @@
                     <i data-lucide="dumbbell" class="w-4 h-4"></i> <span class="nav-text">Rutinas Musc.</span>
                 </button>
             </div>
+			<!-- Sección Seguridad - Acceso Virtual -->
+			<div id="nav-section-virtual">
+				<p class="text-[10px] font-black text-gray-600 uppercase tracking-widest px-6 mb-2 mt-8">Seguridad</p>
+				<button onclick="switchView('acceso-virtual')" id="nav-acceso-virtual" class="nav-btn w-full nav-item px-6 py-4 rounded-2xl font-black uppercase text-[11px] italic">
+					<i data-lucide="qr-code" class="w-4 h-4"></i> <span class="nav-text">Acceso Virtual</span>
+				</button>
+			</div>
         </nav>
 
         <div class="p-8">
@@ -785,6 +792,34 @@
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="rutinas-lista"></div>
                 </div>
             </div>
+			<!-- Vista de Acceso Virtual -->
+			<div id="view-acceso-virtual" class="view-content">
+				<div class="flex justify-between items-center mb-8">
+					<div>
+						<h3 class="text-3xl font-black italic uppercase">Accesos al Valhalla</h3>
+						<p class="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-1 italic">Control de Molinetes y QR en Tiempo Real</p>
+					</div>
+					<!-- Botón para pruebas manuales o simulación -->
+					<button onclick="simularAcceso()" class="viking-bg-red text-black px-6 py-3 rounded-xl font-black uppercase italic text-[11px] shadow-lg hover:scale-105 transition-transform flex items-center gap-2">
+						<i data-lucide="refresh-cw" class="w-4 h-4"></i> Simular Ingreso
+					</button>
+				</div>
+
+				<div class="glass-card p-6 rounded-[2.5rem] border-white/5">
+					<!-- Cabecera de columnas -->
+					<div class="grid grid-cols-5 gap-4 px-6 mb-4 opacity-50 text-[10px] font-black uppercase italic tracking-widest">
+						<span>Guerrero / Alumno</span>
+						<span>DNI / Usuario</span>
+						<span>Fecha y Hora</span>
+						<span>Método</span>
+						<span class="text-right">Estado</span>
+					</div>
+					<!-- Lista dinámica de ingresos -->
+					<div id="acceso-list-view" class="flex flex-col gap-2 max-h-[600px] overflow-y-auto custom-scrollbar pr-2">
+						<p class="text-center text-gray-600 italic py-10">Esperando registros de entrada...</p>
+					</div>
+				</div>
+			</div>
         </div>
     </main>
 
@@ -1098,7 +1133,8 @@
             reservas: [], 
             cart: [], currentPaymentMethod: '',
             cobrarTab: 'mercaderia',
-            gruposMusculares: [], ejerciciosLibreria: []
+            gruposMusculares: [], ejerciciosLibreria: [],
+			accesos: []
         };
 
         function showVikingToast(msg, error = false) {
@@ -1115,12 +1151,19 @@
 			const rol = state.user.rol_nombre || "";
 			const isAlumno = rol === "Alumno";
 			const isAdmin = rol === "Administrador" || rol === "Supervisor";
+			const isStaffAutorizado = rol === "Administrador" || rol === "Supervisor" || rol === "Administracion";
 			
 			// Layout Dashboard
 			const adminDash = document.getElementById('admin-dashboard-layout');
 			const aluDash = document.getElementById('alumno-dashboard-layout');
 			if(adminDash) adminDash.style.display = isAlumno ? 'none' : 'block';
 			if(aluDash) aluDash.style.display = isAlumno ? 'block' : 'none';
+
+			const navVirtual = document.getElementById('nav-section-virtual');
+			if (navVirtual) {
+				// Usamos setProperty para forzar el estilo si el CSS es muy estricto
+				navVirtual.style.setProperty('display', isStaffAutorizado ? 'block' : 'none', 'important');
+			}
 
 			// Elementos de Navegación (Usamos setProperty para forzar sobre el CSS)
 			const navAlumnos = document.getElementById('nav-alumnos');
@@ -1156,6 +1199,8 @@
 				
 				document.querySelectorAll('.action-col').forEach(el => el.style.display = 'table-cell');
 			}
+			
+			
 			
 			if(window.lucide) lucide.createIcons();
 		}
@@ -2029,6 +2074,7 @@ async function renderRutinas() {
             if(view === 'cobrar') renderCobrar();
             if(view === 'rutinas') renderRutinas();
             if(view === 'dashboard' && state.user?.rol_nombre === "Alumno") renderStudentDashboard();
+			if(view === 'acceso-virtual') renderAccesos();
             
             if(view === 'perfil' && state.user) {
                 const u = state.user;
@@ -2694,6 +2740,81 @@ async function renderRutinas() {
         function openModalNewExercise() {
             openModal('modal-nuevo-ejercicio');
         }
+		
+		// Renderiza la lista de ingresos con estilo de filas/tarjetas
+			function renderAccesos() {
+				const container = document.getElementById('acceso-list-view');
+				if (!container) return;
+
+				if (state.accesos.length === 0) {
+					container.innerHTML = '<p class="text-center text-gray-600 italic py-10">No hay registros de ingreso hoy.</p>';
+					return;
+				}
+
+				container.innerHTML = state.accesos.map(acc => {
+					const isDenied = acc.estado.includes('DENEGADO');
+					const statusColor = isDenied ? 'text-red-500' : 'text-green-500';
+					const statusBg = isDenied ? 'bg-red-500/10' : 'bg-green-500/10';
+
+					return `
+					<div class="glass-card p-4 rounded-2xl border-white/5 flex items-center justify-between hover:bg-white/5 transition-colors group relative overflow-hidden">
+						<!-- Barra lateral indicadora -->
+						<div class="absolute left-0 top-0 bottom-0 w-1 ${isDenied ? 'bg-red-600' : 'bg-green-600'} opacity-30 group-hover:opacity-100 transition-opacity"></div>
+						
+						<div class="grid grid-cols-5 gap-4 w-full items-center px-2">
+							<!-- Guerrero -->
+							<div class="flex items-center gap-3">
+								<div class="w-8 h-8 rounded-lg ${isDenied ? 'bg-red-600/20 text-red-500' : 'viking-bg-red text-black'} flex items-center justify-center font-black text-[10px] italic">
+									${acc.nombre ? acc.nombre[0].toUpperCase() : '?'}
+								</div>
+								<span class="text-[11px] font-black uppercase italic text-white group-hover:text-red-500 transition-colors">${acc.nombre}</span>
+							</div>
+							
+							<!-- DNI -->
+							<span class="text-[10px] text-gray-500 font-bold tracking-widest">${acc.dni}</span>
+							
+							<!-- Fecha/Hora -->
+							<span class="text-[10px] text-gray-400 font-medium">${acc.fecha}</span>
+							
+							<!-- Método -->
+							<div class="flex items-center gap-2">
+								<i data-lucide="${acc.metodo.includes('QR') ? 'qr-code' : 'door-closed'}" class="w-3.5 h-3.5 text-gray-600"></i>
+								<span class="text-[9px] font-black uppercase text-gray-600">${acc.metodo}</span>
+							</div>
+							
+							<!-- Estado -->
+							<div class="text-right">
+								<span class="text-[9px] px-3 py-1 rounded-full ${statusBg} ${statusColor} font-black uppercase tracking-wider border border-white/5">
+									${acc.estado}
+								</span>
+							</div>
+						</div>
+					</div>
+					`;
+				}).join('');
+				
+				if (window.lucide) lucide.createIcons();
+			}
+
+			// Función para simular ingresos (puedes conectarla luego a tu backend o QR)
+			function simularAcceso() {
+				const nombres = ["Ragnar Lothbrok", "Lagertha", "Bjorn Ironside", "Ivar the Boneless", "Ubbe"];
+				const metodos = ["QR SCAN", "MOLINETE", "MANUAL"];
+				
+				const nuevoIngreso = {
+					nombre: nombres[Math.floor(Math.random() * nombres.length)],
+					dni: Math.floor(Math.random() * 10000000 + 30000000).toString(),
+					fecha: new Date().toLocaleTimeString(), // Solo hora para la simulación rápida
+					metodo: metodos[Math.floor(Math.random() * metodos.length)],
+					estado: Math.random() > 0.2 ? "AUTORIZADO" : "DENEGADO (Vencido)"
+				};
+
+				state.accesos.unshift(nuevoIngreso); // Agregar al inicio
+				if (state.accesos.length > 50) state.accesos.pop(); // Limitar historial visual
+				
+				renderAccesos();
+				showVikingToast("Nuevo ingreso detectado");
+			}
 
         document.getElementById('form-nuevo-ejercicio-lib').onsubmit = async (e) => {
             e.preventDefault();
