@@ -2703,9 +2703,6 @@ async function renderRutinas() {
 			if(window.lucide) lucide.createIcons();
 		}
 
-    container.appendChild(row);
-    if(window.lucide) lucide.createIcons();
-
 		// --- ABRIR EDICIÓN (Cargar slots con sus profes) ---
 		function openEditClase(id) {
 			const c = state.clases.find(x => x.id == id); 
