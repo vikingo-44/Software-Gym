@@ -1421,147 +1421,167 @@
             }
         }
 
-async function openFichaTecnica(alumnoId) {
-    const rutinaContainer = document.getElementById('ficha-rutina-container');
+		// --- REEMPLAZA TU FUNCIÓN openFichaTecnica POR ESTA VERSIÓN CON DISEÑO DE FILAS ---
+		async function openFichaTecnica(alumnoId) {
+			const rutinaContainer = document.getElementById('ficha-rutina-container');
 
-    rutinaContainer.innerHTML = `
-        <div class="col-span-2 py-10 flex flex-col items-center justify-center space-y-4">
-            <div class="w-8 h-8 border-4 border-red-600 border-t-transparent rounded-full animate-spin"></div>
-            <p class="text-[10px] text-gray-500 italic uppercase tracking-widest animate-pulse text-center">Iniciando escaneo del guerrero...</p>
-        </div>
-    `;
+			// Estado de carga visual
+			rutinaContainer.innerHTML = `
+				<div class="col-span-2 py-10 flex flex-col items-center justify-center space-y-4">
+					<div class="w-8 h-8 border-4 border-red-600 border-t-transparent rounded-full animate-spin"></div>
+					<p class="text-[10px] text-gray-500 italic uppercase tracking-widest animate-pulse text-center">Cargando datos del alumno...</p>
+				</div>
+			`;
 
-    const res = await apiFetch(`/alumnos/${alumnoId}/ficha`);
-    if (res.error) {
-        showVikingToast("Error al conectar con el servidor", true);
-        return;
-    }
+			// 1. Obtener datos del alumno
+			const res = await apiFetch(`/alumnos/${alumnoId}/ficha`);
+			if (res.error) {
+				showVikingToast("Error al conectar con el servidor", true);
+				return;
+			}
 
-    if (document.getElementById('ficha-nombre')) document.getElementById('ficha-nombre').innerText = res.nombre_completo || 'Sin Nombre';
-    if (document.getElementById('ficha-dni')) document.getElementById('ficha-dni').innerText = "DNI: " + (res.dni || '---');
-    if (document.getElementById('ficha-plan')) document.getElementById('ficha-plan').innerText = "Plan: " + (res.plan || 'Sin Plan Activo');
-    if (document.getElementById('ficha-cuenta')) document.getElementById('ficha-cuenta').innerText = "Estado: " + (res.estado_cuenta || 'Inactivo');
-    if (document.getElementById('ficha-peso')) document.getElementById('ficha-peso').innerText = (res.peso || 0) + " kg";
-    if (document.getElementById('ficha-altura')) document.getElementById('ficha-altura').innerText = (res.altura || 0) + " cm";
-    if (document.getElementById('ficha-imc')) document.getElementById('ficha-imc').innerText = res.imc || 0;
+			// Llenar cabecera del modal
+			if (document.getElementById('ficha-nombre')) document.getElementById('ficha-nombre').innerText = res.nombre_completo || 'Sin Nombre';
+			if (document.getElementById('ficha-dni')) document.getElementById('ficha-dni').innerText = "DNI: " + (res.dni || '---');
+			if (document.getElementById('ficha-plan')) document.getElementById('ficha-plan').innerText = "Plan: " + (res.plan || 'Sin Plan Activo');
+			if (document.getElementById('ficha-cuenta')) document.getElementById('ficha-cuenta').innerText = "Estado: " + (res.estado_cuenta || 'Inactivo');
+			if (document.getElementById('ficha-peso')) document.getElementById('ficha-peso').innerText = (res.peso || 0) + " kg";
+			if (document.getElementById('ficha-altura')) document.getElementById('ficha-altura').innerText = (res.altura || 0) + " cm";
+			if (document.getElementById('ficha-imc')) document.getElementById('ficha-imc').innerText = res.imc || 0;
 
-    let rutinaData = await apiFetch(`/rutinas/usuario/${alumnoId}`);
-    const rutinas = Array.isArray(rutinaData) ? rutinaData : (rutinaData && !rutinaData.error ? [rutinaData] : []);
+			// 2. Obtener Rutina
+			let rutinaData = await apiFetch(`/rutinas/usuario/${alumnoId}`);
+			const rutinas = Array.isArray(rutinaData) ? rutinaData : (rutinaData && !rutinaData.error ? [rutinaData] : []);
 
-    if (rutinas.length > 0) {
-        const hoy = new Date();
-        hoy.setHours(0, 0, 0, 0);
+			if (rutinas.length > 0) {
+				const hoy = new Date();
+				hoy.setHours(0, 0, 0, 0);
 
-        const mainHTML = rutinas.map((rutina, rIdx) => {
-            const objetivoId = `obj-group-${rIdx}`;
-            const fechaVenc = rutina.fecha_vencimiento ? new Date(rutina.fecha_vencimiento + 'T23:59:59') : null;
-            const esActiva = fechaVenc ? hoy <= fechaVenc : true;
+				const mainHTML = rutinas.map((rutina, rIdx) => {
+					const objetivoId = `obj-group-${rIdx}`;
+					const fechaVenc = rutina.fecha_vencimiento ? new Date(rutina.fecha_vencimiento + 'T23:59:59') : null;
+					const esActiva = fechaVenc ? hoy <= fechaVenc : true;
 
-            const statusBadge = esActiva 
-                ? `<span class="bg-green-600/20 text-green-500 border border-green-500/30 px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest animate-pulse">Activa</span>`
-                : `<span class="bg-red-600/20 text-red-500 border border-red-500/30 px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest">Vencida</span>`;
+					const statusBadge = esActiva 
+						? `<span class="bg-green-600/20 text-green-500 border border-green-500/30 px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest animate-pulse">Activa</span>`
+						: `<span class="bg-red-600/20 text-red-500 border border-red-500/30 px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest">Vencida</span>`;
 
-            const diasHTML = (rutina.dias || []).map((d, dIdx) => {
-                const diaId = `ficha-dia-${rIdx}-${dIdx}`;
-                return `
-                <div class="glass-card rounded-2xl border-white/5 overflow-hidden mb-2 transition-all">
-                    <button onclick="toggleFichaElement('${diaId}')" class="w-full flex items-center justify-between p-4 bg-white/2 hover:bg-white/5 transition-colors group text-left">
-                        <div class="flex items-center gap-3">
-                            <div class="w-2 h-2 rounded-full ${esActiva ? 'bg-green-600 shadow-[0_0_8px_#16a34a]' : 'bg-red-600 shadow-[0_0_8px_#dc2626]'}"></div>
-                            <span class="text-[11px] font-black italic uppercase tracking-wider text-gray-300 group-hover:text-red-500 transition-colors">${d.nombre_dia}</span>
-                        </div>
-                        <i data-lucide="chevron-down" class="w-4 h-4 text-gray-600 transition-transform duration-500" id="icon-${diaId}"></i>
-                    </button>
-                    
-                    <div id="${diaId}" class="hidden p-4 space-y-4 bg-black/20 border-t border-white/5">
-                        ${(d.ejercicios || d.ejercicios_list || []).map(ex => {
-                            const nombreEjercicio = ex.ejercicio_obj?.nombre || ex.nombre || ex.ejercicio?.nombre || "Ejercicio Sin Nombre";
-                            const series = ex.series_detalle || ex.series || [];
-                            
-                            return `
-                                <div class="flex flex-col border-l-2 border-red-600/40 pl-4 py-1.5 hover:bg-white/5 rounded-r-xl transition-all mb-4">
-                                    <p class="text-[11px] font-black uppercase italic text-white tracking-tight">${nombreEjercicio}</p>
-                                    
-                                    <div class="mt-3 grid grid-cols-3 sm:grid-cols-4 gap-2">
-                                        ${series
-                                            .sort((a, b) => (a.numero_serie || 0) - (b.numero_serie || 0))
-                                            .map(s => `
-                                                <div class="bg-black/40 border border-white/10 rounded-xl p-2 flex flex-col items-center justify-center relative overflow-hidden group hover:border-red-600/50 transition-colors">
-                                                    <div class="absolute top-0 left-0 w-1 h-full bg-red-600/20"></div>
-                                                    <p class="text-[7px] font-black text-red-500 uppercase tracking-widest mb-1">Serie ${s.numero_serie}</p>
-                                                    
-                                                    <div class="flex items-baseline gap-1">
-                                                        <span class="text-sm font-black italic text-white">${s.repeticiones}</span>
-                                                        <span class="text-[8px] text-gray-500 font-bold">REPS</span>
-                                                    </div>
-                                                    
-                                                    <div class="w-full h-px bg-white/5 my-1"></div>
-                                                    
-                                                    <div class="flex justify-between w-full px-1">
-                                                        <div class="text-[9px] font-bold text-gray-300">${s.peso} <span class="text-[7px] text-gray-600">KG</span></div>
-                                                        <div class="text-[9px] font-bold text-gray-500 italic">${s.descanso || '-'}</div>
-                                                    </div>
-                                                </div>
-                                            `).join('')}
-                                    </div>
+					const diasHTML = (rutina.dias || []).map((d, dIdx) => {
+						const diaId = `ficha-dia-${rIdx}-${dIdx}`;
+						return `
+						<div class="glass-card rounded-2xl border-white/5 overflow-hidden mb-2 transition-all">
+							<!-- Cabecera del Día (Acordeón) -->
+							<button onclick="toggleFichaElement('${diaId}')" class="w-full flex items-center justify-between p-4 bg-white/2 hover:bg-white/5 transition-colors group text-left">
+								<div class="flex items-center gap-3">
+									<div class="w-2 h-2 rounded-full ${esActiva ? 'bg-green-600 shadow-[0_0_8px_#16a34a]' : 'bg-red-600 shadow-[0_0_8px_#dc2626]'}"></div>
+									<span class="text-[11px] font-black italic uppercase tracking-wider text-gray-300 group-hover:text-red-500 transition-colors">${d.nombre_dia}</span>
+								</div>
+								<i data-lucide="chevron-down" class="w-4 h-4 text-gray-600 transition-transform duration-500" id="icon-${diaId}"></i>
+							</button>
+							
+							<!-- Contenido de Ejercicios del Día -->
+							<div id="${diaId}" class="hidden p-4 space-y-4 bg-black/20 border-t border-white/5">
+								${(d.ejercicios || d.ejercicios_list || []).map(ex => {
+									const nombreEjercicio = ex.ejercicio_obj?.nombre || ex.nombre || ex.ejercicio?.nombre || "Ejercicio Sin Nombre";
+									const series = ex.series_detalle || ex.series || [];
+									
+									return `
+										<div class="flex flex-col border-l-2 border-red-600/40 pl-4 py-1.5 hover:bg-white/5 rounded-r-xl transition-all mb-4">
+											<p class="text-[11px] font-black uppercase italic text-white tracking-tight mb-3">${nombreEjercicio}</p>
+											
+											<!-- CAMBIO CLAVE: Cabecera de columnas para las series -->
+											<div class="grid grid-cols-4 gap-2 mb-2 px-2 opacity-50">
+												<span class="text-[8px] font-bold uppercase text-red-600 tracking-wider">Serie</span>
+												<span class="text-[8px] font-bold uppercase text-gray-400 text-center tracking-wider">Reps</span>
+												<span class="text-[8px] font-bold uppercase text-gray-400 text-center tracking-wider">Peso</span>
+												<span class="text-[8px] font-bold uppercase text-gray-400 text-right tracking-wider">Pausa</span>
+											</div>
 
-                                    ${ex.comentario ? `
-                                        <div class="mt-2 bg-black/40 p-2 rounded-lg border border-white/5 flex gap-2">
-                                            <i data-lucide="info" class="w-2.5 h-2.5 text-red-600 mt-0.5 shrink-0"></i>
-                                            <p class="text-[8px] text-gray-400 italic font-medium leading-tight">${ex.comentario}</p>
-                                        </div>
-                                    ` : ''}
-                                </div>
-                            `;
-                        }).join('')}
-                    </div>
-                </div>
-                `;
-            }).join('');
+											<!-- CAMBIO CLAVE: Lista de Series en Filas (Rows) -->
+											<div class="flex flex-col gap-1">
+												${series
+													.sort((a, b) => (a.numero_serie || 0) - (b.numero_serie || 0))
+													.map(s => `
+														<div class="grid grid-cols-4 items-center bg-white/5 px-3 py-2 rounded-lg border border-white/5 hover:border-red-600/30 transition-colors">
+															<!-- Nro Serie -->
+															<span class="text-[9px] font-black text-white uppercase">#${s.numero_serie}</span>
+															
+															<!-- Reps -->
+															<div class="text-center">
+																<span class="text-[11px] font-black text-white">${s.repeticiones}</span>
+															</div>
+															
+															<!-- Peso -->
+															<div class="text-center">
+																<span class="text-[11px] font-black text-white">${s.peso}</span> <span class="text-[8px] text-gray-500">kg</span>
+															</div>
+															
+															<!-- Descanso -->
+															<div class="text-right">
+																<span class="text-[9px] text-gray-400 italic">${s.descanso || '-'}</span>
+															</div>
+														</div>
+													`).join('')}
+											</div>
 
-            return `
-            <div class="col-span-2 mb-4">
-                <div class="bg-white/5 border border-white/10 rounded-[2rem] overflow-hidden shadow-xl">
-                    <button onclick="toggleFichaElement('${objetivoId}')" class="w-full flex items-center justify-between p-6 hover:bg-white/5 transition-all text-left">
-                        <div class="flex items-center gap-4">
-                            <div class="w-1 h-10 bg-red-600 rounded-full"></div>
-                            <div>
-                                <p class="text-[8px] text-gray-500 font-black uppercase tracking-[0.3em] mb-1">Plan de Entrenamiento</p>
-                                <h5 class="text-lg font-black italic uppercase viking-red leading-none">${rutina.objetivo || 'Rutina de Musculación'}</h5>
-                                <p class="text-[9px] text-gray-400 font-bold italic mt-1 flex items-center gap-1">
-                                    <i data-lucide="calendar" class="w-3 h-3"></i> Vence: ${rutina.fecha_vencimiento || 'Indefinido'}
-                                </p>
-                            </div>
-                        </div>
-                        <div class="flex items-center gap-4">
-                            ${statusBadge}
-                            <i data-lucide="chevron-down" class="w-6 h-6 text-red-600 transition-transform duration-500" id="icon-${objetivoId}"></i>
-                        </div>
-                    </button>
-                    <div id="${objetivoId}" class="hidden p-4 bg-black/30 border-t border-white/5">
-                        ${diasHTML}
-                    </div>
-                </div>
-            </div>
-            `;
-        }).join('');
+											${ex.comentario ? `
+												<div class="mt-3 bg-black/40 p-2 rounded-lg border border-white/5 flex gap-2">
+													<i data-lucide="info" class="w-2.5 h-2.5 text-red-600 mt-0.5 shrink-0"></i>
+													<p class="text-[8px] text-gray-400 italic font-medium leading-tight">${ex.comentario}</p>
+												</div>
+											` : ''}
+										</div>
+									`;
+								}).join('')}
+							</div>
+						</div>
+						`;
+					}).join('');
 
-        rutinaContainer.innerHTML = mainHTML;
-    } else {
-        rutinaContainer.innerHTML = `
-            <div class="col-span-2 p-16 border border-dashed border-white/10 rounded-[3rem] text-center bg-white/2">
-                <div class="w-16 h-16 viking-bg-red/10 rounded-full flex items-center justify-center mx-auto mb-6">
-                    <i data-lucide="skull" class="w-8 h-8 opacity-40 text-red-600"></i>
-                </div>
-                <p class="text-[12px] text-gray-600 font-black uppercase italic tracking-[0.2em]">No se ha detectado un plan de batalla activo</p>
-                <p class="text-[10px] text-gray-700 mt-2 font-bold">Asigna una rutina desde el gestor para ver los datos aquí.</p>
-            </div>
-        `;
-    }
+					// Estructura general de la tarjeta de rutina
+					return `
+					<div class="col-span-2 mb-4">
+						<div class="bg-white/5 border border-white/10 rounded-[2rem] overflow-hidden shadow-xl">
+							<button onclick="toggleFichaElement('${objetivoId}')" class="w-full flex items-center justify-between p-6 hover:bg-white/5 transition-all text-left">
+								<div class="flex items-center gap-4">
+									<div class="w-1 h-10 bg-red-600 rounded-full"></div>
+									<div>
+										<p class="text-[8px] text-gray-500 font-black uppercase tracking-[0.3em] mb-1">Plan de Entrenamiento</p>
+										<h5 class="text-lg font-black italic uppercase viking-red leading-none">${rutina.objetivo || 'Rutina de Musculación'}</h5>
+										<p class="text-[9px] text-gray-400 font-bold italic mt-1 flex items-center gap-1">
+											<i data-lucide="calendar" class="w-3 h-3"></i> Vence: ${rutina.fecha_vencimiento || 'Indefinido'}
+										</p>
+									</div>
+								</div>
+								<div class="flex items-center gap-4">
+									${statusBadge}
+									<i data-lucide="chevron-down" class="w-6 h-6 text-red-600 transition-transform duration-500" id="icon-${objetivoId}"></i>
+								</div>
+							</button>
+							<div id="${objetivoId}" class="hidden p-4 bg-black/30 border-t border-white/5">
+								${diasHTML}
+							</div>
+						</div>
+					</div>
+					`;
+				}).join('');
 
-    if (window.lucide) lucide.createIcons();
-    openModal('modal-ficha-tecnica');
-}
+				rutinaContainer.innerHTML = mainHTML;
+			} else {
+				rutinaContainer.innerHTML = `
+					<div class="col-span-2 p-16 border border-dashed border-white/10 rounded-[3rem] text-center bg-white/2">
+						<div class="w-16 h-16 viking-bg-red/10 rounded-full flex items-center justify-center mx-auto mb-6">
+							<i data-lucide="skull" class="w-8 h-8 opacity-40 text-red-600"></i>
+						</div>
+						<p class="text-[12px] text-gray-600 font-black uppercase italic tracking-[0.2em]">No se ha detectado un plan de batalla activo</p>
+						<p class="text-[10px] text-gray-700 mt-2 font-bold">Asigna una rutina desde el gestor para ver los datos aquí.</p>
+					</div>
+				`;
+			}
+
+			if (window.lucide) lucide.createIcons();
+			openModal('modal-ficha-tecnica');
+		}
 
         function toggleFichaElement(id) {
             const content = document.getElementById(id);
