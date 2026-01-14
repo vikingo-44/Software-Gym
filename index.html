@@ -1832,48 +1832,55 @@ async function renderRutinas() {
         }
 
         function addExerciseToDay(dayId, data = null) {
-            const container = document.querySelector(`[data-day-id="${dayId}"] .day-exercises-container`);
-            const div = document.createElement('div');
-            const exerciseUniqueId = 'ex-' + Math.random().toString(36).substr(2, 9);
-            div.className = "exercise-row bg-white/5 p-4 rounded-2xl border border-white/5 mb-4";
-            div.dataset.exerciseRowId = exerciseUniqueId;
+			const container = document.querySelector(`[data-day-id="${dayId}"] .day-exercises-container`);
+			const div = document.createElement('div');
+			const exerciseUniqueId = 'ex-' + Math.random().toString(36).substr(2, 9);
+			div.className = "exercise-row bg-white/5 p-4 rounded-2xl border border-white/5 mb-4";
+			div.dataset.exerciseRowId = exerciseUniqueId;
 
-            let exName = data?.exercise_name || "";
-            if (!exName && data?.ejercicio_id) {
-                const found = state.ejerciciosLibreria.find(e => e.id == data.ejercicio_id);
-                exName = found ? found.nombre : "Ejercicio";
-            }
+			let exName = data?.exercise_name || "";
+			if (!exName && data?.ejercicio_id) {
+				const found = state.ejerciciosLibreria.find(e => e.id == data.ejercicio_id);
+				exName = found ? found.nombre : "Ejercicio";
+			}
 
-            div.innerHTML = `
-                <div class="flex justify-between items-center mb-4">
-                    <div class="flex flex-col text-left">
-                        <input type="hidden" class="exercise-id" value="${data?.ejercicio_id}">
-                        <span class="text-[12px] font-black uppercase italic viking-red">${exName}</span>
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <label class="text-[9px] font-black text-gray-500 uppercase">Series:</label>
-                        <select class="viking-input py-1 w-14 h-8 text-[10px] series-select" 
-                                onchange="updateSeriesCount('${exerciseUniqueId}', this.value)">
-                            ${[1,2,3,4,5,6,7,8,9].map(n => `<option value="${n}" ${data?.series?.length == n ? 'selected' : (n==3 ? 'selected' : '')}>${n}</option>`).join('')}
-                        </select>
-                        <button type="button" onclick="this.closest('.exercise-row').remove()" class="text-gray-600 hover:text-red-600 ml-2">
-                            <i data-lucide="x-circle" class="w-5 h-5"></i>
-                        </button>
-                    </div>
-                </div>
-                <div id="series-container-${exerciseUniqueId}" class="space-y-2 mb-3"></div>
-                <div class="mt-2 text-left">
-                    <input type="text" placeholder="Comentario para este ejercicio..." 
-                        value="${data?.comentario || ''}"
-                        class="viking-input py-2 text-[10px] exercise-comment bg-transparent border-dashed border-white/10 italic">
-                </div>
-            `;
-            container.appendChild(div);
-            
-            const initialNumSeries = (data && data.series) ? data.series.length : 3;
-            generateSeriesRows(exerciseUniqueId, initialNumSeries, data ? data.series : null);
-            if(window.lucide) lucide.createIcons();
-        }
+			// Calculamos el valor inicial (0 por defecto si no hay datos)
+			const initialNumSeries = (data && data.series) ? data.series.length : 0;
+
+			div.innerHTML = `
+				<div class="flex justify-between items-center mb-4">
+					<div class="flex flex-col text-left">
+						<input type="hidden" class="exercise-id" value="${data?.ejercicio_id}">
+						<span class="text-[12px] font-black uppercase italic viking-red">${exName}</span>
+					</div>
+					<div class="flex items-center gap-2">
+						<label class="text-[9px] font-black text-gray-500 uppercase">Series:</label>
+						<!-- FIX VISUAL: Agregamos bg-black y text-white para que se vea el número seleccionado -->
+						<select class="viking-input py-1 w-14 h-8 text-[10px] text-center font-bold bg-black text-white border border-white/20 series-select" 
+								onchange="updateSeriesCount('${exerciseUniqueId}', this.value)">
+							<!-- FIX LOGICO: Agregamos 0 al array y ajustamos el 'selected' para que marque 0 por defecto -->
+							${[0,1,2,3,4,5,6,7,8,9,10].map(n => 
+								`<option value="${n}" class="bg-black text-white" ${n === initialNumSeries ? 'selected' : ''}>${n}</option>`
+							).join('')}
+						</select>
+						<button type="button" onclick="this.closest('.exercise-row').remove()" class="text-gray-600 hover:text-red-600 ml-2">
+							<i data-lucide="x-circle" class="w-5 h-5"></i>
+						</button>
+					</div>
+				</div>
+				<div id="series-container-${exerciseUniqueId}" class="space-y-2 mb-3"></div>
+				<div class="mt-2 text-left">
+					<input type="text" placeholder="Comentario para este ejercicio..." 
+						value="${data?.comentario || ''}"
+						class="viking-input py-2 text-[10px] exercise-comment bg-transparent border-dashed border-white/10 italic w-full">
+				</div>
+			`;
+			container.appendChild(div);
+			
+			// Generar filas (si es 0, no crea nada hasta que cambies el select)
+			generateSeriesRows(exerciseUniqueId, initialNumSeries, data ? data.series : null);
+			if(window.lucide) lucide.createIcons();
+		}
 
         function updateSeriesCount(containerId, newCount) {
             const container = document.getElementById(`series-container-${containerId}`);
