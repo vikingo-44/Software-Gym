@@ -121,7 +121,7 @@ class ClaseUpdate(BaseModel):
     coach: str
     color: Optional[str] = "#FF0000"
     capacidad_max: Optional[int] = 40
-    # Recibimos la lista completa de horarios
+    # Recibimos la lista completa de horarios: [{"dia": 1, "horario": 8.5}, ...]
     horarios_detalle: Optional[List[dict]] = None
 
 # --- ESQUEMA DE MOVIMIENTO ACTUALIZADO ---
@@ -330,7 +330,6 @@ def get_reservas(db: Session = Depends(database.get_db)):
         joinedload(models.Reserva.usuario),
         joinedload(models.Reserva.clase)
     ).all()
-    # Modificamos el retorno para que sea compatible con el nuevo sistema de horarios
     return [{
         "id": r.id,
         "usuario_id": r.usuario_id,
@@ -522,6 +521,7 @@ def get_tipos(db: Session = Depends(database.get_db)):
 
 @app.get("/api/clases", tags=["Clases"])
 def get_clases(db: Session = Depends(database.get_db)):
+    # Usamos models.Clase directamente para evitar conflictos de definición
     return db.query(models.Clase).all()
 
 @app.post("/api/clases", tags=["Clases"])
@@ -546,6 +546,10 @@ def update_clase(id: int, data: ClaseUpdate, db: Session = Depends(database.get_
         c.color = data.color
         c.capacidad_max = data.capacidad_max
         c.horarios_detalle = data.horarios_detalle # Actualiza la lista completa
+        
+        # Notificamos a SQLAlchemy que el objeto JSON ha sido modificado
+        flag_modified(c, "horarios_detalle")
+        
         db.commit()
         return {"status": "success"}
     return {"status": "error", "message": "Clase no encontrada"}
@@ -557,22 +561,20 @@ def move_clase(id: int, data: ClaseMove, db: Session = Depends(database.get_db))
     if not c:
         raise HTTPException(status_code=404, detail="Clase no encontrada")
     
-    # Obtenemos la lista actual de horarios (copia profunda para evitar problemas)
+    # Obtenemos la lista actual de horarios
     horarios = list(c.horarios_detalle) if c.horarios_detalle else []
     
     # Buscamos el slot que coincide con la posición "vieja"
     encontrado = False
     for slot in horarios:
-        # Comparamos dia y horario (asegurando floats para la hora)
-        if slot['dia'] == data.old_dia and float(slot['horario']) == float(data.old_horario):
+        # Comparamos dia y horario
+        if slot.get('dia') == data.old_dia and float(slot.get('horario')) == float(data.old_horario):
             slot['dia'] = data.new_dia
             slot['horario'] = data.new_horario
             encontrado = True
             break
     
     if encontrado:
-        # Notificamos a SQLAlchemy que el objeto JSON ha sido modificado
-        from sqlalchemy.orm.attributes import flag_modified
         c.horarios_detalle = horarios
         flag_modified(c, "horarios_detalle")
         db.commit()

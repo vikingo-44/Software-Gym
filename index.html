@@ -2623,7 +2623,8 @@ async function renderRutinas() {
             openModal('modal-clase'); 
         }
 
-        function openEditClase(id) {
+        // --- 1. FUNCIÓN PARA ABRIR EL MODAL DE EDICIÓN ---
+		function openEditClase(id) {
 			const c = state.clases.find(x => x.id == id); 
 			if(!c) return;
 
@@ -2635,20 +2636,10 @@ async function renderRutinas() {
 			document.getElementById('cl-cupo').value = c.capacidad_max;
 			document.getElementById('cl-color').value = c.color || "#FF0000";
 			
-			// 1. Limpiar todos los checkboxes de días primero
-			const checkboxes = document.querySelectorAll('input[name="cl-dias-check"]');
-			checkboxes.forEach(cb => cb.checked = false);
-
-			// 2. Marcar los días que la clase REALMENTE tiene en su bolsa JSON
+			// Obtenemos los horarios o inicializamos un array vacío
 			const horarios = Array.isArray(c.horarios_detalle) ? c.horarios_detalle : [];
-			
-			horarios.forEach(slot => {
-				const cb = document.querySelector(`input[name="cl-dias-check"][value="${slot.dia}"]`);
-				if (cb) cb.checked = true;
-			});
 
-			// 3. MANDATORIO: Llamar a renderScheduleInputs pasándole los horarios existentes
-			// Esto es lo que hace que aparezcan los selectores de hora con los valores correctos
+			// Dibujamos la lista de slots de horarios
 			renderScheduleInputs(horarios);
 
 			// Configurar botón eliminar (Solo Admin/Supervisor)
@@ -2662,51 +2653,114 @@ async function renderRutinas() {
 			openModal('modal-clase');
 		}
 
-		// --- 2. FUNCIÓN PARA DIBUJAR LOS SELECTORES DE HORA ---
-		function renderScheduleInputs(existingHorarios = null) {
+		// --- 2. FUNCIÓN PARA DIBUJAR LOS SELECTORES DE HORA (MULTI-SLOT) ---
+		// Ahora permite múltiples horarios incluso para el mismo día
+		function renderScheduleInputs(existingHorarios = []) {
 			const container = document.getElementById('cl-schedule-slots');
 			if (!container) return;
 
-			const checkboxes = Array.from(document.querySelectorAll('input[name="cl-dias-check"]:checked'));
-			const diasMap = {1: 'Lunes', 2: 'Martes', 3: 'Miércoles', 4: 'Jueves', 5: 'Viernes', 6: 'Sábado'};
+			container.innerHTML = "";
+			
+			// Si no hay horarios, mostramos un aviso
+			if (existingHorarios.length === 0) {
+				container.innerHTML = '<p class="text-[9px] text-gray-600 italic py-2 text-center">No hay horarios definidos</p>';
+			}
 
-			if (checkboxes.length === 0) {
-				container.innerHTML = '<p class="text-[9px] text-gray-600 italic py-4 text-center">Selecciona días arriba para asignar horarios</p>';
+			existingHorarios.forEach((slot, index) => {
+				const row = createScheduleRow(slot, index);
+				container.appendChild(row);
+			});
+
+			// Botón para añadir un nuevo horario
+			const addBtn = document.createElement('button');
+			addBtn.type = "button";
+			addBtn.className = "w-full py-2 mt-2 border border-dashed border-red-600/30 rounded-xl text-[9px] font-black uppercase text-red-500 hover:bg-red-600/5 transition-colors flex items-center justify-center gap-2";
+			addBtn.innerHTML = `<i data-lucide="plus" class="w-3 h-3"></i> Añadir Horario`;
+			addBtn.onclick = () => {
+				const newSlot = { dia: 1, horario: 7 };
+				const row = createScheduleRow(newSlot, document.querySelectorAll('.schedule-slot-row').length);
+				if (existingHorarios.length === 0) container.innerHTML = "";
+				container.appendChild(row);
+				if(window.lucide) lucide.createIcons();
+			};
+			container.appendChild(addBtn);
+			
+			if(window.lucide) lucide.createIcons();
+		}
+
+		// Función auxiliar para crear una fila de horario
+		function createScheduleRow(slot, index) {
+			const diasMap = {1: 'Lunes', 2: 'Martes', 3: 'Miércoles', 4: 'Jueves', 5: 'Viernes', 6: 'Sábado'};
+			const row = document.createElement('div');
+			row.className = "schedule-slot-row flex items-center gap-2 bg-white/5 p-2 rounded-xl border border-white/5 mb-2";
+			
+			// Selector de Día
+			let diasOptions = "";
+			for(let d=1; d<=6; d++) {
+				diasOptions += `<option value="${d}" ${slot.dia == d ? 'selected' : ''}>${diasMap[d]}</option>`;
+			}
+
+			// Selector de Hora
+			let horasOptions = "";
+			for(let i=7; i<=21.5; i+=0.5) {
+				const label = i % 1 === 0 ? `${i}:00` : `${Math.floor(i)}:30`;
+				horasOptions += `<option value="${i}" ${slot.horario == i ? 'selected' : ''}>${label} HS</option>`;
+			}
+
+			row.innerHTML = `
+				<select class="viking-input py-1 h-8 text-[10px] flex-1 slot-dia">
+					${diasOptions}
+				</select>
+				<select class="viking-input py-1 h-8 text-[10px] flex-1 slot-hora">
+					${horasOptions}
+				</select>
+				<button type="button" onclick="this.closest('.schedule-slot-row').remove()" class="text-gray-500 hover:text-red-500 p-1">
+					<i data-lucide="x" class="w-4 h-4"></i>
+				</button>
+			`;
+			return row;
+		}
+
+		// --- 3. PROCESAMIENTO DEL FORMULARIO (GUARDADO) ---
+		// Debes asegurarte de que tu evento 'onsubmit' del formulario llame a esta lógica
+		async function saveClaseVikinga(e) {
+			if(e) e.preventDefault();
+			
+			const id = document.getElementById('cl-id').value;
+			const slots = document.querySelectorAll('.schedule-slot-row');
+			
+			const horarios_detalle = [];
+			slots.forEach(row => {
+				horarios_detalle.push({
+					dia: parseInt(row.querySelector('.slot-dia').value),
+					horario: parseFloat(row.querySelector('.slot-hora').value)
+				});
+			});
+
+			if(horarios_detalle.length === 0) {
+				showVikingToast("Debes añadir al menos un horario", true);
 				return;
 			}
 
-			container.innerHTML = "";
-			checkboxes.forEach(cb => {
-				const dia = parseInt(cb.value);
-				const diaNombre = diasMap[dia];
-				
-				// Buscamos si este día tiene una hora asignada en los datos existentes
-				let horaPrevia = 7; // Por defecto 7:00 AM
-				if (Array.isArray(existingHorarios)) {
-					const hFound = existingHorarios.find(h => parseInt(h.dia) === dia);
-					if (hFound) horaPrevia = parseFloat(hFound.horario);
-				}
+			const payload = {
+				nombre: document.getElementById('cl-nombre').value,
+				coach: document.getElementById('cl-coach-select').value,
+				color: document.getElementById('cl-color').value,
+				capacidad_max: parseInt(document.getElementById('cl-cupo').value),
+				horarios_detalle: horarios_detalle
+			};
 
-				const row = document.createElement('div');
-				row.className = "flex items-center justify-between bg-white/5 p-2 rounded-xl border border-white/5 mb-2";
-				
-				let optionsHtml = "";
-				for(let i=7; i<=21.5; i+=0.5) {
-					const label = i % 1 === 0 ? `${i}:00` : `${Math.floor(i)}:30`;
-					optionsHtml += `<option value="${i}" ${horaPrevia === i ? 'selected' : ''}>${label} HS</option>`;
-				}
+			const method = id ? 'PUT' : 'POST';
+			const endpoint = id ? `/clases/${id}` : '/clases';
 
-				row.innerHTML = `
-					<div class="flex items-center gap-2">
-						<div class="w-2 h-2 rounded-full bg-red-600"></div>
-						<span class="text-[10px] font-black uppercase italic text-white">${diaNombre}</span>
-					</div>
-					<select class="viking-input py-1 h-8 text-[10px] w-28 schedule-select-day" data-dia="${dia}">
-						${optionsHtml}
-					</select>
-				`;
-				container.appendChild(row);
-			});
+			const res = await apiFetch(endpoint, method, payload);
+			if(!res.error) {
+				closeModal('modal-clase');
+				await loadClases();
+				showVikingToast(id ? "Clase Actualizada" : "Clase Creada");
+			} else {
+				showVikingToast("Error: " + res.error, true);
+			}
 		}
 
         function renderScheduleInputs(defaultVal = 7) {
@@ -3018,6 +3072,8 @@ async function renderRutinas() {
                 showVikingToast("Error al crear: " + res.error, true);
             }
         };
+		
+		document.getElementById('form-clase').onsubmit = saveClaseVikinga;
 
         window.onclick = function(event) {
             if (event.target.classList.contains('search-exercise-input')) return;
