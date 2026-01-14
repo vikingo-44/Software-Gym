@@ -76,6 +76,11 @@ class Reserva(Base):
     clase_id = Column(Integer, ForeignKey("clases.id"))
     fecha_reserva = Column(Date, default=datetime.date.today)
     
+    # --- CAMPOS NUEVOS PARA DIFERENCIAR TURNOS ---
+    horario = Column(Float)      # Ejemplo: 18.5 para 18:30
+    dia_semana = Column(Integer) # 1 para Lunes, 2 Martes, etc.
+    # ---------------------------------------------
+
     usuario = relationship("Usuario", back_populates="reservas")
     clase = relationship("Clase", back_populates="reservas")
 

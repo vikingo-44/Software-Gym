@@ -138,9 +138,12 @@ class MovimientoCajaCreate(BaseModel):
     monto: float
     descripcion: str
 
+# CORRECCIÓN: Agregados campos de turno para coincidir con la tabla Reservas
 class ReservaCreate(BaseModel):
     usuario_id: int
     clase_id: int
+    horario: float
+    dia_semana: int
 
 # --- SCHEMAS MUSCULACIÓN ---
 
@@ -324,7 +327,7 @@ def delete_alumno(id: int, db: Session = Depends(database.get_db)):
     return {"status": "success"}
 
 # ==========================================
-# MÓDULO 3: RESERVAS (LOGICA DE CRÉDITOS APLICADA)
+# MÓDULO 3: RESERVAS (LOGICA DE CRÉDITOS Y TURNOS)
 # ==========================================
 
 @app.get("/api/reservas", tags=["Reservas"])
@@ -338,6 +341,8 @@ def get_reservas(db: Session = Depends(database.get_db)):
         "usuario_id": r.usuario_id,
         "clase_id": r.clase_id,
         "fecha_clase": r.fecha_reserva.isoformat() if r.fecha_reserva else None,
+        "horario": r.horario,      # Agregado
+        "dia_semana": r.dia_semana, # Agregado
         "alumno_dni": r.usuario.dni if r.usuario else "N/A",
         "clase_nombre": r.clase.nombre if r.clase else "Eliminada"
     } for r in res]
@@ -353,12 +358,10 @@ def book_clase(data: ReservaCreate, db: Session = Depends(database.get_db)):
     # 2. VALIDACIÓN DE LÍMITE MENSUAL (CRÉDITOS)
     if user.plan:
         limite_mensual = user.plan.clases_mensuales
-        # Si el límite es menor a 1000, asumimos que no es ilimitado y chequeamos
         if limite_mensual < 1000:
             mes_actual = date.today().month
             anio_actual = date.today().year
             
-            # Contamos cuántas reservas tiene este usuario en el mes actual
             count_reservas = db.query(models.Reserva).filter(
                 models.Reserva.usuario_id == user.id,
                 extract('month', models.Reserva.fecha_reserva) == mes_actual,
@@ -371,32 +374,39 @@ def book_clase(data: ReservaCreate, db: Session = Depends(database.get_db)):
                     detail=f"Has alcanzado tu límite de {limite_mensual} clases mensuales. ¡Actualiza tu plan!"
                 )
 
-    # 3. Validar si ya tiene reserva hoy para esa clase
+    # 3. Validar si ya tiene reserva hoy para esa clase Y ESE TURNO
     exists = db.query(models.Reserva).filter(
         models.Reserva.usuario_id == data.usuario_id,
         models.Reserva.clase_id == data.clase_id,
+        models.Reserva.horario == data.horario,
+        models.Reserva.dia_semana == data.dia_semana,
         models.Reserva.fecha_reserva == date.today()
     ).first()
     
     if exists:
-        raise HTTPException(status_code=400, detail="Ya tienes una reserva para esta clase hoy")
+        raise HTTPException(status_code=400, detail="Ya tienes una reserva para este turno hoy")
     
     clase = db.query(models.Clase).filter(models.Clase.id == data.clase_id).first()
     if not clase:
         raise HTTPException(status_code=404, detail="Clase no encontrada")
         
+    # 4. Validar cupo por TURNO ESPECÍFICO
     cupo_actual = db.query(models.Reserva).filter(
         models.Reserva.clase_id == data.clase_id,
+        models.Reserva.horario == data.horario,
+        models.Reserva.dia_semana == data.dia_semana,
         models.Reserva.fecha_reserva == date.today()
     ).count()
     
     if cupo_actual >= clase.capacidad_max:
-        raise HTTPException(status_code=400, detail="Clase sin cupos disponibles")
+        raise HTTPException(status_code=400, detail="Este horario no tiene cupos disponibles")
 
     new_res = models.Reserva(
         usuario_id=data.usuario_id,
         clase_id=data.clase_id,
-        fecha_reserva=date.today()
+        fecha_reserva=date.today(),
+        horario=data.horario,     # Agregado
+        dia_semana=data.dia_semana # Agregado
     )
     db.add(new_res)
     db.commit()
@@ -556,7 +566,6 @@ def get_tipos(db: Session = Depends(database.get_db)):
 
 @app.get("/api/clases", tags=["Clases"])
 def get_clases(db: Session = Depends(database.get_db)):
-    # Usamos models.Clase directamente para evitar conflictos de definición
     return db.query(models.Clase).all()
 
 @app.post("/api/clases", tags=["Clases"])
@@ -596,13 +605,10 @@ def move_clase(id: int, data: ClaseMove, db: Session = Depends(database.get_db))
     if not c:
         raise HTTPException(status_code=404, detail="Clase no encontrada")
     
-    # Obtenemos la lista actual de horarios
     horarios = list(c.horarios_detalle) if c.horarios_detalle else []
     
-    # Buscamos el slot que coincide con la posición "vieja"
     encontrado = False
     for slot in horarios:
-        # Comparamos dia y horario
         if slot.get('dia') == data.old_dia and float(slot.get('horario')) == float(data.old_horario):
             slot['dia'] = data.new_dia
             slot['horario'] = data.new_horario
@@ -649,7 +655,7 @@ def create_movimiento(data: MovimientoCajaCreate, db: Session = Depends(database
     return {"status": "success"}
 
 # ==========================================
-# MÓDULO 9: MUSCULACIÓN AVANZADA (CORREGIDO)
+# MÓDULO 9: MUSCULACIÓN AVANZADA
 # ==========================================
 
 @app.get("/api/rutinas/grupos-musculares", tags=["Musculación"])
@@ -750,7 +756,7 @@ def get_rutina_activa(id: int, db: Session = Depends(database.get_db)):
         .joinedload(models.EjercicioEnRutina.ejercicio_obj),
         joinedload(models.PlanRutina.dias)
         .joinedload(models.DiaRutina.ejercicios)
-        .joinedload(models.EjercicioEnRutina.series_detalle)
+        .joinedload(models.SerieEjercicio.ejercicio_en_rutina) # Corregido path
     ).first()
     
     if not rutina:
