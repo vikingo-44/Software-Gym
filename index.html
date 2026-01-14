@@ -887,11 +887,10 @@
 			<h3 id="modal-clase-title" class="text-2xl font-black italic uppercase mb-6">Configurar Clase</h3>
 			<form id="form-clase" class="space-y-4">
 				<input type="hidden" id="cl-id">
-				<div class="grid grid-cols-2 gap-4">
+				<div class="w-full">
 					<input type="text" id="cl-nombre" placeholder="Nombre de Clase" class="viking-input" required>
-					<select id="cl-coach-select" class="viking-input" required>
-						<option value="">Seleccionar Coach</option>
-					</select>
+					<!-- El selector de coach global se elimina visualmente porque elegiremos coach por turno -->
+					<input type="hidden" id="cl-coach-select" value="Staff"> 
 				</div>
 				<div class="grid grid-cols-2 gap-4">
 					<input type="number" id="cl-cupo" placeholder="Cupo Máximo" class="viking-input" required>
@@ -2173,10 +2172,17 @@ async function renderRutinas() {
         }
 
         async function handleLogin(e) {
-			e.preventDefault();
+			// 1. Detener el refresco automático
+			if(e && e.preventDefault) e.preventDefault();
+			
+			const dniInput = document.getElementById('login-dni');
+			const passInput = document.getElementById('login-pass');
+			
+			if (!dniInput || !passInput) return; // Seguridad extra
+
 			const data = { 
-				dni: document.getElementById('login-dni').value, 
-				password: document.getElementById('login-pass').value 
+				dni: dniInput.value, 
+				password: passInput.value 
 			};
 			
 			const res = await apiFetch('/login', 'POST', data);
@@ -2184,40 +2190,32 @@ async function renderRutinas() {
 			if (res && !res.error) {
 				state.user = res;
 				
-				// Ocultar Login y mostrar App
+				// 2. Ocultar Login y mostrar App
 				document.getElementById('login-overlay').style.display = 'none';
 				document.getElementById('sidebar').classList.remove('hidden');
 				document.getElementById('main-content').classList.remove('hidden');
 				
-				// Actualizar datos del Sidebar (con verificaciones por si no existen los IDs)
+				// 3. Cargar datos del usuario en sidebar
 				const elName = document.getElementById('side-user-name');
 				if(elName) elName.innerText = res.nombre_completo || "Usuario";
 
 				const elRole = document.getElementById('side-user-role');
 				if(elRole) elRole.innerText = res.rol_nombre || 'Staff';
 
-				const elInitials = document.getElementById('user-initials');
-				if(elInitials) {
-					const initials = res.nombre_completo 
-						? res.nombre_completo.split(' ').filter(n => n).map(n => n[0]).join('').toUpperCase() 
-						: "??";
-					elInitials.innerText = initials.substring(0, 2);
-				}
-
-				// --- CARGA DE DATOS ---
-				await loadProfesores(); // <--- VITAL: Carga los profes para el modal de clases -->
+				// 4. IMPORTANTE: Cargar Profesores para que los selectores funcionen
+				await loadProfesores();
 				
+				// 5. Iniciar resto de la app
 				if (typeof initApp === 'function') {
-					await initApp(); // Tu función de inicialización original
+					await initApp(); 
 				} else {
-					// Fallback por si initApp no existe en esta versión
-					loadClases();
-					loadAlumnos(); 
+					loadClases(); 
 				}
 
 				switchView('dashboard');
 			} else {
-				document.getElementById('login-error').classList.remove('hidden');
+				const errorDiv = document.getElementById('login-error');
+				if(errorDiv) errorDiv.classList.remove('hidden');
 			}
 		}
 
@@ -2562,6 +2560,12 @@ async function renderRutinas() {
 			if(document.getElementById('view-calendario')?.classList.contains('active')) renderCalendar();
 			applyPermissions();
 		}
+		
+		async function loadProfesores() {
+			// Esta función llena la memoria con los profesores para usarlos en el select de turnos
+			const res = await apiFetch('/profesores');
+			state.profesores = (!res.error && Array.isArray(res)) ? res : [];
+		}
 
         function openModalAlumno() { document.getElementById('modal-alumno-title').innerText = "Nuevo Alumno"; document.getElementById('al-id').value = ""; document.getElementById('al-fecha-renovacion').value = new Date().toISOString().split('T')[0]; openModal('modal-alumno'); }
         function openEditAlumno(id) {
@@ -2641,53 +2645,56 @@ async function renderRutinas() {
             openModal('modal-clase'); 
         }
 
-		// --- 1. FUNCIÓN PARA GENERAR FILA DE HORARIO CON PROFESOR ---
+		// --- 1. GENERAR FILA: DÍA + HORA + PROFESOR ---
 		function addNewScheduleSlot(data = { dia: 1, horario: 7, coach: "" }) {
 			const container = document.getElementById('cl-schedule-slots');
 			if (!container) return;
-			
+
 			// Limpiar mensaje de "vacío" si existe
 			if (container.querySelector('p.italic')) container.innerHTML = "";
 
 			const row = document.createElement('div');
-			row.className = "schedule-slot-row flex flex-col gap-2 bg-white/5 p-4 rounded-2xl border border-white/5 mb-3 group transition-all hover:border-red-600/20";
+			// Diseño tipo tarjeta para cada turno
+			row.className = "schedule-slot-row flex flex-col gap-2 bg-white/5 p-3 rounded-xl border border-white/5 mb-3 group hover:border-red-600/30 transition-all";
 			
 			const diasMap = {1: 'Lunes', 2: 'Martes', 3: 'Miércoles', 4: 'Jueves', 5: 'Viernes', 6: 'Sábado'};
 			
-			// Generar Días
+			// 1. Selector de Días
 			let diasOptions = "";
 			for(let d=1; d<=6; d++) {
 				diasOptions += `<option value="${d}" ${data.dia == d ? 'selected' : ''}>${diasMap[d]}</option>`;
 			}
 
-			// Generar Horas
+			// 2. Selector de Horas
 			let horasOptions = "";
 			for(let i=7; i<=21.5; i+=0.5) {
 				const label = i % 1 === 0 ? `${i}:00` : `${Math.floor(i)}:30`;
 				horasOptions += `<option value="${i}" ${data.horario == i ? 'selected' : ''}>${label} HS</option>`;
 			}
 
-			// Generar Profesores (Usando los datos reales cargados)
-			let coachOptions = `<option value="">Seleccionar Profesor...</option>`;
+			// 3. Selector de Profesores (Usando state.profesores cargado previamente)
+			let coachOptions = `<option value="">Asignar Profesor...</option>`;
 			if (state.profesores && state.profesores.length > 0) {
 				coachOptions += state.profesores.map(p => 
 					`<option value="${p.nombre_completo}" ${data.coach === p.nombre_completo ? 'selected' : ''}>${p.nombre_completo}</option>`
 				).join('');
+			} else {
+				coachOptions += `<option value="Staff">Staff General</option>`;
 			}
 
 			row.innerHTML = `
-				<div class="flex items-center justify-between mb-1">
-					<span class="text-[9px] font-black text-red-600 uppercase italic tracking-widest">Turno & Profesor</span>
-					<button type="button" onclick="this.closest('.schedule-slot-row').remove()" class="text-gray-500 hover:text-red-500 transition-all p-1">
+				<div class="flex items-center justify-between">
+					<span class="text-[9px] font-black text-red-600 uppercase italic tracking-widest">Turno</span>
+					<button type="button" onclick="this.closest('.schedule-slot-row').remove()" class="text-gray-500 hover:text-red-500 transition-all">
 						<i data-lucide="x" class="w-4 h-4"></i>
 					</button>
 				</div>
 				<div class="grid grid-cols-2 gap-2">
-					<select class="viking-input py-1 h-10 text-[10px] slot-dia">${diasOptions}</select>
-					<select class="viking-input py-1 h-10 text-[10px] slot-hora">${horasOptions}</select>
+					<select class="viking-input py-1 h-9 text-[10px] slot-dia bg-black/40 border-white/10">${diasOptions}</select>
+					<select class="viking-input py-1 h-9 text-[10px] slot-hora bg-black/40 border-white/10">${horasOptions}</select>
 				</div>
 				<div class="w-full">
-					<select class="viking-input py-1 h-10 text-[10px] w-full slot-coach bg-black/50 border-red-900/30 text-red-100">
+					<select class="viking-input py-1 h-9 text-[10px] w-full slot-coach bg-black/40 border-white/10 text-gray-300">
 						${coachOptions}
 					</select>
 				</div>
@@ -2707,6 +2714,7 @@ async function renderRutinas() {
     if(window.lucide) lucide.createIcons();
 }
 
+		// --- ABRIR EDICIÓN (Cargar slots con sus profes) ---
 		function openEditClase(id) {
 			const c = state.clases.find(x => x.id == id); 
 			if(!c) return;
@@ -2717,10 +2725,7 @@ async function renderRutinas() {
 			document.getElementById('cl-cupo').value = c.capacidad_max;
 			document.getElementById('cl-color').value = c.color || "#FF0000";
 			
-			// Ocultar selector global de coach si existe (ya no se usa)
-			const globalCoach = document.getElementById('cl-coach-select');
-			if(globalCoach) globalCoach.closest('div').style.display = 'none';
-
+			// Limpiar y cargar horarios
 			const slotsContainer = document.getElementById('cl-schedule-slots');
 			slotsContainer.innerHTML = "";
 
@@ -2729,74 +2734,69 @@ async function renderRutinas() {
 			if (horarios.length > 0) {
 				horarios.forEach(h => addNewScheduleSlot(h));
 			} else {
-				// Cargar datos viejos como primer slot si no hay JSON
+				// Compatibilidad: si es clase vieja, usamos el coach general
 				addNewScheduleSlot({ dia: 1, horario: 7, coach: c.coach || "" });
 			}
-			
-			// Botón eliminar
+
+			// Mostrar botón eliminar solo a admin
+			const isAdmin = (state.user?.rol_nombre === "Administrador" || state.user?.rol_nombre === "Supervisor");
 			const delBtn = document.getElementById('btn-delete-clase'); 
-			if(delBtn) delBtn.classList.remove('hidden');
-			// Configurar evento de eliminar
-			delBtn.onclick = () => {
-				 if(confirm('¿Eliminar clase permanentemente?')) {
-					 apiFetch(`/clases/${c.id}`, 'DELETE').then(() => {
-						 closeModal('modal-clase');
-						 loadClases();
-						 showVikingToast("Clase eliminada");
-					 });
-				 }
-			};
+			if(delBtn) {
+				delBtn.classList.toggle('hidden', !isAdmin);
+				delBtn.onclick = () => deleteRecord('clases', c.id, 'modal-clase', loadClases);
+			}
 
 			openModal('modal-clase');
 		}
 
-// --- 3. FUNCIÓN PARA PREPARAR EL MODAL AL CREAR NUEVA ---
-function openNewClase() {
-    document.getElementById('form-clase').reset();
-    document.getElementById('cl-id').value = "";
-    document.getElementById('cl-schedule-slots').innerHTML = "";
-    document.getElementById('modal-clase-title').innerText = "Nueva Clase Vikinga";
-    
-    // Añadimos el primer slot vacío
-    addNewScheduleSlot();
-    openModal('modal-clase');
-}
-
-		// --- NUEVA FUNCIÓN PARA CARGAR PROFESORES REALES ---
-		async function loadProfesores() {
-			const res = await apiFetch('/profesores');
-			if (!res.error) {
-				state.profesores = res; // Guardamos en el estado global
-			}
+		// --- 3. FUNCIÓN PARA PREPARAR EL MODAL AL CREAR NUEVA ---
+		function openNewClase() {
+			document.getElementById('form-clase').reset();
+			document.getElementById('cl-id').value = "";
+			document.getElementById('cl-schedule-slots').innerHTML = "";
+			document.getElementById('modal-clase-title').innerText = "Nueva Clase Vikinga";
+			
+			// Añadimos el primer slot vacío
+			addNewScheduleSlot();
+			openModal('modal-clase');
 		}
 
-		// --- FUNCIÓN DE GUARDADO CON COACH POR TURNO ---
+// --- NUEVA FUNCIÓN PARA CARGAR PROFESORES REALES ---
+async function loadProfesores() {
+    const res = await apiFetch('/profesores');
+    if (!res.error) {
+        state.profesores = res; // Guardamos en el estado global
+    }
+}
+
+		// --- GUARDAR CLASE CON MÚLTIPLES PROFESORES ---
 		async function saveClaseVikinga(e) {
 			if(e) e.preventDefault();
 			
 			const id = document.getElementById('cl-id').value;
 			const slotRows = document.querySelectorAll('.schedule-slot-row');
 			
+			// Recolectar datos de cada tarjeta de turno
 			const horarios_detalle = [];
 			slotRows.forEach(row => {
 				const diaEl = row.querySelector('.slot-dia');
 				const horaEl = row.querySelector('.slot-hora');
-				const coachEl = row.querySelector('.slot-coach'); // <--- NUEVO CAMPO -->
+				const coachEl = row.querySelector('.slot-coach'); // Nuevo campo
 				
-				if(diaEl && horaEl && coachEl) {
+				if(diaEl && horaEl) {
 					horarios_detalle.push({
 						dia: parseInt(diaEl.value),
 						horario: parseFloat(horaEl.value),
-						coach: coachEl.value // Guardamos el profesor específico
+						coach: coachEl ? coachEl.value : "Staff" // Guardamos el profe específico
 					});
 				}
 			});
 
 			if(horarios_detalle.length === 0) {
-				return showVikingToast("Añade al menos un horario y profesor", true);
+				return showVikingToast("Añade al menos un horario", true);
 			}
 
-			// Tomamos el primer coach como "principal" para compatibilidad
+			// Usamos el coach del primer turno como "coach principal" para compatibilidad en tablas viejas
 			const mainCoach = horarios_detalle[0].coach || "Staff";
 
 			const payload = {
@@ -3106,7 +3106,7 @@ function openNewClase() {
 				
 				if (window.lucide) lucide.createIcons();
 			}
-
+			
 			// Función para simular ingresos (puedes conectarla luego a tu backend o QR)
 			function simularAcceso() {
 				const nombres = ["Ragnar Lothbrok", "Lagertha", "Bjorn Ironside", "Ivar the Boneless", "Ubbe"];
