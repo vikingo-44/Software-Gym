@@ -2173,22 +2173,53 @@ async function renderRutinas() {
         }
 
         async function handleLogin(e) {
-            e.preventDefault();
-            const data = { dni: document.getElementById('login-dni').value, password: document.getElementById('login-pass').value };
-            const res = await apiFetch('/login', 'POST', data);
-            if (res && !res.error) {
-                state.user = res;
-                document.getElementById('login-overlay').style.display = 'none';
-                document.getElementById('sidebar').classList.remove('hidden');
-                document.getElementById('main-content').classList.remove('hidden');
-                document.getElementById('side-user-name').innerText = res.nombre_completo || "Usuario";
-                document.getElementById('side-user-role').innerText = res.rol_nombre || 'Staff';
-                const initials = res.nombre_completo ? res.nombre_completo.split(' ').filter(n => n).map(n => n[0]).join('').toUpperCase() : "??";
-                document.getElementById('user-initials').innerText = initials;
-                await initApp();
-                switchView('dashboard');
-            } else document.getElementById('login-error').classList.remove('hidden');
-        }
+			e.preventDefault();
+			const data = { 
+				dni: document.getElementById('login-dni').value, 
+				password: document.getElementById('login-pass').value 
+			};
+			
+			const res = await apiFetch('/login', 'POST', data);
+			
+			if (res && !res.error) {
+				state.user = res;
+				
+				// Ocultar Login y mostrar App
+				document.getElementById('login-overlay').style.display = 'none';
+				document.getElementById('sidebar').classList.remove('hidden');
+				document.getElementById('main-content').classList.remove('hidden');
+				
+				// Actualizar datos del Sidebar (con verificaciones por si no existen los IDs)
+				const elName = document.getElementById('side-user-name');
+				if(elName) elName.innerText = res.nombre_completo || "Usuario";
+
+				const elRole = document.getElementById('side-user-role');
+				if(elRole) elRole.innerText = res.rol_nombre || 'Staff';
+
+				const elInitials = document.getElementById('user-initials');
+				if(elInitials) {
+					const initials = res.nombre_completo 
+						? res.nombre_completo.split(' ').filter(n => n).map(n => n[0]).join('').toUpperCase() 
+						: "??";
+					elInitials.innerText = initials.substring(0, 2);
+				}
+
+				// --- CARGA DE DATOS ---
+				await loadProfesores(); // <--- VITAL: Carga los profes para el modal de clases -->
+				
+				if (typeof initApp === 'function') {
+					await initApp(); // Tu función de inicialización original
+				} else {
+					// Fallback por si initApp no existe en esta versión
+					loadClases();
+					loadAlumnos(); 
+				}
+
+				switchView('dashboard');
+			} else {
+				document.getElementById('login-error').classList.remove('hidden');
+			}
+		}
 
         async function initApp() {
             await Promise.all([fetchAlumnos(), loadStaff(), loadPlanes(), loadStock(), loadClases(), fetchReservas(), loadDashboard(), loadMusculacionMetadata()]);
@@ -2610,32 +2641,60 @@ async function renderRutinas() {
             openModal('modal-clase'); 
         }
 
-		// --- 1. FUNCIÓN PARA GENERAR UNA FILA DE HORARIO (Día + Hora) ---
-// Se usa tanto al abrir (editar) como al pulsar el botón "+"
-function addNewScheduleSlot(data = { dia: 1, horario: 7 }) {
-    const container = document.getElementById('cl-schedule-slots');
-    if (!container) return;
+		// --- 1. FUNCIÓN PARA GENERAR FILA DE HORARIO CON PROFESOR ---
+		function addNewScheduleSlot(data = { dia: 1, horario: 7, coach: "" }) {
+			const container = document.getElementById('cl-schedule-slots');
+			if (!container) return;
+			
+			// Limpiar mensaje de "vacío" si existe
+			if (container.querySelector('p.italic')) container.innerHTML = "";
 
-    // Si hay un mensaje de "No hay horarios", lo limpiamos antes de añadir
-    if (container.querySelector('p.italic')) container.innerHTML = "";
+			const row = document.createElement('div');
+			row.className = "schedule-slot-row flex flex-col gap-2 bg-white/5 p-4 rounded-2xl border border-white/5 mb-3 group transition-all hover:border-red-600/20";
+			
+			const diasMap = {1: 'Lunes', 2: 'Martes', 3: 'Miércoles', 4: 'Jueves', 5: 'Viernes', 6: 'Sábado'};
+			
+			// Generar Días
+			let diasOptions = "";
+			for(let d=1; d<=6; d++) {
+				diasOptions += `<option value="${d}" ${data.dia == d ? 'selected' : ''}>${diasMap[d]}</option>`;
+			}
 
-    const row = document.createElement('div');
-    row.className = "schedule-slot-row flex items-center gap-2 bg-white/5 p-2 rounded-xl border border-white/5 mb-2";
-    
-    const diasMap = {1: 'Lunes', 2: 'Martes', 3: 'Miércoles', 4: 'Jueves', 5: 'Viernes', 6: 'Sábado'};
-    
-    // Generar opciones de Días
-    let diasOptions = "";
-    for(let d=1; d<=6; d++) {
-        diasOptions += `<option value="${d}" ${data.dia == d ? 'selected' : ''}>${diasMap[d]}</option>`;
-    }
+			// Generar Horas
+			let horasOptions = "";
+			for(let i=7; i<=21.5; i+=0.5) {
+				const label = i % 1 === 0 ? `${i}:00` : `${Math.floor(i)}:30`;
+				horasOptions += `<option value="${i}" ${data.horario == i ? 'selected' : ''}>${label} HS</option>`;
+			}
 
-    // Generar opciones de Horas
-    let horasOptions = "";
-    for(let i=7; i<=21.5; i+=0.5) {
-        const label = i % 1 === 0 ? `${i}:00` : `${Math.floor(i)}:30`;
-        horasOptions += `<option value="${i}" ${data.horario == i ? 'selected' : ''}>${label} HS</option>`;
-    }
+			// Generar Profesores (Usando los datos reales cargados)
+			let coachOptions = `<option value="">Seleccionar Profesor...</option>`;
+			if (state.profesores && state.profesores.length > 0) {
+				coachOptions += state.profesores.map(p => 
+					`<option value="${p.nombre_completo}" ${data.coach === p.nombre_completo ? 'selected' : ''}>${p.nombre_completo}</option>`
+				).join('');
+			}
+
+			row.innerHTML = `
+				<div class="flex items-center justify-between mb-1">
+					<span class="text-[9px] font-black text-red-600 uppercase italic tracking-widest">Turno & Profesor</span>
+					<button type="button" onclick="this.closest('.schedule-slot-row').remove()" class="text-gray-500 hover:text-red-500 transition-all p-1">
+						<i data-lucide="x" class="w-4 h-4"></i>
+					</button>
+				</div>
+				<div class="grid grid-cols-2 gap-2">
+					<select class="viking-input py-1 h-10 text-[10px] slot-dia">${diasOptions}</select>
+					<select class="viking-input py-1 h-10 text-[10px] slot-hora">${horasOptions}</select>
+				</div>
+				<div class="w-full">
+					<select class="viking-input py-1 h-10 text-[10px] w-full slot-coach bg-black/50 border-red-900/30 text-red-100">
+						${coachOptions}
+					</select>
+				</div>
+			`;
+			container.appendChild(row);
+			if(window.lucide) lucide.createIcons();
+		}
 
     row.innerHTML = `
         <select class="viking-input py-1 h-10 text-[10px] flex-1 slot-dia">${diasOptions}</select>
@@ -2648,43 +2707,48 @@ function addNewScheduleSlot(data = { dia: 1, horario: 7 }) {
     if(window.lucide) lucide.createIcons();
 }
 
-// --- 2. FUNCIÓN PARA PREPARAR EL MODAL AL EDITAR ---
-function openEditClase(id) {
-    const c = state.clases.find(x => x.id == id); 
-    if(!c) return;
+		function openEditClase(id) {
+			const c = state.clases.find(x => x.id == id); 
+			if(!c) return;
 
-    // Llenar campos básicos
-    document.getElementById('cl-id').value = c.id; 
-    document.getElementById('modal-clase-title').innerText = "Configuración Vikinga: " + c.nombre;
-    document.getElementById('cl-nombre').value = c.nombre; 
-    document.getElementById('cl-coach-select').value = c.coach; 
-    document.getElementById('cl-cupo').value = c.capacidad_max;
-    document.getElementById('cl-color').value = c.color || "#FF0000";
-    
-    // Limpiar contenedor de horarios
-    const slotsContainer = document.getElementById('cl-schedule-slots');
-    slotsContainer.innerHTML = "";
+			document.getElementById('cl-id').value = c.id; 
+			document.getElementById('modal-clase-title').innerText = "Editar: " + c.nombre;
+			document.getElementById('cl-nombre').value = c.nombre; 
+			document.getElementById('cl-cupo').value = c.capacidad_max;
+			document.getElementById('cl-color').value = c.color || "#FF0000";
+			
+			// Ocultar selector global de coach si existe (ya no se usa)
+			const globalCoach = document.getElementById('cl-coach-select');
+			if(globalCoach) globalCoach.closest('div').style.display = 'none';
 
-    // Cargar horarios desde la bolsa JSON
-    const horarios = Array.isArray(c.horarios_detalle) ? c.horarios_detalle : [];
-    
-    if (horarios.length > 0) {
-        horarios.forEach(h => addNewScheduleSlot(h));
-    } else {
-        // Si es una clase vieja sin JSON, ponemos un slot vacío por defecto
-        addNewScheduleSlot();
-    }
+			const slotsContainer = document.getElementById('cl-schedule-slots');
+			slotsContainer.innerHTML = "";
 
-    // Configurar botón eliminar (Solo Admin/Supervisor)
-    const isAdmin = (state.user?.rol_nombre === "Administrador" || state.user?.rol_nombre === "Supervisor");
-    const delBtn = document.getElementById('btn-delete-clase'); 
-    if(delBtn) {
-        delBtn.classList.toggle('hidden', !isAdmin);
-        delBtn.onclick = () => deleteRecord('clases', c.id, 'modal-clase', loadClases);
-    }
+			const horarios = Array.isArray(c.horarios_detalle) ? c.horarios_detalle : [];
+			
+			if (horarios.length > 0) {
+				horarios.forEach(h => addNewScheduleSlot(h));
+			} else {
+				// Cargar datos viejos como primer slot si no hay JSON
+				addNewScheduleSlot({ dia: 1, horario: 7, coach: c.coach || "" });
+			}
+			
+			// Botón eliminar
+			const delBtn = document.getElementById('btn-delete-clase'); 
+			if(delBtn) delBtn.classList.remove('hidden');
+			// Configurar evento de eliminar
+			delBtn.onclick = () => {
+				 if(confirm('¿Eliminar clase permanentemente?')) {
+					 apiFetch(`/clases/${c.id}`, 'DELETE').then(() => {
+						 closeModal('modal-clase');
+						 loadClases();
+						 showVikingToast("Clase eliminada");
+					 });
+				 }
+			};
 
-    openModal('modal-clase');
-}
+			openModal('modal-clase');
+		}
 
 // --- 3. FUNCIÓN PARA PREPARAR EL MODAL AL CREAR NUEVA ---
 function openNewClase() {
@@ -2698,62 +2762,75 @@ function openNewClase() {
     openModal('modal-clase');
 }
 
-// --- 4. FUNCIÓN DE GUARDADO (Captura todo y envía JSON) ---
-async function saveClaseVikinga(e) {
-    if(e) e.preventDefault();
-    
-    const id = document.getElementById('cl-id').value;
-    const slotRows = document.querySelectorAll('.schedule-slot-row');
-    
-    // Recolectar datos de todas las filas de horarios
-    const horarios_detalle = [];
-    slotRows.forEach(row => {
-        const diaEl = row.querySelector('.slot-dia');
-        const horaEl = row.querySelector('.slot-hora');
-        if(diaEl && horaEl) {
-            horarios_detalle.push({
-                dia: parseInt(diaEl.value),
-                horario: parseFloat(horaEl.value)
-            });
-        }
-    });
+		// --- NUEVA FUNCIÓN PARA CARGAR PROFESORES REALES ---
+		async function loadProfesores() {
+			const res = await apiFetch('/profesores');
+			if (!res.error) {
+				state.profesores = res; // Guardamos en el estado global
+			}
+		}
 
-    if(horarios_detalle.length === 0) {
-        return showVikingToast("Debes añadir al menos un horario para la clase", true);
-    }
+		// --- FUNCIÓN DE GUARDADO CON COACH POR TURNO ---
+		async function saveClaseVikinga(e) {
+			if(e) e.preventDefault();
+			
+			const id = document.getElementById('cl-id').value;
+			const slotRows = document.querySelectorAll('.schedule-slot-row');
+			
+			const horarios_detalle = [];
+			slotRows.forEach(row => {
+				const diaEl = row.querySelector('.slot-dia');
+				const horaEl = row.querySelector('.slot-hora');
+				const coachEl = row.querySelector('.slot-coach'); // <--- NUEVO CAMPO -->
+				
+				if(diaEl && horaEl && coachEl) {
+					horarios_detalle.push({
+						dia: parseInt(diaEl.value),
+						horario: parseFloat(horaEl.value),
+						coach: coachEl.value // Guardamos el profesor específico
+					});
+				}
+			});
 
-    const payload = {
-        nombre: document.getElementById('cl-nombre').value,
-        coach: document.getElementById('cl-coach-select').value,
-        color: document.getElementById('cl-color').value,
-        capacidad_max: parseInt(document.getElementById('cl-cupo').value),
-        horarios_detalle: horarios_detalle
-    };
+			if(horarios_detalle.length === 0) {
+				return showVikingToast("Añade al menos un horario y profesor", true);
+			}
 
-    const method = id ? 'PUT' : 'POST';
-    const endpoint = id ? `/clases/${id}` : '/clases';
-    const res = await apiFetch(endpoint, method, payload);
-    
-    if(!res.error) {
-        showVikingToast(id ? "Clase Actualizada" : "Clase Creada");
-        closeModal('modal-clase');
-        loadClases(); // Refrescar lista
-    } else {
-        showVikingToast("Error al guardar: " + res.error, true);
-    }
-}
+			// Tomamos el primer coach como "principal" para compatibilidad
+			const mainCoach = horarios_detalle[0].coach || "Staff";
 
-// --- 5. VINCULACIÓN DE EVENTOS AL CARGAR LA PÁGINA ---
-window.onload = () => {
-    // Vincular el submit del formulario
-    const formClase = document.getElementById('form-clase');
-    if(formClase) {
-        formClase.onsubmit = saveClaseVikinga;
-    }
-    
-    // Cargar iconos de Lucide
-    if(window.lucide) lucide.createIcons();
-};
+			const payload = {
+				nombre: document.getElementById('cl-nombre').value,
+				coach: mainCoach, 
+				color: document.getElementById('cl-color').value,
+				capacidad_max: parseInt(document.getElementById('cl-cupo').value),
+				horarios_detalle: horarios_detalle
+			};
+
+			const method = id ? 'PUT' : 'POST';
+			const endpoint = id ? `/clases/${id}` : '/clases';
+			const res = await apiFetch(endpoint, method, payload);
+			
+			if(!res.error) {
+				showVikingToast(id ? "Clase Actualizada" : "Clase Creada");
+				closeModal('modal-clase');
+				loadClases();
+			} else {
+				showVikingToast("Error: " + res.error, true);
+			}
+		}
+
+		// --- 5. VINCULACIÓN DE EVENTOS AL CARGAR LA PÁGINA ---
+		window.onload = () => {
+			// Vincular el submit del formulario
+			const formClase = document.getElementById('form-clase');
+			if(formClase) {
+				formClase.onsubmit = saveClaseVikinga;
+			}
+			
+			// Cargar iconos de Lucide
+			if(window.lucide) lucide.createIcons();
+		};
 
         function renderScheduleInputs(defaultVal = 7) {
             const container = document.getElementById('cl-schedule-slots');
