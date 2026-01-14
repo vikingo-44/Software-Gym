@@ -1855,12 +1855,13 @@ async function renderRutinas() {
 					</div>
 					<div class="flex items-center gap-2">
 						<label class="text-[9px] font-black text-gray-500 uppercase">Series:</label>
-						<!-- FIX VISUAL: Agregamos bg-black y text-white para que se vea el número seleccionado -->
-						<select class="viking-input py-1 w-14 h-8 text-[10px] text-center font-bold bg-black text-white border border-white/20 series-select" 
+						<!-- FIX VISUAL IMPORTANTE: 
+							 Agregamos !p-0 y !pl-2 para anular el padding grande de 'viking-input' que ocultaba el número.
+							 Usamos bg-[#1a1a1a] para asegurar contraste. -->
+						<select class="viking-input !py-0 !px-1 w-14 h-8 text-[11px] text-center font-black bg-[#1a1a1a] text-white border border-white/20 series-select cursor-pointer focus:border-red-600" 
 								onchange="updateSeriesCount('${exerciseUniqueId}', this.value)">
-							<!-- FIX LOGICO: Agregamos 0 al array y ajustamos el 'selected' para que marque 0 por defecto -->
 							${[0,1,2,3,4,5,6,7,8,9,10].map(n => 
-								`<option value="${n}" class="bg-black text-white" ${n === initialNumSeries ? 'selected' : ''}>${n}</option>`
+								`<option value="${n}" class="bg-black text-white font-bold" ${n === initialNumSeries ? 'selected' : ''}>${n}</option>`
 							).join('')}
 						</select>
 						<button type="button" onclick="this.closest('.exercise-row').remove()" class="text-gray-600 hover:text-red-600 ml-2">
