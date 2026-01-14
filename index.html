@@ -882,56 +882,43 @@
     </div>
 
     <!-- MODAL CLASE -->
-    <div id="modal-clase" class="viking-modal">
-        <div class="glass-card p-10 rounded-[3rem] w-full max-w-lg text-left">
-            <h3 class="text-2xl font-black uppercase italic mb-6" id="modal-clase-title">Configurar Clase</h3>
-            <form id="form-clase" class="space-y-4">
-                <input type="hidden" id="cl-id">
-                <div class="grid grid-cols-2 gap-4">
-                    <input type="text" id="cl-nombre" placeholder="Nombre de la Clase" required class="viking-input">
-                    <select id="cl-coach-select" required class="viking-input">
-                        <option value="">Seleccionar Profesor</option>
-                    </select>
-                </div>
-                
-                <div class="space-y-2">
-                    <label class="text-[10px] font-black uppercase text-gray-500 italic">Días de la Clase</label>
-                    <div class="multi-select-container" id="cl-dias-container">
-                        <label class="multi-option"><input type="checkbox" name="cl-dias-check" value="1" onchange="renderScheduleInputs()"><span>Lunes</span></label>
-                        <label class="multi-option"><input type="checkbox" name="cl-dias-check" value="2" onchange="renderScheduleInputs()"><span>Martes</span></label>
-                        <label class="multi-option"><input type="checkbox" name="cl-dias-check" value="3" onchange="renderScheduleInputs()"><span>Miércoles</span></label>
-                        <label class="multi-option"><input type="checkbox" name="cl-dias-check" value="4" onchange="renderScheduleInputs()"><span>Jueves</span></label>
-                        <label class="multi-option"><input type="checkbox" name="cl-dias-check" value="5" onchange="renderScheduleInputs()"><span>Viernes</span></label>
-                        <label class="multi-option"><input type="checkbox" name="cl-dias-check" value="6" onchange="renderScheduleInputs()"><span>Sábado</span></label>
-                    </div>
-                </div>
+	<div id="modal-clase" class="viking-modal">
+		<div class="glass-card p-10 rounded-[3rem] w-full max-w-lg border-red-600/30">
+			<h3 id="modal-clase-title" class="text-2xl font-black italic uppercase mb-6">Configurar Clase</h3>
+			<form id="form-clase" class="space-y-4">
+				<input type="hidden" id="cl-id">
+				<div class="grid grid-cols-2 gap-4">
+					<input type="text" id="cl-nombre" placeholder="Nombre de Clase" class="viking-input" required>
+					<select id="cl-coach-select" class="viking-input" required>
+						<option value="">Seleccionar Coach</option>
+					</select>
+				</div>
+				<div class="grid grid-cols-2 gap-4">
+					<input type="number" id="cl-cupo" placeholder="Cupo Máximo" class="viking-input" required>
+					<input type="color" id="cl-color" value="#FF0000" class="viking-input h-[52px] cursor-pointer p-1">
+				</div>
 
-                <div id="cl-schedule-container" class="space-y-2">
-                    <label class="text-[10px] font-black uppercase text-red-600 italic">Horarios por Día</label>
-                    <div id="cl-schedule-slots">
-                        <p class="text-[9px] text-gray-600 italic">Selecciona días arriba para asignar horarios</p>
-                    </div>
-                </div>
+				<div class="mt-6">
+					<div class="flex items-center justify-between mb-2">
+						<p class="text-[10px] font-black text-gray-500 uppercase tracking-widest italic">Días y Horarios</p>
+						<!-- ESTE BOTÓN ES NUEVO: Permite añadir tantos horarios como quieras -->
+						<button type="button" onclick="addNewScheduleSlot()" class="text-[9px] font-black text-red-500 uppercase border border-red-500/30 px-3 py-1 rounded-full hover:bg-red-500 hover:text-black transition-all">
+							+ Añadir Turno
+						</button>
+					</div>
+					<div id="cl-schedule-slots" class="max-h-56 overflow-y-auto custom-scrollbar space-y-2 pr-2 border-t border-white/5 pt-4">
+						<!-- Aquí se inyectarán las filas de horarios -->
+					</div>
+				</div>
 
-                <div class="grid grid-cols-2 gap-4">
-                    <div class="space-y-1">
-                        <label class="text-[9px] font-black text-gray-500 uppercase italic">Cupo Máximo</label>
-                        <input type="number" id="cl-cupo" placeholder="Cupo" class="viking-input" value="40">
-                    </div>
-                    <div class="space-y-1">
-                        <label class="text-[9px] font-black text-gray-500 uppercase italic">Color</label>
-                        <input type="color" id="cl-color" class="viking-input h-14 p-2 cursor-pointer" value="#FF0000">
-                    </div>
-                </div>
-
-                <div class="flex gap-4 pt-4">
-                    <button type="button" onclick="closeModal('modal-clase')" class="flex-1 py-4 bg-white/5 rounded-2xl font-black uppercase italic text-[11px]">Cancelar</button>
-                    <button type="button" id="btn-delete-clase" class="hidden py-4 px-4 bg-red-900/40 rounded-2xl font-black uppercase italic text-[11px] text-red-500">Eliminar</button>
-                    <button type="submit" id="btn-save-clase-modal" class="flex-1 py-4 viking-bg-red text-black rounded-2xl font-black uppercase italic text-[11px]">Guardar Clase</button>
-                </div>
-            </form>
-        </div>
-    </div>
+				<div class="flex gap-4 pt-6">
+					<button type="button" onclick="closeModal('modal-clase')" class="flex-1 py-4 border border-white/10 rounded-2xl font-black uppercase italic text-[11px] hover:bg-white/5 transition-all">Cancelar</button>
+					<button type="submit" class="flex-1 py-4 viking-bg-red text-black rounded-2xl font-black uppercase italic text-[11px] shadow-lg">Guardar Configuración</button>
+				</div>
+				<button type="button" id="btn-delete-clase" class="w-full text-[10px] text-red-600 font-bold uppercase mt-4 hidden">Eliminar Clase Permanentemente</button>
+			</form>
+		</div>
+	</div>
 
     <!-- Otros Modales -->
     <!-- MODAL: FICHA TÉCNICA -->
@@ -2623,145 +2610,150 @@ async function renderRutinas() {
             openModal('modal-clase'); 
         }
 
-        // --- 1. FUNCIÓN PARA ABRIR EL MODAL DE EDICIÓN ---
-		function openEditClase(id) {
-			const c = state.clases.find(x => x.id == id); 
-			if(!c) return;
+		// --- 1. FUNCIÓN PARA GENERAR UNA FILA DE HORARIO (Día + Hora) ---
+// Se usa tanto al abrir (editar) como al pulsar el botón "+"
+function addNewScheduleSlot(data = { dia: 1, horario: 7 }) {
+    const container = document.getElementById('cl-schedule-slots');
+    if (!container) return;
 
-			// Llenar campos básicos
-			document.getElementById('cl-id').value = c.id; 
-			document.getElementById('modal-clase-title').innerText = "Configuración Vikinga: " + c.nombre;
-			document.getElementById('cl-nombre').value = c.nombre; 
-			document.getElementById('cl-coach-select').value = c.coach; 
-			document.getElementById('cl-cupo').value = c.capacidad_max;
-			document.getElementById('cl-color').value = c.color || "#FF0000";
-			
-			// Obtenemos los horarios o inicializamos un array vacío
-			const horarios = Array.isArray(c.horarios_detalle) ? c.horarios_detalle : [];
+    // Si hay un mensaje de "No hay horarios", lo limpiamos antes de añadir
+    if (container.querySelector('p.italic')) container.innerHTML = "";
 
-			// Dibujamos la lista de slots de horarios
-			renderScheduleInputs(horarios);
+    const row = document.createElement('div');
+    row.className = "schedule-slot-row flex items-center gap-2 bg-white/5 p-2 rounded-xl border border-white/5 mb-2";
+    
+    const diasMap = {1: 'Lunes', 2: 'Martes', 3: 'Miércoles', 4: 'Jueves', 5: 'Viernes', 6: 'Sábado'};
+    
+    // Generar opciones de Días
+    let diasOptions = "";
+    for(let d=1; d<=6; d++) {
+        diasOptions += `<option value="${d}" ${data.dia == d ? 'selected' : ''}>${diasMap[d]}</option>`;
+    }
 
-			// Configurar botón eliminar (Solo Admin/Supervisor)
-			const isAdmin = (state.user?.rol_nombre === "Administrador" || state.user?.rol_nombre === "Supervisor");
-			const delBtn = document.getElementById('btn-delete-clase'); 
-			if(delBtn) {
-				delBtn.classList.toggle('hidden', !isAdmin);
-				delBtn.onclick = () => deleteRecord('clases', c.id, 'modal-clase', loadClases);
-			}
+    // Generar opciones de Horas
+    let horasOptions = "";
+    for(let i=7; i<=21.5; i+=0.5) {
+        const label = i % 1 === 0 ? `${i}:00` : `${Math.floor(i)}:30`;
+        horasOptions += `<option value="${i}" ${data.horario == i ? 'selected' : ''}>${label} HS</option>`;
+    }
 
-			openModal('modal-clase');
-		}
+    row.innerHTML = `
+        <select class="viking-input py-1 h-10 text-[10px] flex-1 slot-dia">${diasOptions}</select>
+        <select class="viking-input py-1 h-10 text-[10px] flex-1 slot-hora">${horasOptions}</select>
+        <button type="button" onclick="this.closest('.schedule-slot-row').remove()" class="text-red-500 hover:bg-red-500/10 p-2 rounded-lg transition-all">
+            <i data-lucide="trash-2" class="w-4 h-4"></i>
+        </button>
+    `;
+    container.appendChild(row);
+    if(window.lucide) lucide.createIcons();
+}
 
-		// --- 2. FUNCIÓN PARA DIBUJAR LOS SELECTORES DE HORA (MULTI-SLOT) ---
-		// Ahora permite múltiples horarios incluso para el mismo día
-		function renderScheduleInputs(existingHorarios = []) {
-			const container = document.getElementById('cl-schedule-slots');
-			if (!container) return;
+// --- 2. FUNCIÓN PARA PREPARAR EL MODAL AL EDITAR ---
+function openEditClase(id) {
+    const c = state.clases.find(x => x.id == id); 
+    if(!c) return;
 
-			container.innerHTML = "";
-			
-			// Si no hay horarios, mostramos un aviso
-			if (existingHorarios.length === 0) {
-				container.innerHTML = '<p class="text-[9px] text-gray-600 italic py-2 text-center">No hay horarios definidos</p>';
-			}
+    // Llenar campos básicos
+    document.getElementById('cl-id').value = c.id; 
+    document.getElementById('modal-clase-title').innerText = "Configuración Vikinga: " + c.nombre;
+    document.getElementById('cl-nombre').value = c.nombre; 
+    document.getElementById('cl-coach-select').value = c.coach; 
+    document.getElementById('cl-cupo').value = c.capacidad_max;
+    document.getElementById('cl-color').value = c.color || "#FF0000";
+    
+    // Limpiar contenedor de horarios
+    const slotsContainer = document.getElementById('cl-schedule-slots');
+    slotsContainer.innerHTML = "";
 
-			existingHorarios.forEach((slot, index) => {
-				const row = createScheduleRow(slot, index);
-				container.appendChild(row);
-			});
+    // Cargar horarios desde la bolsa JSON
+    const horarios = Array.isArray(c.horarios_detalle) ? c.horarios_detalle : [];
+    
+    if (horarios.length > 0) {
+        horarios.forEach(h => addNewScheduleSlot(h));
+    } else {
+        // Si es una clase vieja sin JSON, ponemos un slot vacío por defecto
+        addNewScheduleSlot();
+    }
 
-			// Botón para añadir un nuevo horario
-			const addBtn = document.createElement('button');
-			addBtn.type = "button";
-			addBtn.className = "w-full py-2 mt-2 border border-dashed border-red-600/30 rounded-xl text-[9px] font-black uppercase text-red-500 hover:bg-red-600/5 transition-colors flex items-center justify-center gap-2";
-			addBtn.innerHTML = `<i data-lucide="plus" class="w-3 h-3"></i> Añadir Horario`;
-			addBtn.onclick = () => {
-				const newSlot = { dia: 1, horario: 7 };
-				const row = createScheduleRow(newSlot, document.querySelectorAll('.schedule-slot-row').length);
-				if (existingHorarios.length === 0) container.innerHTML = "";
-				container.appendChild(row);
-				if(window.lucide) lucide.createIcons();
-			};
-			container.appendChild(addBtn);
-			
-			if(window.lucide) lucide.createIcons();
-		}
+    // Configurar botón eliminar (Solo Admin/Supervisor)
+    const isAdmin = (state.user?.rol_nombre === "Administrador" || state.user?.rol_nombre === "Supervisor");
+    const delBtn = document.getElementById('btn-delete-clase'); 
+    if(delBtn) {
+        delBtn.classList.toggle('hidden', !isAdmin);
+        delBtn.onclick = () => deleteRecord('clases', c.id, 'modal-clase', loadClases);
+    }
 
-		// Función auxiliar para crear una fila de horario
-		function createScheduleRow(slot, index) {
-			const diasMap = {1: 'Lunes', 2: 'Martes', 3: 'Miércoles', 4: 'Jueves', 5: 'Viernes', 6: 'Sábado'};
-			const row = document.createElement('div');
-			row.className = "schedule-slot-row flex items-center gap-2 bg-white/5 p-2 rounded-xl border border-white/5 mb-2";
-			
-			// Selector de Día
-			let diasOptions = "";
-			for(let d=1; d<=6; d++) {
-				diasOptions += `<option value="${d}" ${slot.dia == d ? 'selected' : ''}>${diasMap[d]}</option>`;
-			}
+    openModal('modal-clase');
+}
 
-			// Selector de Hora
-			let horasOptions = "";
-			for(let i=7; i<=21.5; i+=0.5) {
-				const label = i % 1 === 0 ? `${i}:00` : `${Math.floor(i)}:30`;
-				horasOptions += `<option value="${i}" ${slot.horario == i ? 'selected' : ''}>${label} HS</option>`;
-			}
+// --- 3. FUNCIÓN PARA PREPARAR EL MODAL AL CREAR NUEVA ---
+function openNewClase() {
+    document.getElementById('form-clase').reset();
+    document.getElementById('cl-id').value = "";
+    document.getElementById('cl-schedule-slots').innerHTML = "";
+    document.getElementById('modal-clase-title').innerText = "Nueva Clase Vikinga";
+    
+    // Añadimos el primer slot vacío
+    addNewScheduleSlot();
+    openModal('modal-clase');
+}
 
-			row.innerHTML = `
-				<select class="viking-input py-1 h-8 text-[10px] flex-1 slot-dia">
-					${diasOptions}
-				</select>
-				<select class="viking-input py-1 h-8 text-[10px] flex-1 slot-hora">
-					${horasOptions}
-				</select>
-				<button type="button" onclick="this.closest('.schedule-slot-row').remove()" class="text-gray-500 hover:text-red-500 p-1">
-					<i data-lucide="x" class="w-4 h-4"></i>
-				</button>
-			`;
-			return row;
-		}
+// --- 4. FUNCIÓN DE GUARDADO (Captura todo y envía JSON) ---
+async function saveClaseVikinga(e) {
+    if(e) e.preventDefault();
+    
+    const id = document.getElementById('cl-id').value;
+    const slotRows = document.querySelectorAll('.schedule-slot-row');
+    
+    // Recolectar datos de todas las filas de horarios
+    const horarios_detalle = [];
+    slotRows.forEach(row => {
+        const diaEl = row.querySelector('.slot-dia');
+        const horaEl = row.querySelector('.slot-hora');
+        if(diaEl && horaEl) {
+            horarios_detalle.push({
+                dia: parseInt(diaEl.value),
+                horario: parseFloat(horaEl.value)
+            });
+        }
+    });
 
-		// --- 3. PROCESAMIENTO DEL FORMULARIO (GUARDADO) ---
-		// Debes asegurarte de que tu evento 'onsubmit' del formulario llame a esta lógica
-		async function saveClaseVikinga(e) {
-			if(e) e.preventDefault();
-			
-			const id = document.getElementById('cl-id').value;
-			const slots = document.querySelectorAll('.schedule-slot-row');
-			
-			const horarios_detalle = [];
-			slots.forEach(row => {
-				horarios_detalle.push({
-					dia: parseInt(row.querySelector('.slot-dia').value),
-					horario: parseFloat(row.querySelector('.slot-hora').value)
-				});
-			});
+    if(horarios_detalle.length === 0) {
+        return showVikingToast("Debes añadir al menos un horario para la clase", true);
+    }
 
-			if(horarios_detalle.length === 0) {
-				showVikingToast("Debes añadir al menos un horario", true);
-				return;
-			}
+    const payload = {
+        nombre: document.getElementById('cl-nombre').value,
+        coach: document.getElementById('cl-coach-select').value,
+        color: document.getElementById('cl-color').value,
+        capacidad_max: parseInt(document.getElementById('cl-cupo').value),
+        horarios_detalle: horarios_detalle
+    };
 
-			const payload = {
-				nombre: document.getElementById('cl-nombre').value,
-				coach: document.getElementById('cl-coach-select').value,
-				color: document.getElementById('cl-color').value,
-				capacidad_max: parseInt(document.getElementById('cl-cupo').value),
-				horarios_detalle: horarios_detalle
-			};
+    const method = id ? 'PUT' : 'POST';
+    const endpoint = id ? `/clases/${id}` : '/clases';
+    const res = await apiFetch(endpoint, method, payload);
+    
+    if(!res.error) {
+        showVikingToast(id ? "Clase Actualizada" : "Clase Creada");
+        closeModal('modal-clase');
+        loadClases(); // Refrescar lista
+    } else {
+        showVikingToast("Error al guardar: " + res.error, true);
+    }
+}
 
-			const method = id ? 'PUT' : 'POST';
-			const endpoint = id ? `/clases/${id}` : '/clases';
-
-			const res = await apiFetch(endpoint, method, payload);
-			if(!res.error) {
-				closeModal('modal-clase');
-				await loadClases();
-				showVikingToast(id ? "Clase Actualizada" : "Clase Creada");
-			} else {
-				showVikingToast("Error: " + res.error, true);
-			}
-		}
+// --- 5. VINCULACIÓN DE EVENTOS AL CARGAR LA PÁGINA ---
+window.onload = () => {
+    // Vincular el submit del formulario
+    const formClase = document.getElementById('form-clase');
+    if(formClase) {
+        formClase.onsubmit = saveClaseVikinga;
+    }
+    
+    // Cargar iconos de Lucide
+    if(window.lucide) lucide.createIcons();
+};
 
         function renderScheduleInputs(defaultVal = 7) {
             const container = document.getElementById('cl-schedule-slots');
@@ -3080,7 +3072,14 @@ async function renderRutinas() {
             document.querySelectorAll('.exercise-results-list').forEach(list => list.classList.add('hidden'));
         };
         
-        window.onload = () => { lucide.createIcons(); };
+        window.onload = () => {
+			const formClase = document.getElementById('form-clase');
+			if(formClase) {
+				formClase.onsubmit = saveClaseVikinga;
+			}
+			if(window.lucide) lucide.createIcons();
+		};
+		
     </script>
 </body>
 </html>
