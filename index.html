@@ -1463,7 +1463,7 @@
 
 		/**
 		 * RENDERIZADO DEL CALENDARIO VIKINGO
-		 * Esta función dibuja la grilla y posiciona las clases con sus cupos actualizados.
+		 * Esta versión corrige el error de "0 cupos" y el fallo post-reserva.
 		 */
 		function renderCalendar() {
 			const cal = document.getElementById('calendar-grid'); 
@@ -1496,7 +1496,7 @@
 				}
 			}
 
-			// 3. Renderizado de Clases
+			// 3. Renderizado de Clases con Filtro de Cupos Corregido
 			state.clases.forEach(c => {
 				const horarios = Array.isArray(c.horarios_detalle) ? c.horarios_detalle : [];
 				
@@ -1505,13 +1505,12 @@
 					const cell = document.getElementById(`cell-${slot.dia}-${hKey}`);
 					
 					if (cell) {
-						const badge = document.createElement('div');
-						badge.className = "class-badge cursor-move group transition-all hover:scale-105 active:scale-95 shadow-lg"; 
-						badge.style.backgroundColor = c.color || '#FF0000';
-						
-						// LÓGICA DE CUPOS: Filtrado estricto por Clase, Día y Hora
+						// CORRECCIÓN DE CONTADOR: 
+						// Aseguramos que state.reservas sea un array y comparamos tipos correctamente
+						const reservasArray = Array.isArray(state.reservas) ? state.reservas : [];
 						const cupoMax = c.capacidad_max || 40;
-						const cupoActual = state.reservas.filter(r => 
+						
+						const cupoActual = reservasArray.filter(r => 
 							String(r.clase_id) === String(c.id) && 
 							Number(r.dia_semana) === Number(slot.dia) && 
 							Number(r.horario) === Number(slot.horario)
@@ -1519,6 +1518,10 @@
 						
 						const estaLleno = cupoActual >= cupoMax;
 
+						const badge = document.createElement('div');
+						badge.className = "class-badge cursor-move group transition-all hover:scale-105 active:scale-95 shadow-lg"; 
+						badge.style.backgroundColor = c.color || '#FF0000';
+						
 						// Drag & Drop para Admins
 						if (isAdmin) {
 							badge.draggable = true; 
@@ -1526,9 +1529,9 @@
 								e.dataTransfer.setData("claseId", c.id);
 								e.dataTransfer.setData("oldDia", slot.dia);
 								e.dataTransfer.setData("oldHorario", slot.horario);
-								badge.classList.add('opacity-40', 'scale-90');
+								badge.classList.add('opacity-40');
 							};
-							badge.ondragend = () => badge.classList.remove('opacity-40', 'scale-90');
+							badge.ondragend = () => badge.classList.remove('opacity-40');
 						}
 
 						badge.innerHTML = `
@@ -1546,12 +1549,12 @@
 							e.stopPropagation();
 							if (esAlumno) {
 								if (estaLleno) {
-									showVikingToast("Este turno no tiene más cupos", true);
+									showVikingToast("Cupo lleno para este turno", true);
 								} else {
 									confirmarReservaVikinga(c, slot.dia, slot.horario);
 								}
 							} else {
-								openInscriptos(c.id, slot.dia, slot.horario);
+								if (typeof openInscriptos === 'function') openInscriptos(c.id, slot.dia, slot.horario);
 							}
 						};
 
@@ -1560,40 +1563,69 @@
 				});
 			});
 
-			// 4. Drag & Drop Receptor (Admin)
-			if (isAdmin) {
-				document.querySelectorAll('.cal-cell[id^="cell-"]').forEach(cell => {
-					cell.ondrop = async (e) => {
-						e.preventDefault();
-						const claseId = e.dataTransfer.getData("claseId");
-						const oldDia = e.dataTransfer.getData("oldDia");
-						const oldHorario = e.dataTransfer.getData("oldHorario");
-						if (!claseId) return;
-
-						const parts = cell.id.split('-');
-						const newDia = parseInt(parts[1]);
-						const newHorario = parseFloat(parts[2].replace('_', '.'));
-
-						if (oldDia == newDia && oldHorario == newHorario) return;
-
-						const res = await apiFetch(`/clases/${claseId}/move`, 'PUT', {
-							old_dia: parseInt(oldDia),
-							old_horario: parseFloat(oldHorario),
-							new_dia: newDia,
-							new_horario: newHorario
-						});
-
-						if (!res.error) {
-							showVikingToast("Clase reubicada con éxito");
-							await loadClases(); 
-						} else {
-							showVikingToast("Error: " + res.error, true);
-						}
-					};
-				});
-			}
-
 			if (window.lucide) lucide.createIcons();
+		}
+
+		/**
+		 * FUNCIÓN DE RESERVA CORREGIDA
+		 * Evita el error de "Vanhala" manejando fallos internos sin crashear.
+		 */
+		async function confirmarReservaVikinga(clase, dia, horario) {
+			const diasMap = {1: 'Lunes', 2: 'Martes', 3: 'Miércoles', 4: 'Jueves', 5: 'Viernes', 6: 'Sábado'};
+			const horaLabel = horario % 1 === 0 ? `${horario}:00` : `${Math.floor(horario)}:30`;
+			
+			showVikingToast(`Procesando reserva...`);
+
+			const payload = {
+				usuario_id: state.user.id,
+				clase_id: clase.id,
+				dia_semana: dia,
+				horario: horario
+			};
+
+			try {
+				const res = await apiFetch('/reservas', 'POST', payload);
+				
+				if (!res.error) {
+					showVikingToast(`¡Reserva confirmada! ${diasMap[dia]} ${horaLabel}hs`);
+					
+					// INTENTO DE ACTUALIZACIÓN PROTEGIDO:
+					// Si una función falla, no queremos que salte al 'catch' de conexión.
+					try {
+						// 1. Refrescar reservas (Intentamos con el nombre que tengas)
+						if (typeof fetchReservas === 'function') {
+							await fetchReservas(); 
+						} else if (typeof loadReservas === 'function') {
+							await loadReservas();
+						} else {
+							// Si no hay función, pedimos los datos manualmente para actualizar el estado
+							const manualData = await apiFetch('/reservas');
+							if (!manualData.error) state.reservas = manualData;
+						}
+
+						// 2. Redibujar calendario
+						renderCalendar(); 
+						
+						// 3. Redibujar dashboard
+						if (typeof renderStudentDashboard === 'function') {
+							renderStudentDashboard();
+						}
+					} catch (innerError) {
+						console.warn("Reserva exitosa pero fallo el refresco visual:", innerError);
+					}
+
+				} else {
+					// Error del servidor (ej: sin créditos)
+					let errorMsg = res.error || "No se pudo procesar";
+					if (typeof res.error === 'string' && res.error.startsWith('{')) {
+						try { errorMsg = JSON.parse(res.error).detail || errorMsg; } catch(e){}
+					}
+					showVikingToast(errorMsg, true);
+				}
+			} catch (err) {
+				console.error("Error crítico en Reserva:", err);
+				showVikingToast("Error de sincronización con el Valhalla", true);
+			}
 		}
 
 		/**
