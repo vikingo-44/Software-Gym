@@ -22,6 +22,9 @@ class Plan(Base):
     nombre = Column(String)
     precio = Column(Float)
     tipo_plan_id = Column(Integer, ForeignKey("tipos_planes.id"))
+    # --- NUEVO CAMPO PARA CUPO ---
+    clases_mensuales = Column(Integer, default=12) 
+    # -----------------------------
     tipo = relationship("TipoPlan", back_populates="planes")
     usuarios = relationship("Usuario", back_populates="plan")
 

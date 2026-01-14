@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy import func
+from sqlalchemy import func, extract
 from sqlalchemy.orm.attributes import flag_modified
 from typing import List, Optional
 from pydantic import BaseModel
@@ -53,6 +53,7 @@ class PlanSchema(BaseModel):
     id: int
     nombre: str
     precio: float
+    clases_mensuales: int  # <-- NUEVO CAMPO
     tipo_plan_id: Optional[int]
     tipo: Optional[TipoPlanSchema] = None
     class Config:
@@ -114,6 +115,7 @@ class PlanUpdate(BaseModel):
     nombre: str
     precio: float
     tipo_plan_id: int
+    clases_mensuales: Optional[int] = 12 # <-- NUEVO CAMPO CON DEFAULT
 
 # --- ESQUEMA DE CLASE ACTUALIZADO ---
 class ClaseUpdate(BaseModel):
@@ -220,7 +222,8 @@ def login(data: UsuarioLogin, db: Session = Depends(database.get_db)):
         "plan": {
             "id": user.plan.id,
             "nombre": user.plan.nombre,
-            "precio": user.plan.precio
+            "precio": user.plan.precio,
+            "clases_mensuales": user.plan.clases_mensuales # <-- ENVÍO AL FRONT
         } if user.plan else None,
         "plan_id": user.plan_id,
         "fecha_vencimiento": user.fecha_vencimiento.isoformat() if user.fecha_vencimiento else None,
@@ -321,7 +324,7 @@ def delete_alumno(id: int, db: Session = Depends(database.get_db)):
     return {"status": "success"}
 
 # ==========================================
-# MÓDULO 3: RESERVAS
+# MÓDULO 3: RESERVAS (LOGICA DE CRÉDITOS APLICADA)
 # ==========================================
 
 @app.get("/api/reservas", tags=["Reservas"])
@@ -334,12 +337,41 @@ def get_reservas(db: Session = Depends(database.get_db)):
         "id": r.id,
         "usuario_id": r.usuario_id,
         "clase_id": r.clase_id,
+        "fecha_clase": r.fecha_reserva.isoformat() if r.fecha_reserva else None,
         "alumno_dni": r.usuario.dni if r.usuario else "N/A",
         "clase_nombre": r.clase.nombre if r.clase else "Eliminada"
     } for r in res]
 
 @app.post("/api/reservas", tags=["Reservas"])
 def book_clase(data: ReservaCreate, db: Session = Depends(database.get_db)):
+    
+    # 1. Verificar si el usuario existe y obtener su plan
+    user = db.query(models.Usuario).options(joinedload(models.Usuario.plan)).filter(models.Usuario.id == data.usuario_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+
+    # 2. VALIDACIÓN DE LÍMITE MENSUAL (CRÉDITOS)
+    if user.plan:
+        limite_mensual = user.plan.clases_mensuales
+        # Si el límite es menor a 1000, asumimos que no es ilimitado y chequeamos
+        if limite_mensual < 1000:
+            mes_actual = date.today().month
+            anio_actual = date.today().year
+            
+            # Contamos cuántas reservas tiene este usuario en el mes actual
+            count_reservas = db.query(models.Reserva).filter(
+                models.Reserva.usuario_id == user.id,
+                extract('month', models.Reserva.fecha_reserva) == mes_actual,
+                extract('year', models.Reserva.fecha_reserva) == anio_actual
+            ).count()
+            
+            if count_reservas >= limite_mensual:
+                raise HTTPException(
+                    status_code=400, 
+                    detail=f"Has alcanzado tu límite de {limite_mensual} clases mensuales. ¡Actualiza tu plan!"
+                )
+
+    # 3. Validar si ya tiene reserva hoy para esa clase
     exists = db.query(models.Reserva).filter(
         models.Reserva.usuario_id == data.usuario_id,
         models.Reserva.clase_id == data.clase_id,
@@ -488,7 +520,8 @@ def create_plan(data: PlanUpdate, db: Session = Depends(database.get_db)):
     new_p = models.Plan(
         nombre=data.nombre,
         precio=data.precio,
-        tipo_plan_id=data.tipo_plan_id
+        tipo_plan_id=data.tipo_plan_id,
+        clases_mensuales=data.clases_mensuales or 12 # Guardar cupo
     )
     db.add(new_p)
     db.commit()
@@ -501,6 +534,8 @@ def update_plan(id: int, data: PlanUpdate, db: Session = Depends(database.get_db
         p.nombre = data.nombre
         p.precio = data.precio
         p.tipo_plan_id = data.tipo_plan_id
+        if data.clases_mensuales is not None:
+             p.clases_mensuales = data.clases_mensuales
         db.commit()
     return {"status": "success"}
 
