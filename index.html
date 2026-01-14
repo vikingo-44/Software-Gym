@@ -1381,9 +1381,16 @@
 			}
 
         async function fetchReservas() {
-            const data = await apiFetch('/reservas');
-            state.reservas = Array.isArray(data) ? data : [];
-        }
+			const data = await apiFetch('/reservas');
+			if (!data.error) {
+				// Guardamos las reservas en el estado global para que el calendario las vea
+				state.reservas = Array.isArray(data) ? data : [];
+				return state.reservas;
+			} else {
+				console.error("Error cargando reservas:", data.error);
+				return [];
+			}
+		}
 
         async function bookClass(claseId) {
             if (state.user.rol_nombre !== "Alumno") return;
@@ -1454,6 +1461,10 @@
             }
         }
 
+		/**
+		 * RENDERIZADO DEL CALENDARIO VIKINGO
+		 * Esta función dibuja la grilla y posiciona las clases con sus cupos actualizados.
+		 */
 		function renderCalendar() {
 			const cal = document.getElementById('calendar-grid'); 
 			if (!cal) return;
@@ -1481,28 +1492,34 @@
 					const isSat = d === 6; 
 					const isClosed = isSat && (h < 10 || h > 13);
 					const cellId = `cell-${d}-${h.toString().replace('.','_')}`;
-					// Mantenemos tu ondragover inline para permitir soltar elementos
 					cal.innerHTML += `<div id="${cellId}" class="cal-cell ${isClosed ? 'cal-cell-closed' : ''}" ondragover="event.preventDefault()"></div>`;
 				}
 			}
 
-			// --- VERSIÓN MEJORADA DEL RENDERIZADO DE CLASES EN EL CALENDARIO ---
+			// 3. Renderizado de Clases
 			state.clases.forEach(c => {
-				// Aseguramos que horarios_detalle sea un array
 				const horarios = Array.isArray(c.horarios_detalle) ? c.horarios_detalle : [];
 				
 				horarios.forEach(slot => {
-					// Generamos la llave para encontrar la celda (ej: cell-1-8_5)
 					const hKey = slot.horario.toString().replace('.', '_');
 					const cell = document.getElementById(`cell-${slot.dia}-${hKey}`);
 					
 					if (cell) {
 						const badge = document.createElement('div');
-						// Añadimos clases visuales y de interacción
 						badge.className = "class-badge cursor-move group transition-all hover:scale-105 active:scale-95 shadow-lg"; 
 						badge.style.backgroundColor = c.color || '#FF0000';
 						
-						// 1. MEJORA DE DRAG & DROP: Solo para personal con permisos
+						// LÓGICA DE CUPOS: Filtrado estricto por Clase, Día y Hora
+						const cupoMax = c.capacidad_max || 40;
+						const cupoActual = state.reservas.filter(r => 
+							String(r.clase_id) === String(c.id) && 
+							Number(r.dia_semana) === Number(slot.dia) && 
+							Number(r.horario) === Number(slot.horario)
+						).length;
+						
+						const estaLleno = cupoActual >= cupoMax;
+
+						// Drag & Drop para Admins
 						if (isAdmin) {
 							badge.draggable = true; 
 							badge.ondragstart = (e) => {
@@ -1513,18 +1530,6 @@
 							};
 							badge.ondragend = () => badge.classList.remove('opacity-40', 'scale-90');
 						}
-
-						// 2. MEJORA DE LÓGICA DE CUPOS: 
-						// Ahora filtramos las reservas por clase ID, DIA y HORARIO específico
-						const cupoMax = c.capacidad_max || 40;
-						const cupoActual = state.reservas.filter(r => 
-							r.clase_id === c.id && 
-							r.dia_semana == slot.dia && 
-							r.horario == slot.horario
-						).length;
-						
-						// Determinamos si el cupo está lleno para aviso visual
-						const estaLleno = cupoActual >= cupoMax;
 
 						badge.innerHTML = `
 							<div class="flex flex-col items-center justify-center h-full w-full">
@@ -1537,15 +1542,12 @@
 							</div>
 						`;
 						
-						// 3. MEJORA DE ACCIÓN AL CLIC:
-						// Pasamos los parámetros de turno (día y hora) para que el servidor valide correctamente
 						badge.onclick = (e) => {
 							e.stopPropagation();
 							if (esAlumno) {
 								if (estaLleno) {
 									showVikingToast("Este turno no tiene más cupos", true);
 								} else {
-									// Llamamos a la función con confirmación estética
 									confirmarReservaVikinga(c, slot.dia, slot.horario);
 								}
 							} else {
@@ -1558,89 +1560,22 @@
 				});
 			});
 
-			/**
-			 * Reemplazo de confirm() nativo por una validación integrada.
-			 * Puedes usar un modal simple que ya tengas definido o un toast con acción.
-			 */
-			async function confirmarReservaVikinga(clase, dia, horario) {
-				const diasMap = {1: 'Lunes', 2: 'Martes', 3: 'Miércoles', 4: 'Jueves', 5: 'Viernes', 6: 'Sábado'};
-				const horaLabel = horario % 1 === 0 ? `${horario}:00` : `${Math.floor(horario)}:30`;
-				
-				// Mostramos un toast informativo inicial
-				showVikingToast(`Procesando reserva para ${clase.nombre}...`);
-
-				// En lugar de confirm(), podrías disparar un pequeño modal de "Si/No" 
-				// Aquí implementamos la llamada directa tras una validación visual.
-				// Si prefieres un modal intermedio, llama a openModal('modal-confirm-reserva')
-				
-				const payload = {
-					usuario_id: state.user.id,
-					clase_id: clase.id,
-					dia_semana: dia,
-					horario: horario
-				};
-
-				try {
-					const res = await apiFetch('/reservas', 'POST', payload);
-					
-					if (!res.error) {
-						showVikingToast(`¡Victoria! Reserva confirmada para el ${diasMap[dia]} ${horaLabel}hs`);
-						// Recargamos datos para actualizar los cupos en el calendario
-						await loadReservas();
-						renderCalendar(); 
-					} else {
-						// El servidor responderá aquí si no hay créditos o el cupo se llenó justo antes
-						showVikingToast(res.detail || "No se pudo procesar la reserva", true);
-					}
-				} catch (err) {
-					showVikingToast("Error de conexión con el Valhalla", true);
-				}
-			}
-			
-			async function bookClass(claseId, dia, horario) {
-				const confirmacion = confirm(`¿Quieres reservar esta clase el día ${dia} a las ${horario}hs?`);
-				if(!confirmacion) return;
-
-				const payload = {
-					usuario_id: state.user.id,
-					clase_id: claseId,
-					dia_semana: dia,
-					horario: horario
-				};
-
-				const res = await apiFetch('/reservas', 'POST', payload);
-				
-				if(!res.error) {
-					showVikingToast("¡Reserva confirmada!");
-					loadReservas(); // Refresca cupos en el calendario
-				} else {
-					// Aquí el servidor devolverá el error si se acabaron los créditos del plan
-					showVikingToast(res.detail, true); 
-				}
-			}
-
-			// 4. LOGICA PARA RECIBIR EL DROP (SOLTAR)
-			// Solo activamos la escucha si el usuario tiene permisos
+			// 4. Drag & Drop Receptor (Admin)
 			if (isAdmin) {
 				document.querySelectorAll('.cal-cell[id^="cell-"]').forEach(cell => {
 					cell.ondrop = async (e) => {
 						e.preventDefault();
-						
 						const claseId = e.dataTransfer.getData("claseId");
 						const oldDia = e.dataTransfer.getData("oldDia");
 						const oldHorario = e.dataTransfer.getData("oldHorario");
-						
 						if (!claseId) return;
 
-						// Parsear destino desde el ID: cell-DIA-HORARIO
 						const parts = cell.id.split('-');
 						const newDia = parseInt(parts[1]);
 						const newHorario = parseFloat(parts[2].replace('_', '.'));
 
-						// Si es la misma celda, no hacemos petición
 						if (oldDia == newDia && oldHorario == newHorario) return;
 
-						// Llamada al endpoint actualizado para JSON
 						const res = await apiFetch(`/clases/${claseId}/move`, 'PUT', {
 							old_dia: parseInt(oldDia),
 							old_horario: parseFloat(oldHorario),
@@ -1650,12 +1585,59 @@
 
 						if (!res.error) {
 							showVikingToast("Clase reubicada con éxito");
-							await loadClases(); // Refrescar y volver a renderizar
+							await loadClases(); 
 						} else {
 							showVikingToast("Error: " + res.error, true);
 						}
 					};
 				});
+			}
+
+			if (window.lucide) lucide.createIcons();
+		}
+
+		/**
+		 * PROCESO DE RESERVA
+		 * Separada de renderCalendar para evitar errores de scope y cierres.
+		 */
+		async function confirmarReservaVikinga(clase, dia, horario) {
+			const diasMap = {1: 'Lunes', 2: 'Martes', 3: 'Miércoles', 4: 'Jueves', 5: 'Viernes', 6: 'Sábado'};
+			const horaLabel = horario % 1 === 0 ? `${horario}:00` : `${Math.floor(horario)}:30`;
+			
+			showVikingToast(`Procesando reserva para ${clase.nombre}...`);
+
+			const payload = {
+				usuario_id: state.user.id,
+				clase_id: clase.id,
+				dia_semana: dia,
+				horario: horario
+			};
+
+			try {
+				const res = await apiFetch('/reservas', 'POST', payload);
+				
+				if (!res.error) {
+					showVikingToast(`¡Victoria! Reserva confirmada: ${diasMap[dia]} ${horaLabel}hs`);
+					
+					// Sincronización completa de datos
+					await fetchReservas(); // El nombre correcto según tu código
+					
+					// Actualización visual inmediata
+					renderCalendar(); 
+					if (typeof renderStudentDashboard === 'function') {
+						renderStudentDashboard();
+					}
+				} else {
+					let errorMsg = res.error || "No se pudo procesar la reserva";
+					// Si el error viene como JSON string, lo parseamos
+					if (typeof res.error === 'string' && res.error.startsWith('{')) {
+						try { errorMsg = JSON.parse(res.error).detail || errorMsg; } catch(e){}
+					}
+					showVikingToast(errorMsg, true);
+				}
+			} catch (err) {
+				console.error("Error en Reserva:", err);
+				showVikingToast("Error de sincronización con el Valhalla", true);
 			}
 		}
 
