@@ -1487,77 +1487,115 @@
 			}
 
 			// --- VERSIÓN MEJORADA DEL RENDERIZADO DE CLASES EN EL CALENDARIO ---
-				state.clases.forEach(c => {
-					// Aseguramos que horarios_detalle sea un array
-					const horarios = Array.isArray(c.horarios_detalle) ? c.horarios_detalle : [];
+			state.clases.forEach(c => {
+				// Aseguramos que horarios_detalle sea un array
+				const horarios = Array.isArray(c.horarios_detalle) ? c.horarios_detalle : [];
+				
+				horarios.forEach(slot => {
+					// Generamos la llave para encontrar la celda (ej: cell-1-8_5)
+					const hKey = slot.horario.toString().replace('.', '_');
+					const cell = document.getElementById(`cell-${slot.dia}-${hKey}`);
 					
-					horarios.forEach(slot => {
-						// Generamos la llave para encontrar la celda (ej: cell-1-8_5)
-						const hKey = slot.horario.toString().replace('.', '_');
-						const cell = document.getElementById(`cell-${slot.dia}-${hKey}`);
+					if (cell) {
+						const badge = document.createElement('div');
+						// Añadimos clases visuales y de interacción
+						badge.className = "class-badge cursor-move group transition-all hover:scale-105 active:scale-95 shadow-lg"; 
+						badge.style.backgroundColor = c.color || '#FF0000';
 						
-						if (cell) {
-							const badge = document.createElement('div');
-							// Añadimos clases visuales y de interacción
-							badge.className = "class-badge cursor-move group transition-all hover:scale-105 active:scale-95 shadow-lg"; 
-							badge.style.backgroundColor = c.color || '#FF0000';
-							
-							// 1. MEJORA DE DRAG & DROP: Solo para personal con permisos
-							if (isAdmin) {
-								badge.draggable = true; 
-								badge.ondragstart = (e) => {
-									e.dataTransfer.setData("claseId", c.id);
-									e.dataTransfer.setData("oldDia", slot.dia);
-									e.dataTransfer.setData("oldHorario", slot.horario);
-									badge.classList.add('opacity-40', 'scale-90');
-								};
-								badge.ondragend = () => badge.classList.remove('opacity-40', 'scale-90');
-							}
-
-							// 2. MEJORA DE LÓGICA DE CUPOS: 
-							// Ahora filtramos las reservas por clase ID, DIA y HORARIO específico
-							const cupoMax = c.capacidad_max || 40;
-							const cupoActual = state.reservas.filter(r => 
-								r.clase_id === c.id && 
-								r.dia_semana == slot.dia && 
-								r.horario == slot.horario
-							).length;
-							
-							// Determinamos si el cupo está lleno para aviso visual
-							const estaLleno = cupoActual >= cupoMax;
-
-							badge.innerHTML = `
-								<div class="flex flex-col items-center justify-center h-full w-full">
-									<span class="text-[8px] sm:text-[9px] mb-0.5 leading-none font-black uppercase italic tracking-tighter text-black/90">
-										${c.nombre}
-									</span>
-									<div class="bg-black/30 px-1.5 rounded-full text-[7px] font-black ${estaLleno ? 'text-red-400 animate-pulse' : 'text-white/80'}">
-										${cupoActual}/${cupoMax}
-									</div>
-								</div>
-							`;
-							
-							// 3. MEJORA DE ACCIÓN AL CLIC:
-							// Pasamos los parámetros de turno (día y hora) para que el servidor valide correctamente
-							badge.onclick = (e) => {
-								e.stopPropagation();
-								if (esAlumno) {
-									// Si es alumno, intenta reservar el turno específico
-									if (estaLleno) {
-										showVikingToast("Este turno no tiene más cupos", true);
-									} else {
-										bookClass(c.id, slot.dia, slot.horario);
-									}
-								} else {
-									// Si es staff, abre la lista de inscriptos de ese turno
-									openInscriptos(c.id, slot.dia, slot.horario);
-								}
+						// 1. MEJORA DE DRAG & DROP: Solo para personal con permisos
+						if (isAdmin) {
+							badge.draggable = true; 
+							badge.ondragstart = (e) => {
+								e.dataTransfer.setData("claseId", c.id);
+								e.dataTransfer.setData("oldDia", slot.dia);
+								e.dataTransfer.setData("oldHorario", slot.horario);
+								badge.classList.add('opacity-40', 'scale-90');
 							};
-
-							cell.appendChild(badge);
+							badge.ondragend = () => badge.classList.remove('opacity-40', 'scale-90');
 						}
-					});
+
+						// 2. MEJORA DE LÓGICA DE CUPOS: 
+						// Ahora filtramos las reservas por clase ID, DIA y HORARIO específico
+						const cupoMax = c.capacidad_max || 40;
+						const cupoActual = state.reservas.filter(r => 
+							r.clase_id === c.id && 
+							r.dia_semana == slot.dia && 
+							r.horario == slot.horario
+						).length;
+						
+						// Determinamos si el cupo está lleno para aviso visual
+						const estaLleno = cupoActual >= cupoMax;
+
+						badge.innerHTML = `
+							<div class="flex flex-col items-center justify-center h-full w-full">
+								<span class="text-[8px] sm:text-[9px] mb-0.5 leading-none font-black uppercase italic tracking-tighter text-black/90">
+									${c.nombre}
+								</span>
+								<div class="bg-black/30 px-1.5 rounded-full text-[7px] font-black ${estaLleno ? 'text-red-400 animate-pulse' : 'text-white/80'}">
+									${cupoActual}/${cupoMax}
+								</div>
+							</div>
+						`;
+						
+						// 3. MEJORA DE ACCIÓN AL CLIC:
+						// Pasamos los parámetros de turno (día y hora) para que el servidor valide correctamente
+						badge.onclick = (e) => {
+							e.stopPropagation();
+							if (esAlumno) {
+								if (estaLleno) {
+									showVikingToast("Este turno no tiene más cupos", true);
+								} else {
+									// Llamamos a la función con confirmación estética
+									confirmarReservaVikinga(c, slot.dia, slot.horario);
+								}
+							} else {
+								openInscriptos(c.id, slot.dia, slot.horario);
+							}
+						};
+
+						cell.appendChild(badge);
+					}
 				});
+			});
+
+			/**
+			 * Reemplazo de confirm() nativo por una validación integrada.
+			 * Puedes usar un modal simple que ya tengas definido o un toast con acción.
+			 */
+			async function confirmarReservaVikinga(clase, dia, horario) {
+				const diasMap = {1: 'Lunes', 2: 'Martes', 3: 'Miércoles', 4: 'Jueves', 5: 'Viernes', 6: 'Sábado'};
+				const horaLabel = horario % 1 === 0 ? `${horario}:00` : `${Math.floor(horario)}:30`;
+				
+				// Mostramos un toast informativo inicial
+				showVikingToast(`Procesando reserva para ${clase.nombre}...`);
+
+				// En lugar de confirm(), podrías disparar un pequeño modal de "Si/No" 
+				// Aquí implementamos la llamada directa tras una validación visual.
+				// Si prefieres un modal intermedio, llama a openModal('modal-confirm-reserva')
+				
+				const payload = {
+					usuario_id: state.user.id,
+					clase_id: clase.id,
+					dia_semana: dia,
+					horario: horario
+				};
+
+				try {
+					const res = await apiFetch('/reservas', 'POST', payload);
+					
+					if (!res.error) {
+						showVikingToast(`¡Victoria! Reserva confirmada para el ${diasMap[dia]} ${horaLabel}hs`);
+						// Recargamos datos para actualizar los cupos en el calendario
+						await loadReservas();
+						renderCalendar(); 
+					} else {
+						// El servidor responderá aquí si no hay créditos o el cupo se llenó justo antes
+						showVikingToast(res.detail || "No se pudo procesar la reserva", true);
+					}
+				} catch (err) {
+					showVikingToast("Error de conexión con el Valhalla", true);
+				}
+			}
 			
 			async function bookClass(claseId, dia, horario) {
 				const confirmacion = confirm(`¿Quieres reservar esta clase el día ${dia} a las ${horario}hs?`);

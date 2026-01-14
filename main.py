@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session, joinedload
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import func, extract
 from sqlalchemy.orm.attributes import flag_modified
-from typing import List, Optional
+from typing import List, Optional, Union
 from pydantic import BaseModel
 from datetime import date, datetime
 
@@ -117,16 +117,13 @@ class PlanUpdate(BaseModel):
     tipo_plan_id: int
     clases_mensuales: Optional[int] = 12 # <-- NUEVO CAMPO CON DEFAULT
 
-# --- ESQUEMA DE CLASE ACTUALIZADO ---
 class ClaseUpdate(BaseModel):
     nombre: str
     coach: str
     color: Optional[str] = "#FF0000"
     capacidad_max: Optional[int] = 40
-    # Recibimos la lista completa de horarios: [{"dia": 1, "horario": 8.5}, ...]
     horarios_detalle: Optional[List[dict]] = None
 
-# --- ESQUEMA DE MOVIMIENTO ACTUALIZADO ---
 class ClaseMove(BaseModel):
     old_dia: int
     old_horario: float
@@ -138,31 +135,55 @@ class MovimientoCajaCreate(BaseModel):
     monto: float
     descripcion: str
 
-# CORRECCIÓN: Agregados campos de turno para coincidir con la tabla Reservas
 class ReservaCreate(BaseModel):
     usuario_id: int
     clase_id: int
     horario: float
     dia_semana: int
 
-# --- SCHEMAS MUSCULACIÓN ---
+# --- SCHEMAS DE RESPUESTA PARA RUTINAS (PARA EVITAR ERROR 500) ---
 
-class GrupoMuscularSchema(BaseModel):
+class SerieResponse(BaseModel):
+    id: int
+    numero_serie: int
+    repeticiones: str
+    peso: str
+    descanso: str
+    class Config: from_attributes = True
+
+class EjercicioLibResponse(BaseModel):
     id: int
     nombre: str
     class Config: from_attributes = True
 
-class EjercicioCreate(BaseModel):
-    nombre: str
-    grupo_muscular_id: int
-
-class EjercicioLibreriaSchema(BaseModel):
+class EjercicioEnRutinaResponse(BaseModel):
     id: int
-    nombre: str
-    grupo_muscular_id: int
-    grupo_muscular: Optional[GrupoMuscularSchema] = None
+    ejercicio_id: int
+    ejercicio_obj: Optional[EjercicioLibResponse] = None
+    series_detalle: List[SerieResponse] = []
+    comentario: Optional[str] = None
     class Config: from_attributes = True
-    
+
+class DiaRutinaResponse(BaseModel):
+    id: int
+    nombre_dia: str
+    ejercicios: List[EjercicioEnRutinaResponse] = []
+    class Config: from_attributes = True
+
+class PlanRutinaResponse(BaseModel):
+    id: int
+    usuario_id: int
+    nombre_grupo: Optional[str] = None
+    descripcion: Optional[str] = None
+    objetivo: str
+    fecha_creacion: date
+    fecha_vencimiento: date
+    activo: bool
+    dias: List[DiaRutinaResponse] = []
+    class Config: from_attributes = True
+
+# --- SCHEMAS DE CREACIÓN ---
+
 class SerieCreate(BaseModel):
     numero_serie: int
     repeticiones: str
@@ -176,7 +197,8 @@ class EjercicioEnRutinaCreate(BaseModel):
 
 class DiaRutinaCreate(BaseModel):
     nombre_dia: str
-    ejercicios: List[EjercicioEnRutinaCreate]
+    exercises: Optional[List[EjercicioEnRutinaCreate]] = None 
+    ejercicios: Optional[List[EjercicioEnRutinaCreate]] = None
     
 class PlanRutinaCreate(BaseModel):
     usuario_id: int
@@ -185,6 +207,15 @@ class PlanRutinaCreate(BaseModel):
     objetivo: str
     fecha_vencimiento: date
     dias: List[DiaRutinaCreate]
+
+class EjercicioCreate(BaseModel):
+    nombre: str
+    grupo_muscular_id: int
+
+class GrupoMuscularSchema(BaseModel):
+    id: int
+    nombre: str
+    class Config: from_attributes = True
 
 # ==========================================
 # ENDPOINTS DE ACCESO Y FRONTEND
@@ -655,7 +686,7 @@ def create_movimiento(data: MovimientoCajaCreate, db: Session = Depends(database
     return {"status": "success"}
 
 # ==========================================
-# MÓDULO 9: MUSCULACIÓN AVANZADA
+# MÓDULO 9: MUSCULACIÓN AVANZADA (CORREGIDO)
 # ==========================================
 
 @app.get("/api/rutinas/grupos-musculares", tags=["Musculación"])
@@ -689,6 +720,7 @@ def create_plan_rutina(data: PlanRutinaCreate, db: Session = Depends(database.ge
         if not user:
             raise HTTPException(status_code=404, detail="Usuario no encontrado")
 
+        # Desactivar rutinas previas
         db.query(models.PlanRutina).filter(
             models.PlanRutina.usuario_id == data.usuario_id
         ).update({"activo": False}, synchronize_session=False)
@@ -709,7 +741,10 @@ def create_plan_rutina(data: PlanRutinaCreate, db: Session = Depends(database.ge
             db.add(nuevo_dia)
             db.flush()
             
-            for e in d.ejercicios:
+            # Soporte para campos del frontend (ejercicios o exercises)
+            lista_ejercicios = d.ejercicios if d.ejercicios else (d.exercises if d.exercises else [])
+            
+            for e in lista_ejercicios:
                 ej_exists = db.query(models.Ejercicio).filter(models.Ejercicio.id == e.ejercicio_id).first()
                 if not ej_exists:
                     logger.warning(f"Salteando ejercicio ID {e.ejercicio_id}: No existe.")
@@ -745,27 +780,32 @@ def create_plan_rutina(data: PlanRutinaCreate, db: Session = Depends(database.ge
         logger.error(f"Error Grave: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/api/rutinas/usuario/{id}", tags=["Musculación"])
+@app.get("/api/rutinas/usuario/{id}", response_model=Optional[PlanRutinaResponse], tags=["Musculación"])
 def get_rutina_activa(id: int, db: Session = Depends(database.get_db)):
+    # FIX: Corregida la ruta de carga anidada para series y ejercicios específicos
     rutina = db.query(models.PlanRutina).filter(
         models.PlanRutina.usuario_id == id, 
         models.PlanRutina.activo == True
     ).options(
         joinedload(models.PlanRutina.dias)
-        .joinedload(models.DiaRutina.ejercicios)
-        .joinedload(models.EjercicioEnRutina.ejercicio_obj),
+            .joinedload(models.DiaRutina.ejercicios)
+            .joinedload(models.EjercicioEnRutina.ejercicio_obj),
         joinedload(models.PlanRutina.dias)
-        .joinedload(models.DiaRutina.ejercicios)
-        .joinedload(models.SerieEjercicio.ejercicio_en_rutina) # Corregido path
+            .joinedload(models.DiaRutina.ejercicios)
+            .joinedload(models.EjercicioEnRutina.series_detalle)
     ).first()
     
-    if not rutina:
-        return {"error": "No hay rutina activa"}
     return rutina
 
-@app.get("/api/rutinas/historial/{id}", tags=["Musculación"])
+@app.get("/api/rutinas/historial/{id}", response_model=List[PlanRutinaResponse], tags=["Musculación"])
 def get_historial_rutinas(id: int, db: Session = Depends(database.get_db)):
-    return db.query(models.PlanRutina).filter(models.PlanRutina.usuario_id == id).order_by(models.PlanRutina.fecha_creacion.desc()).all()
+    return db.query(models.PlanRutina).filter(
+        models.PlanRutina.usuario_id == id
+    ).options(
+        joinedload(models.PlanRutina.dias)
+            .joinedload(models.DiaRutina.ejercicios)
+            .joinedload(models.EjercicioEnRutina.series_detalle)
+    ).order_by(models.PlanRutina.fecha_creacion.desc()).all()
 
 # ==========================================
 # EJECUCIÓN DEL SERVIDOR
