@@ -1333,45 +1333,103 @@
         }
 
         function renderCalendar() {
-            const cal = document.getElementById('calendar-grid'); if (!cal) return;
-            const canMove = (state.user?.rol_nombre === "Administrador" || state.user?.rol_nombre === "Supervisor");
-            const esAlumno = (state.user?.rol_nombre === "Alumno");
+			const cal = document.getElementById('calendar-grid'); 
+			if (!cal) return;
 
-            cal.innerHTML = `<div class="cal-header">HORA</div><div class="cal-header">LUNES</div><div class="cal-header">MARTES</div><div class="cal-header">MIÉRCOLES</div><div class="cal-header">JUEVES</div><div class="cal-header">VIERNES</div><div class="cal-header">SÁBADO</div>`;
-            
-            for(let h=7; h<=21.5; h+=0.5) {
-                const label = h % 1 === 0 ? `${h}:00` : `${Math.floor(h)}:30`;
-                cal.innerHTML += `<div class="cal-cell flex items-center justify-center font-black text-[9px] text-white/40 bg-white/5 border-r border-white/20">${label}</div>`;
-                for(let d=1; d<=6; d++) {
-                    const isSat = d === 6; 
-                    const isClosed = isSat && (h < 10 || h > 13);
-                    const cellId = `cell-${d}-${h.toString().replace('.','_')}`;
-                    cal.innerHTML += `<div id="${cellId}" class="cal-cell ${isClosed ? 'cal-cell-closed' : ''}" ondragover="event.preventDefault()" ondrop="${canMove ? `handleDrop(event, ${d}, ${h})` : ''}"></div>`;
-                }
-            }
+			const isAdmin = (state.user?.rol_nombre === "Administrador" || state.user?.rol_nombre === "Supervisor");
+			const esAlumno = (state.user?.rol_nombre === "Alumno");
 
-            state.clases.forEach(c => {
-                const hKey = c.horario.toString().replace('.', '_');
-                const cell = document.getElementById(`cell-${c.dia}-${hKey}`);
-                if (cell) {
-                    const capMax = c.capacidad_max || 40;
-                    const cupoActual = state.reservas.filter(r => r.clase_id === c.id).length;
-                    const badge = document.createElement('div'); 
-                    badge.className = "class-badge"; 
-                    badge.style.backgroundColor = c.color || '#FF0000';
-                    if (esAlumno) badge.onclick = () => bookClass(c.id);
-                    else {
-                        badge.onclick = () => openInscriptos(c.id);
-                        if (canMove) {
-                            badge.draggable = true; 
-                            badge.ondragstart = (e) => e.dataTransfer.setData("clase_id", c.id);
-                        }
-                    }
-                    badge.innerHTML = `<span class="text-[8px] mb-0.5 leading-none font-black uppercase">${c.nombre}</span><div class="bg-black/20 px-1 rounded-full text-[7px] font-black">${cupoActual}/${capMax}</div>`;
-                    cell.appendChild(badge);
-                }
-            });
-        }
+			// 1. Limpiar y crear cabeceras
+			cal.innerHTML = `
+				<div class="cal-header">HORA</div>
+				<div class="cal-header">LUNES</div>
+				<div class="cal-header">MARTES</div>
+				<div class="cal-header">MIÉRCOLES</div>
+				<div class="cal-header">JUEVES</div>
+				<div class="cal-header">VIERNES</div>
+				<div class="cal-header">SÁBADO</div>
+			`;
+
+			// 2. Generar grilla de tiempo (7hs a 21:30hs)
+			for(let h=7; h<=21.5; h+=0.5) {
+				const label = h % 1 === 0 ? `${h}:00` : `${Math.floor(h)}:30`;
+				cal.innerHTML += `<div class="cal-cell flex items-center justify-center font-black text-[9px] text-white/40 bg-white/5 border-r border-white/20">${label}</div>`;
+				
+				for(let d=1; d<=6; d++) {
+					const isSat = d === 6; 
+					const isClosed = isSat && (h < 10 || h > 13);
+					const cellId = `cell-${d}-${h.toString().replace('.','_')}`;
+					cal.innerHTML += `<div id="${cellId}" class="cal-cell ${isClosed ? 'cal-cell-closed' : ''}" ondragover="event.preventDefault()"></div>`;
+				}
+			}
+
+			// 3. RECORRER CLASES Y SUS MULTIPLES HORARIOS
+			state.clases.forEach(c => {
+				const horarios = Array.isArray(c.horarios_detalle) ? c.horarios_detalle : [];
+        
+				horarios.forEach(slot => {
+					const hKey = slot.horario.toString().replace('.', '_');
+					const cell = document.getElementById(`cell-${slot.dia}-${hKey}`);
+					
+					if (cell) {
+						const badge = document.createElement('div');
+						badge.className = "class-badge cursor-move"; // Añadimos cursor de movimiento
+						badge.style.backgroundColor = c.color || '#FF0000';
+						badge.draggable = true; // Habilitamos arrastre
+
+						// Guardamos los datos originales para el backend
+						badge.dataset.claseId = c.id;
+						badge.dataset.oldDia = slot.dia;
+						badge.dataset.oldHorario = slot.horario;
+
+						badge.ondragstart = (e) => {
+							e.dataTransfer.setData("claseId", c.id);
+							e.dataTransfer.setData("oldDia", slot.dia);
+							e.dataTransfer.setData("oldHorario", slot.horario);
+							badge.classList.add('opacity-50');
+						};
+
+						badge.ondragend = () => badge.classList.remove('opacity-50');
+
+						badge.innerHTML = `<span class="text-[8px] font-black uppercase">${c.nombre}</span>`;
+						cell.appendChild(badge);
+					}
+				});
+			});
+			
+			document.querySelectorAll('.cal-cell[id^="cell-"]').forEach(cell => {
+				cell.ondragover = (e) => e.preventDefault();
+				cell.ondrop = async (e) => {
+					e.preventDefault();
+					const claseId = e.dataTransfer.getData("claseId");
+					const oldDia = e.dataTransfer.getData("oldDia");
+					const oldHorario = e.dataTransfer.getData("oldHorario");
+					
+					// Obtener destino del ID de la celda: cell-DIA-HORA
+					const parts = cell.id.split('-');
+					const newDia = parseInt(parts[1]);
+					const newHorario = parseFloat(parts[2].replace('_', '.'));
+
+					// Evitar procesar si es la misma celda
+					if(oldDia == newDia && oldHorario == newHorario) return;
+
+					const res = await apiFetch(`/clases/${claseId}/move`, 'PUT', {
+						old_dia: parseInt(oldDia),
+						old_horario: parseFloat(oldHorario),
+						new_dia: newDia,
+						new_horario: newHorario
+					});
+
+					if(!res.error) {
+						showVikingToast("Posición de clase actualizada");
+						await loadClases(); // Recargar datos y redibujar
+					} else {
+						showVikingToast("Error al mover: " + res.error, true);
+					}
+				};
+			});
+			
+		}
 
         function setCobrarTab(tab) {
             state.cobrarTab = tab;

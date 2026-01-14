@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy import func
+from sqlalchemy import func, Column, Integer, String, JSON
 from typing import List, Optional
 from pydantic import BaseModel
 from datetime import date, datetime
@@ -17,6 +17,7 @@ logger = logging.getLogger(__name__)
 # Importamos nuestros módulos locales
 import models
 import database
+from database import Base
 
 app = FastAPI(title="Vikingo Strength Hub API")
 
@@ -31,6 +32,20 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# ==========================================
+# MODELO DE CLASE (Sobrescribimos/Aseguramos el campo JSON)
+# ==========================================
+
+class Clase(Base):
+    __tablename__ = "clases"
+    id = Column(Integer, primary_key=True, index=True)
+    nombre = Column(String)
+    coach = Column(String)
+    capacidad_max = Column(Integer, default=40)
+    color = Column(String, default="#FF0000")
+    # Este campo permite guardar una lista de horarios: [{"dia": 1, "horario": 7}, ...]
+    horarios_detalle = Column(JSON, nullable=True) 
 
 # ==========================================
 # MODELOS DE DATOS (PYDANTIC SCHEMAS)
@@ -113,17 +128,21 @@ class PlanUpdate(BaseModel):
     precio: float
     tipo_plan_id: int
 
+# --- ESQUEMA DE CLASE ACTUALIZADO ---
 class ClaseUpdate(BaseModel):
     nombre: str
     coach: str
-    dia: int
-    horario: float 
     color: Optional[str] = "#FF0000"
     capacidad_max: Optional[int] = 40
+    # Recibimos la lista completa de horarios
+    horarios_detalle: Optional[List[dict]] = None
 
+# --- ESQUEMA DE MOVIMIENTO ACTUALIZADO ---
 class ClaseMove(BaseModel):
-    dia: int
-    horario: float 
+    old_dia: int
+    old_horario: float
+    new_dia: int
+    new_horario: float
 
 class MovimientoCajaCreate(BaseModel):
     tipo: str
@@ -324,14 +343,13 @@ def get_reservas(db: Session = Depends(database.get_db)):
         joinedload(models.Reserva.usuario),
         joinedload(models.Reserva.clase)
     ).all()
+    # Modificamos el retorno para que sea compatible con el nuevo sistema de horarios
     return [{
         "id": r.id,
         "usuario_id": r.usuario_id,
         "clase_id": r.clase_id,
         "alumno_dni": r.usuario.dni if r.usuario else "N/A",
-        "clase_nombre": r.clase.nombre if r.clase else "Eliminada",
-        "horario": r.clase.horario if r.clase else 0,
-        "dia": r.clase.dia if r.clase else 0
+        "clase_nombre": r.clase.nombre if r.clase else "Eliminada"
     } for r in res]
 
 @app.post("/api/reservas", tags=["Reservas"])
@@ -345,7 +363,7 @@ def book_clase(data: ReservaCreate, db: Session = Depends(database.get_db)):
     if exists:
         raise HTTPException(status_code=400, detail="Ya tienes una reserva para esta clase hoy")
     
-    clase = db.query(models.Clase).filter(models.Clase.id == data.clase_id).first()
+    clase = db.query(Clase).filter(Clase.id == data.clase_id).first()
     if not clase:
         raise HTTPException(status_code=404, detail="Clase no encontrada")
         
@@ -512,22 +530,21 @@ def get_tipos(db: Session = Depends(database.get_db)):
     return db.query(models.TipoPlan).all()
 
 # ==========================================
-# MÓDULO 7: CLASES Y AGENDA
+# MÓDULO 7: CLASES Y AGENDA (OPTIMIZADO JSON)
 # ==========================================
 
 @app.get("/api/clases", tags=["Clases"])
 def get_clases(db: Session = Depends(database.get_db)):
-    return db.query(models.Clase).all()
+    return db.query(Clase).all()
 
 @app.post("/api/clases", tags=["Clases"])
 def create_clase(data: ClaseUpdate, db: Session = Depends(database.get_db)):
-    new_c = models.Clase(
+    new_c = Clase(
         nombre=data.nombre,
         coach=data.coach,
-        dia=data.dia,
-        horario=data.horario,
         color=data.color,
-        capacidad_max=data.capacidad_max
+        capacidad_max=data.capacidad_max,
+        horarios_detalle=data.horarios_detalle # Lista JSON de horarios
     )
     db.add(new_c)
     db.commit()
@@ -535,31 +552,50 @@ def create_clase(data: ClaseUpdate, db: Session = Depends(database.get_db)):
 
 @app.put("/api/clases/{id}", tags=["Clases"])
 def update_clase(id: int, data: ClaseUpdate, db: Session = Depends(database.get_db)):
-    c = db.query(models.Clase).filter(models.Clase.id == id).first()
+    c = db.query(Clase).filter(Clase.id == id).first()
     if c:
         c.nombre = data.nombre
         c.coach = data.coach
-        c.dia = data.dia
-        c.horario = data.horario
         c.color = data.color
         c.capacidad_max = data.capacidad_max
+        c.horarios_detalle = data.horarios_detalle # Actualiza la lista completa
         db.commit()
         return {"status": "success"}
     return {"status": "error", "message": "Clase no encontrada"}
 
+# --- ENDPOINT DE MOVIMIENTO (DRAG & DROP) ---
 @app.put("/api/clases/{id}/move", tags=["Clases"])
 def move_clase(id: int, data: ClaseMove, db: Session = Depends(database.get_db)):
-    c = db.query(models.Clase).filter(models.Clase.id == id).first()
-    if c:
-        c.dia = data.dia
-        c.horario = data.horario
+    c = db.query(Clase).filter(Clase.id == id).first()
+    if not c:
+        raise HTTPException(status_code=404, detail="Clase no encontrada")
+    
+    # Obtenemos la lista actual de horarios (copia profunda para evitar problemas)
+    horarios = list(c.horarios_detalle) if c.horarios_detalle else []
+    
+    # Buscamos el slot que coincide con la posición "vieja"
+    encontrado = False
+    for slot in horarios:
+        # Comparamos dia y horario (asegurando floats para la hora)
+        if slot['dia'] == data.old_dia and float(slot['horario']) == float(data.old_horario):
+            slot['dia'] = data.new_dia
+            slot['horario'] = data.new_horario
+            encontrado = True
+            break
+    
+    if encontrado:
+        # Notificamos a SQLAlchemy que el objeto JSON ha sido modificado
+        from sqlalchemy.orm.attributes import flag_modified
+        c.horarios_detalle = horarios
+        flag_modified(c, "horarios_detalle")
         db.commit()
         return {"status": "success"}
-    return {"status": "error", "message": "Clase no encontrada"}
+    
+    return {"status": "error", "message": "No se encontró el horario original en la lista"}
 
 @app.delete("/api/clases/{id}", tags=["Clases"])
 def delete_clase(id: int, db: Session = Depends(database.get_db)):
-    db.query(models.Clase).filter(models.Clase.id == id).delete()
+    db.query(Clase).filter(Clase.id == id).delete()
     db.commit()
     return {"status": "success"}
 
@@ -619,17 +655,14 @@ def create_ejercicio_lib(data: EjercicioCreate, db: Session = Depends(database.g
 @app.post("/api/rutinas/plan", tags=["Musculación"])
 def create_plan_rutina(data: PlanRutinaCreate, db: Session = Depends(database.get_db)):
     try:
-        # 1. VALIDACIÓN: Usuario existe
         user = db.query(models.Usuario).filter(models.Usuario.id == data.usuario_id).first()
         if not user:
             raise HTTPException(status_code=404, detail="Usuario no encontrado")
 
-        # 2. Desactivar rutinas anteriores
         db.query(models.PlanRutina).filter(
             models.PlanRutina.usuario_id == data.usuario_id
         ).update({"activo": False}, synchronize_session=False)
         
-        # 3. Crear el nuevo Plan
         nuevo_plan = models.PlanRutina(
             usuario_id=data.usuario_id,
             nombre_grupo=data.nombre_grupo,
@@ -641,30 +674,25 @@ def create_plan_rutina(data: PlanRutinaCreate, db: Session = Depends(database.ge
         db.add(nuevo_plan)
         db.flush() 
         
-        # 4. Recorrer los Días
         for d in data.dias:
             nuevo_dia = models.DiaRutina(plan_rutina_id=nuevo_plan.id, nombre_dia=d.nombre_dia)
             db.add(nuevo_dia)
             db.flush()
             
-            # 5. Recorrer los Ejercicios de cada día
             for e in d.ejercicios:
                 ej_exists = db.query(models.Ejercicio).filter(models.Ejercicio.id == e.ejercicio_id).first()
                 if not ej_exists:
                     logger.warning(f"Salteando ejercicio ID {e.ejercicio_id}: No existe.")
                     continue
 
-                # Creamos el registro del ejercicio en la rutina
                 ej_en_rut = models.EjercicioEnRutina(
                     dia_id=nuevo_dia.id,
                     ejercicio_id=e.ejercicio_id,
                     comentario=e.comentario
-                    # (Ya no guardamos series/reps/peso aquí, se guardan en la tabla nueva)
                 )
                 db.add(ej_en_rut)
-                db.flush() # Para obtener el ID de 'ej_en_rut'
+                db.flush()
 
-                # 6. NUEVO: Recorrer y guardar cada Serie individual
                 for s in e.series:
                     nueva_serie = models.SerieEjercicio(
                         ejercicio_en_rutina_id=ej_en_rut.id,
@@ -693,13 +721,9 @@ def get_rutina_activa(id: int, db: Session = Depends(database.get_db)):
         models.PlanRutina.usuario_id == id, 
         models.PlanRutina.activo == True
     ).options(
-        # RAMA 1: Cargar hasta el objeto Ejercicio (para saber el nombre)
         joinedload(models.PlanRutina.dias)
         .joinedload(models.DiaRutina.ejercicios)
         .joinedload(models.EjercicioEnRutina.ejercicio_obj),
-        
-        # RAMA 2: Cargar hasta el detalle de las Series (para saber reps/peso)
-        # SQLAlchemy es inteligente y une esto en una sola consulta eficiente
         joinedload(models.PlanRutina.dias)
         .joinedload(models.DiaRutina.ejercicios)
         .joinedload(models.EjercicioEnRutina.series_detalle)
