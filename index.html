@@ -2624,24 +2624,90 @@ async function renderRutinas() {
         }
 
         function openEditClase(id) {
-            const c = state.clases.find(x => x.id == id); if(!c) return;
-            document.getElementById('cl-id').value = c.id; 
-            document.getElementById('modal-clase-title').innerText = "Editar Clase";
-            document.getElementById('cl-nombre').value = c.nombre; 
-            document.getElementById('cl-coach-select').value = c.coach; 
-            document.getElementById('cl-cupo').value = c.capacidad_max || 40;
-            document.getElementById('cl-color').value = c.color || "#FF0000";
-            
-            document.querySelectorAll('input[name="cl-dias-check"]').forEach(checkbox => {
-                checkbox.checked = (checkbox.value == c.dia);
-            });
-            renderScheduleInputs(c.horario);
+			const c = state.clases.find(x => x.id == id); 
+			if(!c) return;
 
-            const delBtn = document.getElementById('btn-delete-clase'); 
-            if(state.user.rol_nombre === "Administrador" || state.user.rol_nombre === "Supervisor") delBtn.classList.remove('hidden');
-            delBtn.onclick = () => deleteRecord('clases', c.id, 'modal-clase', loadClases);
-            openModal('modal-clase');
-        }
+			// Llenar campos básicos
+			document.getElementById('cl-id').value = c.id; 
+			document.getElementById('modal-clase-title').innerText = "Configuración Vikinga: " + c.nombre;
+			document.getElementById('cl-nombre').value = c.nombre; 
+			document.getElementById('cl-coach-select').value = c.coach; 
+			document.getElementById('cl-cupo').value = c.capacidad_max;
+			document.getElementById('cl-color').value = c.color || "#FF0000";
+			
+			// 1. Limpiar todos los checkboxes de días primero
+			const checkboxes = document.querySelectorAll('input[name="cl-dias-check"]');
+			checkboxes.forEach(cb => cb.checked = false);
+
+			// 2. Marcar los días que la clase REALMENTE tiene en su bolsa JSON
+			const horarios = Array.isArray(c.horarios_detalle) ? c.horarios_detalle : [];
+			
+			horarios.forEach(slot => {
+				const cb = document.querySelector(`input[name="cl-dias-check"][value="${slot.dia}"]`);
+				if (cb) cb.checked = true;
+			});
+
+			// 3. MANDATORIO: Llamar a renderScheduleInputs pasándole los horarios existentes
+			// Esto es lo que hace que aparezcan los selectores de hora con los valores correctos
+			renderScheduleInputs(horarios);
+
+			// Configurar botón eliminar (Solo Admin/Supervisor)
+			const isAdmin = (state.user?.rol_nombre === "Administrador" || state.user?.rol_nombre === "Supervisor");
+			const delBtn = document.getElementById('btn-delete-clase'); 
+			if(delBtn) {
+				delBtn.classList.toggle('hidden', !isAdmin);
+				delBtn.onclick = () => deleteRecord('clases', c.id, 'modal-clase', loadClases);
+			}
+
+			openModal('modal-clase');
+		}
+
+		// --- 2. FUNCIÓN PARA DIBUJAR LOS SELECTORES DE HORA ---
+		function renderScheduleInputs(existingHorarios = null) {
+			const container = document.getElementById('cl-schedule-slots');
+			if (!container) return;
+
+			const checkboxes = Array.from(document.querySelectorAll('input[name="cl-dias-check"]:checked'));
+			const diasMap = {1: 'Lunes', 2: 'Martes', 3: 'Miércoles', 4: 'Jueves', 5: 'Viernes', 6: 'Sábado'};
+
+			if (checkboxes.length === 0) {
+				container.innerHTML = '<p class="text-[9px] text-gray-600 italic py-4 text-center">Selecciona días arriba para asignar horarios</p>';
+				return;
+			}
+
+			container.innerHTML = "";
+			checkboxes.forEach(cb => {
+				const dia = parseInt(cb.value);
+				const diaNombre = diasMap[dia];
+				
+				// Buscamos si este día tiene una hora asignada en los datos existentes
+				let horaPrevia = 7; // Por defecto 7:00 AM
+				if (Array.isArray(existingHorarios)) {
+					const hFound = existingHorarios.find(h => parseInt(h.dia) === dia);
+					if (hFound) horaPrevia = parseFloat(hFound.horario);
+				}
+
+				const row = document.createElement('div');
+				row.className = "flex items-center justify-between bg-white/5 p-2 rounded-xl border border-white/5 mb-2";
+				
+				let optionsHtml = "";
+				for(let i=7; i<=21.5; i+=0.5) {
+					const label = i % 1 === 0 ? `${i}:00` : `${Math.floor(i)}:30`;
+					optionsHtml += `<option value="${i}" ${horaPrevia === i ? 'selected' : ''}>${label} HS</option>`;
+				}
+
+				row.innerHTML = `
+					<div class="flex items-center gap-2">
+						<div class="w-2 h-2 rounded-full bg-red-600"></div>
+						<span class="text-[10px] font-black uppercase italic text-white">${diaNombre}</span>
+					</div>
+					<select class="viking-input py-1 h-8 text-[10px] w-28 schedule-select-day" data-dia="${dia}">
+						${optionsHtml}
+					</select>
+				`;
+				container.appendChild(row);
+			});
+		}
 
         function renderScheduleInputs(defaultVal = 7) {
             const container = document.getElementById('cl-schedule-slots');
