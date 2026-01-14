@@ -2703,13 +2703,6 @@ async function renderRutinas() {
 			if(window.lucide) lucide.createIcons();
 		}
 
-    row.innerHTML = `
-        <select class="viking-input py-1 h-10 text-[10px] flex-1 slot-dia">${diasOptions}</select>
-        <select class="viking-input py-1 h-10 text-[10px] flex-1 slot-hora">${horasOptions}</select>
-        <button type="button" onclick="this.closest('.schedule-slot-row').remove()" class="text-red-500 hover:bg-red-500/10 p-2 rounded-lg transition-all">
-            <i data-lucide="trash-2" class="w-4 h-4"></i>
-        </button>
-    `;
     container.appendChild(row);
     if(window.lucide) lucide.createIcons();
 
@@ -2830,80 +2823,7 @@ async function loadProfesores() {
 			// Cargar iconos de Lucide
 			if(window.lucide) lucide.createIcons();
 		};
-
-        function renderScheduleInputs(defaultVal = 7) {
-            const container = document.getElementById('cl-schedule-slots');
-            const checkboxes = Array.from(document.querySelectorAll('input[name="cl-dias-check"]:checked'));
-            const diasMap = {1: 'Lunes', 2: 'Martes', 3: 'Miércoles', 4: 'Jueves', 5: 'Viernes', 6: 'Sábado'};
-
-            if (checkboxes.length === 0) {
-                container.innerHTML = '<p class="text-[9px] text-gray-600 italic">Selecciona días arriba para asignar horarios</p>';
-                return;
-            }
-
-            const currentValues = {};
-            document.querySelectorAll('.schedule-select-day').forEach(sel => {
-                currentValues[sel.dataset.dia] = sel.value;
-            });
-
-            container.innerHTML = "";
-            checkboxes.forEach(cb => {
-                const dia = cb.value;
-                const diaNombre = diasMap[dia];
-                const row = document.createElement('div');
-                row.className = "schedule-slot-row";
-                
-                let optionsHtml = "";
-                for(let i=7; i<=21.5; i+=0.5) {
-                    const label = i % 1 === 0 ? `${i}:00` : `${Math.floor(i)}:30`;
-                    const isSelected = (defaultVal && defaultVal == i) || (currentValues[dia] == i);
-                    optionsHtml += `<option value="${i}" ${isSelected ? 'selected' : ''}>${label} HS</option>`;
-                }
-
-                row.innerHTML = `
-                    <span class="text-[10px] font-black uppercase italic">${diaNombre}</span>
-                    <select class="viking-input py-1 h-8 text-[10px] w-24 schedule-select-day" data-dia="${dia}">
-                        ${optionsHtml}
-                    </select>
-                `;
-                container.appendChild(row);
-            });
-        }
-
-        document.getElementById('form-clase').onsubmit = async (e) => {
-            e.preventDefault(); 
-            const id = document.getElementById('cl-id').value;
-            const scheduleSelects = document.querySelectorAll('.schedule-select-day');
-
-            if(scheduleSelects.length === 0) {
-                showVikingToast("Selecciona al menos un día", true);
-                return;
-            }
-
-            const baseData = {
-                nombre: document.getElementById('cl-nombre').value,
-                coach: document.getElementById('cl-coach-select').value,
-                color: document.getElementById('cl-color').value,
-                capacidad_max: parseInt(document.getElementById('cl-cupo').value)
-            };
-
-            let success = true;
-
-            for(let sel of scheduleSelects) {
-                const payload = { ...baseData, dia: parseInt(sel.dataset.dia), horario: parseFloat(sel.value) };
-                const res = await apiFetch(id ? `/clases/${id}` : '/clases', id ? 'PUT' : 'POST', payload);
-                if(res.error) success = false;
-                if(id) break; 
-            }
-
-            if(success) {
-                closeModal('modal-clase'); 
-                loadClases(); 
-                showVikingToast(id ? "Clase Actualizada" : "Clases Generadas con Éxito"); 
-            } else {
-                showVikingToast("Hubo un error al procesar la solicitud", true);
-            }
-        };
+    
 
         async function handleDrop(e, dia, horario) { e.preventDefault(); const id = e.dataTransfer.getData("clase_id"); if (!id) return; const res = await apiFetch(`/clases/${id}/move`, 'PUT', { dia, horario }); if (!res.error) { loadClases(); showVikingToast("Clase Reubicada"); } }
         
