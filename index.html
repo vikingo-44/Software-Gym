@@ -3120,16 +3120,19 @@ async function renderRutinas() {
 			if (!container) return;
 
 			if (state.stock.length === 0) {
-				container.innerHTML = `<div class="col-span-full py-20 text-center opacity-20"><p class="font-black uppercase italic">Almacén vacío</p></div>`;
+				container.innerHTML = `<div class="col-span-full py-20 text-center opacity-20"><p class="font-black uppercase italic tracking-widest">Almacén vacío</p></div>`;
 			} else {
 				container.innerHTML = state.stock.map(s => {
 					const stockBajo = s.stock_actual <= 5;
-					const imgUrl = s.url_imagen || 'https://images.unsplash.com/photo-1583417319070-4a69db38a482?q=80&w=400&auto=format&fit=crop';
+					// FIX: Verificamos múltiples nombres de campo posibles (url_imagen o imagen)
+					const imgData = s.url_imagen || s.imagen || "";
+					const imgUrl = imgData.length > 50 ? imgData : 'https://images.unsplash.com/photo-1583417319070-4a69db38a482?q=80&w=400&auto=format&fit=crop';
 					
 					return `
 					<div class="glass-card p-4 rounded-[2.5rem] border-white/5 flex flex-col gap-4 hover:border-red-600/30 transition-all group relative overflow-hidden shadow-xl">
 						<div class="w-full h-40 rounded-[1.8rem] overflow-hidden bg-black/40 relative">
-							<img src="${imgUrl}" class="w-full h-full object-cover opacity-70 group-hover:opacity-100 transition-all duration-700">
+							<img src="${imgUrl}" class="w-full h-full object-cover opacity-70 group-hover:opacity-100 transition-all duration-700" 
+								 onerror="this.src='https://images.unsplash.com/photo-1583417319070-4a69db38a482?q=80&w=400&auto=format&fit=crop'">
 							<div class="absolute top-3 right-3 bg-black/70 backdrop-blur-xl px-3 py-1.5 rounded-xl border border-white/10 text-[11px] font-black text-white italic">
 								$${s.precio_venta}
 							</div>
@@ -3145,9 +3148,10 @@ async function renderRutinas() {
 									</span>
 								</div>
 								
-								<!-- LÁPIZ CENTRADO (FIX) -->
-								<button onclick="openEditStock(${s.id})" class="w-10 h-10 flex items-center justify-center bg-white/5 rounded-xl border border-white/5 text-gray-400 hover:bg-red-600 hover:text-black hover:scale-110 transition-all action-col">
-									<i data-lucide="edit-3" class="w-4 h-4"></i>
+								<!-- LÁPIZ CENTRADO CON GRID (FIX DEFINITIVO) -->
+								<button onclick="openEditStock(${s.id})" 
+										class="w-10 h-10 grid place-items-center bg-white/5 rounded-xl border border-white/5 text-gray-400 hover:bg-red-600 hover:text-black hover:scale-110 transition-all action-col p-0">
+									<i data-lucide="edit-3" class="w-5 h-5"></i>
 								</button>
 							</div>
 						</div>
@@ -3162,13 +3166,17 @@ async function renderRutinas() {
 			const file = event.target.files[0];
 			if (!file) return;
 
+			// Validación de tamaño (Max 2MB para no saturar la DB)
+			if (file.size > 2 * 1024 * 1024) {
+				showVikingToast("Imagen demasiado pesada (Máx 2MB)", true);
+				return;
+			}
+
 			const reader = new FileReader();
 			reader.onload = function(e) {
 				const base64String = e.target.result;
-				// Guardar en el campo oculto
 				document.getElementById('stock-imagen-base64').value = base64String;
 				
-				// Mostrar en la vista previa
 				const img = document.getElementById('stock-img-preview');
 				img.src = base64String;
 				img.classList.remove('hidden');
@@ -3294,7 +3302,7 @@ async function renderRutinas() {
         };
 
         // ABRIR MODAL PARA NUEVO PRODUCTO
-			function openModalStock() {
+		function openModalStock() {
 			const form = document.getElementById('form-stock');
 			if(form) form.reset();
 			
@@ -3305,7 +3313,7 @@ async function renderRutinas() {
 			document.getElementById('modal-stock-title').innerText = "Alta de Mercadería";
 			
 			openModal('modal-stock');
-			}
+		}
 		
 		function openEditStock(id) {
 			const s = state.stock.find(x => x.id == id);
@@ -3316,12 +3324,12 @@ async function renderRutinas() {
 			document.getElementById('stock-cant').value = s.stock_actual;
 			document.getElementById('stock-precio').value = s.precio_venta;
 			
-			// Cargar imagen previa
-			const base64 = s.url_imagen || "";
+			// Cargar imagen previa (chequeamos url_imagen o imagen)
+			const base64 = s.url_imagen || s.imagen || "";
 			document.getElementById('stock-imagen-base64').value = base64;
 			
 			const img = document.getElementById('stock-img-preview');
-			if(base64) {
+			if(base64 && base64.length > 50) {
 				img.src = base64;
 				img.classList.remove('hidden');
 				document.getElementById('stock-img-placeholder').classList.add('hidden');
@@ -3342,7 +3350,7 @@ async function renderRutinas() {
 				nombre_producto: document.getElementById('stock-nombre').value,
 				stock_actual: parseInt(document.getElementById('stock-cant').value),
 				precio_venta: parseFloat(document.getElementById('stock-precio').value),
-				url_imagen: document.getElementById('stock-imagen-base64').value // <--- AQUÍ VA EL BASE64 --->
+				url_imagen: document.getElementById('stock-imagen-base64').value 
 			};
 
 			const res = await apiFetch(id ? `/stock/${id}` : '/stock', id ? 'PUT' : 'POST', payload);
@@ -3350,7 +3358,8 @@ async function renderRutinas() {
 			if(!res.error) {
 				showVikingToast(id ? "Actualizado" : "Registrado");
 				closeModal('modal-stock');
-				loadStock();
+				// Pequeño delay para que la DB asimile el Base64 antes de recargar
+				setTimeout(loadStock, 300);
 			}
 		}
 
