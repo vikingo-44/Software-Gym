@@ -740,7 +740,7 @@
 			<div class="flex justify-between items-center mb-8">
 				<div>
 					<h3 class="text-3xl font-black italic uppercase">Gestión de Alumnos</h3>
-					<p class="text-[10px] text-gray-500 font-bold uppercase tracking-[0.2em] mt-1 italic">Panel de control y seguimiento de guerreros</p>
+					<p class="text-[10px] text-gray-500 font-bold uppercase tracking-[0.2em] mt-1 italic">Control de accesos y membresías del Valhalla</p>
 				</div>
 				<button id="btn-nuevo-alumno" onclick="openModalAlumno()" class="viking-bg-red text-black px-8 py-4 rounded-2xl font-black uppercase italic text-[12px] shadow-xl flex items-center gap-3 hover:scale-105 transition-all">
 					<i data-lucide="user-plus" class="w-4 h-4"></i> Nuevo Alumno
@@ -766,13 +766,13 @@
 				</div>
 			</div>
 
-			<!-- PAGINACIÓN (MOVIDA A LA PARTE SUPERIOR) -->
+			<!-- PAGINACIÓN SUPERIOR -->
 			<div id="alumnos-pagination" class="flex items-center justify-between mb-6 px-8 py-4 glass-card rounded-2xl border-white/5 bg-white/2">
 				<!-- Se genera dinámicamente -->
 			</div>
 
-			<!-- LISTADO DE ALUMNOS -->
-			<div id="alumnos-list-view" class="space-y-3 min-h-[400px]">
+			<!-- LISTADO DE ALUMNOS (TARJETAS PREMIUM) -->
+			<div id="alumnos-list-view" class="space-y-4 min-h-[400px]">
 				<!-- Aquí se inyectan las tarjetas mediante renderAlumnos() -->
 			</div>
 		</div>
@@ -2794,19 +2794,17 @@ async function renderRutinas() {
 		state.alumnosSearch = "";
 		state.alumnosStatusFilter = "todos"; // todos, activos, vencidos
 
-		/**
-		 * RENDERIZADO DE LA LISTA DE ALUMNOS CON FILTROS Y PAGINACIÓN
-		 */
+		/*** RENDERIZADO DE ALUMNOS CON FILTROS Y PAGINACIÓN */
 		function renderAlumnos() {
 			const container = document.getElementById('alumnos-list-view');
 			if (!container) return;
 
 			const hoy = new Date().toISOString().split('T')[0];
 
-			// --- PASO A: FILTRADO ---
+			// 1. FILTRADO LÓGICO
 			let filtrados = state.alumnos.filter(a => {
 				const matchesSearch = a.nombre_completo.toLowerCase().includes(state.alumnosSearch.toLowerCase()) || 
-									  a.dni.includes(state.alumnosSearch);
+									  String(a.dni).includes(state.alumnosSearch);
 				
 				const isActive = a.fecha_vencimiento && a.fecha_vencimiento >= hoy;
 				
@@ -2817,32 +2815,38 @@ async function renderRutinas() {
 				return matchesSearch && matchesStatus;
 			});
 
-			// --- PASO B: CÁLCULO DE PAGINACIÓN ---
+			// 2. PAGINACIÓN
 			const totalItems = filtrados.length;
 			const totalPages = Math.ceil(totalItems / state.alumnosLimit) || 1;
-			
-			// Ajustar página actual si queda fuera de rango tras filtrar
 			if (state.alumnosPage > totalPages) state.alumnosPage = totalPages;
 
 			const inicio = (state.alumnosPage - 1) * state.alumnosLimit;
-			const fin = inicio + state.alumnosLimit;
-			const paginados = filtrados.slice(inicio, fin);
+			const paginados = filtrados.slice(inicio, inicio + state.alumnosLimit);
 
-			// --- PASO C: RENDERIZADO DE FILAS ---
+			// 3. ACTUALIZACIÓN VISUAL DE LOS BOTONES DE FILTRO (FIX COLOR ROJO)
+			document.querySelectorAll('.filter-btn').forEach(btn => {
+				btn.classList.remove('bg-red-600', 'text-black');
+				btn.classList.add('text-gray-500');
+			});
+			
+			const currentBtn = document.getElementById('filter-' + state.alumnosStatusFilter);
+			if (currentBtn) {
+				currentBtn.classList.remove('text-gray-500');
+				currentBtn.classList.add('bg-red-600', 'text-black');
+			}
+
+			// 4. DIBUJAR TARJETAS
 			if (paginados.length === 0) {
 				container.innerHTML = `
-					<div class="col-span-full p-20 text-center opacity-30">
-						<i data-lucide="search-x" class="w-16 h-16 mx-auto mb-4"></i>
-						<p class="font-black uppercase italic tracking-widest">No se encontraron guerreros</p>
-					</div>
-				`;
+					<div class="py-20 text-center opacity-20">
+						<i data-lucide="shield-off" class="w-16 h-16 mx-auto mb-4"></i>
+						<p class="font-black uppercase italic tracking-widest">No hay guerreros aquí</p>
+					</div>`;
 			} else {
 				container.innerHTML = paginados.map(a => createAlumnoRow(a, 'listado')).join('');
 			}
 
-			// --- PASO D: RENDERIZADO DE CONTROLES DE PAGINACIÓN ---
-			renderPaginationControls(totalPages, totalItems);
-
+			updatePaginationUI(totalPages, totalItems);
 			if (window.lucide) lucide.createIcons();
 		}
 
@@ -2930,69 +2934,79 @@ async function renderRutinas() {
 		}
 
 		/**
-		 * LA FUNCIÓN DE FILA SE MANTIENE PERO CON EL DISEÑO MEJORADO DEL PUNTO 4
+		 * CREACIÓN DE FILA/TARJETA DE ALUMNO (MEJORADA CON FECHA DE RENOVACIÓN)
 		 */
 		function createAlumnoRow(a, type) {
-			const initials = a.nombre_completo ? a.nombre_completo.split(' ').map(n=>n[0]).join('').substring(0,2).toUpperCase() : "??";
+			const initials = a.nombre_completo ? a.nombre_completo.split(' ').filter(n=>n).map(n=>n[0]).join('').substring(0,2).toUpperCase() : "??";
 			const planName = a.plan?.nombre || 'SIN PLAN ACTIVO';
 			const hoy = new Date().toISOString().split('T')[0];
 			const isActive = a.fecha_vencimiento && a.fecha_vencimiento >= hoy;
+			
 			const statusColor = isActive ? 'text-green-500' : 'text-red-500';
 			const statusText = isActive ? 'ACTIVO' : 'VENCIDO';
 			const statusBg = isActive ? 'bg-green-500/10 border-green-500/20' : 'bg-red-500/10 border-red-500/20';
 
 			if (type === 'dashboard') {
+				// Estilo compacto para el Dashboard lateral
 				return `
 				<div class="glass-card p-3 rounded-2xl border-white/5 flex items-center justify-between hover:bg-white/5 transition-colors group">
 					<div class="flex items-center gap-3">
 						<div class="w-8 h-8 rounded-lg viking-bg-red flex items-center justify-center font-black text-black text-[10px] italic shadow-md">${initials}</div>
 						<div class="flex flex-col">
-							<h4 class="text-[10px] font-black uppercase italic text-white group-hover:text-red-500 transition-colors leading-none mb-1">${a.nombre_completo}</h4>
-							<div class="flex items-center gap-2">
-								 <span class="text-[8px] text-gray-500 font-bold">${a.dni}</span>
-								 <span class="text-[7px] px-1.5 py-0.5 rounded ${statusBg} ${statusColor} font-black uppercase tracking-wider">${statusText}</span>
-							</div>
+							<h4 class="text-[10px] font-black uppercase italic text-white group-hover:text-red-500 leading-none mb-1">${a.nombre_completo}</h4>
+							<span class="text-[7px] px-1.5 py-0.5 rounded w-fit ${statusBg} ${statusColor} font-black uppercase tracking-wider">${statusText}</span>
 						</div>
 					</div>
-					<button onclick="openEditAlumno(${a.id})" class="w-7 h-7 flex items-center justify-center bg-white/5 text-gray-400 rounded-lg hover:bg-white/10 hover:text-white transition-colors action-col">
+					<button onclick="openEditAlumno(${a.id})" class="w-7 h-7 flex items-center justify-center bg-white/5 text-gray-400 rounded-lg hover:bg-white/10 hover:text-white action-col">
 						<i data-lucide="edit-2" class="w-3.5 h-3.5"></i>
 					</button>
 				</div>`;
 			} else {
+				// --- ESTILO PREMIUM PARA SECCIÓN ALUMNOS (RENOVACIÓN Y VENCIMIENTO) ---
 				return `
 				<div class="glass-card p-6 rounded-[2.5rem] border-white/5 flex flex-col lg:flex-row lg:items-center gap-6 hover:border-red-600/30 transition-all group relative overflow-hidden mb-3">
-					<div class="absolute left-0 top-0 bottom-0 w-1.5 ${isActive ? 'bg-green-500' : 'bg-red-500'} opacity-40 group-hover:opacity-100 transition-opacity"></div>
+					<div class="absolute left-0 top-0 bottom-0 w-1.5 ${isActive ? 'bg-green-500' : 'bg-red-500'} opacity-40"></div>
 					
+					<!-- Info Principal -->
 					<div class="flex items-center gap-5 flex-[1.2]">
-						<div class="w-14 h-14 rounded-2xl viking-bg-red flex items-center justify-center font-black text-black text-lg italic shadow-xl group-hover:scale-110 transition-transform duration-300">${initials}</div>
+						<div class="w-14 h-14 rounded-2xl viking-bg-red flex items-center justify-center font-black text-black text-lg italic shadow-xl group-hover:scale-110 transition-transform">
+							${initials}
+						</div>
 						<div class="min-w-0">
 							<h4 class="text-base font-black uppercase italic text-white group-hover:text-red-500 transition-colors truncate">${a.nombre_completo}</h4>
-							<div class="flex flex-wrap gap-x-4 gap-y-1 mt-1">
-								<p class="text-[10px] text-gray-500 font-bold flex items-center gap-1.5"><i data-lucide="id-card" class="w-3.5 h-3.5 text-red-600"></i> ${a.dni}</p>
-							</div>
+							<p class="text-[10px] text-gray-500 font-bold flex items-center gap-1.5 mt-1">
+								<i data-lucide="id-card" class="w-3.5 h-3.5 text-red-600"></i> DNI: ${a.dni}
+							</p>
 						</div>
 					</div>
 
-					<div class="flex flex-wrap items-center gap-8 lg:justify-start border-t lg:border-t-0 lg:border-l border-white/10 pt-4 lg:pt-0 lg:pl-8 flex-[1.8]">
-						<div class="flex-1 min-w-[200px]">
-							<p class="text-[9px] text-gray-500 font-black uppercase tracking-[0.2em] mb-1.5">Plan de Batalla</p>
+					<!-- Plan y Estado -->
+					<div class="flex flex-wrap items-center gap-8 lg:justify-start border-t lg:border-t-0 lg:border-l border-white/10 pt-4 lg:pt-0 lg:pl-8 flex-[1.6]">
+						<div class="flex-1 min-w-[180px]">
+							<p class="text-[9px] text-gray-500 font-black uppercase tracking-[0.2em] mb-1">Plan de Entrenamiento</p>
 							<p class="text-[13px] font-black uppercase italic text-white leading-tight">${planName}</p>
 						</div>
 						<div class="min-w-[90px]">
-							<p class="text-[9px] text-gray-500 font-black uppercase tracking-[0.2em] mb-1.5">Estado</p>
-							<span class="text-[10px] px-3 py-1.5 rounded-xl ${statusBg} ${statusColor} font-black uppercase tracking-widest border border-white/5 shadow-inner">${statusText}</span>
+							<p class="text-[9px] text-gray-500 font-black uppercase tracking-[0.2em] mb-1">Estado</p>
+							<span class="text-[10px] px-3 py-1.5 rounded-xl ${statusBg} ${statusColor} font-black uppercase tracking-widest border border-white/5">${statusText}</span>
 						</div>
 					</div>
 
-					<div class="flex items-center gap-6 justify-between lg:justify-end border-t lg:border-t-0 lg:border-l border-white/10 pt-4 lg:pt-0 lg:pl-8 flex-1">
-						<div class="text-right space-y-1.5">
+					<!-- FECHAS DE BATALLA (RENOWED & EXPIRY) -->
+					<div class="flex items-center gap-6 justify-between lg:justify-end border-t lg:border-t-0 lg:border-l border-white/10 pt-4 lg:pt-0 lg:pl-8 flex-[1.2]">
+						<div class="flex gap-6 text-right">
 							<div class="flex flex-col">
-								<span class="text-[8px] text-gray-500 font-black uppercase">Vencimiento</span>
-								<span class="text-[12px] font-black text-white italic tracking-wide">${a.fecha_vencimiento || '-- / -- / --'}</span>
+								<span class="text-[8px] text-gray-600 font-black uppercase tracking-tighter">Activación / Reno.</span>
+								<span class="text-[11px] font-bold text-gray-400 italic">${a.fecha_ultima_renovacion || '--/--/--'}</span>
+							</div>
+							<div class="flex flex-col">
+								<span class="text-[8px] text-red-600 font-black uppercase tracking-tighter">Vencimiento</span>
+								<span class="text-[13px] font-black text-white italic tracking-wide">${a.fecha_vencimiento || '--/--/--'}</span>
 							</div>
 						</div>
-						<button onclick="openEditAlumno(${a.id})" class="p-4 bg-white/5 text-white rounded-2xl hover:bg-red-600 hover:text-black transition-all shadow-xl action-col border border-white/5">
-							<i data-lucide="settings-2" class="w-5 h-5 group-hover:rotate-90 transition-transform duration-500"></i>
+						
+						<button onclick="openEditAlumno(${a.id})" class="p-4 bg-white/5 text-white rounded-2xl hover:bg-red-600 hover:text-black transition-all action-col border border-white/5">
+							<i data-lucide="settings-2" class="w-5 h-5 group-hover:rotate-90 transition-transform"></i>
 						</button>
 					</div>
 				</div>`;
