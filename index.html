@@ -1873,9 +1873,60 @@
                         <div class="flex items-center justify-between"><p class="text-[12px] font-black italic">$ ${s.precio_venta.toLocaleString()}</p><span class="text-[9px] font-bold ${s.stock_actual < 5 ? 'text-red-500' : 'text-gray-500'}">S: ${s.stock_actual}</span></div>
                     </div>`).join('');
             } else {
-                const filteredAl = state.alumnos.filter(a => a.nombre_completo.toLowerCase().includes(searchVal) || a.dni.includes(searchVal));
-                displayArea.innerHTML = `<div class="glass-card p-8 rounded-[2.5rem] h-[600px] flex flex-col"><h4 class="text-[11px] font-black uppercase italic text-red-600 mb-6 tracking-widest">Alumnos para Renovación</h4><div class="overflow-y-auto custom-scrollbar flex-1 space-y-3">${filteredAl.map(a => `<div class="flex flex-col gap-2 p-4 bg-white/5 rounded-2xl border border-white/5 hover:border-red-600/30 text-left"><div class="flex justify-between items-start"><div><p class="text-[12px] font-black italic uppercase leading-tight">${a.nombre_completo}</p><p class="text-[9px] text-gray-500">DNI: ${a.dni}</p></div></div><div class="flex gap-2 items-center mt-1"><select id="plan-select-${a.id}" class="viking-input py-1 text-[10px] h-8 bg-black/40 border-white/10 flex-1">${state.planes.map(p => `<option value="${p.id}" ${p.id === a.plan_id ? 'selected' : ''}>${p.nombre} ($${p.precio})</option>`).join('')}</select><button onclick="preparePlanCharge(${a.id})" class="px-4 py-2 rounded-xl text-[10px] font-black italic bg-green-600/20 text-green-500 hover:bg-green-600 hover:text-black transition-all">Cobrar</button></div></div>`).join('')}</div></div>`;
-            }
+				const hoy = new Date().toISOString().split('T')[0];
+				const filteredAl = state.alumnos.filter(a => 
+					a.nombre_completo.toLowerCase().includes(searchVal) || a.dni.includes(searchVal)
+				);
+
+				displayArea.innerHTML = `
+					<div class="glass-card p-8 rounded-[2.5rem] h-[600px] flex flex-col border-white/5">
+						<h4 class="text-[11px] font-black uppercase italic text-red-600 mb-6 tracking-widest border-b border-white/5 pb-4">
+							Guerreros para Renovación
+						</h4>
+						<div class="overflow-y-auto custom-scrollbar flex-1 space-y-3 pr-2">
+							${filteredAl.map(a => {
+								const isActive = a.fecha_vencimiento && a.fecha_vencimiento >= hoy;
+								const statusColor = isActive ? 'text-green-500' : 'text-red-500';
+								const statusBg = isActive ? 'bg-green-500/10' : 'bg-red-500/10';
+								const statusText = isActive ? 'Al día' : 'Vencido';
+
+								return `
+								<div class="flex flex-col gap-3 p-5 bg-white/2 rounded-[2rem] border border-white/5 hover:border-red-600/30 transition-all text-left group">
+									<div class="flex justify-between items-center">
+										<div class="flex items-center gap-3">
+											<div class="w-10 h-10 rounded-xl viking-bg-red flex items-center justify-center font-black text-black text-xs italic shadow-lg">
+												${a.nombre_completo[0].toUpperCase()}
+											</div>
+											<div>
+												<p class="text-[13px] font-black italic uppercase leading-tight text-white group-hover:text-red-500 transition-colors">${a.nombre_completo}</p>
+												<p class="text-[9px] text-gray-500 font-bold uppercase tracking-widest mt-1">DNI: ${a.dni}</p>
+											</div>
+										</div>
+										<span class="text-[8px] px-3 py-1 rounded-full ${statusBg} ${statusColor} font-black uppercase italic border border-white/5">
+											${statusText}
+										</span>
+									</div>
+
+									<div class="flex gap-2 items-center mt-2 pt-3 border-t border-white/5">
+										<div class="flex-1">
+											<p class="text-[8px] text-gray-600 font-black uppercase italic mb-1 px-2">Seleccionar Plan</p>
+											<select id="plan-select-${a.id}" class="viking-input !py-2 !text-[10px] h-10 bg-black/60 border-white/10">
+												${state.planes.map(p => `
+													<option value="${p.id}" ${p.id === a.plan_id ? 'selected' : ''}>
+														${p.nombre} — $${p.precio.toLocaleString()}
+													</option>
+												`).join('')}
+											</select>
+										</div>
+										<button onclick="preparePlanCharge(${a.id})" class="mt-4 px-6 h-10 rounded-xl text-[10px] font-black italic bg-green-600/20 text-green-500 border border-green-500/20 hover:bg-green-600 hover:text-black transition-all flex items-center gap-2 shadow-lg">
+											<i data-lucide="shopping-cart" class="w-3 h-3"></i> COBRAR
+										</button>
+									</div>
+								</div>`;
+							}).join('')}
+						</div>
+					</div>`;
+			}
             lucide.createIcons();
             updateCartUI();
         }
@@ -2245,127 +2296,45 @@ async function renderRutinas() {
             }
         }
 
-		async function openRoutineEditor(alumnoId) {
-			// 1. Buscar al alumno en el estado local
-			const alumno = state.alumnos.find(a => a.id == alumnoId);
-			if (!alumno) {
-				showVikingToast("No se encontró al guerrero en el sistema", true);
-				return;
-			}
+        async function openRoutineEditor(alumnoId) {
+            const al = state.alumnos.find(a => a.id === alumnoId);
+            if (!al) return;
+            
+            await loadMusculacionMetadata();
+            
+            document.getElementById('rutina-editor-alumno').innerText = "Alumno: " + al.nombre_completo;
+            document.getElementById('rutina-editor-alumno-id').value = alumnoId;
+            const container = document.getElementById('rutina-editor-container');
+            container.innerHTML = "";
 
-			// 2. Preparar el Modal (Usando los IDs reales de tu HTML)
-			const modalId = 'modal-rutina-editor';
-			const alumnoNombreLabel = document.getElementById('rutina-editor-alumno'); // <p id="rutina-editor-alumno">
-			const alumnoIdInput = document.getElementById('rutina-editor-alumno-id'); // <input id="rutina-editor-alumno-id">
-			const objetivoInput = document.getElementById('rutina-objetivo'); // <input id="rutina-objetivo">
-			const vencimientoInput = document.getElementById('rutina-vencimiento'); // <input id="rutina-vencimiento">
-			const container = document.getElementById('rutina-editor-container'); // <div id="rutina-editor-container">
+            const rutinaRes = await apiFetch(`/rutinas/usuario/${alumnoId}`);
+            
+            if (!rutinaRes.error && rutinaRes.id) {
+                document.getElementById('rutina-objetivo').value = rutinaRes.objetivo;
+                document.getElementById('rutina-vencimiento').value = rutinaRes.fecha_vencimiento;
+                
+                rutinaRes.dias.forEach(d => {
+                    const ejerciciosFormateados = d.ejercicios.map(e => {
+                        return {
+                            ejercicio_id: e.ejercicio_id,
+                            exercise_name: e.ejercicio_obj?.nombre || "Ejercicio",
+                            series: e.series_detalle || [],
+                            comentario: e.comentario
+                        };
+                    });
+                    addRoutineDay(d.nombre_dia, ejerciciosFormateados);
+                });
+            } else {
+                document.getElementById('rutina-objetivo').value = "";
+                const defaultDate = new Date();
+                defaultDate.setDate(defaultDate.getDate() + 30);
+                document.getElementById('rutina-vencimiento').value = defaultDate.toISOString().split('T')[0];
+                
+                addRoutineDay("Día 1", []); 
+            }
 
-			if (alumnoNombreLabel) alumnoNombreLabel.innerText = `Editando Plan: ${alumno.nombre_completo}`;
-			if (alumnoIdInput) alumnoIdInput.value = alumnoId;
-			
-			// Limpiar contenedor y mostrar carga
-			if (container) {
-				container.innerHTML = `
-					<div class="py-10 text-center opacity-50 col-span-full">
-						<div class="w-6 h-6 border-2 border-red-600 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
-						<p class="text-[10px] font-black uppercase italic">Consultando pergaminos de entrenamiento...</p>
-					</div>
-				`;
-			}
-
-			openModal(modalId);
-
-			// 3. Consultar si el alumno ya tiene una rutina activa
-			try {
-				const res = await apiFetch(`/rutinas/usuario/${alumnoId}`);
-				
-				// Resetear campos
-				if (objetivoInput) objetivoInput.value = "";
-				if (vencimientoInput) vencimientoInput.value = "";
-				if (container) container.innerHTML = "";
-
-				// Verificación de seguridad para evitar el crash de 'null'
-				if (res && typeof res === 'object' && !res.error) {
-					// Si res es un array (varias rutinas), tomamos la primera. Si es objeto, lo usamos directo.
-					const rutina = Array.isArray(res) ? res[0] : res;
-
-					if (rutina && rutina.id) {
-						if (objetivoInput) objetivoInput.value = rutina.objetivo || "";
-						if (vencimientoInput) vencimientoInput.value = rutina.fecha_vencimiento || "";
-						
-						// Renderizar los días y ejercicios guardados
-						if (rutina.dias && rutina.dias.length > 0) {
-							rutina.dias.forEach(dia => {
-								renderDiaEnEditor(dia);
-							});
-						}
-					}
-				} else {
-					showVikingToast("Iniciando nuevo plan de batalla");
-					// Opcional: Agregar un primer día vacío automáticamente
-					if (typeof addRoutineDay === 'function') {
-						addRoutineDay("Día 1");
-					}
-				}
-			} catch (err) {
-				console.error("Error al abrir el editor:", err);
-				showVikingToast("Error de conexión con el Valhalla", true);
-			}
-
-			if (window.lucide) lucide.createIcons();
-		}
-		
-		/**
-		 * Función auxiliar para renderizar cada día en el modal del editor
-		 */
-		function renderDiaEnEditor(diaData) {
-		// Usamos 'rutina-editor-container' que es el ID que tienes en tu HTML (línea 527)
-		const container = document.getElementById('rutina-editor-container');
-		if (!container) return;
-
-		const dayId = 'day-' + Math.random().toString(36).substr(2, 9);
-		
-		const div = document.createElement('div');
-		div.className = "glass-card p-6 rounded-[2rem] border-white/5 mb-6 day-group rutina-dia-card"; // Añadí 'rutina-dia-card' por consistencia
-		div.dataset.dayId = dayId;
-
-		div.innerHTML = `
-			<div class="flex justify-between items-center mb-6">
-				<input type="text" value="${diaData.nombre_dia || ''}" 
-					class="bg-transparent border-b border-white/10 text-lg font-black uppercase italic text-red-500 focus:border-red-600 outline-none day-name w-2/3 day-title">
-				<button type="button" onclick="this.closest('.day-group').remove()" class="text-gray-600 hover:text-red-500 transition-colors">
-					<i data-lucide="trash-2" class="w-5 h-5"></i>
-				</button>
-			</div>
-			
-			<!-- Este es el contenedor donde addExerciseToDay buscará para meter los ejercicios -->
-			<div class="day-exercises-container space-y-4 exercises-list">
-				<!-- Aquí se inyectan los ejercicios -->
-			</div>
-
-			<button type="button" onclick="addExerciseToDay('${dayId}')" 
-					class="w-full mt-4 py-3 border border-dashed border-white/10 rounded-2xl text-[10px] font-black uppercase italic text-gray-500 hover:text-white hover:border-white/30 transition-all flex items-center justify-center gap-2">
-				<i data-lucide="plus-circle" class="w-4 h-4"></i> Añadir Ejercicio
-			</button>
-		`;
-
-		container.appendChild(div);
-
-		// Cargar los ejercicios de este día
-		const ejercicios = diaData.ejercicios || diaData.ejercicios_list || [];
-		if (ejercicios.length > 0) {
-			ejercicios.forEach(ex => {
-				// Llamamos a tu función global que ya maneja la creación de filas y series
-				if (typeof addExerciseToDay === 'function') {
-					addExerciseToDay(dayId, ex);
-				}
-			});
-		}
-
-		// Refrescamos iconos de Lucide para que se vea el tacho de basura y el plus
-		if (window.lucide) lucide.createIcons();
-	}
+            openModal('modal-rutina-editor');
+        }
 
         function addRoutineDay(nombre = "", ejercicios = []) {
             const container = document.getElementById('rutina-editor-container');
