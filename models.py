@@ -91,6 +91,7 @@ class Stock(Base):
     precio_venta = Column(Float)
     stock_actual = Column(Integer)
     stock_inicial = Column(Integer)
+    url_imagen = Column(String, nullable=True) # <-- Agregado para el catálogo
 
 class MovimientoCaja(Base):
     __tablename__ = "caja"
@@ -98,6 +99,7 @@ class MovimientoCaja(Base):
     tipo = Column(String) # Ingreso / Egreso
     monto = Column(Float)
     descripcion = Column(String)
+    metodo_pago = Column(String, default="Efectivo") # <-- Agregado para reportes
     fecha = Column(DateTime, default=datetime.datetime.now)
 
 # =========================================

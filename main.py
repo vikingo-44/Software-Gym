@@ -1,5 +1,6 @@
 import os
 import logging
+import datetime
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
@@ -53,7 +54,7 @@ class PlanSchema(BaseModel):
     id: int
     nombre: str
     precio: float
-    clases_mensuales: int  # <-- NUEVO CAMPO
+    clases_mensuales: int  
     tipo_plan_id: Optional[int]
     tipo: Optional[TipoPlanSchema] = None
     class Config:
@@ -110,13 +111,13 @@ class StockUpdate(BaseModel):
     nombre_producto: str
     stock_actual: int
     precio_venta: float
-    url_imagen: Optional[str] = None # <-- NUEVO CAMPO
+    url_imagen: Optional[str] = None 
 
 class PlanUpdate(BaseModel):
     nombre: str
     precio: float
     tipo_plan_id: int
-    clases_mensuales: Optional[int] = 12 # <-- NUEVO CAMPO CON DEFAULT
+    clases_mensuales: Optional[int] = 12 
 
 class ClaseUpdate(BaseModel):
     nombre: str
@@ -135,6 +136,17 @@ class MovimientoCajaCreate(BaseModel):
     tipo: str
     monto: float
     descripcion: str
+    metodo_pago: Optional[str] = "Efectivo"
+
+# --- NUEVO ESQUEMA PARA TRANSACCIONES COMPLEJAS ---
+class TransactionCreate(BaseModel):
+    tipo: str  # 'Plan' o 'Mercaderia'
+    monto: float
+    descripcion: str
+    metodo_pago: str  # 'Efectivo', 'Transferencia', 'Tarjeta'
+    alumno_id: Optional[int] = None
+    producto_id: Optional[int] = None
+    cantidad: int = 1
 
 class ReservaCreate(BaseModel):
     usuario_id: int
@@ -142,8 +154,7 @@ class ReservaCreate(BaseModel):
     horario: float
     dia_semana: int
 
-# --- SCHEMAS DE RESPUESTA PARA RUTINAS (PARA EVITAR ERROR 500) ---
-
+# --- SCHEMAS RUTINAS ---
 class SerieResponse(BaseModel):
     id: int
     numero_serie: int
@@ -182,8 +193,6 @@ class PlanRutinaResponse(BaseModel):
     activo: bool
     dias: List[DiaRutinaResponse] = []
     class Config: from_attributes = True
-
-# --- SCHEMAS DE CREACIÓN ---
 
 class SerieCreate(BaseModel):
     numero_serie: int
@@ -258,7 +267,7 @@ def login(data: UsuarioLogin, db: Session = Depends(database.get_db)):
             "id": user.plan.id,
             "nombre": user.plan.nombre,
             "precio": user.plan.precio,
-            "clases_mensuales": user.plan.clases_mensuales # <-- ENVÍO AL FRONT
+            "clases_mensuales": user.plan.clases_mensuales 
         } if user.plan else None,
         "plan_id": user.plan_id,
         "fecha_vencimiento": user.fecha_vencimiento.isoformat() if user.fecha_vencimiento else None,
@@ -373,8 +382,8 @@ def get_reservas(db: Session = Depends(database.get_db)):
         "usuario_id": r.usuario_id,
         "clase_id": r.clase_id,
         "fecha_clase": r.fecha_reserva.isoformat() if r.fecha_reserva else None,
-        "horario": r.horario,      # Agregado
-        "dia_semana": r.dia_semana, # Agregado
+        "horario": r.horario,      
+        "dia_semana": r.dia_semana, 
         "alumno_dni": r.usuario.dni if r.usuario else "N/A",
         "clase_nombre": r.clase.nombre if r.clase else "Eliminada"
     } for r in res]
@@ -382,12 +391,10 @@ def get_reservas(db: Session = Depends(database.get_db)):
 @app.post("/api/reservas", tags=["Reservas"])
 def book_clase(data: ReservaCreate, db: Session = Depends(database.get_db)):
     
-    # 1. Verificar si el usuario existe y obtener su plan
     user = db.query(models.Usuario).options(joinedload(models.Usuario.plan)).filter(models.Usuario.id == data.usuario_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
 
-    # 2. VALIDACIÓN DE LÍMITE MENSUAL (CRÉDITOS)
     if user.plan:
         limite_mensual = user.plan.clases_mensuales
         if limite_mensual < 1000:
@@ -406,7 +413,6 @@ def book_clase(data: ReservaCreate, db: Session = Depends(database.get_db)):
                     detail=f"Has alcanzado tu límite de {limite_mensual} clases mensuales. ¡Actualiza tu plan!"
                 )
 
-    # 3. Validar si ya tiene reserva hoy para esa clase Y ESE TURNO
     exists = db.query(models.Reserva).filter(
         models.Reserva.usuario_id == data.usuario_id,
         models.Reserva.clase_id == data.clase_id,
@@ -422,7 +428,6 @@ def book_clase(data: ReservaCreate, db: Session = Depends(database.get_db)):
     if not clase:
         raise HTTPException(status_code=404, detail="Clase no encontrada")
         
-    # 4. Validar cupo por TURNO ESPECÍFICO
     cupo_actual = db.query(models.Reserva).filter(
         models.Reserva.clase_id == data.clase_id,
         models.Reserva.horario == data.horario,
@@ -437,8 +442,8 @@ def book_clase(data: ReservaCreate, db: Session = Depends(database.get_db)):
         usuario_id=data.usuario_id,
         clase_id=data.clase_id,
         fecha_reserva=date.today(),
-        horario=data.horario,     # Agregado
-        dia_semana=data.dia_semana # Agregado
+        horario=data.horario,     
+        dia_semana=data.dia_semana 
     )
     db.add(new_res)
     db.commit()
@@ -528,7 +533,7 @@ def create_stock(data: StockUpdate, db: Session = Depends(database.get_db)):
         stock_actual=data.stock_actual, 
         stock_inicial=data.stock_actual, 
         precio_venta=data.precio_venta,
-        url_imagen=data.url_imagen # <-- GUARDAR IMAGEN
+        url_imagen=data.url_imagen 
     )
     db.add(new_s)
     db.commit()
@@ -541,7 +546,7 @@ def update_stock(id: int, data: StockUpdate, db: Session = Depends(database.get_
         s.nombre_producto = data.nombre_producto
         s.stock_actual = data.stock_actual
         s.precio_venta = data.precio_venta
-        s.url_imagen = data.url_imagen # <-- ACTUALIZAR IMAGEN
+        s.url_imagen = data.url_imagen 
         db.commit()
     return {"status": "success"}
 
@@ -565,7 +570,7 @@ def create_plan(data: PlanUpdate, db: Session = Depends(database.get_db)):
         nombre=data.nombre,
         precio=data.precio,
         tipo_plan_id=data.tipo_plan_id,
-        clases_mensuales=data.clases_mensuales or 12 # Guardar cupo
+        clases_mensuales=data.clases_mensuales or 12 
     )
     db.add(new_p)
     db.commit()
@@ -609,7 +614,7 @@ def create_clase(data: ClaseUpdate, db: Session = Depends(database.get_db)):
         coach=data.coach,
         color=data.color,
         capacidad_max=data.capacidad_max,
-        horarios_detalle=data.horarios_detalle # Lista JSON de horarios
+        horarios_detalle=data.horarios_detalle 
     )
     db.add(new_c)
     db.commit()
@@ -623,16 +628,14 @@ def update_clase(id: int, data: ClaseUpdate, db: Session = Depends(database.get_
         c.coach = data.coach
         c.color = data.color
         c.capacidad_max = data.capacidad_max
-        c.horarios_detalle = data.horarios_detalle # Actualiza la lista completa
+        c.horarios_detalle = data.horarios_detalle 
         
-        # Notificamos a SQLAlchemy que el objeto JSON ha sido modificado
         flag_modified(c, "horarios_detalle")
         
         db.commit()
         return {"status": "success"}
     return {"status": "error", "message": "Clase no encontrada"}
 
-# --- ENDPOINT DE MOVIMIENTO (DRAG & DROP) ---
 @app.put("/api/clases/{id}/move", tags=["Clases"])
 def move_clase(id: int, data: ClaseMove, db: Session = Depends(database.get_db)):
     c = db.query(models.Clase).filter(models.Clase.id == id).first()
@@ -664,7 +667,7 @@ def delete_clase(id: int, db: Session = Depends(database.get_db)):
     return {"status": "success"}
 
 # ==========================================
-# MÓDULO 8: CAJA Y FINANZAS
+# MÓDULO 8: CAJA Y FINANZAS (SINCRONIZADO)
 # ==========================================
 
 @app.get("/api/caja/resumen", tags=["Finanzas"])
@@ -682,14 +685,62 @@ def create_movimiento(data: MovimientoCajaCreate, db: Session = Depends(database
     new_mov = models.MovimientoCaja(
         tipo=data.tipo,
         monto=data.monto,
-        descripcion=data.descripcion
+        descripcion=data.descripcion,
+        metodo_pago=data.metodo_pago,
+        fecha=datetime.now()
     )
     db.add(new_mov)
     db.commit()
     return {"status": "success"}
 
+# --- ENDPOINT UNIFICADO: COBRAR PLAN / MERCADERÍA CON IMPACTO EN STOCK ---
+@app.post("/api/cobros/procesar", tags=["Finanzas"])
+def procesar_cobro(data: TransactionCreate, db: Session = Depends(database.get_db)):
+    try:
+        # 1. Registro automático en Caja como "Ingreso"
+        nueva_transaccion = models.MovimientoCaja(
+            tipo="Ingreso",
+            monto=data.monto,
+            descripcion=data.descripcion,
+            metodo_pago=data.metodo_pago,
+            fecha=datetime.now()
+        )
+        db.add(nueva_transaccion)
+
+        # 2. Lógica de Stock (Si es mercadería)
+        if data.tipo == "Mercaderia" and data.producto_id:
+            producto = db.query(models.Stock).filter(models.Stock.id == data.producto_id).first()
+            if not producto:
+                raise HTTPException(status_code=404, detail="Producto no encontrado")
+            
+            if producto.stock_actual < data.cantidad:
+                raise HTTPException(status_code=400, detail=f"Stock insuficiente de {producto.nombre_producto}")
+            
+            # Descontamos el stock
+            producto.stock_actual -= data.cantidad
+            
+        # 3. Actualización de Alumno (Si es un Plan)
+        if data.tipo == "Plan" and data.alumno_id:
+            alumno = db.query(models.Usuario).filter(models.Usuario.id == data.alumno_id).first()
+            if alumno:
+                alumno.fecha_ultima_renovacion = date.today()
+                # Extensión automática de 30 días (ajustable según lógica de negocio)
+                alumno.fecha_vencimiento = date.today() + datetime.timedelta(days=30)
+                alumno.estado_cuenta = "Al día"
+
+        db.commit()
+        return {"status": "success", "message": "Cobro procesado, Caja impactada y Stock actualizado"}
+
+    except HTTPException as he:
+        db.rollback()
+        raise he
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error procesando cobro: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error interno al procesar el pago")
+
 # ==========================================
-# MÓDULO 9: MUSCULACIÓN AVANZADA (CORREGIDO)
+# MÓDULO 9: MUSCULACIÓN AVANZADA
 # ==========================================
 
 @app.get("/api/rutinas/grupos-musculares", tags=["Musculación"])
@@ -723,7 +774,6 @@ def create_plan_rutina(data: PlanRutinaCreate, db: Session = Depends(database.ge
         if not user:
             raise HTTPException(status_code=404, detail="Usuario no encontrado")
 
-        # Desactivar rutinas previas
         db.query(models.PlanRutina).filter(
             models.PlanRutina.usuario_id == data.usuario_id
         ).update({"activo": False}, synchronize_session=False)
@@ -744,7 +794,6 @@ def create_plan_rutina(data: PlanRutinaCreate, db: Session = Depends(database.ge
             db.add(nuevo_dia)
             db.flush()
             
-            # Soporte para campos del frontend (ejercicios o exercises)
             lista_ejercicios = d.ejercicios if d.ejercicios else (d.exercises if d.exercises else [])
             
             for e in lista_ejercicios:
@@ -785,7 +834,6 @@ def create_plan_rutina(data: PlanRutinaCreate, db: Session = Depends(database.ge
 
 @app.get("/api/rutinas/usuario/{id}", response_model=Optional[PlanRutinaResponse], tags=["Musculación"])
 def get_rutina_activa(id: int, db: Session = Depends(database.get_db)):
-    # FIX: Corregida la ruta de carga anidada para series y ejercicios específicos
     rutina = db.query(models.PlanRutina).filter(
         models.PlanRutina.usuario_id == id, 
         models.PlanRutina.activo == True
