@@ -735,7 +735,7 @@
                 </div>
             </div>
 
-            <div id="view-alumnos" class="view-content">
+        <div id="view-alumnos" class="view-content">
 			<!-- CABECERA PRINCIPAL -->
 			<div class="flex justify-between items-center mb-8">
 				<div>
@@ -748,7 +748,7 @@
 			</div>
 
 			<!-- BARRA DE HERRAMIENTAS (BUSCADOR Y FILTROS) -->
-			<div class="flex flex-col md:flex-row gap-4 mb-8">
+			<div class="flex flex-col md:flex-row gap-4 mb-4">
 				<!-- BUSCADOR -->
 				<div class="flex-1 relative">
 					<i data-lucide="search" class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500"></i>
@@ -766,14 +766,14 @@
 				</div>
 			</div>
 
-			<!-- LISTADO DE ALUMNOS (REEMPLAZA A LA TABLA) -->
-			<div id="alumnos-list-view" class="space-y-3 min-h-[400px]">
-				<!-- Aquí se inyectan las tarjetas mediante renderAlumnos() -->
+			<!-- PAGINACIÓN (MOVIDA A LA PARTE SUPERIOR) -->
+			<div id="alumnos-pagination" class="flex items-center justify-between mb-6 px-8 py-4 glass-card rounded-2xl border-white/5 bg-white/2">
+				<!-- Se genera dinámicamente -->
 			</div>
 
-			<!-- PAGINACIÓN -->
-			<div id="alumnos-pagination" class="flex items-center justify-between mt-8 px-8 py-5 glass-card rounded-[2rem] border-white/5">
-				<!-- Se genera dinámicamente -->
+			<!-- LISTADO DE ALUMNOS -->
+			<div id="alumnos-list-view" class="space-y-3 min-h-[400px]">
+				<!-- Aquí se inyectan las tarjetas mediante renderAlumnos() -->
 			</div>
 		</div>
 
