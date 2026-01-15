@@ -3109,38 +3109,53 @@ async function renderRutinas() {
 			if (!container) return;
 
 			if (state.stock.length === 0) {
-				container.innerHTML = `<p class="col-span-full text-center py-20 text-gray-600 italic">No hay mercadería en el inventario.</p>`;
+				container.innerHTML = `
+					<div class="col-span-full py-20 text-center opacity-20">
+						<i data-lucide="package-x" class="w-16 h-16 mx-auto mb-4"></i>
+						<p class="font-black uppercase italic tracking-widest">El almacén está vacío</p>
+					</div>`;
 			} else {
-				container.innerHTML = state.stock.map(s => `
-					<div class="glass-card p-4 rounded-[2rem] border-white/5 flex flex-col gap-4 hover:border-red-600/20 transition-all group relative overflow-hidden">
-						<!-- Imagen del Producto -->
-						<div class="w-full h-32 rounded-2xl overflow-hidden bg-white/5 relative">
-							<img src="${s.url_imagen || 'https://images.unsplash.com/photo-1583417319070-4a69db38a482?q=80&w=200&auto=format&fit=crop'}" 
+				container.innerHTML = state.stock.map(s => {
+					const stockBajo = s.stock_actual <= 5;
+					// Imagen por defecto si no tiene o falla
+					const imgUrl = s.url_imagen || 'https://images.unsplash.com/photo-1583417319070-4a69db38a482?q=80&w=400&auto=format&fit=crop';
+					
+					return `
+					<div class="glass-card p-4 rounded-[2.5rem] border-white/5 flex flex-col gap-4 hover:border-red-600/30 transition-all group relative overflow-hidden shadow-xl">
+						<!-- Imagen con Badge de Precio -->
+						<div class="w-full h-40 rounded-[1.8rem] overflow-hidden bg-black/40 relative">
+							<img src="${imgUrl}" 
 								 alt="${s.nombre_producto}" 
-								 class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500 opacity-80 group-hover:opacity-100"
-								 onerror="this.src='https://images.unsplash.com/photo-1583417319070-4a69db38a482?q=80&w=200&auto=format&fit=crop'">
-							<div class="absolute top-2 right-2 bg-black/60 backdrop-blur-md px-2 py-1 rounded-lg text-[10px] font-black text-red-500">
+								 class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 opacity-70 group-hover:opacity-100"
+								 onerror="this.src='https://images.unsplash.com/photo-1583417319070-4a69db38a482?q=80&w=400&auto=format&fit=crop'">
+							<div class="absolute top-3 right-3 bg-black/70 backdrop-blur-xl px-3 py-1.5 rounded-xl border border-white/10 text-[11px] font-black text-white italic">
 								$${s.precio_venta}
 							</div>
 						</div>
 
-						<!-- Info -->
-						<div class="px-2">
-							<h4 class="text-xs font-black uppercase italic text-white truncate">${s.nombre_producto}</h4>
-							<div class="flex items-center justify-between mt-2">
+						<!-- Detalles y Acción -->
+						<div class="px-2 pb-2">
+							<h4 class="text-[13px] font-black uppercase italic text-white truncate mb-3">${s.nombre_producto}</h4>
+							<div class="flex items-center justify-between">
 								<div class="flex flex-col">
-									<span class="text-[8px] text-gray-500 font-bold uppercase">Stock Actual</span>
-									<span class="text-sm font-black ${s.stock_actual <= 5 ? 'text-red-500 animate-pulse' : 'text-white'}">${s.stock_actual} Unid.</span>
+									<span class="text-[8px] text-gray-500 font-black uppercase tracking-widest">Disponibilidad</span>
+									<span class="text-sm font-black italic ${stockBajo ? 'text-red-500 animate-pulse' : 'text-white'}">
+										${s.stock_actual} <span class="text-[9px] opacity-50 uppercase">unid.</span>
+									</span>
 								</div>
-								<button onclick="openEditStock(${s.id})" class="p-2 bg-white/5 rounded-xl hover:bg-red-600 hover:text-black transition-all">
+								
+								<!-- BOTÓN EDITAR (Sincronizado con openEditStock) -->
+								<button onclick="openEditStock(${s.id})" class="w-10 h-10 flex items-center justify-center bg-white/5 rounded-xl border border-white/5 text-gray-400 hover:bg-red-600 hover:text-black hover:scale-110 transition-all action-col">
 									<i data-lucide="edit-3" class="w-4 h-4"></i>
 								</button>
 							</div>
 						</div>
-					</div>
-				`).join('');
+					</div>`;
+				}).join('');
 			}
+
 			if (window.lucide) lucide.createIcons();
+			if (typeof applyPermissions === 'function') applyPermissions();
 		}
 
         async function loadClases() {
@@ -3259,23 +3274,64 @@ async function renderRutinas() {
             if(!res.error) { closeModal('modal-plan'); loadPlanes(); showVikingToast("Plan Guardado"); }
         };
 
-        function openModalStock() {
-			document.getElementById('st-id').value = "";
-			document.getElementById('st-nombre').value = "";
-			document.getElementById('st-stock').value = "";
-			document.getElementById('st-precio').value = "";
-			document.getElementById('st-imagen').value = ""; // Limpiar campo imagen
-			openModal('modal-stock');
-		}
-        function openEditStock(id) {
+        // 2. ABRIR MODAL PARA NUEVO PRODUCTO
+				function openModalStock() {
+					const form = document.getElementById('form-stock');
+					if(form) form.reset();
+					
+					document.getElementById('stock-id').value = "";
+					document.getElementById('modal-stock-title').innerText = "Alta de Mercadería";
+					
+					const delBtn = document.getElementById('btn-delete-stock');
+					if(delBtn) delBtn.classList.add('hidden');
+
+					openModal('modal-stock');
+				}
+				function openEditStock(id) {
 			const s = state.stock.find(x => x.id == id);
 			if (!s) return;
-			document.getElementById('st-id').value = s.id;
-			document.getElementById('st-nombre').value = s.nombre_producto;
-			document.getElementById('st-stock').value = s.stock_actual;
-			document.getElementById('st-precio').value = s.precio_venta;
-			document.getElementById('st-imagen').value = s.url_imagen || ""; // Cargar campo imagen
+
+			document.getElementById('stock-id').value = s.id;
+			document.getElementById('stock-nombre').value = s.nombre_producto;
+			document.getElementById('stock-cant').value = s.stock_actual;
+			document.getElementById('stock-precio').value = s.precio_venta;
+			document.getElementById('stock-imagen').value = s.url_imagen || "";
+			
+			document.getElementById('modal-stock-title').innerText = "Editar Producto";
+			
+			const delBtn = document.getElementById('btn-delete-stock');
+			if(delBtn) {
+				delBtn.classList.remove('hidden');
+				delBtn.onclick = () => deleteRecord('stock', s.id, 'modal-stock', loadStock);
+			}
+
 			openModal('modal-stock');
+		}
+		
+		// 4. GUARDAR CAMBIOS (Vincular al onsubmit del form)
+		async function saveStockVikingo(e) {
+			if(e) e.preventDefault();
+			
+			const id = document.getElementById('stock-id').value;
+			const payload = {
+				nombre_producto: document.getElementById('stock-nombre').value,
+				stock_actual: parseInt(document.getElementById('stock-cant').value),
+				precio_venta: parseFloat(document.getElementById('stock-precio').value),
+				url_imagen: document.getElementById('stock-imagen').value
+			};
+
+			const method = id ? 'PUT' : 'POST';
+			const endpoint = id ? `/stock/${id}` : '/stock';
+
+			const res = await apiFetch(endpoint, method, payload);
+			
+			if(!res.error) {
+				showVikingToast(id ? "Producto Actualizado" : "Producto Registrado");
+				closeModal('modal-stock');
+				await loadStock();
+			} else {
+				showVikingToast("Error: " + res.error, true);
+			}
 		}
 
         document.getElementById('form-stock').onsubmit = async (e) => {
@@ -3711,6 +3767,11 @@ async function loadProfesores() {
             document.querySelectorAll('.exercise-results-list').forEach(list => list.classList.add('hidden'));
         };
         
+		window.addEventListener('load', () => {
+			const formStock = document.getElementById('form-stock');
+			if(formStock) formStock.onsubmit = saveStockVikingo;
+		});
+		
         window.onload = () => {
 			const formClase = document.getElementById('form-clase');
 			if(formClase) {
