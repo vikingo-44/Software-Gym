@@ -3120,35 +3120,42 @@ async function renderRutinas() {
 			if (!container) return;
 
 			if (state.stock.length === 0) {
-				container.innerHTML = `<div class="col-span-full py-20 text-center opacity-20"><p class="font-black uppercase italic tracking-widest">Almacén vacío</p></div>`;
+				container.innerHTML = `
+					<div class="col-span-full py-20 text-center opacity-20">
+						<i data-lucide="package-x" class="w-16 h-16 mx-auto mb-4"></i>
+						<p class="font-black uppercase italic tracking-widest">El Valhalla no tiene provisiones</p>
+					</div>`;
 			} else {
 				container.innerHTML = state.stock.map(s => {
 					const stockBajo = s.stock_actual <= 5;
-					// FIX: Verificamos múltiples nombres de campo posibles (url_imagen o imagen)
-					const imgData = s.url_imagen || s.imagen || "";
-					const imgUrl = imgData.length > 50 ? imgData : 'https://images.unsplash.com/photo-1583417319070-4a69db38a482?q=80&w=400&auto=format&fit=crop';
+					// Buscamos la imagen en ambos campos posibles
+					const rawImg = s.url_imagen || s.imagen || "";
+					const hasImg = rawImg && rawImg.length > 100; // Un Base64 real es largo
+					const imgUrl = hasImg ? rawImg : 'https://images.unsplash.com/photo-1583417319070-4a69db38a482?q=80&w=400&auto=format&fit=crop';
 					
 					return `
 					<div class="glass-card p-4 rounded-[2.5rem] border-white/5 flex flex-col gap-4 hover:border-red-600/30 transition-all group relative overflow-hidden shadow-xl">
+						<!-- Foto del Producto -->
 						<div class="w-full h-40 rounded-[1.8rem] overflow-hidden bg-black/40 relative">
-							<img src="${imgUrl}" class="w-full h-full object-cover opacity-70 group-hover:opacity-100 transition-all duration-700" 
+							<img src="${imgUrl}" class="w-full h-full object-cover opacity-70 group-hover:opacity-100 transition-all duration-700"
 								 onerror="this.src='https://images.unsplash.com/photo-1583417319070-4a69db38a482?q=80&w=400&auto=format&fit=crop'">
 							<div class="absolute top-3 right-3 bg-black/70 backdrop-blur-xl px-3 py-1.5 rounded-xl border border-white/10 text-[11px] font-black text-white italic">
 								$${s.precio_venta}
 							</div>
 						</div>
 
+						<!-- Datos y Botón Editar -->
 						<div class="px-2 pb-2">
-							<h4 class="text-[13px] font-black uppercase italic text-white truncate mb-3">${s.nombre_producto}</h4>
+							<h4 class="text-[13px] font-black uppercase italic text-white truncate mb-3 tracking-tight">${s.nombre_producto}</h4>
 							<div class="flex items-center justify-between">
 								<div class="flex flex-col">
-									<span class="text-[8px] text-gray-500 font-black uppercase tracking-widest">Stock</span>
+									<span class="text-[8px] text-gray-500 font-black uppercase tracking-widest leading-none mb-1">Existencias</span>
 									<span class="text-sm font-black italic ${stockBajo ? 'text-red-500 animate-pulse' : 'text-white'}">
-										${s.stock_actual} <span class="text-[9px] opacity-50 uppercase">unid.</span>
+										${s.stock_actual} <span class="text-[9px] opacity-40 uppercase">unid.</span>
 									</span>
 								</div>
 								
-								<!-- LÁPIZ CENTRADO CON GRID (FIX DEFINITIVO) -->
+								<!-- LÁPIZ CENTRADO (GRID + P-0) -->
 								<button onclick="openEditStock(${s.id})" 
 										class="w-10 h-10 grid place-items-center bg-white/5 rounded-xl border border-white/5 text-gray-400 hover:bg-red-600 hover:text-black hover:scale-110 transition-all action-col p-0">
 									<i data-lucide="edit-3" class="w-5 h-5"></i>
@@ -3159,6 +3166,7 @@ async function renderRutinas() {
 				}).join('');
 			}
 			if (window.lucide) lucide.createIcons();
+			if (typeof applyPermissions === 'function') applyPermissions();
 		}
 		
 		// FUNCIÓN PARA PREVISUALIZAR Y CONVERTIR A BASE64
@@ -3166,20 +3174,19 @@ async function renderRutinas() {
 			const file = event.target.files[0];
 			if (!file) return;
 
-			// Validación de tamaño (Max 2MB para no saturar la DB)
-			if (file.size > 2 * 1024 * 1024) {
-				showVikingToast("Imagen demasiado pesada (Máx 2MB)", true);
+			if (file.size > 2 * 1024 * 1024) { // Límite 2MB
+				showVikingToast("La imagen es muy pesada (Máx 2MB)", true);
 				return;
 			}
 
 			const reader = new FileReader();
 			reader.onload = function(e) {
-				const base64String = e.target.result;
-				document.getElementById('stock-imagen-base64').value = base64String;
+				const base64 = e.target.result;
+				document.getElementById('stock-imagen-base64').value = base64;
 				
-				const img = document.getElementById('stock-img-preview');
-				img.src = base64String;
-				img.classList.remove('hidden');
+				const preview = document.getElementById('stock-img-preview');
+				preview.src = base64;
+				preview.classList.remove('hidden');
 				document.getElementById('stock-img-placeholder').classList.add('hidden');
 			};
 			reader.readAsDataURL(file);
@@ -3312,6 +3319,9 @@ async function renderRutinas() {
 			document.getElementById('stock-img-placeholder').classList.remove('hidden');
 			document.getElementById('modal-stock-title').innerText = "Alta de Mercadería";
 			
+			const delBtn = document.getElementById('btn-delete-stock');
+			if(delBtn) delBtn.classList.add('hidden');
+
 			openModal('modal-stock');
 		}
 		
@@ -3324,18 +3334,24 @@ async function renderRutinas() {
 			document.getElementById('stock-cant').value = s.stock_actual;
 			document.getElementById('stock-precio').value = s.precio_venta;
 			
-			// Cargar imagen previa (chequeamos url_imagen o imagen)
 			const base64 = s.url_imagen || s.imagen || "";
 			document.getElementById('stock-imagen-base64').value = base64;
 			
-			const img = document.getElementById('stock-img-preview');
-			if(base64 && base64.length > 50) {
-				img.src = base64;
-				img.classList.remove('hidden');
+			const preview = document.getElementById('stock-img-preview');
+			if(base64 && base64.length > 100) {
+				preview.src = base64;
+				preview.classList.remove('hidden');
 				document.getElementById('stock-img-placeholder').classList.add('hidden');
 			} else {
-				img.classList.add('hidden');
+				preview.classList.add('hidden');
 				document.getElementById('stock-img-placeholder').classList.remove('hidden');
+			}
+
+			document.getElementById('modal-stock-title').innerText = "Editar Mercadería";
+			const delBtn = document.getElementById('btn-delete-stock');
+			if(delBtn) {
+				delBtn.classList.remove('hidden');
+				delBtn.onclick = () => deleteRecord('stock', s.id, 'modal-stock', loadStock);
 			}
 
 			openModal('modal-stock');
@@ -3343,7 +3359,7 @@ async function renderRutinas() {
 		
 		// 4. GUARDAR CAMBIOS (Vincular al onsubmit del form)
 		async function saveStockVikingo(e) {
-			if(e) e.preventDefault();
+			if(e && e.preventDefault) e.preventDefault();
 			
 			const id = document.getElementById('stock-id').value;
 			const payload = {
@@ -3353,13 +3369,21 @@ async function renderRutinas() {
 				url_imagen: document.getElementById('stock-imagen-base64').value 
 			};
 
-			const res = await apiFetch(id ? `/stock/${id}` : '/stock', id ? 'PUT' : 'POST', payload);
+			// Validaciones básicas
+			if(!payload.nombre_producto) return showVikingToast("Falta el nombre", true);
+
+			const method = id ? 'PUT' : 'POST';
+			const endpoint = id ? `/stock/${id}` : '/stock';
+
+			showVikingToast("Sincronizando con el Valhalla...");
+			const res = await apiFetch(endpoint, method, payload);
 			
 			if(!res.error) {
-				showVikingToast(id ? "Actualizado" : "Registrado");
+				showVikingToast(id ? "Producto Actualizado" : "Producto Registrado");
 				closeModal('modal-stock');
-				// Pequeño delay para que la DB asimile el Base64 antes de recargar
-				setTimeout(loadStock, 300);
+				setTimeout(loadStock, 300); // Pequeño delay para asegurar que la DB escribió el Base64
+			} else {
+				showVikingToast("Error: " + res.error, true);
 			}
 		}
 
