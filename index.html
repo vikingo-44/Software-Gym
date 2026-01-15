@@ -276,25 +276,6 @@
 		#sidebar.collapsed .submenu-dot { 
 			display: none !important; 
 		}
-		
-		#sidebar.collapsed p.text-[10px] { 
-			display: none !important; 
-		}
-		
-		/* Ocultar el texto del logo "Vikingo Strength Hub" */
-		#sidebar.collapsed .logo-text {
-			display: none !important;
-		}
-		
-		/* Centrar el botón de las tres líneas en el encabezado cuando está colapsado */
-		#sidebar.collapsed .sidebar-header {
-			padding: 20px 0 !important;
-			justify-content: center !important;
-		}
-		
-		#sidebar.collapsed .sidebar-header button {
-			margin: 0 !important;
-		}
 
 		/* Ajustar los botones para que el icono quede centrado */
 		#sidebar.collapsed .nav-btn {
@@ -350,23 +331,15 @@
     </div>
 
     <aside id="sidebar" class="w-72 h-full glass-sidebar flex flex-col hidden z-50">
-        <div class="sidebar-header p-8 flex items-center gap-4 transition-all duration-300">
-			<!-- El logo se queda siempre -->
-			<img src="https://github.com/vikingo-44/Software-Gym/blob/main/logo.png?raw=true" 
-				 alt="Vikingo Hub" 
-				 class="w-10 h-10 object-contain logo-viking-glow shrink-0" 
-				 onerror="this.style.display='none'">
-			
-			<!-- Este bloque de texto se ocultará automáticamente al colapsar -->
-			<h1 class="logo-text text-xl font-black italic uppercase leading-none">
-				VIKINGO<br><span class="viking-red text-xs tracking-[0.4em] font-bold">STRENGTH HUB</span>
-			</h1>
-			
-			<!-- El botón se mantiene y la lógica se encarga de centrarlo -->
-			<button onclick="toggleSidebar()" class="p-2 hover:bg-white/5 rounded-lg transition-colors ml-auto shrink-0">
-				<i data-lucide="menu" class="w-5 h-5 viking-red"></i>
-			</button>
-		</div>
+        <div class="p-8 flex items-center gap-4">
+            <img src="https://github.com/vikingo-44/Software-Gym/blob/main/logo.png?raw=true" alt="Vikingo Hub" class="w-10 h-10 object-contain logo-viking-glow brand-text" onerror="this.style.display='none'">
+            <h1 class="brand-text text-xl font-black italic uppercase leading-none">
+                VIKINGO<br><span class="viking-red text-xs tracking-[0.4em] font-bold">STRENGTH HUB</span>
+            </h1>
+            <button onclick="toggleSidebar()" class="p-2 hover:bg-white/5 rounded-lg transition-colors ml-auto">
+                <i data-lucide="menu" class="w-5 h-5 viking-red"></i>
+            </button>
+        </div>
 
         <div class="px-6 mb-8">
             <div class="glass-card p-4 rounded-3xl flex items-center gap-4">
@@ -392,53 +365,47 @@
                 </button>
             </div>
 
-            <!-- 1. SECCIÓN STAFF (Asegurando alineación perfecta y soporte para colapso) -->
+            <!-- 1. SECCIÓN STAFF (Asegurando alineación perfecta) -->
 			<div id="nav-section-staff" class="mb-2">
-				<p class="text-[10px] font-black text-gray-600 uppercase tracking-widest px-6 mb-2 mt-4 flex items-center gap-2">
-					<span class="nav-header-text">Personal</span>
-					<div class="h-px bg-white/10 flex-1 opacity-20"></div>
-				</p>
-				<div class="px-3">
+				<p class="text-[10px] font-black text-gray-600 uppercase tracking-widest px-6 mb-2 mt-4">Personal</p>
+				<div class="px-3"> <!-- Contenedor para mantener el radio de los botones -->
 					<button onclick="toggleSubmenu('submenu-staff')" class="nav-btn w-full flex items-center justify-between px-6 py-4 rounded-2xl font-black uppercase text-[11px] italic transition-all hover:bg-white/5 group">
 						<div class="flex items-center gap-3">
 							<i data-lucide="users" class="w-4 h-4"></i>
 							<span class="nav-text">Staff</span>
 						</div>
-						<i data-lucide="chevron-down" id="icon-submenu-staff" class="w-3 h-3 text-gray-600 transition-transform duration-300"></i>
+						<i data-lucide="chevron-down" id="icon-submenu-staff" class="w-3 h-3 text-gray-600 transition-transform"></i>
 					</button>
 					
 					<div id="submenu-staff" class="hidden flex-col mt-1 ml-4 border-l border-white/10 pl-2 space-y-1">
 						<button onclick="switchView('profesores')" class="w-full text-left px-4 py-3 rounded-xl text-[10px] font-bold text-gray-400 hover:text-white hover:bg-white/5 transition-all uppercase italic">
-							<span class="submenu-dot">•</span> Profesores
+							• Profesores
 						</button>
 						<button onclick="switchView('administrativos')" class="w-full text-left px-4 py-3 rounded-xl text-[10px] font-bold text-gray-400 hover:text-white hover:bg-white/5 transition-all uppercase italic">
-							<span class="submenu-dot">•</span> Administrativos
+							• Administrativos
 						</button>
 					</div>
 				</div>
 			</div>
 
-			<!-- 2. SECCIÓN OPERATIVA / FACTURACIÓN (Sincronizada con el estilo anterior) -->
+            <!-- 2. SECCIÓN OPERATIVA / FACTURACIÓN -->
 			<div id="nav-section-operativa" class="mb-2">
-				<p class="text-[10px] font-black text-gray-600 uppercase tracking-widest px-6 mb-2 mt-4 flex items-center gap-2">
-					<span class="nav-header-text">Contabilidad</span>
-					<div class="h-px bg-white/10 flex-1 opacity-20"></div>
-				</p>
+				<p class="text-[10px] font-black text-gray-600 uppercase tracking-widest px-6 mb-2 mt-4">Contabilidad</p>
 				<div class="px-3">
 					<button onclick="toggleSubmenu('submenu-billing')" class="nav-btn w-full flex items-center justify-between px-6 py-4 rounded-2xl font-black uppercase text-[11px] italic transition-all hover:bg-white/5 group">
 						<div class="flex items-center gap-3">
 							<i data-lucide="wallet" class="w-4 h-4"></i>
 							<span class="nav-text">Facturación</span>
 						</div>
-						<i data-lucide="chevron-down" id="icon-submenu-billing" class="w-3 h-3 text-gray-600 transition-transform duration-300"></i>
+						<i data-lucide="chevron-down" id="icon-submenu-billing" class="w-3 h-3 text-gray-600 transition-transform"></i>
 					</button>
 
 					<div id="submenu-billing" class="hidden flex-col mt-1 ml-4 border-l border-white/10 pl-2 space-y-1">
 						<button onclick="switchView('cobrar')" class="w-full text-left px-4 py-3 rounded-xl text-[10px] font-bold text-gray-400 hover:text-white hover:bg-white/5 transition-all uppercase italic">
-							<span class="submenu-dot">•</span> Cobrar / Ventas
+							• Cobrar / Ventas
 						</button>
 						<button onclick="switchView('caja')" class="w-full text-left px-4 py-3 rounded-xl text-[10px] font-bold text-gray-400 hover:text-white hover:bg-white/5 transition-all uppercase italic">
-							<span class="submenu-dot">•</span> Caja Diaria
+							• Caja Diaria
 						</button>
 					</div>
 				</div>
@@ -2463,38 +2430,8 @@ async function renderRutinas() {
             document.getElementById('al-fecha-vencimiento').value = d.toISOString().split('T')[0];
         }
 
-        function toggleSidebar() {
-			const sidebar = document.getElementById('sidebar');
-			const mainContent = document.getElementById('main-content');
-			
-			// Cambiamos a la clase 'collapsed' que es la que configuramos en los estilos
-			sidebar.classList.toggle('collapsed');
-			
-			// 1. Si estamos colapsando, cerramos todos los submenús para que no queden flotando
-			if (sidebar.classList.contains('collapsed')) {
-				document.querySelectorAll('[id^="submenu-"]').forEach(menu => {
-					menu.classList.add('hidden');
-					menu.classList.remove('flex');
-				});
-				
-				// Reseteamos la rotación de las flechitas de los submenús
-				document.querySelectorAll('[id^="icon-submenu-"]').forEach(icon => {
-					icon.style.transform = 'rotate(0deg)';
-				});
-			}
-
-			// 2. Ajustamos el margen del contenido principal dinámicamente
-			// Si está colapsado usamos 85px, si está abierto usamos el ancho original (280px)
-			if (sidebar.classList.contains('collapsed')) {
-				if (mainContent) mainContent.style.marginLeft = "85px";
-			} else {
-				if (mainContent) mainContent.style.marginLeft = "280px";
-			}
-
-			// 3. Refrescamos los iconos de Lucide por si alguno cambió de estado
-			if (window.lucide) lucide.createIcons();
-		}
-		function toggleSub(id) { document.getElementById(id).classList.toggle('hidden'); }
+        function toggleSidebar() { document.getElementById('sidebar').classList.toggle('sidebar-collapsed'); lucide.createIcons(); }
+        function toggleSub(id) { document.getElementById(id).classList.toggle('hidden'); }
         function openModal(id) { document.getElementById(id).style.display = 'flex'; }
         function closeModal(id) { 
             document.getElementById(id).style.display = 'none'; 
