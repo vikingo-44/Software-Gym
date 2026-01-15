@@ -1551,7 +1551,7 @@
 			const isAdmin = (state.user?.rol_nombre === "Administrador" || state.user?.rol_nombre === "Supervisor");
 			const esAlumno = (state.user?.rol_nombre === "Alumno");
 
-			// 1. Limpiar y crear cabeceras
+			// 1. Limpiar y crear cabeceras (Solo una vez al inicio)
 			cal.innerHTML = `
 				<div class="cal-header">HORA</div>
 				<div class="cal-header">LUNES</div>
@@ -1565,28 +1565,32 @@
 			// 2. Generar grilla de tiempo (7hs a 21:30hs)
 			for(let h=7; h<=21.5; h+=0.5) {
 				const label = h % 1 === 0 ? `${h}:00` : `${Math.floor(h)}:30`;
-				cal.innerHTML += `<div class="cal-cell flex items-center justify-center font-black text-[9px] text-white/40 bg-white/5 border-r border-white/20">${label}</div>`;
+				
+				// Creamos el label de la hora como elemento DOM para no usar innerHTML +=
+				const hourLabel = document.createElement('div');
+				hourLabel.className = "cal-cell flex items-center justify-center font-black text-[9px] text-white/40 bg-white/5 border-r border-white/20";
+				hourLabel.innerText = label;
+				cal.appendChild(hourLabel);
 				
 				for(let d=1; d<=6; d++) {
 					const isSat = d === 6; 
 					const isClosed = isSat && (h < 10 || h > 13);
 					const cellId = `cell-${d}-${h.toString().replace('.','_')}`;
 					
-					// Creamos la celda con los eventos de Drag & Drop para Admin
 					const cell = document.createElement('div');
 					cell.id = cellId;
 					cell.className = `cal-cell ${isClosed ? 'cal-cell-closed' : ''}`;
 					
-					if (isAdmin) {
-						// Evento cuando pasas la clase por encima
+					if (isAdmin && !isClosed) {
+						// Evento crucial: preventDefault() permite que la celda acepte el drop
 						cell.ondragover = (e) => {
-							e.preventDefault();
+							e.preventDefault(); 
+							e.dataTransfer.dropEffect = "move"; // Cambia el cursor a "mover"
 							cell.classList.add('bg-red-600/10');
 						};
-						// Evento cuando sacas la clase de la celda sin soltar
+						
 						cell.ondragleave = () => cell.classList.remove('bg-red-600/10');
 						
-						// EVENTO DROP: Aquí se procesa el cambio en la DB
 						cell.ondrop = async (e) => {
 							e.preventDefault();
 							cell.classList.remove('bg-red-600/10');
@@ -1612,7 +1616,7 @@
 
 							if (!res.error) {
 								showVikingToast("¡Turno Reubicado!");
-								await loadClases(); // Recarga y re-renderiza automáticamente
+								await loadClases(); 
 							} else {
 								showVikingToast("Error al mover: " + res.error, true);
 							}
@@ -1631,7 +1635,6 @@
 					const cell = document.getElementById(`cell-${slot.dia}-${hKey}`);
 					
 					if (cell) {
-						// Cálculo de cupos real
 						const reservasArray = Array.isArray(state.reservas) ? state.reservas : [];
 						const cupoMax = c.capacidad_max || 40;
 						
@@ -1689,7 +1692,7 @@
 
 			if (window.lucide) lucide.createIcons();
 		}
-
+		
 		/**
 		 * FUNCIÓN DE RESERVA CORREGIDA
 		 * Evita el error de "Vanhala" manejando fallos internos sin crashear.
