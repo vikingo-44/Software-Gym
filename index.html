@@ -311,68 +311,91 @@
         </div>
 
         <nav class="flex-1 px-4 space-y-1 overflow-y-auto custom-scrollbar pb-10">
-            <div id="nav-section-admin">
-                <p class="nav-section-title text-[10px] font-black text-gray-600 uppercase tracking-widest px-6 mb-2 mt-4">Administración</p>
-                <button onclick="switchView('dashboard')" id="nav-dashboard" class="nav-btn w-full nav-item active px-6 py-4 rounded-2xl font-black uppercase text-[11px] italic">
-                    <i data-lucide="layout-grid" class="w-4 h-4"></i> <span class="nav-text">Dashboard</span>
-                </button>
-                <button onclick="switchView('perfil')" id="nav-perfil" class="nav-btn w-full nav-item px-6 py-4 rounded-2xl font-black uppercase text-[11px] italic">
-                    <i data-lucide="user-cog" class="w-4 h-4"></i> <span class="nav-text">Mi Perfil</span>
-                </button>
-                <button onclick="switchView('alumnos')" id="nav-alumnos" class="nav-btn w-full nav-item px-6 py-4 rounded-2xl font-black uppercase text-[11px] italic">
-                    <i data-lucide="users" class="w-4 h-4"></i> <span class="nav-text">Alumnos</span>
-                </button>
-            </div>
+		<!-- SECCIÓN ADMINISTRACIÓN -->
+		<div id="nav-section-admin">
+			<p class="nav-section-title text-[10px] font-black text-gray-600 uppercase tracking-widest px-6 mb-2 mt-4">Administración</p>
+			
+			<button onclick="switchView('dashboard')" id="nav-dashboard" class="nav-btn w-full nav-item active px-6 py-4 rounded-2xl font-black uppercase text-[11px] italic flex items-center gap-3">
+				<i data-lucide="layout-grid" class="w-4 h-4"></i> 
+				<span class="nav-text">Dashboard</span>
+			</button>
+			
+			<button onclick="switchView('perfil')" id="nav-perfil" class="nav-btn w-full nav-item px-6 py-4 rounded-2xl font-black uppercase text-[11px] italic flex items-center gap-3">
+				<i data-lucide="user-cog" class="w-4 h-4"></i> 
+				<span class="nav-text">Mi Perfil</span>
+			</button>
+			
+			<button onclick="switchView('alumnos')" id="nav-alumnos" class="nav-btn w-full nav-item px-6 py-4 rounded-2xl font-black uppercase text-[11px] italic flex items-center gap-3">
+				<i data-lucide="users" class="w-4 h-4"></i> 
+				<span class="nav-text">Alumnos</span>
+			</button>
 
-            <div id="nav-section-staff" class="relative">
-                <button onclick="toggleSub('sub-staff')" class="w-full flex items-center justify-between px-6 py-4 text-gray-400 font-black uppercase text-[11px] italic hover:text-red-600 transition-colors">
-                    <span class="flex items-center gap-5"><i data-lucide="shield-check" class="w-4 h-4"></i> <span class="nav-text">Staff</span></span>
-                    <i data-lucide="chevron-down" class="w-3 h-3 chevron-icon"></i>
-                </button>
-                <div id="sub-staff" class="hidden pl-12 space-y-3 pb-4">
-                    <button onclick="switchView('profesores')" id="nav-profesores" class="nav-btn block w-full text-left text-[10px] font-black uppercase text-gray-600 hover:text-red-600 transition-colors">Profesores</button>
-                    <button onclick="switchView('administrativos')" id="nav-administrativos" class="nav-btn block w-full text-left text-[10px] font-black uppercase text-gray-600 hover:text-red-600 transition-colors">Administrativos</button>
-                </div>
-            </div>
-
-            <div id="nav-section-operativa">
-                <p class="nav-section-title text-[10px] font-black text-gray-600 uppercase tracking-widest px-6 mb-2 mt-8">Operativa</p>
-                <div class="relative">
-                    <button id="btn-facturacion" onclick="toggleSub('sub-facturacion')" class="w-full flex items-center justify-between px-6 py-4 text-gray-400 font-black uppercase text-[11px] italic hover:text-red-600 transition-colors">
-                        <span class="flex items-center gap-5"><i data-lucide="wallet" class="w-4 h-4"></i> <span class="nav-text">Facturación</span></span>
-                        <i data-lucide="chevron-down" class="w-3 h-3 chevron-icon"></i>
-                    </button>
-                    <div id="sub-facturacion" class="hidden pl-12 space-y-3 pb-4">
-                        <button onclick="switchView('cobrar')" id="nav-cobrar" class="nav-btn block w-full text-left text-[10px] font-black uppercase text-gray-600 hover:text-red-600 transition-colors">Cobrar</button>
-                        <button onclick="switchView('caja')" id="nav-caja" class="nav-btn block w-full text-left text-[10px] font-black uppercase text-gray-600 hover:text-red-600 transition-colors">Caja</button>
-                        <button onclick="switchView('stock')" id="nav-stock" class="nav-btn block w-full text-left text-[10px] font-black uppercase text-gray-600 hover:text-red-600 transition-colors">Stock</button>
-                    </div>
-                </div>
-            </div>
-
-            <div id="nav-section-gestion">
-                <p class="nav-section-title text-[10px] font-black text-gray-600 uppercase tracking-widest px-6 mb-2 mt-8">Gestión</p>
-                <button onclick="switchView('planes')" id="nav-planes" class="nav-btn w-full nav-item px-6 py-4 rounded-2xl font-black uppercase text-[11px] italic">
-                    <i data-lucide="clipboard-list" class="w-4 h-4"></i> <span class="nav-text">Planes</span>
-                </button>
-                <button onclick="switchView('clases')" id="nav-clases" class="nav-btn w-full nav-item px-6 py-4 rounded-2xl font-black uppercase text-[11px] italic">
-                    <i data-lucide="presentation" class="w-4 h-4"></i> <span class="nav-text">Clases</span>
-                </button>
-                <button onclick="switchView('calendario')" id="nav-calendario" class="nav-btn w-full nav-item px-6 py-4 rounded-2xl font-black uppercase text-[11px] italic">
-                    <i data-lucide="calendar" class="w-4 h-4"></i> <span class="nav-text">Calendario</span>
-                </button>
-                <button id="nav-rutinas" onclick="switchView('rutinas')" class="nav-btn w-full nav-item px-6 py-4 rounded-2xl font-black uppercase text-[11px] italic">
-                    <i data-lucide="dumbbell" class="w-4 h-4"></i> <span class="nav-text">Rutinas Musc.</span>
-                </button>
-            </div>
-			<!-- Sección Seguridad - Acceso Virtual -->
-			<div id="nav-section-virtual">
-				<p class="text-[10px] font-black text-gray-600 uppercase tracking-widest px-6 mb-2 mt-8">Seguridad</p>
-				<button onclick="switchView('acceso-virtual')" id="nav-acceso-virtual" class="nav-btn w-full nav-item px-6 py-4 rounded-2xl font-black uppercase text-[11px] italic">
-					<i data-lucide="qr-code" class="w-4 h-4"></i> <span class="nav-text">Acceso Virtual</span>
+			<!-- STAFF (Con alineación gap-3 para que no se desplace al colapsar) -->
+			<div id="nav-section-staff" class="relative">
+				<button onclick="toggleSub('sub-staff')" class="nav-btn w-full flex items-center justify-between px-6 py-4 rounded-2xl font-black uppercase text-[11px] italic transition-all group">
+					<div class="flex items-center gap-3">
+						<i data-lucide="shield-check" class="w-4 h-4"></i> 
+						<span class="nav-text">Staff</span>
+					</div>
+					<i data-lucide="chevron-down" class="w-3 h-3 chevron-icon opacity-50 transition-transform"></i>
 				</button>
+				<div id="sub-staff" class="hidden pl-12 space-y-3 pb-4 mt-1">
+					<button onclick="switchView('profesores')" id="nav-profesores" class="block w-full text-left text-[10px] font-black uppercase text-gray-500 hover:text-red-600 transition-colors tracking-widest">• Profesores</button>
+					<button onclick="switchView('administrativos')" id="nav-administrativos" class="block w-full text-left text-[10px] font-black uppercase text-gray-500 hover:text-red-600 transition-colors tracking-widest">• Administrativos</button>
+				</div>
 			</div>
-        </nav>
+		</div>
+
+		<!-- SECCIÓN OPERATIVA -->
+		<div id="nav-section-operativa">
+			<p class="nav-section-title text-[10px] font-black text-gray-600 uppercase tracking-widest px-6 mb-2 mt-8">Operativa</p>
+			
+			<div class="relative">
+				<button id="btn-facturacion" onclick="toggleSub('sub-facturacion')" class="nav-btn w-full flex items-center justify-between px-6 py-4 rounded-2xl font-black uppercase text-[11px] italic transition-all group">
+					<div class="flex items-center gap-3">
+						<i data-lucide="wallet" class="w-4 h-4"></i> 
+						<span class="nav-text">Facturación</span>
+					</div>
+					<i data-lucide="chevron-down" class="w-3 h-3 chevron-icon opacity-50 transition-transform"></i>
+				</button>
+				<div id="sub-facturacion" class="hidden pl-12 space-y-3 pb-4 mt-1">
+					<button onclick="switchView('cobrar')" id="nav-cobrar" class="block w-full text-left text-[10px] font-black uppercase text-gray-500 hover:text-red-600 transition-colors tracking-widest">• Cobrar</button>
+					<button onclick="switchView('caja')" id="nav-caja" class="block w-full text-left text-[10px] font-black uppercase text-gray-500 hover:text-red-600 transition-colors tracking-widest">• Caja</button>
+					<button onclick="switchView('stock')" id="nav-stock" class="block w-full text-left text-[10px] font-black uppercase text-gray-500 hover:text-red-600 transition-colors tracking-widest">• Stock</button>
+				</div>
+			</div>
+		</div>
+
+		<!-- SECCIÓN GESTIÓN -->
+		<div id="nav-section-gestion">
+			<p class="nav-section-title text-[10px] font-black text-gray-600 uppercase tracking-widest px-6 mb-2 mt-8">Gestión</p>
+			
+			<button onclick="switchView('planes')" id="nav-planes" class="nav-btn w-full nav-item px-6 py-4 rounded-2xl font-black uppercase text-[11px] italic flex items-center gap-3">
+				<i data-lucide="clipboard-list" class="w-4 h-4"></i> <span class="nav-text">Planes</span>
+			</button>
+			
+			<button onclick="switchView('clases')" id="nav-clases" class="nav-btn w-full nav-item px-6 py-4 rounded-2xl font-black uppercase text-[11px] italic flex items-center gap-3">
+				<i data-lucide="presentation" class="w-4 h-4"></i> <span class="nav-text">Clases</span>
+			</button>
+			
+			<button onclick="switchView('calendario')" id="nav-calendario" class="nav-btn w-full nav-item px-6 py-4 rounded-2xl font-black uppercase text-[11px] italic flex items-center gap-3">
+				<i data-lucide="calendar" class="w-4 h-4"></i> <span class="nav-text">Calendario</span>
+			</button>
+			
+			<button id="nav-rutinas" onclick="switchView('rutinas')" class="nav-btn w-full nav-item px-6 py-4 rounded-2xl font-black uppercase text-[11px] italic flex items-center gap-3">
+				<i data-lucide="dumbbell" class="w-4 h-4"></i> <span class="nav-text">Rutinas Musc.</span>
+			</button>
+		</div>
+
+		<!-- SECCIÓN SEGURIDAD (Corregida con nav-section-title y gap-3) -->
+		<div id="nav-section-virtual">
+			<p class="nav-section-title text-[10px] font-black text-gray-600 uppercase tracking-widest px-6 mb-2 mt-8">Seguridad</p>
+			<button onclick="switchView('acceso-virtual')" id="nav-acceso-virtual" class="nav-btn w-full nav-item px-6 py-4 rounded-2xl font-black uppercase text-[11px] italic flex items-center gap-3">
+				<i data-lucide="qr-code" class="w-4 h-4"></i> 
+				<span class="nav-text">Acceso Virtual</span>
+			</button>
+		</div>
+	</nav>
 
         <div class="p-8">
             <button onclick="location.reload()" class="w-full flex items-center justify-center gap-3 py-4 border border-white/5 rounded-2xl text-gray-600 hover:text-red-600 transition-all font-black uppercase text-[11px] italic">
@@ -2408,66 +2431,52 @@ async function renderRutinas() {
         }
 
         async function handleLogin(e) {
-		// 1. Detener el refresco automático
-		if(e && e.preventDefault) e.preventDefault();
-		
-		const dniInput = document.getElementById('login-dni');
-		const passInput = document.getElementById('login-pass');
-		
-		if (!dniInput || !passInput) return; // Seguridad extra
-
-		const data = { 
-			dni: dniInput.value, 
-			password: passInput.value 
-		};
-		
-		const res = await apiFetch('/login', 'POST', data);
-		
-		if (res && !res.error) {
-			state.user = res;
+			// 1. Detener el refresco automático
+			if(e && e.preventDefault) e.preventDefault();
 			
-			// 2. Ocultar Login y mostrar App
-			document.getElementById('login-overlay').style.display = 'none';
-			document.getElementById('sidebar').classList.remove('hidden');
-			document.getElementById('main-content').classList.remove('hidden');
+			const dniInput = document.getElementById('login-dni');
+			const passInput = document.getElementById('login-pass');
 			
-			// 3. Cargar datos del usuario en sidebar
-			const elName = document.getElementById('side-user-name');
-			if(elName) elName.innerText = res.nombre_completo || "Usuario";
+			if (!dniInput || !passInput) return; // Seguridad extra
 
-			const elRole = document.getElementById('side-user-role');
-			if(elRole) elRole.innerText = res.rol_nombre || 'Staff';
-
-			// --- FIX INICIALES (Punto 1 de Mejoras Visuales) ---
-			// Calculamos las iniciales apenas recibimos los datos del servidor
-			const name = res.nombre_completo || "Usuario Vikingo";
-			const initials = name.split(' ')
-								 .filter(n => n)
-								 .map(n => n[0])
-								 .join('')
-								 .toUpperCase()
-								 .substring(0, 2);
+			const data = { 
+				dni: dniInput.value, 
+				password: passInput.value 
+			};
 			
-			const elInitials = document.getElementById('user-initials');
-			if(elInitials) elInitials.innerText = initials;
-			// ---------------------------------------------------
-
-			// 4. IMPORTANTE: Cargar Profesores para que los selectores funcionen
-			await loadProfesores();
+			const res = await apiFetch('/login', 'POST', data);
 			
-			// 5. Iniciar resto de la app
-			if (typeof initApp === 'function') {
-				await initApp(); 
+			if (res && !res.error) {
+				state.user = res;
+				
+				// 2. Ocultar Login y mostrar App
+				document.getElementById('login-overlay').style.display = 'none';
+				document.getElementById('sidebar').classList.remove('hidden');
+				document.getElementById('main-content').classList.remove('hidden');
+				
+				// 3. Cargar datos del usuario en sidebar
+				const elName = document.getElementById('side-user-name');
+				if(elName) elName.innerText = res.nombre_completo || "Usuario";
+
+				const elRole = document.getElementById('side-user-role');
+				if(elRole) elRole.innerText = res.rol_nombre || 'Staff';
+
+				// 4. IMPORTANTE: Cargar Profesores para que los selectores funcionen
+				await loadProfesores();
+				
+				// 5. Iniciar resto de la app
+				if (typeof initApp === 'function') {
+					await initApp(); 
+				} else {
+					loadClases(); 
+				}
+
+				switchView('dashboard');
 			} else {
-				loadClases(); 
+				const errorDiv = document.getElementById('login-error');
+				if(errorDiv) errorDiv.classList.remove('hidden');
 			}
-
-			switchView('dashboard');
-		} else {
-			const errorDiv = document.getElementById('login-error');
-			if(errorDiv) errorDiv.classList.remove('hidden');
 		}
-	}
 
         async function initApp() {
             await Promise.all([fetchAlumnos(), loadStaff(), loadPlanes(), loadStock(), loadClases(), fetchReservas(), loadDashboard(), loadMusculacionMetadata()]);
