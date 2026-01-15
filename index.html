@@ -1879,7 +1879,7 @@
 				);
 
 				displayArea.innerHTML = `
-					<div class="glass-card p-8 rounded-[2.5rem] h-[750px] flex flex-col border-white/5">
+					<div class="glass-card p-8 rounded-[2.5rem] h-[800px] flex flex-col border-white/5">
 						<h4 class="text-[11px] font-black uppercase italic text-red-600 mb-6 tracking-widest border-b border-white/5 pb-4">
 							Guerreros para Renovación
 						</h4>
@@ -1995,6 +1995,94 @@
                 switchView('caja');
             }
         }
+
+		/**
+		 * FUNCIÓN PARA PROCESAR EL PAGO FINAL
+		 * Esta función se encarga de hablar con el backend para impactar Caja y Stock.
+		 */
+		async function procesarPagoVikingo(payload) {
+			// Payload esperado: { tipo, monto, descripcion, metodo_pago, alumno_id, producto_id, cantidad }
+			
+			showVikingToast("Sincronizando con la Tesorería...");
+
+			try {
+				const res = await apiFetch('/cobros/procesar', 'POST', payload);
+
+				if (!res.error) {
+					showVikingToast("¡Victoria! Cobro registrado y Stock actualizado");
+					
+					// 1. Refrescamos el estado local para que el usuario vea los cambios sin F5
+					await Promise.all([
+						loadStock(),   // Para ver el nuevo stock
+						loadAlumnos(), // Para ver el nuevo vencimiento
+						loadCaja()     // Para ver el nuevo ingreso en caja (si tienes esa función)
+					]);
+
+					// 2. Limpiar el carrito o la vista de cobro
+					if (state.cobrarTab === 'mercaderia') {
+						state.cart = [];
+						updateCartUI();
+					}
+					
+					// 3. Volver a renderizar la vista actual
+					renderCobrar();
+					
+				} else {
+					showVikingToast("Error: " + (res.detail || res.error), true);
+				}
+			} catch (err) {
+				showVikingToast("Error de conexión con el Valhalla", true);
+			}
+		}
+
+		/**
+		 * ADAPTACIÓN PARA COBRO DE PLANES
+		 */
+		async function preparePlanCharge(alumnoId) {
+			const alumno = state.alumnos.find(a => a.id === alumnoId);
+			const planSelect = document.getElementById(`plan-select-${alumnoId}`);
+			const planId = planSelect.value;
+			const plan = state.planes.find(p => p.id == planId);
+
+			if (!plan) return showVikingToast("Selecciona un plan válido", true);
+
+			// Aquí podrías abrir un modal para elegir método de pago, 
+			// pero para este paso a paso usaremos Efectivo por defecto:
+			const confirmacion = confirm(`¿Confirmar cobro de $${plan.precio} a ${alumno.nombre_completo} por el plan ${plan.nombre}?`);
+			
+			if (confirmacion) {
+				await procesarPagoVikingo({
+					tipo: "Plan",
+					monto: plan.precio,
+					descripcion: `Renovación Plan ${plan.nombre}: ${alumno.nombre_completo}`,
+					metodo_pago: "Efectivo",
+					alumno_id: alumnoId
+				});
+			}
+		}
+
+		/**
+		 * ADAPTACIÓN PARA COBRO DE MERCADERÍA (Desde el Carrito)
+		 */
+		async function finalizarVentaMercaderia() {
+			if (state.cart.length === 0) return showVikingToast("El carrito está vacío", true);
+
+			const total = state.cart.reduce((acc, item) => acc + (item.precio_venta * item.cantidad), 0);
+			
+			if (confirm(`¿Finalizar venta por un total de $${total.toLocaleString()}?`)) {
+				// Procesamos cada item del carrito
+				for (const item of state.cart) {
+					await procesarPagoVikingo({
+						tipo: "Mercaderia",
+						monto: item.precio_venta * item.cantidad,
+						descripcion: `Venta: ${item.nombre_producto} (x${item.cantidad})`,
+						metodo_pago: "Efectivo",
+						producto_id: item.id,
+						cantidad: item.cantidad
+					});
+				}
+			}
+		}
 
 		// --- REEMPLAZA TU FUNCIÓN openFichaTecnica POR ESTA VERSIÓN CON DISEÑO DE FILAS ---
 		async function openFichaTecnica(alumnoId) {
@@ -3886,6 +3974,4 @@ async function loadProfesores() {
 		
     </script>
 </body>
-
 </html>
-
