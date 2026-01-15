@@ -324,31 +324,51 @@
                 </button>
             </div>
 
-            <div id="nav-section-staff" class="relative">
-                <button onclick="toggleSub('sub-staff')" class="w-full flex items-center justify-between px-6 py-4 text-gray-400 font-black uppercase text-[11px] italic hover:text-red-600 transition-colors">
-                    <span class="flex items-center gap-5"><i data-lucide="shield-check" class="w-4 h-4"></i> <span class="nav-text">Staff</span></span>
-                    <i data-lucide="chevron-down" class="w-3 h-3 chevron-icon"></i>
-                </button>
-                <div id="sub-staff" class="hidden pl-12 space-y-3 pb-4">
-                    <button onclick="switchView('profesores')" id="nav-profesores" class="nav-btn block w-full text-left text-[10px] font-black uppercase text-gray-600 hover:text-red-600 transition-colors">Profesores</button>
-                    <button onclick="switchView('administrativos')" id="nav-administrativos" class="nav-btn block w-full text-left text-[10px] font-black uppercase text-gray-600 hover:text-red-600 transition-colors">Administrativos</button>
-                </div>
-            </div>
+            <!-- 1. SECCIÓN STAFF (Asegurando alineación perfecta) -->
+			<div id="nav-section-staff" class="mb-2">
+				<p class="text-[10px] font-black text-gray-600 uppercase tracking-widest px-6 mb-2 mt-4">Personal</p>
+				<div class="px-3"> <!-- Contenedor para mantener el radio de los botones -->
+					<button onclick="toggleSubmenu('submenu-staff')" class="nav-btn w-full flex items-center justify-between px-6 py-4 rounded-2xl font-black uppercase text-[11px] italic transition-all hover:bg-white/5 group">
+						<div class="flex items-center gap-3">
+							<i data-lucide="users" class="w-4 h-4"></i>
+							<span class="nav-text">Staff</span>
+						</div>
+						<i data-lucide="chevron-down" id="icon-submenu-staff" class="w-3 h-3 text-gray-600 transition-transform"></i>
+					</button>
+					
+					<div id="submenu-staff" class="hidden flex-col mt-1 ml-4 border-l border-white/10 pl-2 space-y-1">
+						<button onclick="switchView('profesores')" class="w-full text-left px-4 py-3 rounded-xl text-[10px] font-bold text-gray-400 hover:text-white hover:bg-white/5 transition-all uppercase italic">
+							• Profesores
+						</button>
+						<button onclick="switchView('administrativos')" class="w-full text-left px-4 py-3 rounded-xl text-[10px] font-bold text-gray-400 hover:text-white hover:bg-white/5 transition-all uppercase italic">
+							• Administrativos
+						</button>
+					</div>
+				</div>
+			</div>
 
-            <div id="nav-section-operativa">
-                <p class="nav-section-title text-[10px] font-black text-gray-600 uppercase tracking-widest px-6 mb-2 mt-8">Operativa</p>
-                <div class="relative">
-                    <button id="btn-facturacion" onclick="toggleSub('sub-facturacion')" class="w-full flex items-center justify-between px-6 py-4 text-gray-400 font-black uppercase text-[11px] italic hover:text-red-600 transition-colors">
-                        <span class="flex items-center gap-5"><i data-lucide="wallet" class="w-4 h-4"></i> <span class="nav-text">Facturación</span></span>
-                        <i data-lucide="chevron-down" class="w-3 h-3 chevron-icon"></i>
-                    </button>
-                    <div id="sub-facturacion" class="hidden pl-12 space-y-3 pb-4">
-                        <button onclick="switchView('cobrar')" id="nav-cobrar" class="nav-btn block w-full text-left text-[10px] font-black uppercase text-gray-600 hover:text-red-600 transition-colors">Cobrar</button>
-                        <button onclick="switchView('caja')" id="nav-caja" class="nav-btn block w-full text-left text-[10px] font-black uppercase text-gray-600 hover:text-red-600 transition-colors">Caja</button>
-                        <button onclick="switchView('stock')" id="nav-stock" class="nav-btn block w-full text-left text-[10px] font-black uppercase text-gray-600 hover:text-red-600 transition-colors">Stock</button>
-                    </div>
-                </div>
-            </div>
+            <!-- 2. SECCIÓN OPERATIVA / FACTURACIÓN -->
+			<div id="nav-section-operativa" class="mb-2">
+				<p class="text-[10px] font-black text-gray-600 uppercase tracking-widest px-6 mb-2 mt-4">Contabilidad</p>
+				<div class="px-3">
+					<button onclick="toggleSubmenu('submenu-billing')" class="nav-btn w-full flex items-center justify-between px-6 py-4 rounded-2xl font-black uppercase text-[11px] italic transition-all hover:bg-white/5 group">
+						<div class="flex items-center gap-3">
+							<i data-lucide="wallet" class="w-4 h-4"></i>
+							<span class="nav-text">Facturación</span>
+						</div>
+						<i data-lucide="chevron-down" id="icon-submenu-billing" class="w-3 h-3 text-gray-600 transition-transform"></i>
+					</button>
+
+					<div id="submenu-billing" class="hidden flex-col mt-1 ml-4 border-l border-white/10 pl-2 space-y-1">
+						<button onclick="switchView('cobrar')" class="w-full text-left px-4 py-3 rounded-xl text-[10px] font-bold text-gray-400 hover:text-white hover:bg-white/5 transition-all uppercase italic">
+							• Cobrar / Ventas
+						</button>
+						<button onclick="switchView('caja')" class="w-full text-left px-4 py-3 rounded-xl text-[10px] font-bold text-gray-400 hover:text-white hover:bg-white/5 transition-all uppercase italic">
+							• Caja Diaria
+						</button>
+					</div>
+				</div>
+			</div>
 
             <div id="nav-section-gestion">
                 <p class="nav-section-title text-[10px] font-black text-gray-600 uppercase tracking-widest px-6 mb-2 mt-8">Gestión</p>
@@ -1679,6 +1699,27 @@
             document.getElementById('tab-' + tab).classList.add('active');
             renderCobrar();
         }
+		
+		function toggleSubmenu(id) {
+			const menu = document.getElementById(id);
+			const icon = document.getElementById('icon-' + id);
+			if (!menu) return;
+
+			const isHidden = menu.classList.contains('hidden');
+			
+			// Cerramos otros submenús si quieres (opcional)
+			// document.querySelectorAll('[id^="submenu-"]').forEach(m => m.classList.add('hidden'));
+
+			if (isHidden) {
+				menu.classList.remove('hidden');
+				menu.classList.add('flex');
+				if (icon) icon.style.transform = 'rotate(180deg)';
+			} else {
+				menu.classList.add('hidden');
+				menu.classList.remove('flex');
+				if (icon) icon.style.transform = 'rotate(0deg)';
+			}
+		}
 
         function renderCobrar() {
             const displayArea = document.getElementById('cobrar-display-area');
@@ -2437,6 +2478,20 @@ async function renderRutinas() {
 
 				const elRole = document.getElementById('side-user-role');
 				if(elRole) elRole.innerText = res.rol_nombre || 'Staff';
+
+				// --- FIX INICIALES (Punto 1 de Mejoras Visuales) ---
+				// Calculamos las iniciales apenas recibimos los datos del servidor
+				const name = res.nombre_completo || "Usuario Vikingo";
+				const initials = name.split(' ')
+									 .filter(n => n)
+									 .map(n => n[0])
+									 .join('')
+									 .toUpperCase()
+									 .substring(0, 2);
+				
+				const elInitials = document.getElementById('user-initials');
+				if(elInitials) elInitials.innerText = initials;
+				// ---------------------------------------------------
 
 				// 4. IMPORTANTE: Cargar Profesores para que los selectores funcionen
 				await loadProfesores();
