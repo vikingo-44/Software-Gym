@@ -10,7 +10,6 @@ from sqlalchemy import func, extract
 from sqlalchemy.orm.attributes import flag_modified
 from typing import List, Optional, Union
 from pydantic import BaseModel
-from datetime import date, datetime
 
 # Configuración de logs para ver errores en Render/Producción
 logging.basicConfig(level=logging.INFO)
@@ -69,16 +68,16 @@ class UsuarioResponse(BaseModel):
     plan: Optional[PlanSchema] = None
     plan_id: Optional[int] = None
     estado_cuenta: Optional[str] = "Al día"
-    fecha_vencimiento: Optional[date] = None
-    fecha_ultima_renovacion: Optional[date] = None
+    fecha_vencimiento: Optional[datetime.date] = None
+    fecha_ultima_renovacion: Optional[datetime.date] = None
     especialidad: Optional[str] = None
-    fecha_nacimiento: Optional[date] = None
+    fecha_nacimiento: Optional[datetime.date] = None
     edad: Optional[int] = None
     peso: Optional[float] = None
     altura: Optional[float] = None
     imc: Optional[float] = None
     certificado_entregado: bool = False
-    fecha_certificado: Optional[date] = None
+    fecha_certificado: Optional[datetime.date] = None
     
     class Config:
         from_attributes = True
@@ -89,15 +88,15 @@ class AlumnoUpdate(BaseModel):
     email: Optional[str] = None
     plan_id: Optional[int] = None
     password: Optional[str] = None
-    fecha_nacimiento: Optional[date] = None
+    fecha_nacimiento: Optional[datetime.date] = None
     edad: Optional[int] = None
     peso: Optional[float] = None
     altura: Optional[float] = None
     imc: Optional[float] = None
     certificado_entregado: bool = False
-    fecha_certificado: Optional[date] = None
-    fecha_ultima_renovacion: Optional[date] = None
-    fecha_vencimiento: Optional[date] = None
+    fecha_certificado: Optional[datetime.date] = None
+    fecha_ultima_renovacion: Optional[datetime.date] = None
+    fecha_vencimiento: Optional[datetime.date] = None
 
 class StaffUpdate(BaseModel):
     nombre_completo: str
@@ -138,7 +137,6 @@ class MovimientoCajaCreate(BaseModel):
     descripcion: str
     metodo_pago: Optional[str] = "Efectivo"
 
-# --- NUEVO ESQUEMA PARA TRANSACCIONES COMPLEJAS ---
 class TransactionCreate(BaseModel):
     tipo: str  # 'Plan' o 'Mercaderia'
     monto: float
@@ -188,8 +186,8 @@ class PlanRutinaResponse(BaseModel):
     nombre_grupo: Optional[str] = None
     descripcion: Optional[str] = None
     objetivo: str
-    fecha_creacion: date
-    fecha_vencimiento: date
+    fecha_creacion: datetime.date
+    fecha_vencimiento: datetime.date
     activo: bool
     dias: List[DiaRutinaResponse] = []
     class Config: from_attributes = True
@@ -215,7 +213,7 @@ class PlanRutinaCreate(BaseModel):
     nombre_grupo: Optional[str] = "Nueva Rutina"
     descripcion: Optional[str] = ""
     objetivo: str
-    fecha_vencimiento: date
+    fecha_vencimiento: datetime.date
     dias: List[DiaRutinaCreate]
 
 class EjercicioCreate(BaseModel):
@@ -241,7 +239,9 @@ def api_root():
 
 @app.get("/app", tags=["Sistema"])
 async def serve_app():
-    return FileResponse("index.html")
+    if os.path.exists("index.html"):
+        return FileResponse("index.html")
+    return {"message": "Frontend file not found"}
 
 # ==========================================
 # MÓDULO 1: AUTENTICACIÓN (LOGIN)
@@ -322,7 +322,7 @@ def create_alumno(alumno: AlumnoUpdate, db: Session = Depends(database.get_db)):
         plan_id=alumno.plan_id, 
         perfil_id=perfil.id, 
         password_hash=alumno.password or alumno.dni,
-        fecha_ultima_renovacion=alumno.fecha_ultima_renovacion or date.today(), 
+        fecha_ultima_renovacion=alumno.fecha_ultima_renovacion or datetime.date.today(), 
         fecha_vencimiento=alumno.fecha_vencimiento,
         fecha_nacimiento=alumno.fecha_nacimiento,
         edad=alumno.edad,
@@ -333,7 +333,11 @@ def create_alumno(alumno: AlumnoUpdate, db: Session = Depends(database.get_db)):
         fecha_certificado=alumno.fecha_certificado
     )
     db.add(new_al)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=400, detail="El DNI o Email ya se encuentra registrado")
     return {"status": "success"}
 
 @app.put("/api/alumnos/{id}", tags=["Alumnos"])
@@ -368,7 +372,7 @@ def delete_alumno(id: int, db: Session = Depends(database.get_db)):
     return {"status": "success"}
 
 # ==========================================
-# MÓDULO 3: RESERVAS (LOGICA DE CRÉDITOS Y TURNOS)
+# MÓDULO 3: RESERVAS
 # ==========================================
 
 @app.get("/api/reservas", tags=["Reservas"])
@@ -390,16 +394,15 @@ def get_reservas(db: Session = Depends(database.get_db)):
 
 @app.post("/api/reservas", tags=["Reservas"])
 def book_clase(data: ReservaCreate, db: Session = Depends(database.get_db)):
-    
     user = db.query(models.Usuario).options(joinedload(models.Usuario.plan)).filter(models.Usuario.id == data.usuario_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
 
     if user.plan:
         limite_mensual = user.plan.clases_mensuales
-        if limite_mensual < 1000:
-            mes_actual = date.today().month
-            anio_actual = date.today().year
+        if limite_mensual < 999: # Asumiendo que 999+ es ilimitado
+            mes_actual = datetime.date.today().month
+            anio_actual = datetime.date.today().year
             
             count_reservas = db.query(models.Reserva).filter(
                 models.Reserva.usuario_id == user.id,
@@ -410,15 +413,16 @@ def book_clase(data: ReservaCreate, db: Session = Depends(database.get_db)):
             if count_reservas >= limite_mensual:
                 raise HTTPException(
                     status_code=400, 
-                    detail=f"Has alcanzado tu límite de {limite_mensual} clases mensuales. ¡Actualiza tu plan!"
+                    detail=f"Has alcanzado tu límite de {limite_mensual} clases mensuales."
                 )
 
+    # Validar si ya reservó ese mismo slot hoy
     exists = db.query(models.Reserva).filter(
         models.Reserva.usuario_id == data.usuario_id,
         models.Reserva.clase_id == data.clase_id,
         models.Reserva.horario == data.horario,
         models.Reserva.dia_semana == data.dia_semana,
-        models.Reserva.fecha_reserva == date.today()
+        models.Reserva.fecha_reserva == datetime.date.today()
     ).first()
     
     if exists:
@@ -432,7 +436,7 @@ def book_clase(data: ReservaCreate, db: Session = Depends(database.get_db)):
         models.Reserva.clase_id == data.clase_id,
         models.Reserva.horario == data.horario,
         models.Reserva.dia_semana == data.dia_semana,
-        models.Reserva.fecha_reserva == date.today()
+        models.Reserva.fecha_reserva == datetime.date.today()
     ).count()
     
     if cupo_actual >= clase.capacidad_max:
@@ -441,7 +445,7 @@ def book_clase(data: ReservaCreate, db: Session = Depends(database.get_db)):
     new_res = models.Reserva(
         usuario_id=data.usuario_id,
         clase_id=data.clase_id,
-        fecha_reserva=date.today(),
+        fecha_reserva=datetime.date.today(),
         horario=data.horario,     
         dia_semana=data.dia_semana 
     )
@@ -459,7 +463,7 @@ def cancel_reserva(id: int, db: Session = Depends(database.get_db)):
     return {"status": "success"}
 
 # ==========================================
-# MÓDULO 4: STAFF (PROFESORES / ADM)
+# MÓDULO 4: STAFF
 # ==========================================
 
 @app.get("/api/profesores", response_model=List[UsuarioResponse], tags=["Staff"])
@@ -489,7 +493,11 @@ def create_staff(data: dict, db: Session = Depends(database.get_db)):
         especialidad=data.get('especialidad')
     )
     db.add(new_staff)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=400, detail="DNI o Email ya registrado")
     return {"status": "success"}
 
 @app.put("/api/staff/{id}", tags=["Staff"])
@@ -548,7 +556,8 @@ def update_stock(id: int, data: StockUpdate, db: Session = Depends(database.get_
         s.precio_venta = data.precio_venta
         s.url_imagen = data.url_imagen 
         db.commit()
-    return {"status": "success"}
+        return {"status": "success"}
+    return {"status": "error", "message": "Producto no encontrado"}
 
 @app.delete("/api/stock/{id}", tags=["Inventario"])
 def delete_stock(id: int, db: Session = Depends(database.get_db)):
@@ -557,7 +566,7 @@ def delete_stock(id: int, db: Session = Depends(database.get_db)):
     return {"status": "success"}
 
 # ==========================================
-# MÓDULO 6: PLANES DE MEMBRESÍA
+# MÓDULO 6: PLANES
 # ==========================================
 
 @app.get("/api/planes", tags=["Planes"])
@@ -586,7 +595,8 @@ def update_plan(id: int, data: PlanUpdate, db: Session = Depends(database.get_db
         if data.clases_mensuales is not None:
              p.clases_mensuales = data.clases_mensuales
         db.commit()
-    return {"status": "success"}
+        return {"status": "success"}
+    return {"status": "error", "message": "Plan no encontrado"}
 
 @app.delete("/api/planes/{id}", tags=["Planes"])
 def delete_plan(id: int, db: Session = Depends(database.get_db)):
@@ -600,7 +610,7 @@ def get_tipos(db: Session = Depends(database.get_db)):
     return db.query(models.TipoPlan).all()
 
 # ==========================================
-# MÓDULO 7: CLASES Y AGENDA (OPTIMIZADO JSON)
+# MÓDULO 7: CLASES
 # ==========================================
 
 @app.get("/api/clases", tags=["Clases"])
@@ -629,9 +639,7 @@ def update_clase(id: int, data: ClaseUpdate, db: Session = Depends(database.get_
         c.color = data.color
         c.capacidad_max = data.capacidad_max
         c.horarios_detalle = data.horarios_detalle 
-        
         flag_modified(c, "horarios_detalle")
-        
         db.commit()
         return {"status": "success"}
     return {"status": "error", "message": "Clase no encontrada"}
@@ -643,7 +651,6 @@ def move_clase(id: int, data: ClaseMove, db: Session = Depends(database.get_db))
         raise HTTPException(status_code=404, detail="Clase no encontrada")
     
     horarios = list(c.horarios_detalle) if c.horarios_detalle else []
-    
     encontrado = False
     for slot in horarios:
         if slot.get('dia') == data.old_dia and float(slot.get('horario')) == float(data.old_horario):
@@ -658,7 +665,7 @@ def move_clase(id: int, data: ClaseMove, db: Session = Depends(database.get_db))
         db.commit()
         return {"status": "success"}
     
-    return {"status": "error", "message": "No se encontró el horario original en la lista"}
+    return {"status": "error", "message": "No se encontró el horario original"}
 
 @app.delete("/api/clases/{id}", tags=["Clases"])
 def delete_clase(id: int, db: Session = Depends(database.get_db)):
@@ -667,7 +674,7 @@ def delete_clase(id: int, db: Session = Depends(database.get_db)):
     return {"status": "success"}
 
 # ==========================================
-# MÓDULO 8: CAJA Y FINANZAS (SINCRONIZADO)
+# MÓDULO 8: CAJA Y FINANZAS
 # ==========================================
 
 @app.get("/api/caja/resumen", tags=["Finanzas"])
@@ -678,7 +685,7 @@ def get_caja_resumen(db: Session = Depends(database.get_db)):
 
 @app.get("/api/caja/movimientos", tags=["Finanzas"])
 def get_movimientos(db: Session = Depends(database.get_db)):
-    return db.query(models.MovimientoCaja).order_by(models.MovimientoCaja.fecha.desc()).limit(15).all()
+    return db.query(models.MovimientoCaja).order_by(models.MovimientoCaja.fecha.desc()).limit(20).all()
 
 @app.post("/api/caja/movimiento", tags=["Finanzas"])
 def create_movimiento(data: MovimientoCajaCreate, db: Session = Depends(database.get_db)):
@@ -687,23 +694,23 @@ def create_movimiento(data: MovimientoCajaCreate, db: Session = Depends(database
         monto=data.monto,
         descripcion=data.descripcion,
         metodo_pago=data.metodo_pago,
-        fecha=datetime.now()
+        fecha=datetime.datetime.now()
     )
     db.add(new_mov)
     db.commit()
     return {"status": "success"}
 
-# --- ENDPOINT UNIFICADO: COBRAR PLAN / MERCADERÍA CON IMPACTO EN STOCK ---
+# CORRECCIÓN IMPORTANTE: Lógica de fechas y stock en el cobro
 @app.post("/api/cobros/procesar", tags=["Finanzas"])
 def procesar_cobro(data: TransactionCreate, db: Session = Depends(database.get_db)):
     try:
-        # 1. Registro automático en Caja como "Ingreso"
+        # 1. Registro automático en Caja
         nueva_transaccion = models.MovimientoCaja(
             tipo="Ingreso",
             monto=data.monto,
             descripcion=data.descripcion,
             metodo_pago=data.metodo_pago,
-            fecha=datetime.now()
+            fecha=datetime.datetime.now()
         )
         db.add(nueva_transaccion)
 
@@ -716,20 +723,20 @@ def procesar_cobro(data: TransactionCreate, db: Session = Depends(database.get_d
             if producto.stock_actual < data.cantidad:
                 raise HTTPException(status_code=400, detail=f"Stock insuficiente de {producto.nombre_producto}")
             
-            # Descontamos el stock
             producto.stock_actual -= data.cantidad
             
         # 3. Actualización de Alumno (Si es un Plan)
         if data.tipo == "Plan" and data.alumno_id:
             alumno = db.query(models.Usuario).filter(models.Usuario.id == data.alumno_id).first()
             if alumno:
-                alumno.fecha_ultima_renovacion = date.today()
-                # Extensión automática de 30 días (ajustable según lógica de negocio)
-                alumno.fecha_vencimiento = date.today() + datetime.timedelta(days=30)
+                hoy = datetime.date.today()
+                alumno.fecha_ultima_renovacion = hoy
+                # Corrección: Uso correcto de timedelta
+                alumno.fecha_vencimiento = hoy + datetime.timedelta(days=30)
                 alumno.estado_cuenta = "Al día"
 
         db.commit()
-        return {"status": "success", "message": "Cobro procesado, Caja impactada y Stock actualizado"}
+        return {"status": "success", "message": "Cobro procesado correctamente"}
 
     except HTTPException as he:
         db.rollback()
@@ -740,7 +747,7 @@ def procesar_cobro(data: TransactionCreate, db: Session = Depends(database.get_d
         raise HTTPException(status_code=500, detail="Error interno al procesar el pago")
 
 # ==========================================
-# MÓDULO 9: MUSCULACIÓN AVANZADA
+# MÓDULO 9: MUSCULACIÓN
 # ==========================================
 
 @app.get("/api/rutinas/grupos-musculares", tags=["Musculación"])
@@ -774,6 +781,7 @@ def create_plan_rutina(data: PlanRutinaCreate, db: Session = Depends(database.ge
         if not user:
             raise HTTPException(status_code=404, detail="Usuario no encontrado")
 
+        # Desactivar rutinas anteriores
         db.query(models.PlanRutina).filter(
             models.PlanRutina.usuario_id == data.usuario_id
         ).update({"activo": False}, synchronize_session=False)
@@ -784,7 +792,8 @@ def create_plan_rutina(data: PlanRutinaCreate, db: Session = Depends(database.ge
             descripcion=data.descripcion,
             objetivo=data.objetivo,
             fecha_vencimiento=data.fecha_vencimiento,
-            activo=True
+            activo=True,
+            fecha_creacion=datetime.date.today()
         )
         db.add(nuevo_plan)
         db.flush() 
@@ -797,11 +806,6 @@ def create_plan_rutina(data: PlanRutinaCreate, db: Session = Depends(database.ge
             lista_ejercicios = d.ejercicios if d.ejercicios else (d.exercises if d.exercises else [])
             
             for e in lista_ejercicios:
-                ej_exists = db.query(models.Ejercicio).filter(models.Ejercicio.id == e.ejercicio_id).first()
-                if not ej_exists:
-                    logger.warning(f"Salteando ejercicio ID {e.ejercicio_id}: No existe.")
-                    continue
-
                 ej_en_rut = models.EjercicioEnRutina(
                     dia_id=nuevo_dia.id,
                     ejercicio_id=e.ejercicio_id,
@@ -823,13 +827,9 @@ def create_plan_rutina(data: PlanRutinaCreate, db: Session = Depends(database.ge
         db.commit()
         return {"status": "success", "id": nuevo_plan.id}
 
-    except IntegrityError as ie:
-        db.rollback()
-        logger.error(f"Error de Integridad: {str(ie)}")
-        raise HTTPException(status_code=400, detail="Error de base de datos. Verifica IDs.")
     except Exception as e:
         db.rollback()
-        logger.error(f"Error Grave: {str(e)}")
+        logger.error(f"Error Grave en Rutinas: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/rutinas/usuario/{id}", response_model=Optional[PlanRutinaResponse], tags=["Musculación"])
@@ -845,7 +845,6 @@ def get_rutina_activa(id: int, db: Session = Depends(database.get_db)):
             .joinedload(models.DiaRutina.ejercicios)
             .joinedload(models.EjercicioEnRutina.series_detalle)
     ).first()
-    
     return rutina
 
 @app.get("/api/rutinas/historial/{id}", response_model=List[PlanRutinaResponse], tags=["Musculación"])
@@ -864,4 +863,5 @@ def get_historial_rutinas(id: int, db: Session = Depends(database.get_db)):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=int(os.environ.get("PORT", 8000)))
+    port = int(os.environ.get("PORT", 8000))
+    uvicorn.run(app, host="0.0.0.0", port=port)

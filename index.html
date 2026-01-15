@@ -631,52 +631,100 @@
 			</div>
             </div>
 
-            <div id="view-cobrar" class="view-content">
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-10 h-full">
-                    <div class="lg:col-span-2 space-y-6">
-                        <div class="flex justify-between items-center mb-4">
-                            <div class="flex border-b border-white/5">
-                                <button onclick="setCobrarTab('mercaderia')" id="tab-mercaderia" class="cobrar-tab active">Mercadería</button>
-                                <button onclick="setCobrarTab('planes')" id="tab-planes" class="cobrar-tab">Planes</button>
-                            </div>
-                            <div class="relative w-64">
-                                <i data-lucide="search" class="absolute left-4 top-3.5 w-4 h-4 text-gray-500"></i>
-                                <input type="text" placeholder="Buscar..." class="viking-input pl-12 py-3" id="cobrar-search">
-                            </div>
-                        </div>
-                        <div id="cobrar-display-area">
-                             <div class="grid grid-cols-2 md:grid-cols-4 gap-4 overflow-y-auto max-h-[600px] pr-2 custom-scrollbar" id="cobrar-catalogo"></div>
-                        </div>
-                    </div>
+            <div id="view-cobrar" class="view-content hidden">
+			<div class="grid grid-cols-1 lg:grid-cols-3 gap-10 h-full">
+				<!-- COLUMNA IZQUIERDA: BUSCADOR Y LISTA -->
+				<div class="lg:col-span-2 space-y-6">
+					<div class="flex justify-between items-center mb-4">
+						<div class="flex border-b border-white/5">
+							<button onclick="setCobrarTab('mercaderia')" id="tab-mercaderia" class="cobrar-tab active px-6 py-2 text-sm font-bold uppercase transition-colors hover:text-red-500 border-b-2 border-transparent">Mercadería</button>
+							<button onclick="setCobrarTab('planes')" id="tab-planes" class="cobrar-tab px-6 py-2 text-sm font-bold uppercase transition-colors hover:text-red-500 border-b-2 border-transparent">Planes</button>
+						</div>
+						<div class="relative w-64">
+							<i data-lucide="search" class="absolute left-4 top-3.5 w-4 h-4 text-gray-500"></i>
+							<!-- Agregado oninput para filtrar -->
+							<input type="text" 
+								   placeholder="Buscar..." 
+								   class="viking-input pl-12 py-3 w-full bg-white/5 border border-white/10 rounded-xl text-xs text-white placeholder-gray-500 focus:outline-none focus:border-red-600 transition-colors" 
+								   id="cobrar-search"
+								   oninput="filterCobroItems(this.value)">
+						</div>
+					</div>
+					
+					<div id="cobrar-display-area">
+						<div class="grid grid-cols-2 md:grid-cols-4 gap-4 overflow-y-auto max-h-[600px] pr-2 custom-scrollbar" id="cobrar-catalogo">
+							<!-- Aquí se inyectan los productos/planes vía JS -->
+						</div>
+					</div>
+				</div>
 
-                    <div class="glass-card p-10 rounded-[3rem] border-red-600/10 flex flex-col h-fit">
-                        <h4 class="text-xs font-black uppercase italic text-red-600 mb-6 tracking-widest border-b border-white/5 pb-4">Carrito de Cobro</h4>
-                        <div class="flex-1 space-y-4 mb-8 overflow-y-auto max-h-64 custom-scrollbar" id="cobrar-lista-carrito">
-                            <p class="text-center text-gray-500 text-[11px] italic py-10">Sin ítems seleccionados</p>
-                        </div>
-                        <div class="space-y-4 border-t border-white/5 pt-6 mb-8">
-                            <div class="flex justify-between text-[11px] font-black italic">
-                                <span class="text-gray-500">SUBTOTAL</span>
-                                <span id="cobrar-subtotal">$ 0</span>
-                            </div>
-                            <div class="flex justify-between text-xl font-black italic">
-                                <span>TOTAL</span>
-                                <span class="viking-red" id="cobrar-total">$ 0</span>
-                            </div>
-                        </div>
-                        <div class="space-y-4">
-                            <p class="text-[10px] font-black uppercase text-gray-500 italic mb-2 tracking-widest">Método de Pago</p>
-                            <div class="grid grid-cols-2 gap-3">
-                                <button onclick="setPaymentMethod('MercadoPago')" class="payment-method-btn py-3 rounded-xl text-[10px] font-black uppercase italic">MercadoPago</button>
-                                <button onclick="setPaymentMethod('Transferencia')" class="payment-method-btn py-3 rounded-xl text-[10px] font-black uppercase italic">Transferencia</button>
-                                <button onclick="setPaymentMethod('Efectivo')" class="payment-method-btn py-3 rounded-xl text-[10px] font-black uppercase italic">Efectivo</button>
-                                <button onclick="setPaymentMethod('Tarjeta')" class="payment-method-btn py-3 rounded-xl text-[10px] font-black uppercase italic">Tarjeta</button>
-                            </div>
-                        </div>
-                        <button id="btn-finalizar-pago" onclick="finalizarVenta()" class="w-full mt-8 viking-bg-red text-black py-5 rounded-2xl font-black uppercase italic tracking-widest hover:scale-[1.02] active:scale-95 transition-all shadow-xl">Procesar Pago</button>
-                    </div>
-                </div>
-            </div>
+				<!-- COLUMNA DERECHA: CARRITO Y PAGO -->
+				<div class="glass-card p-10 rounded-[3rem] border border-red-600/10 flex flex-col h-fit bg-black/40 backdrop-blur-md">
+					<h4 class="text-xs font-black uppercase italic text-red-600 mb-6 tracking-widest border-b border-white/5 pb-4">Carrito de Cobro</h4>
+					
+					<div class="flex-1 space-y-4 mb-8 overflow-y-auto max-h-64 custom-scrollbar" id="cobrar-lista-carrito">
+						<p class="text-center text-gray-500 text-[11px] italic py-10">Sin ítems seleccionados</p>
+					</div>
+
+					<div class="space-y-4 border-t border-white/5 pt-6 mb-8">
+						<div class="flex justify-between text-[11px] font-black italic">
+							<span class="text-gray-500">SUBTOTAL</span>
+							<span id="cobrar-subtotal">$ 0</span>
+						</div>
+						<div class="flex justify-between text-xl font-black italic">
+							<span>TOTAL</span>
+							<span class="viking-red" id="cobrar-total">$ 0</span>
+						</div>
+					</div>
+
+					<!-- SECCIÓN DE MÉTODOS DE PAGO CORREGIDA -->
+					<div class="space-y-4">
+						<p class="text-[10px] font-black uppercase text-gray-500 italic mb-2 tracking-widest">Método de Pago</p>
+						<div class="grid grid-cols-2 gap-3">
+							<!-- MercadoPago -->
+							<button onclick="setPaymentMethod('MercadoPago')" 
+									data-method="MercadoPago"
+									class="btn-pago w-full py-3 rounded-xl text-[10px] font-black uppercase italic transition-all bg-white/5 text-gray-400 hover:text-white border border-transparent hover:border-red-600/30">
+								MercadoPago
+							</button>
+							
+							<!-- Transferencia -->
+							<button onclick="setPaymentMethod('Transferencia')" 
+									data-method="Transferencia"
+									class="btn-pago w-full py-3 rounded-xl text-[10px] font-black uppercase italic transition-all bg-white/5 text-gray-400 hover:text-white border border-transparent hover:border-red-600/30">
+								Transf.
+							</button>
+							
+							<!-- Efectivo (Seleccionado por defecto visualmente) -->
+							<button onclick="setPaymentMethod('Efectivo')" 
+									data-method="Efectivo"
+									class="btn-pago w-full py-3 rounded-xl text-[10px] font-black uppercase italic transition-all bg-red-600 text-black shadow-lg shadow-red-600/20 transform scale-105">
+								Efectivo
+							</button>
+							
+							<!-- Tarjeta -->
+							<button onclick="setPaymentMethod('Tarjeta')" 
+									data-method="Tarjeta"
+									class="btn-pago w-full py-3 rounded-xl text-[10px] font-black uppercase italic transition-all bg-white/5 text-gray-400 hover:text-white border border-transparent hover:border-red-600/30">
+								Tarjeta
+							</button>
+						</div>
+						
+						<!-- SELECT OCULTO IMPORTANTE PARA LA LÓGICA -->
+						<select id="metodo-pago" class="hidden">
+							<option value="MercadoPago">MercadoPago</option>
+							<option value="Transferencia">Transferencia</option>
+							<option value="Efectivo" selected>Efectivo</option>
+							<option value="Tarjeta">Tarjeta</option>
+						</select>
+					</div>
+
+					<button id="btn-finalizar-pago" onclick="finalizarVenta()" class="w-full mt-8 viking-bg-red text-black py-5 rounded-2xl font-black uppercase italic tracking-widest hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-red-900/20">
+						Procesar Pago
+					</button>
+				</div>
+			</div>
+		</div>
 
             <div id="view-perfil" class="view-content">
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-10">
@@ -1975,26 +2023,90 @@
             state.currentPaymentMethod = m;
             document.querySelectorAll('.payment-method-btn').forEach(b => b.classList.toggle('active', b.innerText.includes(m)));
         }
+		
+		function setPaymentMethod(metodo) {
+			// 1. Actualizar el valor lógico (lo que lee finalizarVenta)
+			const select = document.getElementById('metodo-pago');
+			if (select) {
+				select.value = metodo;
+			}
+
+			// 2. Actualizar el valor visual (Colores de botones)
+			const botones = document.querySelectorAll('.btn-pago');
+			
+			botones.forEach(btn => {
+				// Obtenemos el método asociado a este botón desde el atributo HTML
+				const btnMethod = btn.getAttribute('data-method');
+
+				if (btnMethod === metodo) {
+					// ESTILO ACTIVO: Rojo Vikingo, texto negro, con sombra
+					btn.className = "btn-pago w-full py-3 rounded-xl text-[10px] font-black uppercase italic transition-all bg-red-600 text-black shadow-lg shadow-red-600/20 transform scale-105";
+				} else {
+					// ESTILO INACTIVO: Fondo oscuro, texto gris
+					btn.className = "btn-pago w-full py-3 rounded-xl text-[10px] font-black uppercase italic transition-all bg-white/5 text-gray-400 hover:text-white border border-transparent hover:border-red-600/30";
+				}
+			});
+		}
 
         async function finalizarVenta() {
-            if (state.cart.length === 0 || !state.currentPaymentMethod) return;
-            const total = state.cart.reduce((acc, c) => acc + (c.qty * c.precio_venta), 0);
-            const desc = `Venta (${state.currentPaymentMethod}): ${state.cart.map(c => c.nombre_producto).join(', ')}`;
-            const res = await apiFetch('/caja/movimiento', 'POST', { tipo: "Ingreso", monto: total, descripcion: desc });
-            if (!res.error) {
-                for (let item of state.cart) {
-                    if (item.type === 'plan' && item.alumno_id) {
-                        const hoy = new Date().toISOString().split('T')[0];
-                        await apiFetch(`/alumnos/${item.alumno_id}`, 'PUT', { plan_id: item.plan_id_cobrado, fecha_ultima_renovacion: hoy, nombre_completo: "Actualizado", dni: "Actualizado" });
-                    }
-                }
-                state.cart = []; state.currentPaymentMethod = '';
-                showVikingToast("Pago Procesado con Éxito");
-                await initApp();
-                renderCobrar();
-                switchView('caja');
-            }
-        }
+			// 1. Validar que haya algo que cobrar
+			if (state.cart.length === 0) {
+				return showVikingToast("El carrito está vacío, guerrero", true);
+			}
+			
+			// 2. Obtener el método de pago seleccionado
+			// Asegúrate de que tu <select> en el HTML tenga id="metodo-pago"
+			const metodoSelect = document.getElementById('metodo-pago'); 
+			const metodo = metodoSelect ? metodoSelect.value : "Efectivo";
+
+			showVikingToast("Procesando cobro en Tesorería y Stock...");
+
+			try {
+				// 3. Iteramos item por item para procesarlo en el backend
+				for (const item of state.cart) {
+					
+					// Preparamos los datos EXACTOS que pide el nuevo backend (TransactionCreate)
+					const payload = {
+						tipo: item.tipo, // Debe ser 'Plan' o 'Mercaderia'
+						monto: parseFloat(item.precio * item.cantidad),
+						descripcion: item.nombre,
+						metodo_pago: metodo,
+						// Si es plan, mandamos alumno_id; si es producto, mandamos producto_id
+						alumno_id: item.alumno_id ? parseInt(item.alumno_id) : null,
+						producto_id: item.producto_id ? parseInt(item.producto_id) : null,
+						cantidad: parseInt(item.cantidad) || 1
+					};
+
+					// 4. Llamada al endpoint NUEVO que maneja lógica inteligente
+					// Usamos fetch directo o apiFetch según tengas configurado, aquí uso fetch estándar para asegurar
+					const response = await fetch(`${API_URL}/cobros/procesar`, {
+						method: 'POST',
+						headers: { 'Content-Type': 'application/json' },
+						body: JSON.stringify(payload)
+					});
+
+					if (!response.ok) {
+						const errorData = await response.json();
+						throw new Error(errorData.detail || "Error al procesar " + item.nombre);
+					}
+				}
+
+				// 5. Éxito: Limpiar todo y recargar
+				showVikingToast("¡Victoria! Cobro registrado y Stock actualizado");
+				
+				state.cart = []; // Vaciar carrito en memoria
+				renderCart();    // Limpiar visualmente el ticket (asegúrate que esta función exista)
+				
+				// Recargar datos para ver los cambios reflejados
+				if (typeof loadStock === 'function') await loadStock(); 
+				if (typeof renderCaja === 'function') renderCaja(); // Para ver el ingreso en caja
+				if (typeof loadAlumnos === 'function') loadAlumnos(); // Para actualizar fechas de vencimiento
+
+			} catch (err) {
+				console.error("Fallo crítico en cobro:", err);
+				showVikingToast("Error: " + err.message, true);
+			}
+		}
 
 		/**
 		 * FUNCIÓN PARA PROCESAR EL PAGO FINAL
