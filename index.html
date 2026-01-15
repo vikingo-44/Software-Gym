@@ -266,6 +266,32 @@
             color: black;
             cursor: pointer;
         }
+		
+		/* Asegura que el contenedor del avatar se achique proporcionalmente */
+		.sidebar-collapsed #user-avatar-container {
+			width: 40px !important;
+			height: 40px !important;
+			margin-bottom: 10px !important;
+		}
+
+		.sidebar-collapsed #user-initials {
+			font-size: 14px !important;
+		}
+
+		/* Ocultar nombre y rol al colapsar */
+		.sidebar-collapsed #side-user-name,
+		.sidebar-collapsed #side-user-role {
+			display: none !important;
+		}
+
+		/* Centrar el bloque de perfil al colapsar */
+		.sidebar-collapsed .user-profile-block {
+			padding-left: 0 !important;
+			padding-right: 0 !important;
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+		}
     </style>
 </head>
 <body class="flex h-screen w-screen overflow-hidden text-left">
@@ -2431,52 +2457,66 @@ async function renderRutinas() {
         }
 
         async function handleLogin(e) {
-			// 1. Detener el refresco automático
-			if(e && e.preventDefault) e.preventDefault();
-			
-			const dniInput = document.getElementById('login-dni');
-			const passInput = document.getElementById('login-pass');
-			
-			if (!dniInput || !passInput) return; // Seguridad extra
+		// 1. Detener el refresco automático
+		if(e && e.preventDefault) e.preventDefault();
+		
+		const dniInput = document.getElementById('login-dni');
+		const passInput = document.getElementById('login-pass');
+		
+		if (!dniInput || !passInput) return; // Seguridad extra
 
-			const data = { 
-				dni: dniInput.value, 
-				password: passInput.value 
-			};
+		const data = { 
+			dni: dniInput.value, 
+			password: passInput.value 
+		};
+		
+		const res = await apiFetch('/login', 'POST', data);
+		
+		if (res && !res.error) {
+			state.user = res;
 			
-			const res = await apiFetch('/login', 'POST', data);
+			// 2. Ocultar Login y mostrar App
+			document.getElementById('login-overlay').style.display = 'none';
+			document.getElementById('sidebar').classList.remove('hidden');
+			document.getElementById('main-content').classList.remove('hidden');
 			
-			if (res && !res.error) {
-				state.user = res;
-				
-				// 2. Ocultar Login y mostrar App
-				document.getElementById('login-overlay').style.display = 'none';
-				document.getElementById('sidebar').classList.remove('hidden');
-				document.getElementById('main-content').classList.remove('hidden');
-				
-				// 3. Cargar datos del usuario en sidebar
-				const elName = document.getElementById('side-user-name');
-				if(elName) elName.innerText = res.nombre_completo || "Usuario";
+			// 3. Cargar datos del usuario en sidebar
+			const elName = document.getElementById('side-user-name');
+			if(elName) elName.innerText = res.nombre_completo || "Usuario";
 
-				const elRole = document.getElementById('side-user-role');
-				if(elRole) elRole.innerText = res.rol_nombre || 'Staff';
+			const elRole = document.getElementById('side-user-role');
+			if(elRole) elRole.innerText = res.rol_nombre || 'Staff';
 
-				// 4. IMPORTANTE: Cargar Profesores para que los selectores funcionen
-				await loadProfesores();
-				
-				// 5. Iniciar resto de la app
-				if (typeof initApp === 'function') {
-					await initApp(); 
-				} else {
-					loadClases(); 
-				}
+			// --- FIX INICIALES (Punto 1 de Mejoras Visuales) ---
+			// Calculamos las iniciales apenas recibimos los datos del servidor
+			const name = res.nombre_completo || "Usuario Vikingo";
+			const initials = name.split(' ')
+								 .filter(n => n)
+								 .map(n => n[0])
+								 .join('')
+								 .toUpperCase()
+								 .substring(0, 2);
+			
+			const elInitials = document.getElementById('user-initials');
+			if(elInitials) elInitials.innerText = initials;
+			// ---------------------------------------------------
 
-				switchView('dashboard');
+			// 4. IMPORTANTE: Cargar Profesores para que los selectores funcionen
+			await loadProfesores();
+			
+			// 5. Iniciar resto de la app
+			if (typeof initApp === 'function') {
+				await initApp(); 
 			} else {
-				const errorDiv = document.getElementById('login-error');
-				if(errorDiv) errorDiv.classList.remove('hidden');
+				loadClases(); 
 			}
+
+			switchView('dashboard');
+		} else {
+			const errorDiv = document.getElementById('login-error');
+			if(errorDiv) errorDiv.classList.remove('hidden');
 		}
+	}
 
         async function initApp() {
             await Promise.all([fetchAlumnos(), loadStaff(), loadPlanes(), loadStock(), loadClases(), fetchReservas(), loadDashboard(), loadMusculacionMetadata()]);
