@@ -276,6 +276,25 @@
 		#sidebar.collapsed .submenu-dot { 
 			display: none !important; 
 		}
+		
+		#sidebar.collapsed p.text-[10px] { 
+			display: none !important; 
+		}
+		
+		/* Ocultar el texto del logo "Vikingo Strength Hub" */
+		#sidebar.collapsed .logo-text {
+			display: none !important;
+		}
+		
+		/* Centrar el botón de las tres líneas en el encabezado cuando está colapsado */
+		#sidebar.collapsed .sidebar-header {
+			padding: 20px 0 !important;
+			justify-content: center !important;
+		}
+		
+		#sidebar.collapsed .sidebar-header button {
+			margin: 0 !important;
+		}
 
 		/* Ajustar los botones para que el icono quede centrado */
 		#sidebar.collapsed .nav-btn {
@@ -331,15 +350,23 @@
     </div>
 
     <aside id="sidebar" class="w-72 h-full glass-sidebar flex flex-col hidden z-50">
-        <div class="p-8 flex items-center gap-4">
-            <img src="https://github.com/vikingo-44/Software-Gym/blob/main/logo.png?raw=true" alt="Vikingo Hub" class="w-10 h-10 object-contain logo-viking-glow brand-text" onerror="this.style.display='none'">
-            <h1 class="brand-text text-xl font-black italic uppercase leading-none">
-                VIKINGO<br><span class="viking-red text-xs tracking-[0.4em] font-bold">STRENGTH HUB</span>
-            </h1>
-            <button onclick="toggleSidebar()" class="p-2 hover:bg-white/5 rounded-lg transition-colors ml-auto">
-                <i data-lucide="menu" class="w-5 h-5 viking-red"></i>
-            </button>
-        </div>
+        <div class="sidebar-header p-8 flex items-center gap-4 transition-all duration-300">
+			<!-- El logo se queda siempre -->
+			<img src="https://github.com/vikingo-44/Software-Gym/blob/main/logo.png?raw=true" 
+				 alt="Vikingo Hub" 
+				 class="w-10 h-10 object-contain logo-viking-glow shrink-0" 
+				 onerror="this.style.display='none'">
+			
+			<!-- Este bloque de texto se ocultará automáticamente al colapsar -->
+			<h1 class="logo-text text-xl font-black italic uppercase leading-none">
+				VIKINGO<br><span class="viking-red text-xs tracking-[0.4em] font-bold">STRENGTH HUB</span>
+			</h1>
+			
+			<!-- El botón se mantiene y la lógica se encarga de centrarlo -->
+			<button onclick="toggleSidebar()" class="p-2 hover:bg-white/5 rounded-lg transition-colors ml-auto shrink-0">
+				<i data-lucide="menu" class="w-5 h-5 viking-red"></i>
+			</button>
+		</div>
 
         <div class="px-6 mb-8">
             <div class="glass-card p-4 rounded-3xl flex items-center gap-4">
