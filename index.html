@@ -1184,24 +1184,51 @@
         </div>
     </div>
 
-    <div id="modal-stock" class="viking-modal">
-        <div class="glass-card p-10 rounded-[3rem] w-full max-w-lg text-left">
-            <h3 class="text-2xl font-black uppercase italic mb-8" id="modal-stock-title">Mercadería</h3>
-            <form id="form-stock" class="space-y-4">
-                <input type="hidden" id="stock-id">
-                <input type="text" id="stock-nombre" placeholder="Nombre del Producto" required class="viking-input">
-                <div class="grid grid-cols-2 gap-4">
-                    <input type="number" id="stock-cant" placeholder="Stock" required class="viking-input">
-                    <input type="number" id="stock-precio" placeholder="Precio Unidad ($)" required class="viking-input">
-                </div>
-                <div class="flex gap-4 pt-4">
-                    <button type="button" onclick="closeModal('modal-stock')" class="flex-1 py-4 bg-white/5 rounded-2xl font-black uppercase italic text-[11px]">Cancelar</button>
-                    <button type="button" id="btn-delete-stock" class="hidden py-4 px-4 bg-red-900/40 rounded-2xl font-black uppercase italic text-[11px] text-red-500">Eliminar</button>
-                    <button type="submit" id="btn-save-stock-modal" class="flex-1 py-4 viking-bg-red text-black rounded-2xl font-black uppercase italic text-[11px]">Guardar Mercadería</button>
-                </div>
-            </form>
-        </div>
-    </div>
+		<div id="modal-stock" class="viking-modal">
+			<div class="glass-card p-10 rounded-[3rem] w-full max-w-lg text-left border border-white/5">
+				<h3 class="text-2xl font-black uppercase italic mb-8" id="modal-stock-title">Mercadería</h3>
+				
+				<form id="form-stock" class="space-y-4">
+					<!-- ID Oculto para edición -->
+					<input type="hidden" id="stock-id">
+
+					<!-- Nombre del Producto -->
+					<div class="space-y-1">
+						<p class="text-[9px] font-black text-gray-500 uppercase px-2">Identificación</p>
+						<input type="text" id="stock-nombre" placeholder="Nombre del Producto (Ej: Agua 500ml)" required class="viking-input">
+					</div>
+
+					<!-- Stock y Precio -->
+					<div class="grid grid-cols-2 gap-4">
+						<div class="space-y-1">
+							<p class="text-[9px] font-black text-gray-500 uppercase px-2">Cantidad</p>
+							<input type="number" id="stock-cant" placeholder="Stock" required class="viking-input">
+						</div>
+						<div class="space-y-1">
+							<p class="text-[9px] font-black text-gray-500 uppercase px-2">Precio ($)</p>
+							<input type="number" id="stock-precio" placeholder="Precio Unidad" required class="viking-input">
+						</div>
+					</div>
+
+					<!-- CAMPO NUEVO: IMAGEN DEL PRODUCTO -->
+					<div class="space-y-1">
+						<p class="text-[9px] font-black text-red-600 uppercase px-2 italic">Identidad Visual</p>
+						<div class="relative">
+							<i data-lucide="image" class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500"></i>
+							<input type="text" id="stock-imagen" placeholder="URL de la Imagen (Link de internet)" class="viking-input pl-12 bg-white/5 border-white/10 text-white rounded-2xl focus:border-red-600 transition-all">
+						</div>
+						<p class="text-[8px] text-gray-600 italic px-2 mt-1">Tip: Busca la imagen en Google, haz clic derecho y selecciona "Copiar dirección de imagen".</p>
+					</div>
+
+					<!-- Acciones -->
+					<div class="flex gap-4 pt-6">
+						<button type="button" onclick="closeModal('modal-stock')" class="flex-1 py-4 bg-white/5 rounded-2xl font-black uppercase italic text-[11px] hover:bg-white/10 transition-colors">Cancelar</button>
+						<button type="button" id="btn-delete-stock" class="hidden py-4 px-4 bg-red-900/40 rounded-2xl font-black uppercase italic text-[11px] text-red-500 border border-red-500/20 hover:bg-red-900/60 transition-colors">Eliminar</button>
+						<button type="submit" id="btn-save-stock-modal" class="flex-1 py-4 viking-bg-red text-black rounded-2xl font-black uppercase italic text-[11px] shadow-xl hover:scale-105 transition-all">Guardar Mercadería</button>
+					</div>
+				</form>
+			</div>
+		</div>
 
     <div id="modal-plan" class="viking-modal">
         <div class="glass-card p-10 rounded-[3rem] w-full max-w-lg text-left">
@@ -3071,13 +3098,50 @@ async function renderRutinas() {
             applyPermissions();
         }
 
-        async function loadStock() {
-            const data = await apiFetch('/stock'); state.stock = Array.isArray(data) ? data : [];
-            const hideEdit = (state.user?.rol_nombre === "Profesor");
-            document.getElementById('stock-container').innerHTML = state.stock.map(s => `<div class="glass-card p-6 rounded-[2rem] relative group text-left">${hideEdit ? '' : `<button onclick="openEditStock(${s.id})" class="absolute top-4 right-4 text-gray-600 hover:text-red-600"><i data-lucide="edit-2" class="w-3 h-3"></i></button>`}<h4 class="text-sm font-black uppercase italic mb-4">${s.nombre_producto}</h4><p class="text-2xl font-black italic">$ ${s.precio_venta.toLocaleString()}</p><div class="mt-4 border-t border-white/5 pt-4"><span class="text-[10px] font-black text-gray-600 uppercase">Stock: ${s.stock_actual}</span></div></div>`).join('');
-            lucide.createIcons();
-            applyPermissions();
-        }
+        /**
+		 * RENDERIZADO DE STOCK CON IMÁGENES (PUNTO 5)
+		 */
+		async function loadStock() {
+			const data = await apiFetch('/stock');
+			state.stock = Array.isArray(data) ? data : [];
+
+			const container = document.getElementById('stock-container');
+			if (!container) return;
+
+			if (state.stock.length === 0) {
+				container.innerHTML = `<p class="col-span-full text-center py-20 text-gray-600 italic">No hay mercadería en el inventario.</p>`;
+			} else {
+				container.innerHTML = state.stock.map(s => `
+					<div class="glass-card p-4 rounded-[2rem] border-white/5 flex flex-col gap-4 hover:border-red-600/20 transition-all group relative overflow-hidden">
+						<!-- Imagen del Producto -->
+						<div class="w-full h-32 rounded-2xl overflow-hidden bg-white/5 relative">
+							<img src="${s.url_imagen || 'https://images.unsplash.com/photo-1583417319070-4a69db38a482?q=80&w=200&auto=format&fit=crop'}" 
+								 alt="${s.nombre_producto}" 
+								 class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500 opacity-80 group-hover:opacity-100"
+								 onerror="this.src='https://images.unsplash.com/photo-1583417319070-4a69db38a482?q=80&w=200&auto=format&fit=crop'">
+							<div class="absolute top-2 right-2 bg-black/60 backdrop-blur-md px-2 py-1 rounded-lg text-[10px] font-black text-red-500">
+								$${s.precio_venta}
+							</div>
+						</div>
+
+						<!-- Info -->
+						<div class="px-2">
+							<h4 class="text-xs font-black uppercase italic text-white truncate">${s.nombre_producto}</h4>
+							<div class="flex items-center justify-between mt-2">
+								<div class="flex flex-col">
+									<span class="text-[8px] text-gray-500 font-bold uppercase">Stock Actual</span>
+									<span class="text-sm font-black ${s.stock_actual <= 5 ? 'text-red-500 animate-pulse' : 'text-white'}">${s.stock_actual} Unid.</span>
+								</div>
+								<button onclick="openEditStock(${s.id})" class="p-2 bg-white/5 rounded-xl hover:bg-red-600 hover:text-black transition-all">
+									<i data-lucide="edit-3" class="w-4 h-4"></i>
+								</button>
+							</div>
+						</div>
+					</div>
+				`).join('');
+			}
+			if (window.lucide) lucide.createIcons();
+		}
 
         async function loadClases() {
 			// 1. Pedir datos al servidor
@@ -3195,14 +3259,24 @@ async function renderRutinas() {
             if(!res.error) { closeModal('modal-plan'); loadPlanes(); showVikingToast("Plan Guardado"); }
         };
 
-        function openModalStock() { document.getElementById('stock-id').value = ""; openModal('modal-stock'); }
+        function openModalStock() {
+			document.getElementById('st-id').value = "";
+			document.getElementById('st-nombre').value = "";
+			document.getElementById('st-stock').value = "";
+			document.getElementById('st-precio').value = "";
+			document.getElementById('st-imagen').value = ""; // Limpiar campo imagen
+			openModal('modal-stock');
+		}
         function openEditStock(id) {
-            const s = state.stock.find(x => x.id == id); if(!s) return;
-            document.getElementById('stock-id').value = s.id; document.getElementById('stock-nombre').value = s.nombre_producto; document.getElementById('stock-cant').value = s.stock_actual; document.getElementById('stock-precio').value = s.precio_venta;
-            const delBtn = document.getElementById('btn-delete-stock'); if(state.user.rol_nombre === "Administrador" || state.user.rol_nombre === "Supervisor") delBtn.classList.remove('hidden');
-            delBtn.onclick = () => deleteRecord('stock', s.id, 'modal-stock', loadStock);
-            openModal('modal-stock');
-        }
+			const s = state.stock.find(x => x.id == id);
+			if (!s) return;
+			document.getElementById('st-id').value = s.id;
+			document.getElementById('st-nombre').value = s.nombre_producto;
+			document.getElementById('st-stock').value = s.stock_actual;
+			document.getElementById('st-precio').value = s.precio_venta;
+			document.getElementById('st-imagen').value = s.url_imagen || ""; // Cargar campo imagen
+			openModal('modal-stock');
+		}
 
         document.getElementById('form-stock').onsubmit = async (e) => {
             e.preventDefault(); const id = document.getElementById('stock-id').value;

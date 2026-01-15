@@ -110,6 +110,7 @@ class StockUpdate(BaseModel):
     nombre_producto: str
     stock_actual: int
     precio_venta: float
+    url_imagen: Optional[str] = None # <-- NUEVO CAMPO
 
 class PlanUpdate(BaseModel):
     nombre: str
@@ -526,7 +527,8 @@ def create_stock(data: StockUpdate, db: Session = Depends(database.get_db)):
         nombre_producto=data.nombre_producto, 
         stock_actual=data.stock_actual, 
         stock_inicial=data.stock_actual, 
-        precio_venta=data.precio_venta
+        precio_venta=data.precio_venta,
+        url_imagen=data.url_imagen # <-- GUARDAR IMAGEN
     )
     db.add(new_s)
     db.commit()
@@ -539,6 +541,7 @@ def update_stock(id: int, data: StockUpdate, db: Session = Depends(database.get_
         s.nombre_producto = data.nombre_producto
         s.stock_actual = data.stock_actual
         s.precio_venta = data.precio_venta
+        s.url_imagen = data.url_imagen # <-- ACTUALIZAR IMAGEN
         db.commit()
     return {"status": "success"}
 
