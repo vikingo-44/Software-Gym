@@ -266,6 +266,47 @@
             color: black;
             cursor: pointer;
         }
+		/* --- ESTILOS PARA SIDEBAR COLAPSADO --- */
+		#sidebar.collapsed { width: 85px !important; }
+
+		/* Esconder textos y flechas */
+		#sidebar.collapsed .nav-text, 
+		#sidebar.collapsed .nav-header-text,
+		#sidebar.collapsed [id^="icon-submenu-"],
+		#sidebar.collapsed .submenu-dot { 
+			display: none !important; 
+		}
+
+		/* Ajustar los botones para que el icono quede centrado */
+		#sidebar.collapsed .nav-btn {
+			padding-left: 0 !important;
+			padding-right: 0 !important;
+			justify-content: center !important;
+		}
+
+		#sidebar.collapsed .nav-btn .flex {
+			gap: 0 !important;
+		}
+
+		/* Ajustar los contenedores de Staff/Facturación */
+		#sidebar.collapsed .px-3 {
+			padding-left: 0.5rem !important;
+			padding-right: 0.5rem !important;
+		}
+
+		/* Ajustar submenús (se cierran al colapsar para que no floten) */
+		#sidebar.collapsed [id^="submenu-"] {
+			display: none !important;
+		}
+
+		/* Arreglo de Iniciales (Punto 8): Reducir tamaño y centrar */
+		#sidebar.collapsed #user-avatar-container {
+			width: 45px !important;
+			height: 45px !important;
+		}
+		#sidebar.collapsed #user-initials {
+			font-size: 14px !important;
+		}
     </style>
 </head>
 <body class="flex h-screen w-screen overflow-hidden text-left">
@@ -324,47 +365,53 @@
                 </button>
             </div>
 
-            <!-- 1. SECCIÓN STAFF (Asegurando alineación perfecta) -->
+            <!-- 1. SECCIÓN STAFF (Asegurando alineación perfecta y soporte para colapso) -->
 			<div id="nav-section-staff" class="mb-2">
-				<p class="text-[10px] font-black text-gray-600 uppercase tracking-widest px-6 mb-2 mt-4">Personal</p>
-				<div class="px-3"> <!-- Contenedor para mantener el radio de los botones -->
+				<p class="text-[10px] font-black text-gray-600 uppercase tracking-widest px-6 mb-2 mt-4 flex items-center gap-2">
+					<span class="nav-header-text">Personal</span>
+					<div class="h-px bg-white/10 flex-1 opacity-20"></div>
+				</p>
+				<div class="px-3">
 					<button onclick="toggleSubmenu('submenu-staff')" class="nav-btn w-full flex items-center justify-between px-6 py-4 rounded-2xl font-black uppercase text-[11px] italic transition-all hover:bg-white/5 group">
 						<div class="flex items-center gap-3">
 							<i data-lucide="users" class="w-4 h-4"></i>
 							<span class="nav-text">Staff</span>
 						</div>
-						<i data-lucide="chevron-down" id="icon-submenu-staff" class="w-3 h-3 text-gray-600 transition-transform"></i>
+						<i data-lucide="chevron-down" id="icon-submenu-staff" class="w-3 h-3 text-gray-600 transition-transform duration-300"></i>
 					</button>
 					
 					<div id="submenu-staff" class="hidden flex-col mt-1 ml-4 border-l border-white/10 pl-2 space-y-1">
 						<button onclick="switchView('profesores')" class="w-full text-left px-4 py-3 rounded-xl text-[10px] font-bold text-gray-400 hover:text-white hover:bg-white/5 transition-all uppercase italic">
-							• Profesores
+							<span class="submenu-dot">•</span> Profesores
 						</button>
 						<button onclick="switchView('administrativos')" class="w-full text-left px-4 py-3 rounded-xl text-[10px] font-bold text-gray-400 hover:text-white hover:bg-white/5 transition-all uppercase italic">
-							• Administrativos
+							<span class="submenu-dot">•</span> Administrativos
 						</button>
 					</div>
 				</div>
 			</div>
 
-            <!-- 2. SECCIÓN OPERATIVA / FACTURACIÓN -->
+			<!-- 2. SECCIÓN OPERATIVA / FACTURACIÓN (Sincronizada con el estilo anterior) -->
 			<div id="nav-section-operativa" class="mb-2">
-				<p class="text-[10px] font-black text-gray-600 uppercase tracking-widest px-6 mb-2 mt-4">Contabilidad</p>
+				<p class="text-[10px] font-black text-gray-600 uppercase tracking-widest px-6 mb-2 mt-4 flex items-center gap-2">
+					<span class="nav-header-text">Contabilidad</span>
+					<div class="h-px bg-white/10 flex-1 opacity-20"></div>
+				</p>
 				<div class="px-3">
 					<button onclick="toggleSubmenu('submenu-billing')" class="nav-btn w-full flex items-center justify-between px-6 py-4 rounded-2xl font-black uppercase text-[11px] italic transition-all hover:bg-white/5 group">
 						<div class="flex items-center gap-3">
 							<i data-lucide="wallet" class="w-4 h-4"></i>
 							<span class="nav-text">Facturación</span>
 						</div>
-						<i data-lucide="chevron-down" id="icon-submenu-billing" class="w-3 h-3 text-gray-600 transition-transform"></i>
+						<i data-lucide="chevron-down" id="icon-submenu-billing" class="w-3 h-3 text-gray-600 transition-transform duration-300"></i>
 					</button>
 
 					<div id="submenu-billing" class="hidden flex-col mt-1 ml-4 border-l border-white/10 pl-2 space-y-1">
 						<button onclick="switchView('cobrar')" class="w-full text-left px-4 py-3 rounded-xl text-[10px] font-bold text-gray-400 hover:text-white hover:bg-white/5 transition-all uppercase italic">
-							• Cobrar / Ventas
+							<span class="submenu-dot">•</span> Cobrar / Ventas
 						</button>
 						<button onclick="switchView('caja')" class="w-full text-left px-4 py-3 rounded-xl text-[10px] font-bold text-gray-400 hover:text-white hover:bg-white/5 transition-all uppercase italic">
-							• Caja Diaria
+							<span class="submenu-dot">•</span> Caja Diaria
 						</button>
 					</div>
 				</div>
@@ -2389,8 +2436,38 @@ async function renderRutinas() {
             document.getElementById('al-fecha-vencimiento').value = d.toISOString().split('T')[0];
         }
 
-        function toggleSidebar() { document.getElementById('sidebar').classList.toggle('sidebar-collapsed'); lucide.createIcons(); }
-        function toggleSub(id) { document.getElementById(id).classList.toggle('hidden'); }
+        function toggleSidebar() {
+			const sidebar = document.getElementById('sidebar');
+			const mainContent = document.getElementById('main-content');
+			
+			// Cambiamos a la clase 'collapsed' que es la que configuramos en los estilos
+			sidebar.classList.toggle('collapsed');
+			
+			// 1. Si estamos colapsando, cerramos todos los submenús para que no queden flotando
+			if (sidebar.classList.contains('collapsed')) {
+				document.querySelectorAll('[id^="submenu-"]').forEach(menu => {
+					menu.classList.add('hidden');
+					menu.classList.remove('flex');
+				});
+				
+				// Reseteamos la rotación de las flechitas de los submenús
+				document.querySelectorAll('[id^="icon-submenu-"]').forEach(icon => {
+					icon.style.transform = 'rotate(0deg)';
+				});
+			}
+
+			// 2. Ajustamos el margen del contenido principal dinámicamente
+			// Si está colapsado usamos 85px, si está abierto usamos el ancho original (280px)
+			if (sidebar.classList.contains('collapsed')) {
+				if (mainContent) mainContent.style.marginLeft = "85px";
+			} else {
+				if (mainContent) mainContent.style.marginLeft = "280px";
+			}
+
+			// 3. Refrescamos los iconos de Lucide por si alguno cambió de estado
+			if (window.lucide) lucide.createIcons();
+		}
+		function toggleSub(id) { document.getElementById(id).classList.toggle('hidden'); }
         function openModal(id) { document.getElementById(id).style.display = 'flex'; }
         function closeModal(id) { 
             document.getElementById(id).style.display = 'none'; 
