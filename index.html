@@ -2253,24 +2253,26 @@ async function renderRutinas() {
 				return;
 			}
 
-			// 2. Preparar el Modal
+			// 2. Preparar el Modal (Usando los IDs reales de tu HTML)
 			const modalId = 'modal-rutina-editor';
-			const title = document.getElementById('rutina-editor-title');
-			const alumnoIdInput = document.getElementById('re-alumno-id');
-			const objetivoInput = document.getElementById('re-objetivo');
-			const vencimientoInput = document.getElementById('re-vencimiento');
-			const container = document.getElementById('editor-dias-container');
+			const alumnoNombreLabel = document.getElementById('rutina-editor-alumno'); // <p id="rutina-editor-alumno">
+			const alumnoIdInput = document.getElementById('rutina-editor-alumno-id'); // <input id="rutina-editor-alumno-id">
+			const objetivoInput = document.getElementById('rutina-objetivo'); // <input id="rutina-objetivo">
+			const vencimientoInput = document.getElementById('rutina-vencimiento'); // <input id="rutina-vencimiento">
+			const container = document.getElementById('rutina-editor-container'); // <div id="rutina-editor-container">
 
-			if (title) title.innerText = `Editando Plan: ${alumno.nombre_completo}`;
+			if (alumnoNombreLabel) alumnoNombreLabel.innerText = `Editando Plan: ${alumno.nombre_completo}`;
 			if (alumnoIdInput) alumnoIdInput.value = alumnoId;
 			
-			// Limpiar contenedor de días antes de cargar
-			if (container) container.innerHTML = `
-				<div class="py-10 text-center opacity-50">
-					<div class="w-6 h-6 border-2 border-red-600 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
-					<p class="text-[10px] font-black uppercase italic">Consultando pergaminos de entrenamiento...</p>
-				</div>
-			`;
+			// Limpiar contenedor y mostrar carga
+			if (container) {
+				container.innerHTML = `
+					<div class="py-10 text-center opacity-50 col-span-full">
+						<div class="w-6 h-6 border-2 border-red-600 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+						<p class="text-[10px] font-black uppercase italic">Consultando pergaminos de entrenamiento...</p>
+					</div>
+				`;
+			}
 
 			openModal(modalId);
 
@@ -2283,20 +2285,28 @@ async function renderRutinas() {
 				if (vencimientoInput) vencimientoInput.value = "";
 				if (container) container.innerHTML = "";
 
-				// Si existe una rutina, cargar sus datos
-				if (res && !res.error && res.id) {
-					if (objetivoInput) objetivoInput.value = res.objetivo || "";
-					if (vencimientoInput) vencimientoInput.value = res.fecha_vencimiento || "";
-					
-					// Renderizar los días y ejercicios guardados
-					if (res.dias && res.dias.length > 0) {
-						res.dias.forEach(dia => {
-							renderDiaEnEditor(dia);
-						});
+				// Verificación de seguridad para evitar el crash de 'null'
+				if (res && typeof res === 'object' && !res.error) {
+					// Si res es un array (varias rutinas), tomamos la primera. Si es objeto, lo usamos directo.
+					const rutina = Array.isArray(res) ? res[0] : res;
+
+					if (rutina && rutina.id) {
+						if (objetivoInput) objetivoInput.value = rutina.objetivo || "";
+						if (vencimientoInput) vencimientoInput.value = rutina.fecha_vencimiento || "";
+						
+						// Renderizar los días y ejercicios guardados
+						if (rutina.dias && rutina.dias.length > 0) {
+							rutina.dias.forEach(dia => {
+								renderDiaEnEditor(dia);
+							});
+						}
 					}
 				} else {
-					// Si es un alumno nuevo, podrías añadir un día por defecto o dejarlo vacío
 					showVikingToast("Iniciando nuevo plan de batalla");
+					// Opcional: Agregar un primer día vacío automáticamente
+					if (typeof addRoutineDay === 'function') {
+						addRoutineDay("Día 1");
+					}
 				}
 			} catch (err) {
 				console.error("Error al abrir el editor:", err);
@@ -2310,44 +2320,52 @@ async function renderRutinas() {
 		 * Función auxiliar para renderizar cada día en el modal del editor
 		 */
 		function renderDiaEnEditor(diaData) {
-			const container = document.getElementById('editor-dias-container');
-			const dayId = 'day-' + Math.random().toString(36).substr(2, 9);
-			
-			const div = document.createElement('div');
-			div.className = "glass-card p-6 rounded-[2rem] border-white/5 mb-6 day-group";
-			div.dataset.dayId = dayId;
+		// Usamos 'rutina-editor-container' que es el ID que tienes en tu HTML (línea 527)
+		const container = document.getElementById('rutina-editor-container');
+		if (!container) return;
 
-			div.innerHTML = `
-				<div class="flex justify-between items-center mb-6">
-					<input type="text" value="${diaData.nombre_dia}" 
-						   class="bg-transparent border-b border-white/10 text-lg font-black uppercase italic text-red-500 focus:border-red-600 outline-none day-name w-2/3">
-					<button type="button" onclick="this.closest('.day-group').remove()" class="text-gray-600 hover:text-red-500 transition-colors">
-						<i data-lucide="trash-2" class="w-5 h-5"></i>
-					</button>
-				</div>
-				
-				<div class="day-exercises-container space-y-4">
-					<!-- Aquí se inyectan los ejercicios -->
-				</div>
+		const dayId = 'day-' + Math.random().toString(36).substr(2, 9);
+		
+		const div = document.createElement('div');
+		div.className = "glass-card p-6 rounded-[2rem] border-white/5 mb-6 day-group rutina-dia-card"; // Añadí 'rutina-dia-card' por consistencia
+		div.dataset.dayId = dayId;
 
-				<button type="button" onclick="openExerciseSelector('${dayId}')" 
-						class="w-full mt-4 py-3 border border-dashed border-white/10 rounded-2xl text-[10px] font-black uppercase italic text-gray-500 hover:text-white hover:border-white/30 transition-all flex items-center justify-center gap-2">
-					<i data-lucide="plus-circle" class="w-4 h-4"></i> Añadir Ejercicio
+		div.innerHTML = `
+			<div class="flex justify-between items-center mb-6">
+				<input type="text" value="${diaData.nombre_dia || ''}" 
+					class="bg-transparent border-b border-white/10 text-lg font-black uppercase italic text-red-500 focus:border-red-600 outline-none day-name w-2/3 day-title">
+				<button type="button" onclick="this.closest('.day-group').remove()" class="text-gray-600 hover:text-red-500 transition-colors">
+					<i data-lucide="trash-2" class="w-5 h-5"></i>
 				</button>
-			`;
+			</div>
+			
+			<!-- Este es el contenedor donde addExerciseToDay buscará para meter los ejercicios -->
+			<div class="day-exercises-container space-y-4 exercises-list">
+				<!-- Aquí se inyectan los ejercicios -->
+			</div>
 
-			container.appendChild(div);
+			<button type="button" onclick="addExerciseToDay('${dayId}')" 
+					class="w-full mt-4 py-3 border border-dashed border-white/10 rounded-2xl text-[10px] font-black uppercase italic text-gray-500 hover:text-white hover:border-white/30 transition-all flex items-center justify-center gap-2">
+				<i data-lucide="plus-circle" class="w-4 h-4"></i> Añadir Ejercicio
+			</button>
+		`;
 
-			// Cargar los ejercicios de este día
-			if (diaData.ejercicios && diaData.ejercicios.length > 0) {
-				diaData.ejercicios.forEach(ex => {
-					// Usamos la función global addExerciseToDay definida en Ajuste_Series_Default.js
-					if (typeof addExerciseToDay === 'function') {
-						addExerciseToDay(dayId, ex);
-					}
-				});
-			}
+		container.appendChild(div);
+
+		// Cargar los ejercicios de este día
+		const ejercicios = diaData.ejercicios || diaData.ejercicios_list || [];
+		if (ejercicios.length > 0) {
+			ejercicios.forEach(ex => {
+				// Llamamos a tu función global que ya maneja la creación de filas y series
+				if (typeof addExerciseToDay === 'function') {
+					addExerciseToDay(dayId, ex);
+				}
+			});
 		}
+
+		// Refrescamos iconos de Lucide para que se vea el tacho de basura y el plus
+		if (window.lucide) lucide.createIcons();
+	}
 
         function addRoutineDay(nombre = "", ejercicios = []) {
             const container = document.getElementById('rutina-editor-container');
