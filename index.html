@@ -1189,42 +1189,53 @@
 				<h3 class="text-2xl font-black uppercase italic mb-8" id="modal-stock-title">Mercadería</h3>
 				
 				<form id="form-stock" class="space-y-4">
-					<!-- ID Oculto para edición -->
 					<input type="hidden" id="stock-id">
 
-					<!-- Nombre del Producto -->
 					<div class="space-y-1">
-						<p class="text-[9px] font-black text-gray-500 uppercase px-2">Identificación</p>
-						<input type="text" id="stock-nombre" placeholder="Nombre del Producto (Ej: Agua 500ml)" required class="viking-input">
+						<p class="text-[9px] font-black text-gray-500 uppercase px-2">Nombre del Producto</p>
+						<input type="text" id="stock-nombre" placeholder="Ej: Agua Mineral 500ml" required class="viking-input">
 					</div>
 
-					<!-- Stock y Precio -->
 					<div class="grid grid-cols-2 gap-4">
 						<div class="space-y-1">
-							<p class="text-[9px] font-black text-gray-500 uppercase px-2">Cantidad</p>
-							<input type="number" id="stock-cant" placeholder="Stock" required class="viking-input">
+							<p class="text-[9px] font-black text-gray-500 uppercase px-2">Stock</p>
+							<input type="number" id="stock-cant" placeholder="0" required class="viking-input">
 						</div>
 						<div class="space-y-1">
 							<p class="text-[9px] font-black text-gray-500 uppercase px-2">Precio ($)</p>
-							<input type="number" id="stock-precio" placeholder="Precio Unidad" required class="viking-input">
+							<input type="number" id="stock-precio" placeholder="0" required class="viking-input">
 						</div>
 					</div>
 
-					<!-- CAMPO NUEVO: IMAGEN DEL PRODUCTO -->
+					<!-- CARGA DE IMAGEN DESDE ORDENADOR -->
 					<div class="space-y-1">
-						<p class="text-[9px] font-black text-red-600 uppercase px-2 italic">Identidad Visual</p>
-						<div class="relative">
-							<i data-lucide="image" class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500"></i>
-							<input type="text" id="stock-imagen" placeholder="URL de la Imagen (Link de internet)" class="viking-input pl-12 bg-white/5 border-white/10 text-white rounded-2xl focus:border-red-600 transition-all">
+						<p class="text-[9px] font-black text-red-600 uppercase px-2 italic">Imagen del Producto</p>
+						<div class="flex flex-col gap-3">
+							<!-- Vista previa -->
+							<div id="stock-img-preview-container" class="w-full h-32 rounded-2xl bg-white/5 border border-dashed border-white/10 flex items-center justify-center overflow-hidden">
+								<img id="stock-img-preview" src="" class="hidden w-full h-full object-cover">
+								<div id="stock-img-placeholder" class="text-gray-600 flex flex-col items-center">
+									<i data-lucide="image-plus" class="w-8 h-8 mb-1"></i>
+									<span class="text-[8px] font-black uppercase">Sin Imagen</span>
+								</div>
+							</div>
+							
+							<!-- Botón oculto y label estético -->
+							<label for="stock-file-input" class="w-full py-3 bg-white/5 border border-white/10 rounded-xl text-[10px] font-black uppercase italic text-center cursor-pointer hover:bg-white/10 transition-all flex items-center justify-center gap-2">
+								<i data-lucide="upload-cloud" class="w-4 h-4"></i>
+								Seleccionar desde ordenador
+							</label>
+							<input type="file" id="stock-file-input" accept="image/*" class="hidden" onchange="previewStockImage(event)">
+							
+							<!-- Campo oculto para guardar el Base64 -->
+							<input type="hidden" id="stock-imagen-base64">
 						</div>
-						<p class="text-[8px] text-gray-600 italic px-2 mt-1">Tip: Busca la imagen en Google, haz clic derecho y selecciona "Copiar dirección de imagen".</p>
 					</div>
 
-					<!-- Acciones -->
 					<div class="flex gap-4 pt-6">
-						<button type="button" onclick="closeModal('modal-stock')" class="flex-1 py-4 bg-white/5 rounded-2xl font-black uppercase italic text-[11px] hover:bg-white/10 transition-colors">Cancelar</button>
-						<button type="button" id="btn-delete-stock" class="hidden py-4 px-4 bg-red-900/40 rounded-2xl font-black uppercase italic text-[11px] text-red-500 border border-red-500/20 hover:bg-red-900/60 transition-colors">Eliminar</button>
-						<button type="submit" id="btn-save-stock-modal" class="flex-1 py-4 viking-bg-red text-black rounded-2xl font-black uppercase italic text-[11px] shadow-xl hover:scale-105 transition-all">Guardar Mercadería</button>
+						<button type="button" onclick="closeModal('modal-stock')" class="flex-1 py-4 bg-white/5 rounded-2xl font-black uppercase italic text-[11px]">Cancelar</button>
+						<button type="button" id="btn-delete-stock" class="hidden py-4 px-4 bg-red-900/40 rounded-2xl font-black uppercase italic text-[11px] text-red-500">Eliminar</button>
+						<button type="submit" class="flex-1 py-4 viking-bg-red text-black rounded-2xl font-black uppercase italic text-[11px] shadow-xl">Guardar</button>
 					</div>
 				</form>
 			</div>
@@ -3109,42 +3120,32 @@ async function renderRutinas() {
 			if (!container) return;
 
 			if (state.stock.length === 0) {
-				container.innerHTML = `
-					<div class="col-span-full py-20 text-center opacity-20">
-						<i data-lucide="package-x" class="w-16 h-16 mx-auto mb-4"></i>
-						<p class="font-black uppercase italic tracking-widest">El almacén está vacío</p>
-					</div>`;
+				container.innerHTML = `<div class="col-span-full py-20 text-center opacity-20"><p class="font-black uppercase italic">Almacén vacío</p></div>`;
 			} else {
 				container.innerHTML = state.stock.map(s => {
 					const stockBajo = s.stock_actual <= 5;
-					// Imagen por defecto si no tiene o falla
 					const imgUrl = s.url_imagen || 'https://images.unsplash.com/photo-1583417319070-4a69db38a482?q=80&w=400&auto=format&fit=crop';
 					
 					return `
 					<div class="glass-card p-4 rounded-[2.5rem] border-white/5 flex flex-col gap-4 hover:border-red-600/30 transition-all group relative overflow-hidden shadow-xl">
-						<!-- Imagen con Badge de Precio -->
 						<div class="w-full h-40 rounded-[1.8rem] overflow-hidden bg-black/40 relative">
-							<img src="${imgUrl}" 
-								 alt="${s.nombre_producto}" 
-								 class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 opacity-70 group-hover:opacity-100"
-								 onerror="this.src='https://images.unsplash.com/photo-1583417319070-4a69db38a482?q=80&w=400&auto=format&fit=crop'">
+							<img src="${imgUrl}" class="w-full h-full object-cover opacity-70 group-hover:opacity-100 transition-all duration-700">
 							<div class="absolute top-3 right-3 bg-black/70 backdrop-blur-xl px-3 py-1.5 rounded-xl border border-white/10 text-[11px] font-black text-white italic">
 								$${s.precio_venta}
 							</div>
 						</div>
 
-						<!-- Detalles y Acción -->
 						<div class="px-2 pb-2">
 							<h4 class="text-[13px] font-black uppercase italic text-white truncate mb-3">${s.nombre_producto}</h4>
 							<div class="flex items-center justify-between">
 								<div class="flex flex-col">
-									<span class="text-[8px] text-gray-500 font-black uppercase tracking-widest">Disponibilidad</span>
+									<span class="text-[8px] text-gray-500 font-black uppercase tracking-widest">Stock</span>
 									<span class="text-sm font-black italic ${stockBajo ? 'text-red-500 animate-pulse' : 'text-white'}">
 										${s.stock_actual} <span class="text-[9px] opacity-50 uppercase">unid.</span>
 									</span>
 								</div>
 								
-								<!-- BOTÓN EDITAR (Sincronizado con openEditStock) -->
+								<!-- LÁPIZ CENTRADO (FIX) -->
 								<button onclick="openEditStock(${s.id})" class="w-10 h-10 flex items-center justify-center bg-white/5 rounded-xl border border-white/5 text-gray-400 hover:bg-red-600 hover:text-black hover:scale-110 transition-all action-col">
 									<i data-lucide="edit-3" class="w-4 h-4"></i>
 								</button>
@@ -3153,9 +3154,27 @@ async function renderRutinas() {
 					</div>`;
 				}).join('');
 			}
-
 			if (window.lucide) lucide.createIcons();
-			if (typeof applyPermissions === 'function') applyPermissions();
+		}
+		
+		// FUNCIÓN PARA PREVISUALIZAR Y CONVERTIR A BASE64
+		function previewStockImage(event) {
+			const file = event.target.files[0];
+			if (!file) return;
+
+			const reader = new FileReader();
+			reader.onload = function(e) {
+				const base64String = e.target.result;
+				// Guardar en el campo oculto
+				document.getElementById('stock-imagen-base64').value = base64String;
+				
+				// Mostrar en la vista previa
+				const img = document.getElementById('stock-img-preview');
+				img.src = base64String;
+				img.classList.remove('hidden');
+				document.getElementById('stock-img-placeholder').classList.add('hidden');
+			};
+			reader.readAsDataURL(file);
 		}
 
         async function loadClases() {
@@ -3274,20 +3293,21 @@ async function renderRutinas() {
             if(!res.error) { closeModal('modal-plan'); loadPlanes(); showVikingToast("Plan Guardado"); }
         };
 
-        // 2. ABRIR MODAL PARA NUEVO PRODUCTO
-				function openModalStock() {
-					const form = document.getElementById('form-stock');
-					if(form) form.reset();
-					
-					document.getElementById('stock-id').value = "";
-					document.getElementById('modal-stock-title').innerText = "Alta de Mercadería";
-					
-					const delBtn = document.getElementById('btn-delete-stock');
-					if(delBtn) delBtn.classList.add('hidden');
-
-					openModal('modal-stock');
-				}
-				function openEditStock(id) {
+        // ABRIR MODAL PARA NUEVO PRODUCTO
+			function openModalStock() {
+			const form = document.getElementById('form-stock');
+			if(form) form.reset();
+			
+			document.getElementById('stock-id').value = "";
+			document.getElementById('stock-imagen-base64').value = "";
+			document.getElementById('stock-img-preview').classList.add('hidden');
+			document.getElementById('stock-img-placeholder').classList.remove('hidden');
+			document.getElementById('modal-stock-title').innerText = "Alta de Mercadería";
+			
+			openModal('modal-stock');
+			}
+		
+		function openEditStock(id) {
 			const s = state.stock.find(x => x.id == id);
 			if (!s) return;
 
@@ -3295,14 +3315,19 @@ async function renderRutinas() {
 			document.getElementById('stock-nombre').value = s.nombre_producto;
 			document.getElementById('stock-cant').value = s.stock_actual;
 			document.getElementById('stock-precio').value = s.precio_venta;
-			document.getElementById('stock-imagen').value = s.url_imagen || "";
 			
-			document.getElementById('modal-stock-title').innerText = "Editar Producto";
+			// Cargar imagen previa
+			const base64 = s.url_imagen || "";
+			document.getElementById('stock-imagen-base64').value = base64;
 			
-			const delBtn = document.getElementById('btn-delete-stock');
-			if(delBtn) {
-				delBtn.classList.remove('hidden');
-				delBtn.onclick = () => deleteRecord('stock', s.id, 'modal-stock', loadStock);
+			const img = document.getElementById('stock-img-preview');
+			if(base64) {
+				img.src = base64;
+				img.classList.remove('hidden');
+				document.getElementById('stock-img-placeholder').classList.add('hidden');
+			} else {
+				img.classList.add('hidden');
+				document.getElementById('stock-img-placeholder').classList.remove('hidden');
 			}
 
 			openModal('modal-stock');
@@ -3317,20 +3342,15 @@ async function renderRutinas() {
 				nombre_producto: document.getElementById('stock-nombre').value,
 				stock_actual: parseInt(document.getElementById('stock-cant').value),
 				precio_venta: parseFloat(document.getElementById('stock-precio').value),
-				url_imagen: document.getElementById('stock-imagen').value
+				url_imagen: document.getElementById('stock-imagen-base64').value // <--- AQUÍ VA EL BASE64 --->
 			};
 
-			const method = id ? 'PUT' : 'POST';
-			const endpoint = id ? `/stock/${id}` : '/stock';
-
-			const res = await apiFetch(endpoint, method, payload);
+			const res = await apiFetch(id ? `/stock/${id}` : '/stock', id ? 'PUT' : 'POST', payload);
 			
 			if(!res.error) {
-				showVikingToast(id ? "Producto Actualizado" : "Producto Registrado");
+				showVikingToast(id ? "Actualizado" : "Registrado");
 				closeModal('modal-stock');
-				await loadStock();
-			} else {
-				showVikingToast("Error: " + res.error, true);
+				loadStock();
 			}
 		}
 
@@ -3768,8 +3788,8 @@ async function loadProfesores() {
         };
         
 		window.addEventListener('load', () => {
-			const formStock = document.getElementById('form-stock');
-			if(formStock) formStock.onsubmit = saveStockVikingo;
+			const f = document.getElementById('form-stock');
+			if(f) f.onsubmit = saveStockVikingo;
 		});
 		
         window.onload = () => {
