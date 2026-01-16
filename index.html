@@ -3104,44 +3104,49 @@ async function renderRutinas() {
 		}
 	}
 
+		// REEMPLAZA TU FUNCIÓN guardarMovimiento POR ESTA:
 		async function guardarMovimiento(event) {
-		// Evita recarga de página
-		event.preventDefault(); 
+			event.preventDefault(); // Evita recarga
 
-		// 1. OBTENER VALORES DEL FORMULARIO
-		const descripcion = document.getElementById('input-desc-gasto')?.value || 'Varios';
-		const monto = parseFloat(document.getElementById('input-monto-gasto')?.value) || 0;
-		
-		// AQUI ESTABA EL ERROR: Ahora leemos el valor del select, no lo inventamos
-		const selectTipo = document.getElementById('input-tipo-movimiento');
-		const tipo = selectTipo ? selectTipo.value : 'Ingreso'; // Si no encuentra el select, asume Ingreso
+			// 1. Capturar Inputs
+			const descInput = document.getElementById('input-desc-gasto');
+			const montoInput = document.getElementById('input-monto-gasto');
+			const tipoInput = document.getElementById('input-tipo-movimiento');
 
-		if(monto <= 0) return alert("El monto debe ser mayor a 0");
+			const descripcion = descInput?.value || 'Varios';
+			const monto = parseFloat(montoInput?.value) || 0;
+			const tipo = tipoInput ? tipoInput.value : 'Ingreso';
 
-		// 2. ENVIAR AL BACKEND
-		// Notar que enviamos 'tipo' dinámico ahora
-		const res = await apiFetch('/caja/movimientos', 'POST', {
-			tipo: tipo, 
-			descripcion: descripcion,
-			monto: monto,
-			fecha: new Date().toISOString(),
-			metodo_pago: 'Efectivo' 
-		});
+			if(monto <= 0) return alert("El monto debe ser mayor a 0");
 
-		if(!res.error) {
-			// Limpiar formulario y cerrar modal si quieres
-			event.target.reset();
-			document.getElementById('modal-gasto').classList.add('hidden'); // Cierra el modal automáticamente al guardar
-			
-			// Recargar la tabla y los totales
-			await loadCaja(); 
-			
-			// Confirmación visual (opcional)
-			if(typeof showVikingToast === 'function') showVikingToast('Movimiento registrado correctamente');
-		} else {
-			alert("Error al guardar el movimiento");
+			// 2. Enviar al Backend
+			try {
+				const res = await apiFetch('/caja/movimientos', 'POST', {
+					tipo: tipo, 
+					descripcion: descripcion,
+					monto: monto,
+					metodo_pago: 'Efectivo' 
+				});
+
+				if(!res.error) {
+					// 3. LIMPIEZA BLINDADA (Aquí borramos lo escrito)
+					if(descInput) descInput.value = "";
+					if(montoInput) montoInput.value = "";
+					
+					// Cerrar modal y recargar
+					document.getElementById('modal-gasto').classList.add('hidden');
+					await loadCaja(); 
+					
+					if(typeof showVikingToast === 'function') showVikingToast('Movimiento registrado correctamente');
+				} else {
+					// Si el error persiste (ej: backend no actualizado), avisa
+					alert("Error del servidor: " + (res.detail || res.error || "Revisa el main.py"));
+				}
+			} catch (e) {
+				console.error(e);
+				alert("Error de conexión al guardar.");
+			}
 		}
-	}
 
         async function initApp() {
             await Promise.all([fetchAlumnos(), loadStaff(), loadPlanes(), loadStock(), loadClases(), fetchReservas(), loadDashboard(), loadMusculacionMetadata(), loadCaja()]);

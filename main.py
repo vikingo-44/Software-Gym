@@ -213,6 +213,12 @@ class GrupoMuscularSchema(BaseModel):
     id: int
     nombre: str
     class Config: from_attributes = True
+    
+    class MovimientoCreate(BaseModel):
+    descripcion: str
+    monto: float
+    tipo: str  # "Ingreso" o "Gasto"
+    metodo_pago: str = "Efectivo"
 
 # ==========================================
 # ENDPOINTS
@@ -842,6 +848,22 @@ def get_historial_rutinas(id: int, db: Session = Depends(database.get_db)):
             .joinedload(models.DiaRutina.ejercicios)
             .joinedload(models.EjercicioEnRutina.series_detalle)
     ).order_by(models.PlanRutina.fecha_creacion.desc()).all()
+    
+@app.post("/api/caja/movimientos", tags=["Caja"])
+def crear_movimiento_caja(mov: MovimientoCreate, db: Session = Depends(database.get_db)):
+    # Creamos el registro en la base de datos
+    # Ajusta 'models.Caja' al nombre real de tu tabla si es diferente (ej: models.Movimiento)
+    nuevo_movimiento = models.Caja(
+        descripcion=mov.descripcion,
+        monto=mov.monto,
+        tipo=mov.tipo,
+        metodo_pago=mov.metodo_pago,
+        fecha=datetime.now()
+    )
+    db.add(nuevo_movimiento)
+    db.commit()
+    db.refresh(nuevo_movimiento)
+    return {"mensaje": "Movimiento registrado con éxito", "id": nuevo_movimiento.id}
 
 if __name__ == "__main__":
     import uvicorn
