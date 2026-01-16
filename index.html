@@ -783,47 +783,9 @@
                 </div>
             </div>
 
-        <div id="view-alumnos" class="view-content">
-			<!-- CABECERA PRINCIPAL -->
-			<div class="flex justify-between items-center mb-8">
-				<div>
-					<h3 class="text-3xl font-black italic uppercase">Gestión de Alumnos</h3>
-					<p class="text-[10px] text-gray-500 font-bold uppercase tracking-[0.2em] mt-1 italic">Control de accesos y membresías del Valhalla</p>
-				</div>
-				<button id="btn-nuevo-alumno" onclick="openModalAlumno()" class="viking-bg-red text-black px-8 py-4 rounded-2xl font-black uppercase italic text-[12px] shadow-xl flex items-center gap-3 hover:scale-105 transition-all">
-					<i data-lucide="user-plus" class="w-4 h-4"></i> Nuevo Alumno
-				</button>
+			<div id="view-alumnos" class="view-content">
+				<!-- El contenido se genera dinámicamente con JavaScript (renderAlumnosSection) -->
 			</div>
-
-			<!-- BARRA DE HERRAMIENTAS (BUSCADOR Y FILTROS) -->
-			<div class="flex flex-col md:flex-row gap-4 mb-4">
-				<!-- BUSCADOR -->
-				<div class="flex-1 relative">
-					<i data-lucide="search" class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500"></i>
-					<input type="text" 
-						   placeholder="Buscar Guerrero por nombre o DNI..." 
-						   oninput="handleAlumnosSearch(this.value)"
-						   class="viking-input pl-12 bg-white/5 border-white/10 text-white rounded-2xl focus:border-red-600 transition-all">
-				</div>
-
-				<!-- FILTRO DE ESTADO VIKINGO -->
-				<div class="flex bg-white/5 p-1 rounded-2xl border border-white/5 h-[52px]">
-					<button onclick="handleAlumnosStatusFilter('todos')" id="filter-todos" class="filter-btn px-6 rounded-xl text-[10px] font-black uppercase italic transition-all bg-red-600 text-black">Todos</button>
-					<button onclick="handleAlumnosStatusFilter('activos')" id="filter-activos" class="filter-btn px-6 rounded-xl text-[10px] font-black uppercase italic transition-all text-gray-500 hover:text-white">Activos</button>
-					<button onclick="handleAlumnosStatusFilter('vencidos')" id="filter-vencidos" class="filter-btn px-6 rounded-xl text-[10px] font-black uppercase italic transition-all text-gray-500 hover:text-white">Vencidos</button>
-				</div>
-			</div>
-
-			<!-- PAGINACIÓN SUPERIOR -->
-			<div id="alumnos-pagination" class="flex items-center justify-between mb-6 px-8 py-4 glass-card rounded-2xl border-white/5 bg-white/2">
-				<!-- Se genera dinámicamente -->
-			</div>
-
-			<!-- LISTADO DE ALUMNOS (TARJETAS PREMIUM) -->
-			<div id="alumnos-list-view" class="space-y-4 min-h-[400px]">
-				<!-- Aquí se inyectan las tarjetas mediante renderAlumnos() -->
-			</div>
-		</div>
 
             <div id="view-profesores" class="view-content">
                 <div class="flex justify-between items-center mb-8">
@@ -1975,6 +1937,8 @@
             document.getElementById('tab-' + tab).classList.add('active');
             renderCobrar();
         }
+		
+		
 
         function renderCobrar() {
             const displayArea = document.getElementById('cobrar-display-area');
@@ -2945,7 +2909,7 @@ async function renderRutinas() {
             if(view === 'rutinas') renderRutinas();
             if(view === 'dashboard' && state.user?.rol_nombre === "Alumno") renderStudentDashboard();
 			if(view === 'acceso-virtual') renderAccesos();
-            
+            if(view === 'alumnos') renderAlumnosSection();
             if(view === 'perfil' && state.user) {
                 const u = state.user;
                 document.getElementById('prof-name').innerText = u.nombre_completo || "Usuario Vikingo";
@@ -4323,6 +4287,124 @@ async function loadProfesores() {
 				}).join('');
 				
 				if (window.lucide) lucide.createIcons();
+			}
+			
+			// ==========================================
+			// NUEVA LÓGICA DE ALUMNOS (FIX PANTALLA VACÍA)
+			// ==========================================
+
+			function renderAlumnosSection() {
+				const container = document.getElementById('view-alumnos'); 
+				if (!container) return; 
+
+				// Inyectamos la estructura visual (Header + Buscador + Lista)
+				container.innerHTML = `
+					<div class="flex flex-col h-full">
+						<div class="flex justify-between items-end mb-6">
+							<div>
+								<h2 class="text-3xl font-black text-white italic uppercase tracking-tighter">GUERREROS</h2>
+								<p class="text-xs text-gray-500 font-bold uppercase tracking-widest mt-1">Gestión de membresías</p>
+							</div>
+							<div class="flex gap-2">
+								<button onclick="filterAlumnos('todos')" class="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-[10px] font-black uppercase transition-all focus:bg-red-600 focus:text-black focus:border-red-600">Todos</button>
+								<button onclick="filterAlumnos('activos')" class="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-[10px] font-black uppercase transition-all focus:bg-red-600 focus:text-black focus:border-red-600">Activos</button>
+								<button onclick="filterAlumnos('inactivos')" class="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-[10px] font-black uppercase transition-all focus:bg-red-600 focus:text-black focus:border-red-600">Inactivos</button>
+								
+								<!-- Usamos tu función original openModalAlumno -->
+								<button onclick="openModalAlumno()" class="px-4 py-2 rounded-xl bg-red-600 text-black font-black uppercase text-[10px] hover:bg-red-500 shadow-lg shadow-red-600/20 transition-all flex items-center gap-2">
+									<i data-lucide="plus" class="w-3 h-3"></i> Nuevo
+								</button>
+							</div>
+						</div>
+
+						<div class="glass-card rounded-[2rem] border-white/5 flex-1 overflow-hidden flex flex-col">
+							 <div class="p-4 border-b border-white/5">
+								<div class="relative">
+									<i data-lucide="search" class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500"></i>
+									<input type="text" onkeyup="searchAlumno(this.value)" placeholder="Buscar por nombre o DNI..." class="w-full bg-black/20 border border-white/10 rounded-xl py-3 pl-12 pr-4 text-xs font-bold text-white focus:outline-none focus:border-red-500/50 transition-all placeholder:text-gray-700">
+								</div>
+							 </div>
+
+							 <div class="overflow-y-auto custom-scrollbar flex-1 p-2 space-y-2" id="lista-alumnos-container">
+								<!-- Se llena con JS -->
+							 </div>
+						</div>
+					</div>
+				`;
+				
+				if(window.lucide) lucide.createIcons();
+				
+				// IMPORTANTE: Cargamos 'todos' por defecto para que no salga vacío
+				filterAlumnos('todos');
+			}
+
+			window.filterAlumnos = function(filtro) {
+				if(!state.alumnos) return;
+				const hoy = new Date().toISOString().split('T')[0];
+				
+				let filtrados = state.alumnos;
+				
+				if(filtro === 'activos') filtrados = state.alumnos.filter(a => a.fecha_vencimiento && a.fecha_vencimiento >= hoy);
+				if(filtro === 'inactivos') filtrados = state.alumnos.filter(a => !a.fecha_vencimiento || a.fecha_vencimiento < hoy);
+				
+				renderAlumnosList(filtrados);
+			}
+
+			window.searchAlumno = function(query) {
+				if(!query) { filterAlumnos('todos'); return; }
+				const q = query.toLowerCase();
+				const filtrados = state.alumnos.filter(a => a.nombre_completo.toLowerCase().includes(q) || a.dni.includes(q));
+				renderAlumnosList(filtrados);
+			}
+
+			window.renderAlumnosList = function(listaDatos) {
+				const contenedor = document.getElementById('lista-alumnos-container');
+				if(!contenedor) return;
+
+				if(listaDatos.length === 0) {
+					contenedor.innerHTML = `<div class="h-full flex flex-col items-center justify-center text-gray-600 opacity-50"><i data-lucide="users" class="w-12 h-12 mb-2"></i><p class="text-xs font-black uppercase italic">Sin resultados</p></div>`;
+					if(window.lucide) lucide.createIcons();
+					return;
+				}
+
+				const hoy = new Date().toISOString().split('T')[0];
+
+				contenedor.innerHTML = listaDatos.map(a => {
+					const estaVencido = !a.fecha_vencimiento || a.fecha_vencimiento < hoy;
+					const estadoTexto = estaVencido ? 'VENCIDO' : 'AL DÍA';
+					const estadoColor = estaVencido ? 'text-red-500 bg-red-500/10 border-red-500/20' : 'text-green-500 bg-green-500/10 border-green-500/20';
+					
+					return `
+					<div class="group flex items-center justify-between p-4 rounded-2xl border border-white/5 hover:bg-white/5 transition-all cursor-pointer hover:border-red-600/30">
+						<div class="flex items-center gap-4">
+							 <div class="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-[10px] font-black text-gray-400 group-hover:text-black group-hover:bg-red-600 transition-colors">
+								${a.nombre_completo.substring(0,2).toUpperCase()}
+							 </div>
+							 <div>
+								<h4 class="text-sm font-black text-white italic uppercase group-hover:text-red-500 transition-colors">${a.nombre_completo}</h4>
+								<p class="text-[10px] text-gray-500 font-bold uppercase">Plan: ${a.plan ? a.plan.nombre : 'Sin Plan'} <span class="mx-1 text-white/20">|</span> Vence: <span class="text-white">${a.fecha_vencimiento || 'N/A'}</span></p>
+							 </div>
+						</div>
+						<div class="flex items-center gap-4">
+							<span class="px-3 py-1 rounded-lg text-[9px] font-black uppercase border ${estadoColor}">
+								${estadoTexto}
+							</span>
+							
+							<div class="flex gap-2">
+								<button onclick="openRoutineEditor(${a.id})" class="w-8 h-8 rounded-lg border border-white/10 flex items-center justify-center text-gray-400 hover:text-white hover:border-white hover:bg-white/10 transition-all" title="Ver Rutina">
+									<i data-lucide="dumbbell" class="w-4 h-4"></i>
+								</button>
+								<!-- Usamos tu función original openEditAlumno -->
+								<button onclick="openEditAlumno(${a.id})" class="w-8 h-8 rounded-lg border border-white/10 flex items-center justify-center text-gray-400 hover:text-white hover:border-white hover:bg-white/10 transition-all" title="Editar">
+									<i data-lucide="edit-2" class="w-4 h-4"></i>
+								</button>
+							</div>
+						</div>
+					</div>
+					`;
+				}).join('');
+				
+				if(window.lucide) lucide.createIcons();
 			}
 			
 			// Función para simular ingresos (puedes conectarla luego a tu backend o QR)
