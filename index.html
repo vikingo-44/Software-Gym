@@ -1317,10 +1317,41 @@
     </div>
 
     <script>
-        const PRODUCTION_URL = "/api"; 
-        const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.protocol === 'file:'
-            ? (PRODUCTION_URL === "/api" ? "http://localhost:8000/api" : PRODUCTION_URL)
-            : "/api";
+        // ==========================================
+		// 1. CONFIGURACIÓN MAESTRA (PEGAR AL INICIO DE TU SCRIPT)
+		// ==========================================
+
+		// Detectamos automáticamente si estás en tu PC o en Render
+		const IS_LOCALHOST = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+
+		// Definimos la URL Maestra (Para que tu Login antiguo funcione)
+		const API_URL = IS_LOCALHOST ? "http://localhost:8000/api" : "/api";
+
+		// Definimos un Alias (Para que el Carrito nuevo funcione)
+		// Así, use el nombre que use el código, siempre encontrará la dirección correcta.
+		const API_BASE = API_URL; 
+
+		console.log("⚔️ Vikingo System Online ⚔️");
+		console.log("Modo:", IS_LOCALHOST ? "LOCAL (Casa)" : "PRODUCCIÓN (Nube)");
+		console.log("Conectando a:", API_URL);
+
+		// ==========================================
+		// 2. CORRECCIÓN DE SEGURIDAD (LOGIN)
+		// ==========================================
+		// Si tu login está en un formulario, esto evita que la página se refresque si hay error
+		document.addEventListener('DOMContentLoaded', () => {
+			const loginForm = document.getElementById('login-form'); // Asegúrate que tu form tenga este ID o el que uses
+			if (loginForm) {
+				loginForm.onsubmit = async (e) => {
+					e.preventDefault(); // ¡ESTO ES CRUCIAL! Evita el refresco
+					if (typeof login === 'function') {
+						login(); // Llama a tu función de login original
+					} else {
+						console.error("No encuentro la función login()");
+					}
+				};
+			}
+		});
 
         let state = { 
             alumnos: [], planes: [], stock: [], clases: [], user: null, 
@@ -1981,18 +2012,13 @@
 
         document.getElementById('cobrar-search').oninput = renderCobrar;
 
-		// ==========================================
-		// CONFIGURACIÓN CENTRAL
-		// ==========================================
-		const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-			? "http://localhost:8000/api"
-			: "/api";
-
 		/**
 		 * FUNCIÓN 1: AGREGAR MERCADERÍA
-		 * Mantenemos la lógica robusta que ya teníamos.
 		 */
 		function addToCart(productId) {
+			// Protección: Aseguramos que el estado exista
+			if (!state || !state.stock) return;
+
 			const item = state.stock.find(s => s.id == productId);
 			
 			if (!item) {
@@ -2004,7 +2030,7 @@
 				return showVikingToast(`¡Sin stock de ${item.nombre_producto}!`, true);
 			}
 
-			// Verificar si ya existe para sumar
+			// Verificar si ya existe en el carrito
 			const existing = state.cart.find(c => c.producto_id == productId && c.tipo === 'Mercaderia');
 
 			if (existing) {
@@ -2015,12 +2041,13 @@
 					return showVikingToast("Stock insuficiente para agregar más", true);
 				}
 			} else {
+				// Estructura estandarizada para el carrito
 				state.cart.push({
 					tipo: 'Mercaderia',
 					producto_id: productId,
 					alumno_id: null,
 					nombre: item.nombre_producto,
-					precio: item.precio_venta, // Guardamos como 'precio' estandarizado
+					precio: item.precio_venta, 
 					cantidad: 1,
 					url_imagen: item.url_imagen 
 				});
@@ -2035,7 +2062,7 @@
 		 */
 		function updateCartUI() {
 			const list = document.getElementById('cobrar-lista-carrito');
-			if (!list) return; // Protección por si no estamos en la vista
+			if (!list) return; 
 			
 			if (state.cart.length === 0) {
 				list.innerHTML = '<p class="text-center text-gray-500 text-[11px] italic py-10">Sin ítems seleccionados</p>';
@@ -2089,17 +2116,17 @@
 			});
 		}
 
-		// ==========================================
-		// NUEVA LÓGICA DE COBRO (MODULARIZADA)
-		// ==========================================
+		/**
+		 * =========================================================
+		 * 3. NUEVA LÓGICA DE COBRO (MODULARIZADA Y CONECTADA)
+		 * =========================================================
+		 */
 
 		/**
-		 * CORE: FUNCIÓN PRINCIPAL QUE HABLA CON EL BACKEND
-		 * Ahora acepta 'actualizarUI' para controlar cuándo refrescar la pantalla.
+		 * CORE: FUNCIÓN PRINCIPAL DE PAGO
+		 * Usa API_BASE definida arriba para evitar errores de conexión.
 		 */
 		async function procesarPagoVikingo(payload, actualizarUI = true) {
-			// Payload esperado: { tipo, monto, descripcion, metodo_pago, alumno_id, producto_id, cantidad }
-			
 			if(actualizarUI) showVikingToast("Sincronizando con la Tesorería...");
 
 			try {
@@ -2114,25 +2141,25 @@
 				if (response.ok) {
 					if(actualizarUI) showVikingToast("¡Victoria! Cobro registrado y Stock actualizado");
 					
-					// 1. Refrescamos datos si se solicita
 					if (actualizarUI) {
-						await Promise.all([
-							typeof loadStock === 'function' ? loadStock() : null,
-							typeof loadAlumnos === 'function' ? loadAlumnos() : null,
-							typeof loadCaja === 'function' ? loadCaja() : null
-						]);
+						// Recargamos datos de forma segura
+						const promises = [];
+						if (typeof loadStock === 'function') promises.push(loadStock());
+						if (typeof loadAlumnos === 'function') promises.push(loadAlumnos());
+						if (typeof loadCaja === 'function') promises.push(loadCaja());
+						
+						await Promise.all(promises);
 
-						// 2. Limpiar UI si aplica
+						// Limpiar si es mercancía
 						if (payload.tipo === 'Mercaderia') {
 							state.cart = [];
 							updateCartUI();
 						}
 						
-						// 3. Renderizar vista de nuevo
+						// Refrescar vista
 						if (typeof renderCobrar === 'function') renderCobrar();
 					}
-					return true; // Retornamos true para indicar éxito
-					
+					return true; 
 				} else {
 					showVikingToast("Error: " + (res.detail || "Error desconocido"), true);
 					return false;
@@ -2151,21 +2178,18 @@
 			const alumno = state.alumnos.find(a => a.id === alumnoId);
 			if (!alumno) return;
 
-			// Usamos parseInt para asegurar que comparamos números
 			const planSelect = document.getElementById(`plan-select-${alumnoId}`);
 			const planId = parseInt(planSelect.value);
 			const plan = state.planes.find(p => p.id === planId);
 
 			if (!plan) return showVikingToast("Selecciona un plan válido", true);
 
-			// Intentamos obtener el método de pago seleccionado, o default a Efectivo
 			const metodoEl = document.getElementById('metodo-pago');
 			const metodoPago = metodoEl ? metodoEl.value : "Efectivo";
 
 			const confirmacion = confirm(`¿Confirmar cobro de $${plan.precio} a ${alumno.nombre_completo} por el plan ${plan.nombre} (${metodoPago})?`);
 			
 			if (confirmacion) {
-				// Llamamos a la función central
 				await procesarPagoVikingo({
 					tipo: "Plan",
 					monto: plan.precio,
@@ -2173,21 +2197,17 @@
 					metodo_pago: metodoPago,
 					alumno_id: alumnoId,
 					cantidad: 1
-				}, true); // true = refrescar UI al terminar
+				}, true); 
 			}
 		}
 
 		/**
-		 * ADAPTACIÓN PARA COBRO DE MERCADERÍA (Desde el Carrito)
-		 * Reemplaza a 'confirmarCobroFinal'
+		 * ADAPTACIÓN PARA COBRO DE MERCADERÍA
 		 */
 		async function finalizarVentaMercaderia() {
 			if (state.cart.length === 0) return showVikingToast("El carrito está vacío", true);
 
-			// Usamos item.precio (estandarizado)
 			const total = state.cart.reduce((acc, item) => acc + (item.precio * item.cantidad), 0);
-			
-			// Obtener método de pago
 			const metodoEl = document.getElementById('metodo-pago');
 			const metodoPago = metodoEl ? metodoEl.value : "Efectivo";
 
@@ -2196,10 +2216,7 @@
 				showVikingToast("Procesando venta múltiple...");
 				let errores = 0;
 
-				// Procesamos cada item del carrito
 				for (const item of state.cart) {
-					// Pasamos 'false' en el segundo argumento para NO refrescar la UI 
-					// ni borrar el carrito en cada iteración (esperamos al final)
 					const exito = await procesarPagoVikingo({
 						tipo: "Mercaderia",
 						monto: item.precio * item.cantidad,
@@ -2207,25 +2224,23 @@
 						metodo_pago: metodoPago,
 						producto_id: item.producto_id,
 						cantidad: item.cantidad
-					}, false);
+					}, false); // false = no refrescar UI todavía
 
 					if (!exito) errores++;
 				}
 
-				// AL TERMINAR EL BUCLE, HACEMOS LA LIMPIEZA MANUALMENTE
 				if (errores === 0) {
 					showVikingToast("¡Venta finalizada con gloria!");
-					state.cart = []; // Vaciamos carrito
+					state.cart = []; 
 					updateCartUI();
 					
-					// Recargamos datos una sola vez al final
+					// Recargamos todo al final
 					if (typeof loadStock === 'function') await loadStock();
 					if (typeof loadCaja === 'function') await loadCaja();
 					if (typeof renderCobrar === 'function') renderCobrar();
 				} else {
-					showVikingToast(`Venta completada con ${errores} errores. Revisa el stock.`, true);
-					// Recargamos igual para asegurar consistencia
-					await loadStock();
+					showVikingToast(`Venta con ${errores} errores. Revisa el stock.`, true);
+					if (typeof loadStock === 'function') await loadStock();
 				}
 			}
 		}
