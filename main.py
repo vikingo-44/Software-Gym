@@ -9,23 +9,17 @@ from sqlalchemy import func, extract
 from sqlalchemy.orm.attributes import flag_modified
 from typing import List, Optional, Union
 from pydantic import BaseModel
-# CORRECCIÓN DE IMPORTS: Importamos 'date' explícitamente para evitar el conflicto
 from datetime import datetime, timedelta, date
 
-# Configuración de logs para ver errores en Render/Producción
+# Configuración de logs
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Importamos nuestros módulos locales
 import models
 import database
 from database import Base
 
 app = FastAPI(title="Vikingo Strength Hub API")
-
-# ==========================================
-# CONFIGURACIÓN Y MIDDLEWARE
-# ==========================================
 
 app.add_middleware(
     CORSMiddleware,
@@ -35,9 +29,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ==========================================
-# MODELOS DE DATOS (PYDANTIC SCHEMAS)
-# ==========================================
+# --- SCHEMAS ---
 
 class UsuarioLogin(BaseModel):
     dni: str
@@ -47,8 +39,7 @@ class TipoPlanSchema(BaseModel):
     id: int
     nombre: str
     duracion_dias: int
-    class Config:
-        from_attributes = True
+    class Config: from_attributes = True
 
 class PlanSchema(BaseModel):
     id: int
@@ -57,8 +48,7 @@ class PlanSchema(BaseModel):
     clases_mensuales: int  
     tipo_plan_id: Optional[int]
     tipo: Optional[TipoPlanSchema] = None
-    class Config:
-        from_attributes = True
+    class Config: from_attributes = True
 
 class UsuarioResponse(BaseModel):
     id: int
@@ -69,7 +59,6 @@ class UsuarioResponse(BaseModel):
     plan: Optional[PlanSchema] = None
     plan_id: Optional[int] = None
     estado_cuenta: Optional[str] = "Al día"
-    # CORRECCIÓN: Usamos 'date' en lugar de 'datetime.date'
     fecha_vencimiento: Optional[date] = None
     fecha_ultima_renovacion: Optional[date] = None
     especialidad: Optional[str] = None
@@ -81,8 +70,7 @@ class UsuarioResponse(BaseModel):
     certificado_entregado: bool = False
     fecha_certificado: Optional[date] = None
     
-    class Config:
-        from_attributes = True
+    class Config: from_attributes = True
 
 class AlumnoUpdate(BaseModel):
     nombre_completo: str
@@ -90,7 +78,6 @@ class AlumnoUpdate(BaseModel):
     email: Optional[str] = None
     plan_id: Optional[int] = None
     password: Optional[str] = None
-    # CORRECCIÓN: Usamos 'date' directo
     fecha_nacimiento: Optional[date] = None
     edad: Optional[int] = None
     peso: Optional[float] = None
@@ -189,7 +176,6 @@ class PlanRutinaResponse(BaseModel):
     nombre_grupo: Optional[str] = None
     descripcion: Optional[str] = None
     objetivo: str
-    # CORRECCIÓN: Usamos 'date' directo
     fecha_creacion: date
     fecha_vencimiento: date
     activo: bool
@@ -209,15 +195,14 @@ class EjercicioEnRutinaCreate(BaseModel):
 
 class DiaRutinaCreate(BaseModel):
     nombre_dia: str
-    exercises: Optional[List[EjercicioEnRutinaCreate]] = None 
-    ejercicios: Optional[List[EjercicioEnRutinaCreate]] = None
+    ejercicios: Optional[List[EjercicioEnRutinaCreate]] = None 
     
 class PlanRutinaCreate(BaseModel):
     usuario_id: int
     nombre_grupo: Optional[str] = "Nueva Rutina"
     descripcion: Optional[str] = ""
     objetivo: str
-    fecha_vencimiento: date # CORRECCIÓN: date directo
+    fecha_vencimiento: date
     dias: List[DiaRutinaCreate]
 
 class EjercicioCreate(BaseModel):
@@ -230,16 +215,12 @@ class GrupoMuscularSchema(BaseModel):
     class Config: from_attributes = True
 
 # ==========================================
-# ENDPOINTS DE ACCESO Y FRONTEND
+# ENDPOINTS
 # ==========================================
 
 @app.get("/", tags=["Sistema"])
 def api_root():
-    return {
-        "status": "Vikingo Strength Hub API is running",
-        "documentation": "/docs",
-        "frontend_app": "/app"
-    }
+    return {"status": "Vikingo Strength Hub API is running"}
 
 @app.get("/app", tags=["Sistema"])
 async def serve_app():
@@ -247,10 +228,7 @@ async def serve_app():
         return FileResponse("index.html")
     return {"message": "Frontend file not found"}
 
-# ==========================================
-# MÓDULO 1: AUTENTICACIÓN (LOGIN)
-# ==========================================
-
+# --- LOGIN ---
 @app.post("/api/login", tags=["Autenticacion"])
 def login(data: UsuarioLogin, db: Session = Depends(database.get_db)):
     user = db.query(models.Usuario).options(
@@ -281,10 +259,7 @@ def login(data: UsuarioLogin, db: Session = Depends(database.get_db)):
         "imc": user.imc
     }
 
-# ==========================================
-# MÓDULO 2: GESTIÓN DE ALUMNOS Y FICHAS
-# ==========================================
-
+# --- ALUMNOS ---
 @app.get("/api/alumnos", response_model=List[UsuarioResponse], tags=["Alumnos"])
 def get_alumnos(db: Session = Depends(database.get_db)):
     alumnos = db.query(models.Usuario).options(
@@ -294,6 +269,9 @@ def get_alumnos(db: Session = Depends(database.get_db)):
     
     for al in alumnos:
         al.rol_nombre = al.perfil.nombre if al.perfil else "Alumno"
+        # Actualizar estado dinámicamente si está vencido hoy
+        if al.fecha_vencimiento and al.fecha_vencimiento < date.today():
+            al.estado_cuenta = "Vencido"
         
     return alumnos
 
@@ -303,6 +281,10 @@ def get_ficha_tecnica(id: int, db: Session = Depends(database.get_db)):
     if not al:
         raise HTTPException(status_code=404, detail="Alumno no encontrado")
     
+    estado = al.estado_cuenta
+    if al.fecha_vencimiento and al.fecha_vencimiento < date.today():
+        estado = "Vencido"
+
     return {
         "nombre_completo": al.nombre_completo,
         "dni": al.dni,
@@ -310,7 +292,7 @@ def get_ficha_tecnica(id: int, db: Session = Depends(database.get_db)):
         "peso": al.peso,
         "altura": al.altura,
         "imc": al.imc,
-        "estado_cuenta": al.estado_cuenta
+        "estado_cuenta": estado
     }
 
 @app.post("/api/alumnos", tags=["Alumnos"])
@@ -326,7 +308,6 @@ def create_alumno(alumno: AlumnoUpdate, db: Session = Depends(database.get_db)):
         plan_id=alumno.plan_id, 
         perfil_id=perfil.id, 
         password_hash=alumno.password or alumno.dni,
-        # CORRECCIÓN: date.today()
         fecha_ultima_renovacion=alumno.fecha_ultima_renovacion or date.today(), 
         fecha_vencimiento=alumno.fecha_vencimiento,
         fecha_nacimiento=alumno.fecha_nacimiento,
@@ -376,10 +357,7 @@ def delete_alumno(id: int, db: Session = Depends(database.get_db)):
     db.commit()
     return {"status": "success"}
 
-# ==========================================
-# MÓDULO 3: RESERVAS
-# ==========================================
-
+# --- RESERVAS ---
 @app.get("/api/reservas", tags=["Reservas"])
 def get_reservas(db: Session = Depends(database.get_db)):
     res = db.query(models.Reserva).options(
@@ -391,7 +369,7 @@ def get_reservas(db: Session = Depends(database.get_db)):
         "usuario_id": r.usuario_id,
         "clase_id": r.clase_id,
         "fecha_clase": r.fecha_reserva.isoformat() if r.fecha_reserva else None,
-        "horario": r.horario,      
+        "horario": r.horario,       
         "dia_semana": r.dia_semana, 
         "alumno_dni": r.usuario.dni if r.usuario else "N/A",
         "clase_nombre": r.clase.nombre if r.clase else "Eliminada"
@@ -405,8 +383,7 @@ def book_clase(data: ReservaCreate, db: Session = Depends(database.get_db)):
 
     if user.plan:
         limite_mensual = user.plan.clases_mensuales
-        if limite_mensual < 999: # Asumiendo que 999+ es ilimitado
-            # CORRECCIÓN: date.today()
+        if limite_mensual < 999:
             mes_actual = date.today().month
             anio_actual = date.today().year
             
@@ -422,8 +399,6 @@ def book_clase(data: ReservaCreate, db: Session = Depends(database.get_db)):
                     detail=f"Has alcanzado tu límite de {limite_mensual} clases mensuales."
                 )
 
-    # Validar si ya reservó ese mismo slot hoy
-    # CORRECCIÓN: date.today()
     exists = db.query(models.Reserva).filter(
         models.Reserva.usuario_id == data.usuario_id,
         models.Reserva.clase_id == data.clase_id,
@@ -452,9 +427,8 @@ def book_clase(data: ReservaCreate, db: Session = Depends(database.get_db)):
     new_res = models.Reserva(
         usuario_id=data.usuario_id,
         clase_id=data.clase_id,
-        # CORRECCIÓN: date.today()
         fecha_reserva=date.today(),
-        horario=data.horario,     
+        horario=data.horario,       
         dia_semana=data.dia_semana 
     )
     db.add(new_res)
@@ -470,10 +444,7 @@ def cancel_reserva(id: int, db: Session = Depends(database.get_db)):
     db.commit()
     return {"status": "success"}
 
-# ==========================================
-# MÓDULO 4: STAFF
-# ==========================================
-
+# --- STAFF ---
 @app.get("/api/profesores", response_model=List[UsuarioResponse], tags=["Staff"])
 def list_profesores(db: Session = Depends(database.get_db)):
     profs = db.query(models.Usuario).options(joinedload(models.Usuario.perfil)).join(models.Perfil).filter(func.lower(models.Perfil.nombre) == "profesor").all()
@@ -534,10 +505,7 @@ def delete_staff(id: int, db: Session = Depends(database.get_db)):
     db.commit()
     return {"status": "success"}
 
-# ==========================================
-# MÓDULO 5: PRODUCTOS Y STOCK
-# ==========================================
-
+# --- STOCK ---
 @app.get("/api/stock", tags=["Inventario"])
 def get_stock(db: Session = Depends(database.get_db)):
     return db.query(models.Stock).all()
@@ -573,10 +541,7 @@ def delete_stock(id: int, db: Session = Depends(database.get_db)):
     db.commit()
     return {"status": "success"}
 
-# ==========================================
-# MÓDULO 6: PLANES
-# ==========================================
-
+# --- PLANES ---
 @app.get("/api/planes", tags=["Planes"])
 def get_planes(db: Session = Depends(database.get_db)):
     return db.query(models.Plan).options(joinedload(models.Plan.tipo)).all()
@@ -617,10 +582,7 @@ def delete_plan(id: int, db: Session = Depends(database.get_db)):
 def get_tipos(db: Session = Depends(database.get_db)):
     return db.query(models.TipoPlan).all()
 
-# ==========================================
-# MÓDULO 7: CLASES
-# ==========================================
-
+# --- CLASES ---
 @app.get("/api/clases", tags=["Clases"])
 def get_clases(db: Session = Depends(database.get_db)):
     return db.query(models.Clase).all()
@@ -681,10 +643,7 @@ def delete_clase(id: int, db: Session = Depends(database.get_db)):
     db.commit()
     return {"status": "success"}
 
-# ==========================================
-# MÓDULO 8: CAJA Y FINANZAS
-# ==========================================
-
+# --- CAJA ---
 @app.get("/api/caja/resumen", tags=["Finanzas"])
 def get_caja_resumen(db: Session = Depends(database.get_db)):
     ing = db.query(func.sum(models.MovimientoCaja.monto)).filter(models.MovimientoCaja.tipo == "Ingreso").scalar() or 0
@@ -702,14 +661,13 @@ def create_movimiento(data: MovimientoCajaCreate, db: Session = Depends(database
         monto=data.monto,
         descripcion=data.descripcion,
         metodo_pago=data.metodo_pago,
-        # CORRECCIÓN: datetime.now()
         fecha=datetime.now()
     )
     db.add(new_mov)
     db.commit()
     return {"status": "success"}
 
-# CORRECCIÓN IMPORTANTE: Lógica de fechas y stock en el cobro
+# --- PROCESAR COBROS (CORREGIDO) ---
 @app.post("/api/cobros/procesar", tags=["Finanzas"])
 def procesar_cobro(data: TransactionCreate, db: Session = Depends(database.get_db)):
     try:
@@ -720,7 +678,6 @@ def procesar_cobro(data: TransactionCreate, db: Session = Depends(database.get_d
             monto=data.monto,
             descripcion=data.descripcion,
             metodo_pago=data.metodo_pago,
-            # CORRECCIÓN: datetime.now()
             fecha=datetime.now()
         )
         # Opcional: Si tu modelo MovimientoCaja tiene alumno_id/producto_id, asígnalos aquí también.
@@ -742,38 +699,30 @@ def procesar_cobro(data: TransactionCreate, db: Session = Depends(database.get_d
         if data.tipo == "Plan" and data.alumno_id:
             alumno = db.query(models.Usuario).filter(models.Usuario.id == data.alumno_id).first()
             
-            # CORRECCIÓN: Buscamos en tu tabla 'planes' (Modelo models.Plan)
-            # data.producto_id es el ID del plan que seleccionaste en el frente (ej: Pase Libre)
-            plan_db = db.query(models.Plan).filter(models.Plan.id == data.producto_id).first()
+            # BUSCAMOS EL PLAN EN LA TABLA 'tipos_planes' (Modelo TipoPlan)
+            # Usamos data.producto_id que viene del front con el ID del plan seleccionado
+            plan = db.query(models.TipoPlan).filter(models.TipoPlan.id == data.producto_id).first()
             
-            if alumno and plan_db:
+            if alumno and plan:
                 hoy = datetime.now()
                 
                 # A. Actualizamos fechas de pago
                 alumno.fecha_ultimo_pago = hoy 
                 alumno.fecha_ultima_renovacion = hoy 
                 
-                # B. Calculamos Vencimiento Dinámico
-                # 1. Intentamos obtener el tipo de plan para saber la duración
-                dias_duracion = 30 # Default por seguridad
-                
-                if plan_db.tipo_plan_id:
-                    tipo_plan = db.query(models.TipoPlan).filter(models.TipoPlan.id == plan_db.tipo_plan_id).first()
-                    if tipo_plan and tipo_plan.duracion_dias > 0:
-                        dias_duracion = tipo_plan.duracion_dias
-                
+                # B. Calculamos Vencimiento Dinámico usando la columna 'duracion_dias'
+                # Si por error duracion_dias es null o 0, usamos 30 días por seguridad
+                dias_duracion = plan.duracion_dias if plan.duracion_dias and plan.duracion_dias > 0 else 30
                 alumno.fecha_vencimiento = hoy + timedelta(days=dias_duracion)
                 
                 # C. Actualizamos Estado y Plan
-                # IMPORTANTE: Usamos los nombres exactos de tus columnas en models.py
-                if hasattr(alumno, 'estado'): alumno.estado = "Activo"
-                if hasattr(alumno, 'estado_cuenta'): alumno.estado_cuenta = "Al día"
+                alumno.estado = "Activo"       # Cambiamos estado para quitar el "Vencido"
+                alumno.estado_cuenta = "Al día"
+                alumno.plan_id = plan.id       # Asignamos el nuevo plan al usuario
                 
-                alumno.plan_id = plan_db.id
-                
-                # D. Reseteamos Clases
-                if plan_db.clases_mensuales:
-                    alumno.clases_restantes = plan_db.clases_mensuales
+                # D. Reseteamos Clases (Solo si tu tabla tipos_planes tuviera cupo de clases, sino lo ignora)
+                if hasattr(plan, 'clases_mensuales') and plan.clases_mensuales:
+                    alumno.clases_restantes = plan.clases_mensuales
 
         db.commit()
         return {"status": "success", "message": "Cobro procesado y sistema actualizado correctamente"}
@@ -786,10 +735,7 @@ def procesar_cobro(data: TransactionCreate, db: Session = Depends(database.get_d
         # logger.error(f"Error procesando cobro: {str(e)}") 
         raise HTTPException(status_code=500, detail=f"Error interno al procesar el pago: {str(e)}")
 
-# ==========================================
-# MÓDULO 9: MUSCULACIÓN
-# ==========================================
-
+# --- MUSCULACIÓN ---
 @app.get("/api/rutinas/grupos-musculares", tags=["Musculación"])
 def get_grupos(db: Session = Depends(database.get_db)):
     return db.query(models.GrupoMuscular).all()
@@ -833,7 +779,6 @@ def create_plan_rutina(data: PlanRutinaCreate, db: Session = Depends(database.ge
             objetivo=data.objetivo,
             fecha_vencimiento=data.fecha_vencimiento,
             activo=True,
-            # CORRECCIÓN: date.today()
             fecha_creacion=date.today()
         )
         db.add(nuevo_plan)
@@ -844,7 +789,7 @@ def create_plan_rutina(data: PlanRutinaCreate, db: Session = Depends(database.ge
             db.add(nuevo_dia)
             db.flush()
             
-            lista_ejercicios = d.ejercicios if d.ejercicios else (d.exercises if d.exercises else [])
+            lista_ejercicios = d.ejercicios if d.ejercicios else []
             
             for e in lista_ejercicios:
                 ej_en_rut = models.EjercicioEnRutina(
@@ -897,10 +842,6 @@ def get_historial_rutinas(id: int, db: Session = Depends(database.get_db)):
             .joinedload(models.DiaRutina.ejercicios)
             .joinedload(models.EjercicioEnRutina.series_detalle)
     ).order_by(models.PlanRutina.fecha_creacion.desc()).all()
-
-# ==========================================
-# EJECUCIÓN DEL SERVIDOR
-# ==========================================
 
 if __name__ == "__main__":
     import uvicorn

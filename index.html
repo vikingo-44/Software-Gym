@@ -2203,6 +2203,7 @@
 					descripcion: `Renovación Plan ${plan.nombre}: ${alumno.nombre_completo}`,
 					metodo_pago: metodoPago,
 					alumno_id: alumnoId,
+					producto_id: planId, // <--- ESTO FALTABA Y ES LA CLAVE PARA QUE SE ACTUALICE -->
 					cantidad: 1
 				}, true); 
 			}
@@ -2954,8 +2955,45 @@ async function renderRutinas() {
 		}
 	}
 
+		async function loadCaja() {
+            // A. Cargar Resumen (Ingresos, Gastos, Balance)
+            const res = await apiFetch('/caja/resumen');
+            if(!res.error) {
+                if(document.getElementById('caja-ingresos')) document.getElementById('caja-ingresos').innerText = `$ ${res.ingresos.toLocaleString()}`;
+                if(document.getElementById('caja-gastos')) document.getElementById('caja-gastos').innerText = `$ ${res.gastos.toLocaleString()}`;
+                if(document.getElementById('caja-balance')) document.getElementById('caja-balance').innerText = `$ ${res.balance.toLocaleString()}`;
+            }
+
+            // B. Cargar Lista de Movimientos
+            const movs = await apiFetch('/caja/movimientos');
+            const table = document.getElementById('table-caja');
+            
+            if(table) {
+                if(Array.isArray(movs) && movs.length > 0) {
+                    table.innerHTML = movs.map(m => `
+                        <tr class="viking-table-row">
+                            <td class="py-4">
+                                <span class="px-3 py-1 rounded-full text-[9px] font-black uppercase ${m.tipo === 'Ingreso' ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'}">
+                                    ${m.tipo}
+                                </span>
+                            </td>
+                            <td class="py-4">
+                                <p class="text-[11px] font-bold text-white">${m.descripcion}</p>
+                                <p class="text-[9px] text-gray-500">${new Date(m.fecha).toLocaleDateString()} - ${m.metodo_pago}</p>
+                            </td>
+                            <td class="py-4 text-right font-black italic text-white">
+                                $ ${m.monto.toLocaleString()}
+                            </td>
+                        </tr>
+                    `).join('');
+                } else {
+                    table.innerHTML = '<tr><td colspan="3" class="text-center py-6 text-gray-500 italic text-[10px]">Sin movimientos registrados</td></tr>';
+                }
+            }
+        }
+
         async function initApp() {
-            await Promise.all([fetchAlumnos(), loadStaff(), loadPlanes(), loadStock(), loadClases(), fetchReservas(), loadDashboard(), loadMusculacionMetadata()]);
+            await Promise.all([fetchAlumnos(), loadStaff(), loadPlanes(), loadStock(), loadClases(), fetchReservas(), loadDashboard(), loadMusculacionMetadata(), loadCaja()]);
         }
 
         async function loadDashboard() {
