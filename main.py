@@ -698,15 +698,20 @@ def crear_movimiento_caja(mov: MovimientoCreate, db: Session = Depends(database.
 def procesar_cobro(data: TransactionCreate, db: Session = Depends(database.get_db)):
     try:
         # 1. Registro automático en Caja
-        # Usamos tu modelo MovimientoCaja. Asegúrate que tenga estos campos.
+        # CORRECCIÓN CLAVE: Usamos abs() para asegurar que el monto sea siempre POSITIVO
+        # Esto soluciona el problema de que los cobros resten en lugar de sumar
+        monto_positivo = abs(data.monto)
+        
         nueva_transaccion = models.MovimientoCaja(
-            tipo=data.tipo,  # Guardamos 'Plan' o 'Mercaderia' para saber qué fue
-            monto=data.monto,
+            tipo=data.tipo, 
+            monto=monto_positivo, # <--- Aquí forzamos el valor positivo
             descripcion=data.descripcion,
             metodo_pago=data.metodo_pago,
             fecha=datetime.now()
         )
-        # Opcional: Si tu modelo MovimientoCaja tiene alumno_id/producto_id, asígnalos aquí también.
+        # Si tu modelo tiene campos de relación, descomenta estas líneas:
+        # nueva_transaccion.alumno_id = data.alumno_id
+        # nueva_transaccion.producto_id = data.producto_id
         
         db.add(nueva_transaccion)
 
@@ -725,8 +730,7 @@ def procesar_cobro(data: TransactionCreate, db: Session = Depends(database.get_d
         if data.tipo == "Plan" and data.alumno_id:
             alumno = db.query(models.Usuario).filter(models.Usuario.id == data.alumno_id).first()
             
-            # BUSCAMOS EL PLAN EN LA TABLA 'tipos_planes' (Modelo TipoPlan)
-            # Usamos data.producto_id que viene del front con el ID del plan seleccionado
+            # Usamos data.producto_id para buscar el Plan específico
             plan = db.query(models.TipoPlan).filter(models.TipoPlan.id == data.producto_id).first()
             
             if alumno and plan:
@@ -736,30 +740,27 @@ def procesar_cobro(data: TransactionCreate, db: Session = Depends(database.get_d
                 alumno.fecha_ultimo_pago = hoy 
                 alumno.fecha_ultima_renovacion = hoy 
                 
-                # B. Calculamos Vencimiento Dinámico usando la columna 'duracion_dias'
-                # Si por error duracion_dias es null o 0, usamos 30 días por seguridad
+                # B. Calculamos Vencimiento Dinámico
                 dias_duracion = plan.duracion_dias if plan.duracion_dias and plan.duracion_dias > 0 else 30
                 alumno.fecha_vencimiento = hoy + timedelta(days=dias_duracion)
                 
                 # C. Actualizamos Estado y Plan
-                alumno.estado = "Activo"       # Cambiamos estado para quitar el "Vencido"
                 alumno.estado_cuenta = "Al día"
-                alumno.plan_id = plan.id       # Asignamos el nuevo plan al usuario
+                alumno.plan_id = plan.id 
                 
-                # D. Reseteamos Clases (Solo si tu tabla tipos_planes tuviera cupo de clases, sino lo ignora)
+                # D. Reseteamos Clases si corresponde
                 if hasattr(plan, 'clases_mensuales') and plan.clases_mensuales:
                     alumno.clases_restantes = plan.clases_mensuales
 
         db.commit()
-        return {"status": "success", "message": "Cobro procesado y sistema actualizado correctamente"}
+        return {"status": "success", "message": "Cobro procesado correctamente"}
 
     except HTTPException as he:
         db.rollback()
         raise he
     except Exception as e:
         db.rollback()
-        # logger.error(f"Error procesando cobro: {str(e)}") 
-        raise HTTPException(status_code=500, detail=f"Error interno al procesar el pago: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error interno: {str(e)}")
 
 # --- MUSCULACIÓN ---
 @app.get("/api/rutinas/grupos-musculares", tags=["Musculación"])
