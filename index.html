@@ -891,7 +891,10 @@
                 <div class="glass-card p-10 rounded-[3rem]">
                     <div class="flex justify-between items-center mb-8">
                         <h3 class="text-sm font-black uppercase italic border-l-4 border-red-600 pl-4 tracking-widest">Flujo Diario de Caja</h3>
-                        <button id="btn-nuevo-mov" onclick="openModal('modal-movimiento')" class="viking-bg-red text-black px-6 py-3 rounded-xl font-black uppercase italic text-[11px]">Cargar Movimiento</button>
+                        <button onclick="document.getElementById('modal-gasto').classList.remove('hidden')" 
+								class="px-3 py-1.5 bg-red-600 hover:bg-red-700 rounded text-[10px] font-bold uppercase transition-colors text-white">
+							+ Nuevo Movimiento
+						</button>
                     </div>
                     <table class="w-full text-left">
                         <thead>
@@ -1190,23 +1193,58 @@
         </div>
     </div>
 
-    <div id="modal-movimiento" class="viking-modal">
-        <div class="glass-card p-10 rounded-[3rem] w-full max-w-lg text-left">
-            <h3 class="text-2xl font-black uppercase italic mb-8">Nuevo Movimiento</h3>
-            <form id="form-movimiento" class="space-y-4">
-                <select id="mov-tipo" class="viking-input" required>
-                    <option value="Ingreso">Ingreso</option>
-                    <option value="Egreso">Egreso</option>
-                </select>
-                <input type="number" id="mov-monto" placeholder="Monto ($)" required class="viking-input">
-                <input type="text" id="mov-desc" placeholder="Descripción" required class="viking-input">
-                <div class="flex gap-4 pt-4">
-                    <button type="button" onclick="closeModal('modal-movimiento')" class="flex-1 py-4 bg-white/5 rounded-2xl font-black uppercase italic text-[11px]">Cancelar</button>
-                    <button type="submit" id="btn-save-mov-modal" class="flex-1 py-4 viking-bg-red text-black rounded-2xl font-black uppercase italic text-[11px]">Cargar</button>
-                </div>
-            </form>
-        </div>
-    </div>
+    <!-- 2. EL MODAL NUEVO (Reemplaza al viejo 'modal-movimiento') -->
+	<div id="modal-gasto" class="fixed inset-0 bg-black/80 hidden flex items-center justify-center z-50 backdrop-blur-sm animate-fade-in">
+		<div class="glass-panel p-6 rounded-xl w-full max-w-sm mx-4 relative border border-white/10 shadow-2xl">
+			
+			<!-- Botón Cerrar (X) -->
+			<button type="button" onclick="document.getElementById('modal-gasto').classList.add('hidden')" 
+					class="absolute top-4 right-4 text-gray-500 hover:text-white transition-colors">
+				<i data-lucide="x" class="w-5 h-5"></i>
+			</button>
+
+			<h3 class="text-xl font-black italic text-white mb-6 tracking-tight">
+				NUEVO <span class="text-red-600">MOVIMIENTO</span>
+			</h3>
+			
+			<!-- FORMULARIO CONECTADO A JAVASCRIPT -->
+			<form onsubmit="guardarMovimiento(event)">
+				<div class="space-y-4">
+					
+					<!-- Selector Tipo (Agregado para que puedas elegir) -->
+					<div>
+						<label class="block text-[10px] font-bold uppercase text-gray-400 mb-1">Tipo</label>
+						<select id="input-tipo-movimiento" class="viking-input w-full p-3 rounded text-xs font-bold text-white bg-black/50 border border-white/10 focus:border-red-600 transition-colors">
+							<option value="Gasto">EGRESO (Gasto)</option>
+							<option value="Ingreso">INGRESO (Dinero a favor)</option>
+						</select>
+					</div>
+
+					<!-- Input Descripción -->
+					<div>
+						<label class="block text-[10px] font-bold uppercase text-gray-400 mb-1">Descripción</label>
+						<input type="text" id="input-desc-gasto" 
+							   class="viking-input w-full p-3 rounded text-xs font-bold text-white bg-black/50 border border-white/10 focus:border-red-600 transition-colors" 
+							   placeholder="Ej: Compra de Agua, Pago de Luz..." required>
+					</div>
+
+					<!-- Input Monto -->
+					<div>
+						<label class="block text-[10px] font-bold uppercase text-gray-400 mb-1">Monto ($)</label>
+						<input type="number" id="input-monto-gasto" 
+							   class="viking-input w-full p-3 rounded text-xs font-bold text-white bg-black/50 border border-white/10 focus:border-red-600 transition-colors" 
+							   placeholder="0.00" required step="0.01">
+					</div>
+
+					<!-- Botón Guardar -->
+					<button type="submit" 
+							class="w-full bg-red-600 hover:bg-red-700 text-white font-black uppercase py-3 rounded text-xs tracking-widest mt-4 border border-red-500 shadow-lg shadow-red-900/20 transition-all hover:scale-[1.02]">
+						Confirmar Movimiento
+					</button>
+				</div>
+			</form>
+		</div>
+	</div>
 
     <div id="modal-staff" class="viking-modal">
         <div class="glass-card p-10 rounded-[3rem] w-full max-w-lg text-left">
@@ -2956,41 +2994,133 @@ async function renderRutinas() {
 	}
 
 		async function loadCaja() {
-			// A. Cargar Resumen (Ingresos, Gastos, Balance)
-			const res = await apiFetch('/caja/resumen');
-			if(!res.error) {
-				if(document.getElementById('caja-ingresos')) document.getElementById('caja-ingresos').innerText = `$ ${res.ingresos.toLocaleString()}`;
-				if(document.getElementById('caja-gastos')) document.getElementById('caja-gastos').innerText = `$ ${res.gastos.toLocaleString()}`;
-				if(document.getElementById('caja-balance')) document.getElementById('caja-balance').innerText = `$ ${res.balance.toLocaleString()}`;
+			// A. Obtener movimientos
+			const movs = await apiFetch('/caja/movimientos');
+			
+			// B. RECALCULAR TOTALES EN EL MOMENTO (Solución al problema de suma)
+			// Esto asegura que los números de arriba coincidan siempre con la tabla
+			let calcIngresos = 0;
+			let calcGastos = 0;
+
+			if (Array.isArray(movs)) {
+				movs.forEach(m => {
+					if (m.tipo === 'Ingreso') {
+						calcIngresos += parseFloat(m.monto);
+					} else {
+						calcGastos += parseFloat(m.monto);
+					}
+				});
+			}
+			const calcBalance = calcIngresos - calcGastos;
+
+			// C. Actualizar las tarjetas de arriba (Dashboard Caja)
+			if(document.getElementById('caja-ingresos')) 
+				document.getElementById('caja-ingresos').innerText = `$ ${calcIngresos.toLocaleString()}`;
+			
+			if(document.getElementById('caja-gastos')) 
+				document.getElementById('caja-gastos').innerText = `$ ${calcGastos.toLocaleString()}`;
+			
+			if(document.getElementById('caja-balance')) {
+				const elBalance = document.getElementById('caja-balance');
+				elBalance.innerText = `$ ${calcBalance.toLocaleString()}`;
+				// Color dinámico para el balance
+				elBalance.className = `text-3xl font-black ${calcBalance >= 0 ? 'text-white' : 'text-red-500'}`;
 			}
 
-			// B. Cargar Lista de Movimientos
-			const movs = await apiFetch('/caja/movimientos');
+			// D. Renderizar la Tabla con las NUEVAS COLUMNAS (Flujo | Tipo | Detalle | Monto)
 			const table = document.getElementById('table-caja');
+			
+			// IMPORTANTE: Asegúrate de actualizar los <th> en tu HTML para que coincidan con estas 4 columnas:
+			// <th>Flujo</th> <th>Tipo</th> <th>Descripción</th> <th class="text-right">Monto</th>
 			
 			if(table) {
 				if(Array.isArray(movs) && movs.length > 0) {
-					table.innerHTML = movs.map(m => `
-						<tr class="viking-table-row">
-							<td class="py-4">
-								<span class="px-3 py-1 rounded-full text-[9px] font-black uppercase ${m.tipo === 'Ingreso' ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'}">
+					table.innerHTML = movs.map(m => {
+						// Lógica para determinar la categoría automáticamente
+						let categoria = 'Varios';
+						const desc = m.descripcion.toLowerCase();
+						if(desc.includes('cuota') || desc.includes('plan') || desc.includes('membresía')) categoria = 'Membresía';
+						else if(desc.includes('agua') || desc.includes('barra') || desc.includes('stock')) categoria = 'Stock/Bar';
+						else if(desc.includes('clase')) categoria = 'Clase';
+
+						// Estilos según si es Ingreso o Gasto
+						const esIngreso = m.tipo === 'Ingreso';
+						const badgeColor = esIngreso ? 'bg-green-500/10 text-green-500 border-green-500/20' : 'bg-red-500/10 text-red-500 border-red-500/20';
+						
+						return `
+						<tr class="viking-table-row border-b border-white/5 hover:bg-white/5 transition-colors">
+							<!-- 1. Columna FLUJO (Ingreso/Egreso) -->
+							<td class="py-4 px-2">
+								<span class="px-3 py-1 rounded border text-[9px] font-black uppercase tracking-wider ${badgeColor}">
 									${m.tipo}
 								</span>
 							</td>
-							<td class="py-4">
-								<p class="text-[11px] font-bold text-white">${m.descripcion}</p>
-								<p class="text-[9px] text-gray-500">${new Date(m.fecha).toLocaleDateString()} - ${m.metodo_pago}</p>
+
+							<!-- 2. Nueva Columna TIPO (Plan, Stock, etc) -->
+							<td class="py-4 px-2">
+								<span class="text-gray-400 text-[10px] font-bold uppercase italic">
+									<i data-lucide="tag" class="w-3 h-3 inline mr-1 opacity-50"></i>${categoria}
+								</span>
 							</td>
-							<td class="py-4 text-right font-black italic text-white">
-								$ ${m.monto.toLocaleString()}
+
+							<!-- 3. Columna DESCRIPCIÓN -->
+							<td class="py-4 px-2">
+								<p class="text-[11px] font-bold text-white uppercase">${m.descripcion}</p>
+								<p class="text-[9px] text-gray-500">${new Date(m.fecha).toLocaleDateString()} - ${m.metodo_pago || 'Efectivo'}</p>
+							</td>
+
+							<!-- 4. Columna MONTO -->
+							<td class="py-4 px-2 text-right font-black italic text-white tracking-wide">
+								$ ${parseFloat(m.monto).toLocaleString()}
 							</td>
 						</tr>
-					`).join('');
+					`}).join('');
+					
+					// Reactivar iconos insertados dinámicamente
+					if(window.lucide) lucide.createIcons();
+					
 				} else {
-					table.innerHTML = '<tr><td colspan="3" class="text-center py-6 text-gray-500 italic text-[10px]">Sin movimientos registrados</td></tr>';
+					table.innerHTML = '<tr><td colspan="4" class="text-center py-6 text-gray-500 italic text-[10px]">Sin movimientos registrados</td></tr>';
 				}
 			}
 		}
+		
+		async function guardarMovimiento(event) {
+		// ESTO EVITA QUE SE RECARGUE LA PÁGINA (Cierre de sesión)
+		event.preventDefault(); 
+
+		// Obtener valores (Ajusta los IDs según tu HTML real)
+		const descripcion = document.getElementById('input-desc-gasto')?.value || 'Gasto General';
+		const monto = parseFloat(document.getElementById('input-monto-gasto')?.value) || 0;
+		const tipo = 'Gasto'; // O leer de un select
+
+		if(monto <= 0) return alert("El monto debe ser mayor a 0");
+
+		// Enviar al backend
+		const res = await apiFetch('/caja/movimientos', 'POST', {
+			tipo,
+			descripcion,
+			monto,
+			fecha: new Date().toISOString(),
+			metodo_pago: 'Efectivo' // O leer del select
+		});
+
+		if(!res.error) {
+			// Limpiar form
+			event.target.reset();
+			
+			// Recargar caja para ver el cambio INMEDIATAMENTE y actualizar totales
+			await loadCaja(); 
+			
+			// Opcional: Cerrar modal si usas uno
+			// closeModal('modal-gasto'); 
+			
+			// Mostrar confirmación
+			// showVikingToast('Movimiento registrado');
+		} else {
+			alert("Error al guardar");
+		}
+	}
 
         async function initApp() {
             await Promise.all([fetchAlumnos(), loadStaff(), loadPlanes(), loadStock(), loadClases(), fetchReservas(), loadDashboard(), loadMusculacionMetadata(), loadCaja()]);
