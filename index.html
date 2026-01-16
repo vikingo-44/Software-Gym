@@ -1194,7 +1194,7 @@
     </div>
 
     <!-- 2. EL MODAL NUEVO (Reemplaza al viejo 'modal-movimiento') -->
-	<div id="modal-gasto" class="fixed inset-0 bg-black/80 hidden flex items-center justify-center z-50 backdrop-blur-sm animate-fade-in">
+		<div id="modal-gasto" class="fixed inset-0 bg-black/80 hidden flex items-center justify-center z-50 backdrop-blur-sm animate-fade-in">
 		<div class="glass-panel p-6 rounded-xl w-full max-w-sm mx-4 relative border border-white/10 shadow-2xl">
 			
 			<!-- Botón Cerrar (X) -->
@@ -1207,16 +1207,16 @@
 				NUEVO <span class="text-red-600">MOVIMIENTO</span>
 			</h3>
 			
-			<!-- FORMULARIO CONECTADO A JAVASCRIPT -->
+			<!-- FORMULARIO -->
 			<form onsubmit="guardarMovimiento(event)">
 				<div class="space-y-4">
 					
-					<!-- Selector Tipo (Agregado para que puedas elegir) -->
+					<!-- Selector Tipo (AHORA INGRESO ES EL PRIMERO Y DEFAULT) -->
 					<div>
-						<label class="block text-[10px] font-bold uppercase text-gray-400 mb-1">Tipo</label>
+						<label class="block text-[10px] font-bold uppercase text-gray-400 mb-1">Tipo de Movimiento</label>
 						<select id="input-tipo-movimiento" class="viking-input w-full p-3 rounded text-xs font-bold text-white bg-black/50 border border-white/10 focus:border-red-600 transition-colors">
-							<option value="Gasto">EGRESO (Gasto)</option>
-							<option value="Ingreso">INGRESO (Dinero a favor)</option>
+							<option value="Ingreso" selected>INGRESO (Venta, Cuota, etc.)</option>
+							<option value="Gasto">EGRESO (Pago, Gasto, Compra)</option>
 						</select>
 					</div>
 
@@ -1225,7 +1225,7 @@
 						<label class="block text-[10px] font-bold uppercase text-gray-400 mb-1">Descripción</label>
 						<input type="text" id="input-desc-gasto" 
 							   class="viking-input w-full p-3 rounded text-xs font-bold text-white bg-black/50 border border-white/10 focus:border-red-600 transition-colors" 
-							   placeholder="Ej: Compra de Agua, Pago de Luz..." required>
+							   placeholder="Ej: Gatorade, Cuota Mensual..." required>
 					</div>
 
 					<!-- Input Monto -->
@@ -3086,39 +3086,42 @@ async function renderRutinas() {
 		}
 		
 		async function guardarMovimiento(event) {
-		// ESTO EVITA QUE SE RECARGUE LA PÁGINA (Cierre de sesión)
-		event.preventDefault(); 
+			// Evita recarga de página
+			event.preventDefault(); 
 
-		// Obtener valores (Ajusta los IDs según tu HTML real)
-		const descripcion = document.getElementById('input-desc-gasto')?.value || 'Gasto General';
-		const monto = parseFloat(document.getElementById('input-monto-gasto')?.value) || 0;
-		const tipo = 'Gasto'; // O leer de un select
-
-		if(monto <= 0) return alert("El monto debe ser mayor a 0");
-
-		// Enviar al backend
-		const res = await apiFetch('/caja/movimientos', 'POST', {
-			tipo,
-			descripcion,
-			monto,
-			fecha: new Date().toISOString(),
-			metodo_pago: 'Efectivo' // O leer del select
-		});
-
-		if(!res.error) {
-			// Limpiar form
-			event.target.reset();
+			// 1. OBTENER VALORES DEL FORMULARIO
+			const descripcion = document.getElementById('input-desc-gasto')?.value || 'Varios';
+			const monto = parseFloat(document.getElementById('input-monto-gasto')?.value) || 0;
 			
-			// Recargar caja para ver el cambio INMEDIATAMENTE y actualizar totales
-			await loadCaja(); 
-			
-			// Opcional: Cerrar modal si usas uno
-			// closeModal('modal-gasto'); 
-			
-			// Mostrar confirmación
-			// showVikingToast('Movimiento registrado');
-		} else {
-			alert("Error al guardar");
+			// AQUI ESTABA EL ERROR: Ahora leemos el valor del select, no lo inventamos
+			const selectTipo = document.getElementById('input-tipo-movimiento');
+			const tipo = selectTipo ? selectTipo.value : 'Ingreso'; // Si no encuentra el select, asume Ingreso
+
+			if(monto <= 0) return alert("El monto debe ser mayor a 0");
+
+			// 2. ENVIAR AL BACKEND
+			// Notar que enviamos 'tipo' dinámico ahora
+			const res = await apiFetch('/caja/movimientos', 'POST', {
+				tipo: tipo, 
+				descripcion: descripcion,
+				monto: monto,
+				fecha: new Date().toISOString(),
+				metodo_pago: 'Efectivo' 
+			});
+
+			if(!res.error) {
+				// Limpiar formulario y cerrar modal si quieres
+				event.target.reset();
+				document.getElementById('modal-gasto').classList.add('hidden'); // Cierra el modal automáticamente al guardar
+				
+				// Recargar la tabla y los totales
+				await loadCaja(); 
+				
+				// Confirmación visual (opcional)
+				if(typeof showVikingToast === 'function') showVikingToast('Movimiento registrado correctamente');
+			} else {
+				alert("Error al guardar el movimiento");
+			}
 		}
 	}
 
