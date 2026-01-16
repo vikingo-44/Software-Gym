@@ -214,7 +214,7 @@ class GrupoMuscularSchema(BaseModel):
     nombre: str
     class Config: from_attributes = True
     
-    class MovimientoCreate(BaseModel):
+class MovimientoCreate(BaseModel):
     descripcion: str
     monto: float
     tipo: str  # "Ingreso" o "Gasto"
