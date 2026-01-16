@@ -1,6 +1,5 @@
 import os
 import logging
-import datetime
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
@@ -10,7 +9,8 @@ from sqlalchemy import func, extract
 from sqlalchemy.orm.attributes import flag_modified
 from typing import List, Optional, Union
 from pydantic import BaseModel
-from datetime import datetime, timedelta
+# CORRECCIÓN DE IMPORTS: Importamos 'date' explícitamente para evitar el conflicto
+from datetime import datetime, timedelta, date
 
 # Configuración de logs para ver errores en Render/Producción
 logging.basicConfig(level=logging.INFO)
@@ -69,16 +69,17 @@ class UsuarioResponse(BaseModel):
     plan: Optional[PlanSchema] = None
     plan_id: Optional[int] = None
     estado_cuenta: Optional[str] = "Al día"
-    fecha_vencimiento: Optional[datetime.date] = None
-    fecha_ultima_renovacion: Optional[datetime.date] = None
+    # CORRECCIÓN: Usamos 'date' en lugar de 'datetime.date'
+    fecha_vencimiento: Optional[date] = None
+    fecha_ultima_renovacion: Optional[date] = None
     especialidad: Optional[str] = None
-    fecha_nacimiento: Optional[datetime.date] = None
+    fecha_nacimiento: Optional[date] = None
     edad: Optional[int] = None
     peso: Optional[float] = None
     altura: Optional[float] = None
     imc: Optional[float] = None
     certificado_entregado: bool = False
-    fecha_certificado: Optional[datetime.date] = None
+    fecha_certificado: Optional[date] = None
     
     class Config:
         from_attributes = True
@@ -89,15 +90,16 @@ class AlumnoUpdate(BaseModel):
     email: Optional[str] = None
     plan_id: Optional[int] = None
     password: Optional[str] = None
-    fecha_nacimiento: Optional[datetime.date] = None
+    # CORRECCIÓN: Usamos 'date' directo
+    fecha_nacimiento: Optional[date] = None
     edad: Optional[int] = None
     peso: Optional[float] = None
     altura: Optional[float] = None
     imc: Optional[float] = None
     certificado_entregado: bool = False
-    fecha_certificado: Optional[datetime.date] = None
-    fecha_ultima_renovacion: Optional[datetime.date] = None
-    fecha_vencimiento: Optional[datetime.date] = None
+    fecha_certificado: Optional[date] = None
+    fecha_ultima_renovacion: Optional[date] = None
+    fecha_vencimiento: Optional[date] = None
 
 class StaffUpdate(BaseModel):
     nombre_completo: str
@@ -187,8 +189,9 @@ class PlanRutinaResponse(BaseModel):
     nombre_grupo: Optional[str] = None
     descripcion: Optional[str] = None
     objetivo: str
-    fecha_creacion: datetime.date
-    fecha_vencimiento: datetime.date
+    # CORRECCIÓN: Usamos 'date' directo
+    fecha_creacion: date
+    fecha_vencimiento: date
     activo: bool
     dias: List[DiaRutinaResponse] = []
     class Config: from_attributes = True
@@ -214,7 +217,7 @@ class PlanRutinaCreate(BaseModel):
     nombre_grupo: Optional[str] = "Nueva Rutina"
     descripcion: Optional[str] = ""
     objetivo: str
-    fecha_vencimiento: datetime.date
+    fecha_vencimiento: date # CORRECCIÓN: date directo
     dias: List[DiaRutinaCreate]
 
 class EjercicioCreate(BaseModel):
@@ -323,7 +326,8 @@ def create_alumno(alumno: AlumnoUpdate, db: Session = Depends(database.get_db)):
         plan_id=alumno.plan_id, 
         perfil_id=perfil.id, 
         password_hash=alumno.password or alumno.dni,
-        fecha_ultima_renovacion=alumno.fecha_ultima_renovacion or datetime.date.today(), 
+        # CORRECCIÓN: date.today()
+        fecha_ultima_renovacion=alumno.fecha_ultima_renovacion or date.today(), 
         fecha_vencimiento=alumno.fecha_vencimiento,
         fecha_nacimiento=alumno.fecha_nacimiento,
         edad=alumno.edad,
@@ -402,8 +406,9 @@ def book_clase(data: ReservaCreate, db: Session = Depends(database.get_db)):
     if user.plan:
         limite_mensual = user.plan.clases_mensuales
         if limite_mensual < 999: # Asumiendo que 999+ es ilimitado
-            mes_actual = datetime.date.today().month
-            anio_actual = datetime.date.today().year
+            # CORRECCIÓN: date.today()
+            mes_actual = date.today().month
+            anio_actual = date.today().year
             
             count_reservas = db.query(models.Reserva).filter(
                 models.Reserva.usuario_id == user.id,
@@ -418,12 +423,13 @@ def book_clase(data: ReservaCreate, db: Session = Depends(database.get_db)):
                 )
 
     # Validar si ya reservó ese mismo slot hoy
+    # CORRECCIÓN: date.today()
     exists = db.query(models.Reserva).filter(
         models.Reserva.usuario_id == data.usuario_id,
         models.Reserva.clase_id == data.clase_id,
         models.Reserva.horario == data.horario,
         models.Reserva.dia_semana == data.dia_semana,
-        models.Reserva.fecha_reserva == datetime.date.today()
+        models.Reserva.fecha_reserva == date.today()
     ).first()
     
     if exists:
@@ -437,7 +443,7 @@ def book_clase(data: ReservaCreate, db: Session = Depends(database.get_db)):
         models.Reserva.clase_id == data.clase_id,
         models.Reserva.horario == data.horario,
         models.Reserva.dia_semana == data.dia_semana,
-        models.Reserva.fecha_reserva == datetime.date.today()
+        models.Reserva.fecha_reserva == date.today()
     ).count()
     
     if cupo_actual >= clase.capacidad_max:
@@ -446,7 +452,8 @@ def book_clase(data: ReservaCreate, db: Session = Depends(database.get_db)):
     new_res = models.Reserva(
         usuario_id=data.usuario_id,
         clase_id=data.clase_id,
-        fecha_reserva=datetime.date.today(),
+        # CORRECCIÓN: date.today()
+        fecha_reserva=date.today(),
         horario=data.horario,     
         dia_semana=data.dia_semana 
     )
@@ -695,7 +702,8 @@ def create_movimiento(data: MovimientoCajaCreate, db: Session = Depends(database
         monto=data.monto,
         descripcion=data.descripcion,
         metodo_pago=data.metodo_pago,
-        fecha=datetime.datetime.now()
+        # CORRECCIÓN: datetime.now()
+        fecha=datetime.now()
     )
     db.add(new_mov)
     db.commit()
@@ -712,6 +720,7 @@ def procesar_cobro(data: TransactionCreate, db: Session = Depends(database.get_d
             monto=data.monto,
             descripcion=data.descripcion,
             metodo_pago=data.metodo_pago,
+            # CORRECCIÓN: datetime.now()
             fecha=datetime.now()
         )
         # Opcional: Si tu modelo MovimientoCaja tiene alumno_id/producto_id, asígnalos aquí también.
@@ -738,6 +747,7 @@ def procesar_cobro(data: TransactionCreate, db: Session = Depends(database.get_d
             plan = db.query(models.TipoPlan).filter(models.TipoPlan.id == data.producto_id).first()
             
             if alumno and plan:
+                # CORRECCIÓN: datetime.now()
                 hoy = datetime.now()
                 
                 # A. Actualizamos fechas de pago
@@ -816,7 +826,8 @@ def create_plan_rutina(data: PlanRutinaCreate, db: Session = Depends(database.ge
             objetivo=data.objetivo,
             fecha_vencimiento=data.fecha_vencimiento,
             activo=True,
-            fecha_creacion=datetime.date.today()
+            # CORRECCIÓN: date.today()
+            fecha_creacion=date.today()
         )
         db.add(nuevo_plan)
         db.flush() 
