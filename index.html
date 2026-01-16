@@ -2013,6 +2013,13 @@
         document.getElementById('cobrar-search').oninput = renderCobrar;
 
 		/**
+		/**
+		 * =========================================================
+		 * 2. FUNCIONES DE CAJA Y CARRITO (LÓGICA VISUAL)
+		 * =========================================================
+		 */
+
+		/**
 		 * FUNCIÓN 1: AGREGAR MERCADERÍA
 		 */
 		function addToCart(productId) {
@@ -2244,7 +2251,6 @@
 				}
 			}
 		}
-
 		// --- REEMPLAZA TU FUNCIÓN openFichaTecnica POR ESTA VERSIÓN CON DISEÑO DE FILAS ---
 		async function openFichaTecnica(alumnoId) {
 			const rutinaContainer = document.getElementById('ficha-rutina-container');
@@ -4114,6 +4120,20 @@ async function loadProfesores() {
         };
 		
 		document.getElementById('form-clase').onsubmit = saveClaseVikinga;
+
+		/**
+		 * =========================================================
+		 * 4. PUENTES DE COMPATIBILIDAD (ALIAS MÁGICOS)
+		 * =========================================================
+		 * Esto permite que tu HTML viejo llame a funciones con nombres
+		 * antiguos y sean redirigidos automáticamente a las nuevas.
+		 */
+
+		// Si el botón dice onclick="finalizarVenta()", ejecuta finalizarVentaMercaderia()
+		window.finalizarVenta = finalizarVentaMercaderia; 
+
+		// Si el botón dice onclick="confirmarCobroFinal()", ejecuta finalizarVentaMercaderia()
+		window.confirmarCobroFinal = finalizarVentaMercaderia;
 
         window.onclick = function(event) {
             if (event.target.classList.contains('search-exercise-input')) return;
