@@ -1981,16 +1981,49 @@
 
         document.getElementById('cobrar-search').oninput = renderCobrar;
 
-        function addToCart(id, type) {
-            if (type === 'stock') {
-                const product = state.stock.find(s => s.id === id);
-                if (!product || product.stock_actual <= 0) return;
-                const existing = state.cart.find(c => c.id === id && c.type === 'stock');
-                if (existing) { if (existing.qty < product.stock_actual) existing.qty++; }
-                else state.cart.push({ ...product, qty: 1, type: 'stock' });
-            }
-            updateCartUI();
-        }
+        function addToCart(productId) {
+			// 1. Buscamos en el stock cargado en memoria
+			const item = state.stock.find(s => s.id == productId);
+			
+			if (!item) {
+				console.error("Producto no encontrado en state.stock con ID:", productId);
+				return;
+			}
+
+			// 2. Validación de Stock visual
+			if (item.stock_actual <= 0) {
+				return showVikingToast(`¡Sin stock de ${item.nombre_producto}!`, true);
+			}
+
+			// 3. Verificar si ya está en el carrito para sumar cantidad
+			// IMPORTANTE: Usamos 'producto_id' para diferenciarlo de los planes
+			const existing = state.cart.find(c => c.producto_id == productId && c.tipo === 'Mercaderia');
+
+			if (existing) {
+				if (existing.cantidad < item.stock_actual) {
+					existing.cantidad++;
+					showVikingToast(`+1 ${item.nombre_producto}`);
+				} else {
+					return showVikingToast("No puedes vender más de lo que tienes en stock", true);
+				}
+			} else {
+				// 4. Estructura Compatible con TransactionCreate (Backend)
+				state.cart.push({
+					tipo: 'Mercaderia',       // Clave para el backend
+					producto_id: productId,   // ID específico del producto
+					alumno_id: null,          // Mercadería no lleva alumno obligatoriamente aquí
+					nombre: item.nombre_producto,
+					precio: item.precio_venta,
+					cantidad: 1,
+					url_imagen: item.url_imagen // Opcional para visualización
+				});
+				showVikingToast(`${item.nombre_producto} añadido al ticket`);
+			}
+
+			// Compatibilidad de nombres para refrescar UI
+			if (typeof updateCartUI === 'function') updateCartUI();
+			if (typeof renderCart === 'function') renderCart();
+		}
 
         function preparePlanCharge(alumnoId) {
             const al = state.alumnos.find(a => a.id === alumnoId);
@@ -2047,38 +2080,36 @@
 				}
 			});
 		}
+		
+		// --- CONFIGURACIÓN DE API ---
+		const API_URL = "https://vikingo-strengthhub.onrender.com/api"; 
 
-        async function finalizarVenta() {
-			// 1. Validar que haya algo que cobrar
+		// --- FUNCIÓN PRINCIPAL DE COBRO ---
+		async function confirmarCobroFinal() {
 			if (state.cart.length === 0) {
 				return showVikingToast("El carrito está vacío, guerrero", true);
 			}
 			
-			// 2. Obtener el método de pago seleccionado
-			// Asegúrate de que tu <select> en el HTML tenga id="metodo-pago"
-			const metodoSelect = document.getElementById('metodo-pago'); 
-			const metodo = metodoSelect ? metodoSelect.value : "Efectivo";
+			// Obtener método de pago
+			const metodoEl = document.getElementById('metodo-pago-select');
+			const metodo = metodoEl ? metodoEl.value : "Efectivo";
 
-			showVikingToast("Procesando cobro en Tesorería y Stock...");
+			showVikingToast("Sincronizando con la Tesorería...");
 
 			try {
-				// 3. Iteramos item por item para procesarlo en el backend
+				// Procesamos los items uno por uno
 				for (const item of state.cart) {
-					
-					// Preparamos los datos EXACTOS que pide el nuevo backend (TransactionCreate)
+					// Preparamos el paquete de datos asegurando tipos numéricos
 					const payload = {
-						tipo: item.tipo, // Debe ser 'Plan' o 'Mercaderia'
+						tipo: item.tipo, // 'Plan' o 'Mercaderia'
 						monto: parseFloat(item.precio * item.cantidad),
 						descripcion: item.nombre,
 						metodo_pago: metodo,
-						// Si es plan, mandamos alumno_id; si es producto, mandamos producto_id
 						alumno_id: item.alumno_id ? parseInt(item.alumno_id) : null,
 						producto_id: item.producto_id ? parseInt(item.producto_id) : null,
-						cantidad: parseInt(item.cantidad) || 1
+						cantidad: parseInt(item.cantidad)
 					};
 
-					// 4. Llamada al endpoint NUEVO que maneja lógica inteligente
-					// Usamos fetch directo o apiFetch según tengas configurado, aquí uso fetch estándar para asegurar
 					const response = await fetch(`${API_URL}/cobros/procesar`, {
 						method: 'POST',
 						headers: { 'Content-Type': 'application/json' },
@@ -2087,24 +2118,77 @@
 
 					if (!response.ok) {
 						const errorData = await response.json();
-						throw new Error(errorData.detail || "Error al procesar " + item.nombre);
+						throw new Error(errorData.detail || "Error en el servidor");
 					}
 				}
 
-				// 5. Éxito: Limpiar todo y recargar
-				showVikingToast("¡Victoria! Cobro registrado y Stock actualizado");
+				// ÉXITO TOTAL
+				showVikingToast("¡Victoria! Cobro registrado con éxito");
+				state.cart = []; // Limpiar carrito
+				updateCartUI(); // Actualizar interfaz de ticket
 				
-				state.cart = []; // Vaciar carrito en memoria
-				renderCart();    // Limpiar visualmente el ticket (asegúrate que esta función exista)
-				
-				// Recargar datos para ver los cambios reflejados
-				if (typeof loadStock === 'function') await loadStock(); 
-				if (typeof renderCaja === 'function') renderCaja(); // Para ver el ingreso en caja
-				if (typeof loadAlumnos === 'function') loadAlumnos(); // Para actualizar fechas de vencimiento
+				// Recargar datos para ver stock y caja actualizada
+				if (typeof loadAllData === 'function') await loadAllData();
+				if (typeof renderCobrar === 'function') renderCobrar();
 
 			} catch (err) {
-				console.error("Fallo crítico en cobro:", err);
-				showVikingToast("Error: " + err.message, true);
+				console.error("Fallo en el cobro:", err);
+				showVikingToast("Fallo: " + err.message, true);
+			}
+		}
+
+        async function finalizarVenta() {
+			if (state.cart.length === 0) {
+				return showVikingToast("El carrito está vacío, guerrero", true);
+			}
+			
+			// Obtener método de pago (asegura que el ID coincida con tu HTML)
+			const metodoEl = document.getElementById('metodo-pago'); 
+			const metodo = metodoEl ? metodoEl.value : "Efectivo";
+
+			showVikingToast("Sincronizando con la Tesorería...");
+
+			try {
+				// Procesamos los items uno por uno
+				for (const item of state.cart) {
+					// Preparamos el paquete de datos asegurando tipos numéricos
+					// IMPORTANTE: Aquí se usan las propiedades que definimos en addToCart (cantidad, tipo, producto_id)
+					const payload = {
+						tipo: item.tipo, // 'Plan' o 'Mercaderia'
+						monto: parseFloat(item.precio * item.cantidad),
+						descripcion: item.nombre,
+						metodo_pago: metodo,
+						alumno_id: item.alumno_id ? parseInt(item.alumno_id) : null,
+						producto_id: item.producto_id ? parseInt(item.producto_id) : null,
+						cantidad: parseInt(item.cantidad)
+					};
+
+					const response = await fetch(`${API_URL}/cobros/procesar`, {
+						method: 'POST',
+						headers: { 'Content-Type': 'application/json' },
+						body: JSON.stringify(payload)
+					});
+
+					if (!response.ok) {
+						const errorData = await response.json();
+						throw new Error(errorData.detail || "Error en el servidor");
+					}
+				}
+
+				// ÉXITO TOTAL
+				showVikingToast("¡Victoria! Cobro registrado con éxito");
+				state.cart = []; // Limpiar carrito
+				if (typeof updateCartUI === 'function') updateCartUI(); // Actualizar interfaz de ticket
+				if (typeof renderCart === 'function') renderCart(); // Compatibilidad con nombres antiguos
+				
+				// Recargar datos para ver stock y caja actualizada
+				if (typeof loadStock === 'function') await loadStock();
+				if (typeof renderCaja === 'function') renderCaja();
+				if (typeof loadAlumnos === 'function') loadAlumnos();
+
+			} catch (err) {
+				console.error("Fallo en el cobro:", err);
+				showVikingToast("Fallo: " + err.message, true);
 			}
 		}
 
