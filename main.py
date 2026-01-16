@@ -742,31 +742,38 @@ def procesar_cobro(data: TransactionCreate, db: Session = Depends(database.get_d
         if data.tipo == "Plan" and data.alumno_id:
             alumno = db.query(models.Usuario).filter(models.Usuario.id == data.alumno_id).first()
             
-            # BUSCAMOS EL PLAN EN LA TABLA 'tipos_planes' (Modelo TipoPlan)
-            # Usamos data.producto_id que viene del front con el ID del plan seleccionado
-            plan = db.query(models.TipoPlan).filter(models.TipoPlan.id == data.producto_id).first()
+            # CORRECCIÓN: Buscamos en tu tabla 'planes' (Modelo models.Plan)
+            # data.producto_id es el ID del plan que seleccionaste en el frente (ej: Pase Libre)
+            plan_db = db.query(models.Plan).filter(models.Plan.id == data.producto_id).first()
             
-            if alumno and plan:
-                # CORRECCIÓN: datetime.now()
+            if alumno and plan_db:
                 hoy = datetime.now()
                 
                 # A. Actualizamos fechas de pago
                 alumno.fecha_ultimo_pago = hoy 
                 alumno.fecha_ultima_renovacion = hoy 
                 
-                # B. Calculamos Vencimiento Dinámico usando la columna 'duracion_dias'
-                # Si por error duracion_dias es null o 0, usamos 30 días por seguridad
-                dias_duracion = plan.duracion_dias if plan.duracion_dias and plan.duracion_dias > 0 else 30
+                # B. Calculamos Vencimiento Dinámico
+                # 1. Intentamos obtener el tipo de plan para saber la duración
+                dias_duracion = 30 # Default por seguridad
+                
+                if plan_db.tipo_plan_id:
+                    tipo_plan = db.query(models.TipoPlan).filter(models.TipoPlan.id == plan_db.tipo_plan_id).first()
+                    if tipo_plan and tipo_plan.duracion_dias > 0:
+                        dias_duracion = tipo_plan.duracion_dias
+                
                 alumno.fecha_vencimiento = hoy + timedelta(days=dias_duracion)
                 
                 # C. Actualizamos Estado y Plan
-                alumno.estado = "Activo"       # Cambiamos estado para quitar el "Vencido"
-                alumno.estado_cuenta = "Al día"
-                alumno.plan_id = plan.id       # Asignamos el nuevo plan al usuario
+                # IMPORTANTE: Usamos los nombres exactos de tus columnas en models.py
+                if hasattr(alumno, 'estado'): alumno.estado = "Activo"
+                if hasattr(alumno, 'estado_cuenta'): alumno.estado_cuenta = "Al día"
                 
-                # D. Reseteamos Clases (Solo si tu tabla tipos_planes tuviera cupo de clases, sino lo ignora)
-                if hasattr(plan, 'clases_mensuales') and plan.clases_mensuales:
-                    alumno.clases_restantes = plan.clases_mensuales
+                alumno.plan_id = plan_db.id
+                
+                # D. Reseteamos Clases
+                if plan_db.clases_mensuales:
+                    alumno.clases_restantes = plan_db.clases_mensuales
 
         db.commit()
         return {"status": "success", "message": "Cobro procesado y sistema actualizado correctamente"}
