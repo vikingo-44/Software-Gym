@@ -2591,44 +2591,90 @@ async function renderRutinas() {
         }
 
         async function openRoutineEditor(alumnoId) {
-            const al = state.alumnos.find(a => a.id === alumnoId);
-            if (!al) return;
-            
-            await loadMusculacionMetadata();
-            
-            document.getElementById('rutina-editor-alumno').innerText = "Alumno: " + al.nombre_completo;
-            document.getElementById('rutina-editor-alumno-id').value = alumnoId;
-            const container = document.getElementById('rutina-editor-container');
-            container.innerHTML = "";
+		// 1. Validar que state y alumnos existan
+		if (!state || !state.alumnos) {
+			console.error("Error: state.alumnos no está definido");
+			return;
+		}
 
-            const rutinaRes = await apiFetch(`/rutinas/usuario/${alumnoId}`);
-            
-            if (!rutinaRes.error && rutinaRes.id) {
-                document.getElementById('rutina-objetivo').value = rutinaRes.objetivo;
-                document.getElementById('rutina-vencimiento').value = rutinaRes.fecha_vencimiento;
-                
-                rutinaRes.dias.forEach(d => {
-                    const ejerciciosFormateados = d.ejercicios.map(e => {
-                        return {
-                            ejercicio_id: e.ejercicio_id,
-                            exercise_name: e.ejercicio_obj?.nombre || "Ejercicio",
-                            series: e.series_detalle || [],
-                            comentario: e.comentario
-                        };
-                    });
-                    addRoutineDay(d.nombre_dia, ejerciciosFormateados);
-                });
-            } else {
-                document.getElementById('rutina-objetivo').value = "";
-                const defaultDate = new Date();
-                defaultDate.setDate(defaultDate.getDate() + 30);
-                document.getElementById('rutina-vencimiento').value = defaultDate.toISOString().split('T')[0];
-                
-                addRoutineDay("Día 1", []); 
-            }
+		const al = state.alumnos.find(a => a.id === alumnoId);
+		if (!al) return;
+		
+		// 2. Cargar metadatos asegurando que la función exista
+		if(typeof loadMusculacionMetadata === 'function') {
+			await loadMusculacionMetadata();
+		}
+		
+		// 3. Preparar DOM (Usando tus IDs originales)
+		const lblAlumno = document.getElementById('rutina-editor-alumno');
+		if(lblAlumno) lblAlumno.innerText = "Alumno: " + al.nombre_completo;
 
-            openModal('modal-rutina-editor');
-        }
+		const inputId = document.getElementById('rutina-editor-alumno-id');
+		if(inputId) inputId.value = alumnoId;
+
+		const container = document.getElementById('rutina-editor-container');
+		if(container) container.innerHTML = "";
+
+		try {
+			const rutinaRes = await apiFetch(`/rutinas/usuario/${alumnoId}`);
+			
+			// CORRECCIÓN CLAVE: Verificamos que rutinaRes exista antes de leer .error
+			// Si rutinaRes es null/undefined, entramos al ELSE (Nueva Rutina)
+			if (rutinaRes && !rutinaRes.error && rutinaRes.id) {
+				// --- MODO EDICIÓN (Cargar existente) ---
+				const txtObj = document.getElementById('rutina-objetivo');
+				if(txtObj) txtObj.value = rutinaRes.objetivo || '';
+
+				const txtVenc = document.getElementById('rutina-vencimiento');
+				if(txtVenc) txtVenc.value = rutinaRes.fecha_vencimiento || '';
+				
+				if (rutinaRes.dias && Array.isArray(rutinaRes.dias)) {
+					rutinaRes.dias.forEach(d => {
+						const ejerciciosFormateados = d.ejercicios.map(e => {
+							return {
+								ejercicio_id: e.ejercicio_id,
+								exercise_name: e.ejercicio_obj?.nombre || "Ejercicio",
+								series: e.series_detalle || [], // Backend usa series_detalle
+								comentario: e.comentario
+							};
+						});
+						// Llamamos a tu función addRoutineDay
+						if(typeof addRoutineDay === 'function') {
+							addRoutineDay(d.nombre_dia, ejerciciosFormateados);
+						}
+					});
+				}
+			} else {
+				// --- MODO CREACIÓN (Nueva Rutina) ---
+				// Esto se ejecuta si no hay rutina o si el backend devuelve error (ej: "No hay rutina activa")
+				const txtObj = document.getElementById('rutina-objetivo');
+				if(txtObj) txtObj.value = "";
+
+				const defaultDate = new Date();
+				defaultDate.setDate(defaultDate.getDate() + 30);
+				
+				const txtVenc = document.getElementById('rutina-vencimiento');
+				if(txtVenc) txtVenc.value = defaultDate.toISOString().split('T')[0];
+				
+				if(typeof addRoutineDay === 'function') {
+					addRoutineDay("Día 1", []); 
+				}
+			}
+
+			// 4. Abrir Modal (Tu ID original)
+			if(typeof openModal === 'function') {
+				openModal('modal-rutina-editor');
+			} else {
+				// Fallback por si openModal no es global
+				const m = document.getElementById('modal-rutina-editor');
+				if(m) m.classList.remove('hidden');
+			}
+
+		} catch (e) {
+			console.error("Error crítico en openRoutineEditor:", e);
+			alert("Hubo un error al intentar abrir el editor.");
+		}
+	}
 
         function addRoutineDay(nombre = "", ejercicios = []) {
             const container = document.getElementById('rutina-editor-container');
