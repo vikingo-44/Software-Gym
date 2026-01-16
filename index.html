@@ -2993,97 +2993,116 @@ async function renderRutinas() {
 		}
 	}
 
-		async function loadCaja() {
-			// A. Obtener movimientos
-			const movs = await apiFetch('/caja/movimientos');
-			
-			// B. RECALCULAR TOTALES EN EL MOMENTO (Solución al problema de suma)
-			// Esto asegura que los números de arriba coincidan siempre con la tabla
-			let calcIngresos = 0;
-			let calcGastos = 0;
+	async function loadCaja() {
+		// A. Obtener movimientos
+		const movs = await apiFetch('/caja/movimientos');
+		
+		// B. RECALCULAR TOTALES (Lógica corregida: Todo es ingreso salvo que diga Gasto/Egreso)
+		let calcIngresos = 0;
+		let calcGastos = 0;
 
-			if (Array.isArray(movs)) {
-				movs.forEach(m => {
-					if (m.tipo === 'Ingreso') {
-						calcIngresos += parseFloat(m.monto);
-					} else {
-						calcGastos += parseFloat(m.monto);
-					}
-				});
-			}
-			const calcBalance = calcIngresos - calcGastos;
+		if (Array.isArray(movs)) {
+			movs.forEach(m => {
+				// Normalizamos para comparar sin importar mayúsculas
+				const tipo = (m.tipo || '').toLowerCase();
+				const esEgreso = tipo === 'gasto' || tipo === 'egreso';
 
-			// C. Actualizar las tarjetas de arriba (Dashboard Caja)
-			if(document.getElementById('caja-ingresos')) 
-				document.getElementById('caja-ingresos').innerText = `$ ${calcIngresos.toLocaleString()}`;
-			
-			if(document.getElementById('caja-gastos')) 
-				document.getElementById('caja-gastos').innerText = `$ ${calcGastos.toLocaleString()}`;
-			
-			if(document.getElementById('caja-balance')) {
-				const elBalance = document.getElementById('caja-balance');
-				elBalance.innerText = `$ ${calcBalance.toLocaleString()}`;
-				// Color dinámico para el balance
-				elBalance.className = `text-3xl font-black ${calcBalance >= 0 ? 'text-white' : 'text-red-500'}`;
-			}
-
-			// D. Renderizar la Tabla con las NUEVAS COLUMNAS (Flujo | Tipo | Detalle | Monto)
-			const table = document.getElementById('table-caja');
-			
-			// IMPORTANTE: Asegúrate de actualizar los <th> en tu HTML para que coincidan con estas 4 columnas:
-			// <th>Flujo</th> <th>Tipo</th> <th>Descripción</th> <th class="text-right">Monto</th>
-			
-			if(table) {
-				if(Array.isArray(movs) && movs.length > 0) {
-					table.innerHTML = movs.map(m => {
-						// Lógica para determinar la categoría automáticamente
-						let categoria = 'Varios';
-						const desc = m.descripcion.toLowerCase();
-						if(desc.includes('cuota') || desc.includes('plan') || desc.includes('membresía')) categoria = 'Membresía';
-						else if(desc.includes('agua') || desc.includes('barra') || desc.includes('stock')) categoria = 'Stock/Bar';
-						else if(desc.includes('clase')) categoria = 'Clase';
-
-						// Estilos según si es Ingreso o Gasto
-						const esIngreso = m.tipo === 'Ingreso';
-						const badgeColor = esIngreso ? 'bg-green-500/10 text-green-500 border-green-500/20' : 'bg-red-500/10 text-red-500 border-red-500/20';
-						
-						return `
-						<tr class="viking-table-row border-b border-white/5 hover:bg-white/5 transition-colors">
-							<!-- 1. Columna FLUJO (Ingreso/Egreso) -->
-							<td class="py-4 px-2">
-								<span class="px-3 py-1 rounded border text-[9px] font-black uppercase tracking-wider ${badgeColor}">
-									${m.tipo}
-								</span>
-							</td>
-
-							<!-- 2. Nueva Columna TIPO (Plan, Stock, etc) -->
-							<td class="py-4 px-2">
-								<span class="text-gray-400 text-[10px] font-bold uppercase italic">
-									<i data-lucide="tag" class="w-3 h-3 inline mr-1 opacity-50"></i>${categoria}
-								</span>
-							</td>
-
-							<!-- 3. Columna DESCRIPCIÓN -->
-							<td class="py-4 px-2">
-								<p class="text-[11px] font-bold text-white uppercase">${m.descripcion}</p>
-								<p class="text-[9px] text-gray-500">${new Date(m.fecha).toLocaleDateString()} - ${m.metodo_pago || 'Efectivo'}</p>
-							</td>
-
-							<!-- 4. Columna MONTO -->
-							<td class="py-4 px-2 text-right font-black italic text-white tracking-wide">
-								$ ${parseFloat(m.monto).toLocaleString()}
-							</td>
-						</tr>
-					`}).join('');
-					
-					// Reactivar iconos insertados dinámicamente
-					if(window.lucide) lucide.createIcons();
-					
+				if (esEgreso) {
+					calcGastos += parseFloat(m.monto);
 				} else {
-					table.innerHTML = '<tr><td colspan="4" class="text-center py-6 text-gray-500 italic text-[10px]">Sin movimientos registrados</td></tr>';
+					// Si es Plan, Mercadería, Venta, Ingreso, etc. -> SUMA
+					calcIngresos += parseFloat(m.monto);
 				}
+			});
+		}
+		const calcBalance = calcIngresos - calcGastos;
+
+		// C. Actualizar las tarjetas del Dashboard
+		if(document.getElementById('caja-ingresos')) 
+			document.getElementById('caja-ingresos').innerText = `$ ${calcIngresos.toLocaleString()}`;
+		
+		if(document.getElementById('caja-gastos')) 
+			document.getElementById('caja-gastos').innerText = `$ ${calcGastos.toLocaleString()}`;
+		
+		if(document.getElementById('caja-balance')) {
+			const elBalance = document.getElementById('caja-balance');
+			elBalance.innerText = `$ ${calcBalance.toLocaleString()}`;
+			elBalance.className = `text-3xl font-black ${calcBalance >= 0 ? 'text-white' : 'text-red-500'}`;
+		}
+
+		// D. Renderizar la Tabla con las COLUMNAS SOLICITADAS: Flujo | Tipo | Descripción | Monto
+		const table = document.getElementById('table-caja');
+		
+		// TRUCO: Inyectamos los encabezados correctos por JS para no obligarte a cambiar el HTML a mano
+		const thead = document.querySelector('#view-caja table thead tr');
+		if(thead) {
+			thead.innerHTML = `
+				<th class="pb-5 pl-2">Flujo</th>
+				<th class="pb-5">Tipo</th>
+				<th class="pb-5">Descripción</th>
+				<th class="pb-5 text-right pr-2">Monto</th>
+			`;
+		}
+		
+		if(table) {
+			if(Array.isArray(movs) && movs.length > 0) {
+				table.innerHTML = movs.map(m => {
+					// 1. Determinar si es Ingreso o Egreso (Visualmente)
+					const tipoRaw = (m.tipo || '').toLowerCase();
+					const esEgreso = tipoRaw === 'gasto' || tipoRaw === 'egreso';
+					
+					// Configuración Visual del Flujo
+					const flujoTexto = esEgreso ? 'EGRESO' : 'INGRESO';
+					const flujoColor = esEgreso 
+						? 'bg-red-500/10 text-red-500 border-red-500/20' 
+						: 'bg-green-500/10 text-green-500 border-green-500/20';
+
+					// 2. Determinar la Categoría (Columna "Tipo")
+					// Si el tipo guardado es "Ingreso" generico, tratamos de adivinar, sino usamos el tipo guardado (Plan, Mercaderia)
+					let categoriaReal = m.tipo;
+					if (tipoRaw === 'ingreso' || tipoRaw === 'egreso' || tipoRaw === 'gasto') {
+						 // Si es genérico, intentamos deducir por descripción
+						 if(m.descripcion.toLowerCase().includes('plan')) categoriaReal = 'Membresía';
+						 else if(m.descripcion.toLowerCase().includes('venta')) categoriaReal = 'Venta Mostrador';
+						 else categoriaReal = 'Varios';
+					}
+
+					return `
+					<tr class="viking-table-row border-b border-white/5 hover:bg-white/5 transition-colors">
+						<!-- COL 1: FLUJO (Verde/Rojo) -->
+						<td class="py-4 px-2">
+							<span class="px-3 py-1 rounded border text-[9px] font-black uppercase tracking-wider ${flujoColor}">
+								${flujoTexto}
+							</span>
+						</td>
+
+						<!-- COL 2: TIPO (Plan, Mercadería, Varios) -->
+						<td class="py-4 px-2">
+							<span class="text-white text-[10px] font-black uppercase italic opacity-70">
+								<i data-lucide="tag" class="w-3 h-3 inline mr-1 opacity-50"></i>${categoriaReal}
+							</span>
+						</td>
+
+						<!-- COL 3: DESCRIPCIÓN -->
+						<td class="py-4 px-2">
+							<p class="text-[11px] font-bold text-white uppercase">${m.descripcion}</p>
+							<p class="text-[9px] text-gray-500">${new Date(m.fecha).toLocaleDateString()} - ${m.metodo_pago || 'Efectivo'}</p>
+						</td>
+
+						<!-- COL 4: MONTO -->
+						<td class="py-4 px-2 text-right font-black italic text-white tracking-wide pr-2">
+							$ ${parseFloat(m.monto).toLocaleString()}
+						</td>
+					</tr>
+				`}).join('');
+				
+				if(window.lucide) lucide.createIcons();
+				
+			} else {
+				table.innerHTML = '<tr><td colspan="4" class="text-center py-6 text-gray-500 italic text-[10px]">Sin movimientos registrados</td></tr>';
 			}
 		}
+	}
 
 		async function guardarMovimiento(event) {
 		// Evita recarga de página
