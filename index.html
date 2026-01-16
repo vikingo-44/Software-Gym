@@ -3084,7 +3084,44 @@ async function renderRutinas() {
 				}
 			}
 		}
+
+		async function guardarMovimiento(event) {
+		// Evita recarga de página
+		event.preventDefault(); 
+
+		// 1. OBTENER VALORES DEL FORMULARIO
+		const descripcion = document.getElementById('input-desc-gasto')?.value || 'Varios';
+		const monto = parseFloat(document.getElementById('input-monto-gasto')?.value) || 0;
 		
+		// AQUI ESTABA EL ERROR: Ahora leemos el valor del select, no lo inventamos
+		const selectTipo = document.getElementById('input-tipo-movimiento');
+		const tipo = selectTipo ? selectTipo.value : 'Ingreso'; // Si no encuentra el select, asume Ingreso
+
+		if(monto <= 0) return alert("El monto debe ser mayor a 0");
+
+		// 2. ENVIAR AL BACKEND
+		// Notar que enviamos 'tipo' dinámico ahora
+		const res = await apiFetch('/caja/movimientos', 'POST', {
+			tipo: tipo, 
+			descripcion: descripcion,
+			monto: monto,
+			fecha: new Date().toISOString(),
+			metodo_pago: 'Efectivo' 
+		});
+
+		if(!res.error) {
+			// Limpiar formulario y cerrar modal si quieres
+			event.target.reset();
+			document.getElementById('modal-gasto').classList.add('hidden'); // Cierra el modal automáticamente al guardar
+			
+			// Recargar la tabla y los totales
+			await loadCaja(); 
+			
+			// Confirmación visual (opcional)
+			if(typeof showVikingToast === 'function') showVikingToast('Movimiento registrado correctamente');
+		} else {
+			alert("Error al guardar el movimiento");
+		}
 	}
 
         async function initApp() {
