@@ -1981,22 +1981,30 @@
 
         document.getElementById('cobrar-search').oninput = renderCobrar;
 
-        function addToCart(productId) {
-			// 1. Buscamos en el stock cargado en memoria
+		// ==========================================
+		// CONFIGURACIÓN CENTRAL
+		// ==========================================
+		const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+			? "http://localhost:8000/api"
+			: "/api";
+
+		/**
+		 * FUNCIÓN 1: AGREGAR MERCADERÍA
+		 * Mantenemos la lógica robusta que ya teníamos.
+		 */
+		function addToCart(productId) {
 			const item = state.stock.find(s => s.id == productId);
 			
 			if (!item) {
-				console.error("Producto no encontrado en state.stock con ID:", productId);
+				console.error("Producto no encontrado ID:", productId);
 				return;
 			}
 
-			// 2. Validación de Stock visual
 			if (item.stock_actual <= 0) {
 				return showVikingToast(`¡Sin stock de ${item.nombre_producto}!`, true);
 			}
 
-			// 3. Verificar si ya está en el carrito para sumar cantidad
-			// IMPORTANTE: Usamos 'producto_id' para diferenciarlo de los planes
+			// Verificar si ya existe para sumar
 			const existing = state.cart.find(c => c.producto_id == productId && c.tipo === 'Mercaderia');
 
 			if (existing) {
@@ -2004,230 +2012,135 @@
 					existing.cantidad++;
 					showVikingToast(`+1 ${item.nombre_producto}`);
 				} else {
-					return showVikingToast("No puedes vender más de lo que tienes en stock", true);
+					return showVikingToast("Stock insuficiente para agregar más", true);
 				}
 			} else {
-				// 4. Estructura Compatible con TransactionCreate (Backend)
 				state.cart.push({
-					tipo: 'Mercaderia',       // Clave para el backend
-					producto_id: productId,   // ID específico del producto
-					alumno_id: null,          // Mercadería no lleva alumno obligatoriamente aquí
+					tipo: 'Mercaderia',
+					producto_id: productId,
+					alumno_id: null,
 					nombre: item.nombre_producto,
-					precio: item.precio_venta,
+					precio: item.precio_venta, // Guardamos como 'precio' estandarizado
 					cantidad: 1,
-					url_imagen: item.url_imagen // Opcional para visualización
+					url_imagen: item.url_imagen 
 				});
-				showVikingToast(`${item.nombre_producto} añadido al ticket`);
+				showVikingToast(`${item.nombre_producto} añadido`);
 			}
 
-			// Compatibilidad de nombres para refrescar UI
 			if (typeof updateCartUI === 'function') updateCartUI();
-			if (typeof renderCart === 'function') renderCart();
-		}
-
-        function preparePlanCharge(alumnoId) {
-            const al = state.alumnos.find(a => a.id === alumnoId);
-            if (!al) return;
-            const selectedPlanId = parseInt(document.getElementById(`plan-select-${alumnoId}`).value);
-            const plan = state.planes.find(p => p.id === selectedPlanId);
-            if (!plan) return;
-            state.cart = state.cart.filter(c => c.type !== 'plan');
-            state.cart.push({ id: `plan-${al.id}`, nombre_producto: `RENOV: ${al.nombre_completo} (${plan.nombre})`, precio_venta: plan.precio, qty: 1, type: 'plan', alumno_id: al.id, plan_id_cobrado: plan.id });
-            updateCartUI();
-        }
-
-        function updateCartUI() {
-            const list = document.getElementById('cobrar-lista-carrito');
-            if (state.cart.length === 0) {
-                list.innerHTML = '<p class="text-center text-gray-500 text-[11px] italic py-10">Sin ítems seleccionados</p>';
-                document.getElementById('cobrar-subtotal').innerText = '$ 0';
-                document.getElementById('cobrar-total').innerText = '$ 0';
-                return;
-            }
-            list.innerHTML = state.cart.map((c, idx) => `<div class="flex items-center justify-between bg-white/5 p-3 rounded-xl border border-white/5"><div class="overflow-hidden text-left"><p class="text-[11px] font-black uppercase italic truncate">${c.nombre_producto}</p><p class="text-[10px] text-gray-500 font-bold">VALOR: $ ${c.precio_venta.toLocaleString()}</p></div><button onclick="removeFromCart(${idx})" class="text-red-600 hover:text-white"><i data-lucide="trash-2" class="w-3 h-3"></i></button></div>`).join('');
-            const total = state.cart.reduce((acc, c) => acc + (c.qty * c.precio_venta), 0);
-            document.getElementById('cobrar-subtotal').innerText = `$ ${total.toLocaleString()}`;
-            document.getElementById('cobrar-total').innerText = `$ ${total.toLocaleString()}`;
-            lucide.createIcons();
-        }
-
-        function removeFromCart(i) { state.cart.splice(i, 1); updateCartUI(); }
-        function setPaymentMethod(m) {
-            state.currentPaymentMethod = m;
-            document.querySelectorAll('.payment-method-btn').forEach(b => b.classList.toggle('active', b.innerText.includes(m)));
-        }
-		
-		function setPaymentMethod(metodo) {
-			// 1. Actualizar el valor lógico (lo que lee finalizarVenta)
-			const select = document.getElementById('metodo-pago');
-			if (select) {
-				select.value = metodo;
-			}
-
-			// 2. Actualizar el valor visual (Colores de botones)
-			const botones = document.querySelectorAll('.btn-pago');
-			
-			botones.forEach(btn => {
-				// Obtenemos el método asociado a este botón desde el atributo HTML
-				const btnMethod = btn.getAttribute('data-method');
-
-				if (btnMethod === metodo) {
-					// ESTILO ACTIVO: Rojo Vikingo, texto negro, con sombra
-					btn.className = "btn-pago w-full py-3 rounded-xl text-[10px] font-black uppercase italic transition-all bg-red-600 text-black shadow-lg shadow-red-600/20 transform scale-105";
-				} else {
-					// ESTILO INACTIVO: Fondo oscuro, texto gris
-					btn.className = "btn-pago w-full py-3 rounded-xl text-[10px] font-black uppercase italic transition-all bg-white/5 text-gray-400 hover:text-white border border-transparent hover:border-red-600/30";
-				}
-			});
-		}
-		
-		// --- CONFIGURACIÓN DE API ---
-		const API_URL = "https://vikingo-strengthhub.onrender.com/api"; 
-
-		// --- FUNCIÓN PRINCIPAL DE COBRO ---
-		async function confirmarCobroFinal() {
-			if (state.cart.length === 0) {
-				return showVikingToast("El carrito está vacío, guerrero", true);
-			}
-			
-			// Obtener método de pago
-			const metodoEl = document.getElementById('metodo-pago-select');
-			const metodo = metodoEl ? metodoEl.value : "Efectivo";
-
-			showVikingToast("Sincronizando con la Tesorería...");
-
-			try {
-				// Procesamos los items uno por uno
-				for (const item of state.cart) {
-					// Preparamos el paquete de datos asegurando tipos numéricos
-					const payload = {
-						tipo: item.tipo, // 'Plan' o 'Mercaderia'
-						monto: parseFloat(item.precio * item.cantidad),
-						descripcion: item.nombre,
-						metodo_pago: metodo,
-						alumno_id: item.alumno_id ? parseInt(item.alumno_id) : null,
-						producto_id: item.producto_id ? parseInt(item.producto_id) : null,
-						cantidad: parseInt(item.cantidad)
-					};
-
-					const response = await fetch(`${API_URL}/cobros/procesar`, {
-						method: 'POST',
-						headers: { 'Content-Type': 'application/json' },
-						body: JSON.stringify(payload)
-					});
-
-					if (!response.ok) {
-						const errorData = await response.json();
-						throw new Error(errorData.detail || "Error en el servidor");
-					}
-				}
-
-				// ÉXITO TOTAL
-				showVikingToast("¡Victoria! Cobro registrado con éxito");
-				state.cart = []; // Limpiar carrito
-				updateCartUI(); // Actualizar interfaz de ticket
-				
-				// Recargar datos para ver stock y caja actualizada
-				if (typeof loadAllData === 'function') await loadAllData();
-				if (typeof renderCobrar === 'function') renderCobrar();
-
-			} catch (err) {
-				console.error("Fallo en el cobro:", err);
-				showVikingToast("Fallo: " + err.message, true);
-			}
-		}
-
-        async function finalizarVenta() {
-			if (state.cart.length === 0) {
-				return showVikingToast("El carrito está vacío, guerrero", true);
-			}
-			
-			// Obtener método de pago (asegura que el ID coincida con tu HTML)
-			const metodoEl = document.getElementById('metodo-pago'); 
-			const metodo = metodoEl ? metodoEl.value : "Efectivo";
-
-			showVikingToast("Sincronizando con la Tesorería...");
-
-			try {
-				// Procesamos los items uno por uno
-				for (const item of state.cart) {
-					// Preparamos el paquete de datos asegurando tipos numéricos
-					// IMPORTANTE: Aquí se usan las propiedades que definimos en addToCart (cantidad, tipo, producto_id)
-					const payload = {
-						tipo: item.tipo, // 'Plan' o 'Mercaderia'
-						monto: parseFloat(item.precio * item.cantidad),
-						descripcion: item.nombre,
-						metodo_pago: metodo,
-						alumno_id: item.alumno_id ? parseInt(item.alumno_id) : null,
-						producto_id: item.producto_id ? parseInt(item.producto_id) : null,
-						cantidad: parseInt(item.cantidad)
-					};
-
-					const response = await fetch(`${API_URL}/cobros/procesar`, {
-						method: 'POST',
-						headers: { 'Content-Type': 'application/json' },
-						body: JSON.stringify(payload)
-					});
-
-					if (!response.ok) {
-						const errorData = await response.json();
-						throw new Error(errorData.detail || "Error en el servidor");
-					}
-				}
-
-				// ÉXITO TOTAL
-				showVikingToast("¡Victoria! Cobro registrado con éxito");
-				state.cart = []; // Limpiar carrito
-				if (typeof updateCartUI === 'function') updateCartUI(); // Actualizar interfaz de ticket
-				if (typeof renderCart === 'function') renderCart(); // Compatibilidad con nombres antiguos
-				
-				// Recargar datos para ver stock y caja actualizada
-				if (typeof loadStock === 'function') await loadStock();
-				if (typeof renderCaja === 'function') renderCaja();
-				if (typeof loadAlumnos === 'function') loadAlumnos();
-
-			} catch (err) {
-				console.error("Fallo en el cobro:", err);
-				showVikingToast("Fallo: " + err.message, true);
-			}
 		}
 
 		/**
-		 * FUNCIÓN PARA PROCESAR EL PAGO FINAL
-		 * Esta función se encarga de hablar con el backend para impactar Caja y Stock.
+		 * FUNCIÓN 2: ACTUALIZAR UI (VISUAL)
 		 */
-		async function procesarPagoVikingo(payload) {
+		function updateCartUI() {
+			const list = document.getElementById('cobrar-lista-carrito');
+			if (!list) return; // Protección por si no estamos en la vista
+			
+			if (state.cart.length === 0) {
+				list.innerHTML = '<p class="text-center text-gray-500 text-[11px] italic py-10">Sin ítems seleccionados</p>';
+				updateTotales(0);
+				return;
+			}
+
+			list.innerHTML = state.cart.map((c, idx) => `
+				<div class="flex items-center justify-between bg-white/5 p-3 rounded-xl border border-white/5">
+					<div class="overflow-hidden text-left">
+						<p class="text-[11px] font-black uppercase italic truncate text-white">${c.nombre}</p>
+						<div class="flex gap-2">
+							<p class="text-[10px] text-gray-500 font-bold">VALOR: $ ${c.precio.toLocaleString()}</p>
+							<p class="text-[10px] text-red-500 font-bold">CANT: ${c.cantidad}</p>
+						</div>
+					</div>
+					<button onclick="removeFromCart(${idx})" class="text-red-600 hover:text-white">
+						<i data-lucide="trash-2" class="w-3 h-3"></i>
+					</button>
+				</div>
+			`).join('');
+
+			const total = state.cart.reduce((acc, c) => acc + (c.cantidad * c.precio), 0);
+			updateTotales(total);
+			
+			if (window.lucide) lucide.createIcons();
+		}
+
+		function updateTotales(monto) {
+			const elSub = document.getElementById('cobrar-subtotal');
+			const elTot = document.getElementById('cobrar-total');
+			if (elSub) elSub.innerText = `$ ${monto.toLocaleString()}`;
+			if (elTot) elTot.innerText = `$ ${monto.toLocaleString()}`;
+		}
+
+		function removeFromCart(i) { 
+			state.cart.splice(i, 1); 
+			updateCartUI(); 
+		}
+
+		function setPaymentMethod(metodo) {
+			const select = document.getElementById('metodo-pago');
+			if (select) select.value = metodo;
+
+			document.querySelectorAll('.btn-pago').forEach(btn => {
+				const btnMethod = btn.getAttribute('data-method');
+				const isActive = btnMethod === metodo;
+				btn.className = isActive 
+					? "btn-pago w-full py-3 rounded-xl text-[10px] font-black uppercase italic transition-all bg-red-600 text-black shadow-lg shadow-red-600/20 transform scale-105"
+					: "btn-pago w-full py-3 rounded-xl text-[10px] font-black uppercase italic transition-all bg-white/5 text-gray-400 hover:text-white border border-transparent hover:border-red-600/30";
+			});
+		}
+
+		// ==========================================
+		// NUEVA LÓGICA DE COBRO (MODULARIZADA)
+		// ==========================================
+
+		/**
+		 * CORE: FUNCIÓN PRINCIPAL QUE HABLA CON EL BACKEND
+		 * Ahora acepta 'actualizarUI' para controlar cuándo refrescar la pantalla.
+		 */
+		async function procesarPagoVikingo(payload, actualizarUI = true) {
 			// Payload esperado: { tipo, monto, descripcion, metodo_pago, alumno_id, producto_id, cantidad }
 			
-			showVikingToast("Sincronizando con la Tesorería...");
+			if(actualizarUI) showVikingToast("Sincronizando con la Tesorería...");
 
 			try {
-				const res = await apiFetch('/cobros/procesar', 'POST', payload);
+				const response = await fetch(`${API_BASE}/cobros/procesar`, {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify(payload)
+				});
 
-				if (!res.error) {
-					showVikingToast("¡Victoria! Cobro registrado y Stock actualizado");
+				const res = await response.json();
+
+				if (response.ok) {
+					if(actualizarUI) showVikingToast("¡Victoria! Cobro registrado y Stock actualizado");
 					
-					// 1. Refrescamos el estado local para que el usuario vea los cambios sin F5
-					await Promise.all([
-						loadStock(),   // Para ver el nuevo stock
-						loadAlumnos(), // Para ver el nuevo vencimiento
-						loadCaja()     // Para ver el nuevo ingreso en caja (si tienes esa función)
-					]);
+					// 1. Refrescamos datos si se solicita
+					if (actualizarUI) {
+						await Promise.all([
+							typeof loadStock === 'function' ? loadStock() : null,
+							typeof loadAlumnos === 'function' ? loadAlumnos() : null,
+							typeof loadCaja === 'function' ? loadCaja() : null
+						]);
 
-					// 2. Limpiar el carrito o la vista de cobro
-					if (state.cobrarTab === 'mercaderia') {
-						state.cart = [];
-						updateCartUI();
+						// 2. Limpiar UI si aplica
+						if (payload.tipo === 'Mercaderia') {
+							state.cart = [];
+							updateCartUI();
+						}
+						
+						// 3. Renderizar vista de nuevo
+						if (typeof renderCobrar === 'function') renderCobrar();
 					}
-					
-					// 3. Volver a renderizar la vista actual
-					renderCobrar();
+					return true; // Retornamos true para indicar éxito
 					
 				} else {
-					showVikingToast("Error: " + (res.detail || res.error), true);
+					showVikingToast("Error: " + (res.detail || "Error desconocido"), true);
+					return false;
 				}
 			} catch (err) {
+				console.error(err);
 				showVikingToast("Error de conexión con el Valhalla", true);
+				return false;
 			}
 		}
 
@@ -2236,46 +2149,83 @@
 		 */
 		async function preparePlanCharge(alumnoId) {
 			const alumno = state.alumnos.find(a => a.id === alumnoId);
+			if (!alumno) return;
+
+			// Usamos parseInt para asegurar que comparamos números
 			const planSelect = document.getElementById(`plan-select-${alumnoId}`);
-			const planId = planSelect.value;
-			const plan = state.planes.find(p => p.id == planId);
+			const planId = parseInt(planSelect.value);
+			const plan = state.planes.find(p => p.id === planId);
 
 			if (!plan) return showVikingToast("Selecciona un plan válido", true);
 
-			// Aquí podrías abrir un modal para elegir método de pago, 
-			// pero para este paso a paso usaremos Efectivo por defecto:
-			const confirmacion = confirm(`¿Confirmar cobro de $${plan.precio} a ${alumno.nombre_completo} por el plan ${plan.nombre}?`);
+			// Intentamos obtener el método de pago seleccionado, o default a Efectivo
+			const metodoEl = document.getElementById('metodo-pago');
+			const metodoPago = metodoEl ? metodoEl.value : "Efectivo";
+
+			const confirmacion = confirm(`¿Confirmar cobro de $${plan.precio} a ${alumno.nombre_completo} por el plan ${plan.nombre} (${metodoPago})?`);
 			
 			if (confirmacion) {
+				// Llamamos a la función central
 				await procesarPagoVikingo({
 					tipo: "Plan",
 					monto: plan.precio,
 					descripcion: `Renovación Plan ${plan.nombre}: ${alumno.nombre_completo}`,
-					metodo_pago: "Efectivo",
-					alumno_id: alumnoId
-				});
+					metodo_pago: metodoPago,
+					alumno_id: alumnoId,
+					cantidad: 1
+				}, true); // true = refrescar UI al terminar
 			}
 		}
 
 		/**
 		 * ADAPTACIÓN PARA COBRO DE MERCADERÍA (Desde el Carrito)
+		 * Reemplaza a 'confirmarCobroFinal'
 		 */
 		async function finalizarVentaMercaderia() {
 			if (state.cart.length === 0) return showVikingToast("El carrito está vacío", true);
 
-			const total = state.cart.reduce((acc, item) => acc + (item.precio_venta * item.cantidad), 0);
+			// Usamos item.precio (estandarizado)
+			const total = state.cart.reduce((acc, item) => acc + (item.precio * item.cantidad), 0);
 			
-			if (confirm(`¿Finalizar venta por un total de $${total.toLocaleString()}?`)) {
+			// Obtener método de pago
+			const metodoEl = document.getElementById('metodo-pago');
+			const metodoPago = metodoEl ? metodoEl.value : "Efectivo";
+
+			if (confirm(`¿Finalizar venta por un total de $${total.toLocaleString()} (${metodoPago})?`)) {
+				
+				showVikingToast("Procesando venta múltiple...");
+				let errores = 0;
+
 				// Procesamos cada item del carrito
 				for (const item of state.cart) {
-					await procesarPagoVikingo({
+					// Pasamos 'false' en el segundo argumento para NO refrescar la UI 
+					// ni borrar el carrito en cada iteración (esperamos al final)
+					const exito = await procesarPagoVikingo({
 						tipo: "Mercaderia",
-						monto: item.precio_venta * item.cantidad,
-						descripcion: `Venta: ${item.nombre_producto} (x${item.cantidad})`,
-						metodo_pago: "Efectivo",
-						producto_id: item.id,
+						monto: item.precio * item.cantidad,
+						descripcion: `Venta: ${item.nombre} (x${item.cantidad})`,
+						metodo_pago: metodoPago,
+						producto_id: item.producto_id,
 						cantidad: item.cantidad
-					});
+					}, false);
+
+					if (!exito) errores++;
+				}
+
+				// AL TERMINAR EL BUCLE, HACEMOS LA LIMPIEZA MANUALMENTE
+				if (errores === 0) {
+					showVikingToast("¡Venta finalizada con gloria!");
+					state.cart = []; // Vaciamos carrito
+					updateCartUI();
+					
+					// Recargamos datos una sola vez al final
+					if (typeof loadStock === 'function') await loadStock();
+					if (typeof loadCaja === 'function') await loadCaja();
+					if (typeof renderCobrar === 'function') renderCobrar();
+				} else {
+					showVikingToast(`Venta completada con ${errores} errores. Revisa el stock.`, true);
+					// Recargamos igual para asegurar consistencia
+					await loadStock();
 				}
 			}
 		}
