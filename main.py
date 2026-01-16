@@ -29,7 +29,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# --- SCHEMAS ---
+# ==========================================
+# SCHEMAS (Modelos de Datos Pydantic)
+# ==========================================
 
 class UsuarioLogin(BaseModel):
     dni: str
@@ -127,6 +129,13 @@ class MovimientoCajaCreate(BaseModel):
     descripcion: str
     metodo_pago: Optional[str] = "Efectivo"
 
+# Este es el esquema que faltaba y estaba mal indentado antes
+class MovimientoCreate(BaseModel):
+    descripcion: str
+    monto: float
+    tipo: str  
+    metodo_pago: str = "Efectivo"
+
 class TransactionCreate(BaseModel):
     tipo: str  # 'Plan' o 'Mercaderia'
     monto: float
@@ -213,12 +222,7 @@ class GrupoMuscularSchema(BaseModel):
     id: int
     nombre: str
     class Config: from_attributes = True
-    
-class MovimientoCreate(BaseModel):
-    descripcion: str
-    monto: float
-    tipo: str  # "Ingreso" o "Gasto"
-    metodo_pago: str = "Efectivo"
+
 
 # ==========================================
 # ENDPOINTS
@@ -673,6 +677,22 @@ def create_movimiento(data: MovimientoCajaCreate, db: Session = Depends(database
     db.commit()
     return {"status": "success"}
 
+# ESTE ES EL ENDPOINT QUE FALTABA O ESTABA ROTO (PLURAL)
+@app.post("/api/caja/movimientos", tags=["Caja"])
+def crear_movimiento_caja(mov: MovimientoCreate, db: Session = Depends(database.get_db)):
+    # Usamos models.MovimientoCaja porque es el modelo correcto usado en get_movimientos
+    nuevo_movimiento = models.MovimientoCaja(
+        descripcion=mov.descripcion,
+        monto=mov.monto,
+        tipo=mov.tipo,
+        metodo_pago=mov.metodo_pago,
+        fecha=datetime.now()
+    )
+    db.add(nuevo_movimiento)
+    db.commit()
+    db.refresh(nuevo_movimiento)
+    return {"mensaje": "Movimiento registrado con éxito", "id": nuevo_movimiento.id}
+
 # --- PROCESAR COBROS (CORREGIDO) ---
 @app.post("/api/cobros/procesar", tags=["Finanzas"])
 def procesar_cobro(data: TransactionCreate, db: Session = Depends(database.get_db)):
@@ -848,22 +868,6 @@ def get_historial_rutinas(id: int, db: Session = Depends(database.get_db)):
             .joinedload(models.DiaRutina.ejercicios)
             .joinedload(models.EjercicioEnRutina.series_detalle)
     ).order_by(models.PlanRutina.fecha_creacion.desc()).all()
-    
-@app.post("/api/caja/movimientos", tags=["Caja"])
-def crear_movimiento_caja(mov: MovimientoCreate, db: Session = Depends(database.get_db)):
-    # Creamos el registro en la base de datos
-    # Ajusta 'models.Caja' al nombre real de tu tabla si es diferente (ej: models.Movimiento)
-    nuevo_movimiento = models.Caja(
-        descripcion=mov.descripcion,
-        monto=mov.monto,
-        tipo=mov.tipo,
-        metodo_pago=mov.metodo_pago,
-        fecha=datetime.now()
-    )
-    db.add(nuevo_movimiento)
-    db.commit()
-    db.refresh(nuevo_movimiento)
-    return {"mensaje": "Movimiento registrado con éxito", "id": nuevo_movimiento.id}
 
 if __name__ == "__main__":
     import uvicorn
