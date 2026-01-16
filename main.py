@@ -10,6 +10,7 @@ from sqlalchemy import func, extract
 from sqlalchemy.orm.attributes import flag_modified
 from typing import List, Optional, Union
 from pydantic import BaseModel
+from datetime import datetime, timedelta
 
 # Configuración de logs para ver errores en Render/Producción
 logging.basicConfig(level=logging.INFO)
@@ -705,13 +706,16 @@ def create_movimiento(data: MovimientoCajaCreate, db: Session = Depends(database
 def procesar_cobro(data: TransactionCreate, db: Session = Depends(database.get_db)):
     try:
         # 1. Registro automático en Caja
+        # Usamos tu modelo MovimientoCaja. Asegúrate que tenga estos campos.
         nueva_transaccion = models.MovimientoCaja(
-            tipo="Ingreso",
+            tipo=data.tipo,  # Guardamos 'Plan' o 'Mercaderia' para saber qué fue
             monto=data.monto,
             descripcion=data.descripcion,
             metodo_pago=data.metodo_pago,
-            fecha=datetime.datetime.now()
+            fecha=datetime.now()
         )
+        # Opcional: Si tu modelo MovimientoCaja tiene alumno_id/producto_id, asígnalos aquí también.
+        
         db.add(nueva_transaccion)
 
         # 2. Lógica de Stock (Si es mercadería)
@@ -728,23 +732,42 @@ def procesar_cobro(data: TransactionCreate, db: Session = Depends(database.get_d
         # 3. Actualización de Alumno (Si es un Plan)
         if data.tipo == "Plan" and data.alumno_id:
             alumno = db.query(models.Usuario).filter(models.Usuario.id == data.alumno_id).first()
-            if alumno:
-                hoy = datetime.date.today()
-                alumno.fecha_ultima_renovacion = hoy
-                # Corrección: Uso correcto de timedelta
-                alumno.fecha_vencimiento = hoy + datetime.timedelta(days=30)
+            
+            # BUSCAMOS EL PLAN EN LA TABLA 'tipos_planes' (Modelo TipoPlan)
+            # Usamos data.producto_id que viene del front con el ID del plan seleccionado
+            plan = db.query(models.TipoPlan).filter(models.TipoPlan.id == data.producto_id).first()
+            
+            if alumno and plan:
+                hoy = datetime.now()
+                
+                # A. Actualizamos fechas de pago
+                alumno.fecha_ultimo_pago = hoy 
+                alumno.fecha_ultima_renovacion = hoy 
+                
+                # B. Calculamos Vencimiento Dinámico usando la columna 'duracion_dias'
+                # Si por error duracion_dias es null o 0, usamos 30 días por seguridad
+                dias_duracion = plan.duracion_dias if plan.duracion_dias and plan.duracion_dias > 0 else 30
+                alumno.fecha_vencimiento = hoy + timedelta(days=dias_duracion)
+                
+                # C. Actualizamos Estado y Plan
+                alumno.estado = "Activo"       # Cambiamos estado para quitar el "Vencido"
                 alumno.estado_cuenta = "Al día"
+                alumno.plan_id = plan.id       # Asignamos el nuevo plan al usuario
+                
+                # D. Reseteamos Clases (Solo si tu tabla tipos_planes tuviera cupo de clases, sino lo ignora)
+                if hasattr(plan, 'clases_mensuales') and plan.clases_mensuales:
+                    alumno.clases_restantes = plan.clases_mensuales
 
         db.commit()
-        return {"status": "success", "message": "Cobro procesado correctamente"}
+        return {"status": "success", "message": "Cobro procesado y sistema actualizado correctamente"}
 
     except HTTPException as he:
         db.rollback()
         raise he
     except Exception as e:
         db.rollback()
-        logger.error(f"Error procesando cobro: {str(e)}")
-        raise HTTPException(status_code=500, detail="Error interno al procesar el pago")
+        # logger.error(f"Error procesando cobro: {str(e)}") 
+        raise HTTPException(status_code=500, detail=f"Error interno al procesar el pago: {str(e)}")
 
 # ==========================================
 # MÓDULO 9: MUSCULACIÓN
