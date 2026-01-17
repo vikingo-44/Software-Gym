@@ -478,59 +478,75 @@
             <!-- DASHBOARD -->
             <div id="view-dashboard" class="view-content active">
                 <div id="admin-dashboard-layout">
-                    <div class="grid grid-cols-1 lg:grid-cols-4 gap-8 mb-10">
-                        <div class="glass-card p-8 rounded-[2.5rem]">
-                            <h4 class="text-[11px] font-black uppercase italic text-red-600 mb-6 tracking-widest">Últimos Check-ins</h4>
-                            <div id="dash-checkins" class="space-y-4"></div>
-                        </div>
-                        <div class="glass-card p-8 rounded-[2.5rem]">
-                            <h4 class="text-[11px] font-black uppercase italic text-red-600 mb-6 tracking-widest">Resumen</h4>
-                            <div id="dash-summary" class="space-y-4">
-                                <div class="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5">
-                                    <span class="text-[11px] font-black italic">INGRESOS HOY</span>
-                                    <span class="text-[10px] text-green-600 font-bold italic" id="dash-ingresos">$ 0</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="glass-card p-8 rounded-[2.5rem]">
-                            <h4 class="text-[11px] font-black uppercase italic text-red-600 mb-6 tracking-widest">Frecuencia Horaria</h4>
-                            <div id="dash-stats-bars" class="flex items-end justify-between h-32 px-2">
-                                <div class="w-4 viking-bg-red/20 h-[35%] rounded-t-lg"></div>
-                                <div class="w-4 viking-bg-red/40 h-[65%] rounded-t-lg"></div>
-                                <div class="w-4 viking-bg-red h-[95%] rounded-t-lg"></div>
-                                <div class="w-4 viking-bg-red/60 h-[75%] rounded-t-lg"></div>
-                                <div class="w-4 viking-bg-red/30 h-[45%] rounded-t-lg"></div>
-                            </div>
-                        </div>
-                        <div class="glass-card p-8 rounded-[2.5rem]">
-                            <h4 class="text-[11px] font-black uppercase italic text-red-600 mb-6 tracking-widest">Top 5 Clases</h4>
-                            <div id="dash-top-clases" class="space-y-3"></div>
-                        </div>
-                    </div>
+				<!-- FILA SUPERIOR: FINANZAS Y ALERTAS -->
+				<div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+					
+					<!-- PANEL 1: ÚLTIMOS 10 INGRESOS (REALES) -->
+					<div class="glass-card p-8 rounded-[2.5rem] border-green-500/10 flex flex-col h-[400px]">
+						<div class="flex justify-between items-center mb-6 border-b border-white/5 pb-4">
+							<div>
+								<h4 class="text-sm font-black uppercase italic text-green-500 tracking-widest">
+									<i data-lucide="trending-up" class="w-4 h-4 inline mr-2"></i>Últimos Ingresos
+								</h4>
+								<p class="text-[9px] text-gray-500 font-bold uppercase mt-1">Entradas de dinero recientes</p>
+							</div>
+							<button onclick="switchView('caja')" class="text-[9px] bg-white/5 hover:bg-white/10 px-3 py-1 rounded-lg transition-colors font-black uppercase italic">Ver Caja</button>
+						</div>
+						<div id="dash-last-incomes" class="flex-1 overflow-y-auto custom-scrollbar space-y-3 pr-2">
+							<p class="text-center text-gray-600 italic text-[10px] py-10">Cargando tesoro...</p>
+						</div>
+					</div>
 
-                    <div class="glass-card p-10 rounded-[3rem]">
-                        <div class="flex justify-between items-center mb-8">
-                            <h3 class="text-sm font-black uppercase italic border-l-4 border-red-600 pl-4 tracking-widest">Vista Rápida Alumnos (A-Z)</h3>
-                        </div>
-                        <div class="overflow-x-auto">
-                            <table class="w-full text-left">
-                                <thead>
-                                    <tr class="text-[10px] font-black uppercase text-gray-500 italic border-b border-white/5">
-                                        <th class="pb-5">Nombre Completo</th>
-                                        <th class="pb-5">DNI</th>
-                                        <th class="pb-5">Email</th>
-                                        <th class="pb-5">Plan</th>
-                                        <th class="pb-5">Status</th>
-                                        <th class="pb-5">Renovación</th>
-                                        <th class="pb-5">Vencimiento</th>
-                                        <th class="pb-5 text-right action-col">Acciones</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="dash-table-alumnos-mini" class="text-[12px] font-black uppercase italic"></tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
+					<!-- PANEL 2: ALERTAS DE STOCK (RELEVANTE) -->
+					<!-- Reemplaza "Movimientos" por algo crítico: Stock Bajo -->
+					<div class="glass-card p-8 rounded-[2.5rem] border-red-500/10 flex flex-col h-[400px]">
+						<div class="flex justify-between items-center mb-6 border-b border-white/5 pb-4">
+							<div>
+								<h4 class="text-sm font-black uppercase italic text-red-600 tracking-widest">
+									<i data-lucide="alert-triangle" class="w-4 h-4 inline mr-2"></i>Alertas de Stock
+								</h4>
+								<p class="text-[9px] text-gray-500 font-bold uppercase mt-1">Provisiones bajas en el Valhalla</p>
+							</div>
+							<button onclick="switchView('stock')" class="text-[9px] bg-white/5 hover:bg-white/10 px-3 py-1 rounded-lg transition-colors font-black uppercase italic">Reponer</button>
+						</div>
+						<div id="dash-low-stock" class="flex-1 overflow-y-auto custom-scrollbar space-y-3 pr-2">
+							<p class="text-center text-gray-600 italic text-[10px] py-10">Escaneando almacén...</p>
+						</div>
+					</div>
+				</div>
+
+				<!-- FILA INFERIOR: ESTADÍSTICAS OPERATIVAS -->
+				<div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-10">
+					
+					<!-- PANEL 3: FRECUENCIA HORARIA (CON EJES Y DATOS) -->
+					<div class="glass-card p-8 rounded-[2.5rem] lg:col-span-2 flex flex-col">
+						<h4 class="text-sm font-black uppercase italic text-white mb-2 tracking-widest border-l-4 border-red-600 pl-4">Frecuencia Horaria</h4>
+						<p class="text-[9px] text-gray-500 font-bold uppercase mb-6 pl-5">Reservas activas por hora</p>
+						
+						<div class="flex-1 min-h-[250px] relative pt-4 pl-8 border-l border-white/10 border-b flex items-end justify-between pr-4 gap-2" id="dash-chart-container">
+							<!-- EJE Y (Labels) -->
+							<div class="absolute left-0 top-0 bottom-0 w-8 flex flex-col justify-between text-[8px] text-gray-600 font-bold py-2">
+								<span>MAX</span>
+								<span>MED</span>
+								<span>0</span>
+							</div>
+							<!-- Las barras se inyectan aquí por JS -->
+						</div>
+						<!-- EJE X (Labels) -->
+						<div id="dash-chart-labels" class="flex justify-between pl-8 pr-4 mt-2 text-[8px] text-gray-500 font-black uppercase">
+							<!-- Horas inyectadas por JS -->
+						</div>
+					</div>
+
+					<!-- PANEL 4: TOP 5 CLASES (REAL) -->
+					<div class="glass-card p-8 rounded-[2.5rem] flex flex-col">
+						<h4 class="text-sm font-black uppercase italic text-white mb-6 tracking-widest border-l-4 border-red-600 pl-4">Top 5 Clases</h4>
+						<div id="dash-top-clases" class="space-y-4 flex-1">
+							<!-- Se llena con JS -->
+						</div>
+					</div>
+				</div>
+			</div>
 
                 <div id="alumno-dashboard-layout" class="hidden">
 				<!-- SECCIÓN SUPERIOR: DATOS Y MÉTRICAS -->
@@ -3300,11 +3316,167 @@
         }
 
         async function loadDashboard() {
-            const res = await apiFetch('/caja/resumen');
-            if(!res.error) document.getElementById('dash-ingresos').innerText = `$ ${res.ingresos.toLocaleString()}`;
-            document.getElementById('dash-checkins').innerHTML = [{n: "GONZALO L.", t: "14:22"}, {n: "LAGERTHA S.", t: "14:05"}].map(c => `<div class="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5"><span class="text-[11px] font-black italic">${c.n}</span><span class="text-[10px] text-red-600 font-bold italic">${c.t} HS</span></div>`).join('');
-            document.getElementById('dash-top-clases').innerHTML = [{n: "CROSSFIT", r: 45}, {n: "HIIT", r: 28}].map((c, i) => `<div class="flex items-center justify-between p-3 bg-white/5 rounded-xl border border-white/5"><span class="text-[11px] font-black italic">${i+1}. ${c.n}</span><span class="text-[10px] text-red-600 font-bold">${c.r} RES.</span></div>`).join('');
-        }
+			// 1. Cargar datos necesarios en paralelo para velocidad
+			const [movsData, stockData, reservasData] = await Promise.all([
+				apiFetch('/caja/movimientos'),
+				apiFetch('/stock'),
+				apiFetch('/reservas')
+			]);
+
+			// Asegurar arrays
+			const movs = Array.isArray(movsData) ? movsData : [];
+			const stock = Array.isArray(stockData) ? stockData : [];
+			const reservas = Array.isArray(reservasData) ? reservasData : [];
+
+			// --- A. ÚLTIMOS 10 INGRESOS (REALES) ---
+			const incomesContainer = document.getElementById('dash-last-incomes');
+			// Filtramos movimientos tipo "Ingreso" y "Mercaderia" (si se guarda como ingreso)
+			const ingresos = movs.filter(m => {
+				const t = (m.tipo || '').toLowerCase();
+				return t === 'ingreso' || t.includes('venta') || t.includes('cobro') || t.includes('mercaderia') || t.includes('plan');
+			})
+			.sort((a, b) => new Date(b.fecha) - new Date(a.fecha)) // Ordenar por fecha desc
+			.slice(0, 10); // Top 10
+
+			if (ingresos.length === 0) {
+				incomesContainer.innerHTML = '<div class="flex flex-col items-center justify-center h-full opacity-30"><i data-lucide="piggy-bank" class="w-12 h-12 mb-2"></i><p class="text-[10px] font-black italic">Sin ingresos recientes</p></div>';
+			} else {
+				incomesContainer.innerHTML = ingresos.map(m => `
+					<div class="flex justify-between items-center p-3 bg-white/5 rounded-2xl border border-white/5 hover:bg-green-500/5 transition-colors group">
+						<div class="flex items-center gap-3">
+							<div class="w-8 h-8 rounded-lg bg-green-500/20 text-green-500 flex items-center justify-center">
+								<i data-lucide="dollar-sign" class="w-4 h-4"></i>
+							</div>
+							<div>
+								<p class="text-[10px] font-black uppercase italic text-white group-hover:text-green-400 truncate max-w-[120px]">${m.descripcion}</p>
+								<p class="text-[8px] text-gray-500 font-bold">${new Date(m.fecha).toLocaleDateString()} • ${m.metodo_pago || 'Efectivo'}</p>
+							</div>
+						</div>
+						<span class="text-[11px] font-black text-white italic">$${Math.abs(parseFloat(m.monto)).toLocaleString()}</span>
+					</div>
+				`).join('');
+			}
+
+			// --- B. ALERTAS DE STOCK (Reemplazo de "Movimientos") ---
+			const stockContainer = document.getElementById('dash-low-stock');
+			const lowStock = stock.filter(s => s.stock_actual <= 5).sort((a,b) => a.stock_actual - b.stock_actual);
+
+			if (lowStock.length === 0) {
+				stockContainer.innerHTML = '<div class="flex flex-col items-center justify-center h-full opacity-30"><i data-lucide="check-circle" class="w-12 h-12 mb-2 text-green-500"></i><p class="text-[10px] font-black italic">Stock Saludable</p></div>';
+			} else {
+				stockContainer.innerHTML = lowStock.map(s => `
+					<div class="flex justify-between items-center p-3 bg-red-900/10 rounded-2xl border border-red-500/20">
+						<div class="flex items-center gap-3">
+							<div class="w-8 h-8 rounded-lg bg-red-600 text-black flex items-center justify-center font-bold text-xs shadow-lg shadow-red-600/20">
+								${s.stock_actual}
+							</div>
+							<div>
+								<p class="text-[10px] font-black uppercase italic text-red-200">${s.nombre_producto}</p>
+								<p class="text-[8px] text-red-400/60 font-bold uppercase">Reposición Urgente</p>
+							</div>
+						</div>
+						<button onclick="openEditStock(${s.id})" class="text-[9px] border border-red-500/30 text-red-400 px-2 py-1 rounded hover:bg-red-600 hover:text-black transition-colors">EDITAR</button>
+					</div>
+				`).join('');
+			}
+
+			// --- C. TOP 5 CLASES (Cálculo Real) ---
+			const classCounts = {};
+			reservas.forEach(r => {
+				const name = r.clase_nombre || "Clase Eliminada";
+				classCounts[name] = (classCounts[name] || 0) + 1;
+			});
+
+			const sortedClasses = Object.entries(classCounts)
+				.sort((a, b) => b[1] - a[1]) // Mayor a menor
+				.slice(0, 5); // Top 5
+
+			const topClassesContainer = document.getElementById('dash-top-clases');
+			if (sortedClasses.length === 0) {
+				topClassesContainer.innerHTML = '<p class="text-center text-gray-500 italic text-[10px] py-10">No hay reservas suficientes para el ranking.</p>';
+			} else {
+				topClassesContainer.innerHTML = sortedClasses.map(([name, count], index) => {
+					const medals = ["text-yellow-400", "text-gray-300", "text-amber-600", "text-gray-600", "text-gray-700"];
+					const trophy = index < 3 ? 'trophy' : 'medal';
+					return `
+					<div class="flex items-center justify-between p-3 bg-white/5 rounded-2xl border border-white/5">
+						<div class="flex items-center gap-3">
+							<i data-lucide="${trophy}" class="w-4 h-4 ${medals[index]}"></i>
+							<span class="text-[10px] font-black italic uppercase text-white">${index + 1}. ${name}</span>
+						</div>
+						<span class="text-[9px] font-black text-red-600 bg-red-600/10 px-2 py-0.5 rounded border border-red-600/20">${count} RES.</span>
+					</div>
+				`}).join('');
+			}
+
+			// --- D. FRECUENCIA HORARIA (Gráfico CSS Dinámico) ---
+			const chartContainer = document.getElementById('dash-chart-container');
+			const labelsContainer = document.getElementById('dash-chart-labels');
+			
+			// Inicializar contadores por hora (7am a 22pm)
+			const hoursMap = {};
+			for(let i=7; i<=22; i++) hoursMap[i] = 0;
+
+			// Llenar datos
+			reservas.forEach(r => {
+				if(r.horario) {
+					const h = Math.floor(parseFloat(r.horario));
+					if(hoursMap[h] !== undefined) hoursMap[h]++;
+				}
+			});
+
+			// Encontrar el valor máximo para calcular alturas porcentuales (Escala Y)
+			const maxVal = Math.max(...Object.values(hoursMap));
+			const safeMax = maxVal === 0 ? 10 : maxVal; // Evitar división por cero
+
+			// Generar Barras (Solo mostraremos algunas horas clave para no saturar)
+			// Vamos a agrupar cada 2 o 3 horas visualmente si hay muchas
+			const hoursKeys = Object.keys(hoursMap);
+			
+			// Limpiamos contenedores (manteniendo el eje Y absoluto en el container)
+			// Truco: Guardamos el eje Y para no borrarlo
+			const yAxisHTML = `
+				<div class="absolute left-0 top-0 bottom-0 w-8 flex flex-col justify-between text-[8px] text-gray-600 font-bold py-2 pointer-events-none">
+					<span>${safeMax}</span>
+					<span>${Math.round(safeMax/2)}</span>
+					<span>0</span>
+				</div>`;
+			
+			chartContainer.innerHTML = yAxisHTML;
+			labelsContainer.innerHTML = "";
+
+			hoursKeys.forEach(h => {
+				const count = hoursMap[h];
+				const heightPercent = (count / safeMax) * 100;
+				const opacity = Math.max(0.2, (count / safeMax)); // Opacidad dinámica
+				
+				// Crear Barra
+				const bar = document.createElement('div');
+				bar.className = "flex-1 mx-0.5 rounded-t-sm transition-all duration-500 hover:bg-red-500 relative group";
+				bar.style.height = `${Math.max(5, heightPercent)}%`; // Mínimo 5% para que se vea la base
+				bar.style.backgroundColor = `rgba(220, 38, 38, ${opacity})`; // Rojo con opacidad variable
+
+				// Tooltip simple
+				bar.innerHTML = `<div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 bg-black text-white text-[8px] font-bold px-1 rounded opacity-0 group-hover:opacity-100 whitespace-nowrap">${count} Res.</div>`;
+
+				chartContainer.appendChild(bar);
+
+				// Crear Label X (Solo pares para espacio)
+				if (h % 2 === 0 || h == 7) { 
+					const lbl = document.createElement('div');
+					lbl.innerText = `${h}hs`;
+					lbl.className = "flex-1 text-center";
+					labelsContainer.appendChild(lbl);
+				} else {
+					// Espacio vacío para mantener alineación
+					const lbl = document.createElement('div');
+					lbl.className = "flex-1";
+					labelsContainer.appendChild(lbl);
+				}
+			});
+
+			if (window.lucide) lucide.createIcons();
+		}
 
         async function fetchAlumnos() {
 			const d = await apiFetch('/alumnos');
