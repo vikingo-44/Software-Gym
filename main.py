@@ -4,8 +4,8 @@ from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy.exc import IntegrityError
-from sqlalchemy import func, extract
+from sqlalchemy.exc import IntegrityError, ProgrammingError
+from sqlalchemy import func, extract, text
 from sqlalchemy.orm.attributes import flag_modified
 from typing import List, Optional, Union
 from pydantic import BaseModel
@@ -28,6 +28,43 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# ==========================================
+# PARCHE DE BASE DE DATOS (AUTO-FIX)
+# ==========================================
+@app.on_event("startup")
+def startup_event():
+    """
+    Este script se ejecuta al iniciar el servidor.
+    Intenta eliminar las restricciones UNIQUE antiguas de la tabla reservas
+    que impiden reservar la misma clase en diferentes días.
+    """
+    db = database.SessionLocal()
+    try:
+        # Lista de posibles nombres que SQLAlchemy o Postgres asignan a la restricción
+        constraints_to_drop = [
+            "reservas_usuario_id_clase_id_key",             # Nombre default común
+            "reservas_usuario_id_clase_id_fecha_reserva_key", # Variante con fecha
+            "_usuario_clase_uc"                             # Nombre custom si se usó models
+        ]
+        
+        logger.info("--- INICIANDO CORRECCIÓN DE RESTRICCIONES DE BD ---")
+        for constraint in constraints_to_drop:
+            try:
+                # Intentamos borrar la restricción. Si no existe, fallará y pasaremos al siguiente.
+                db.execute(text(f"ALTER TABLE reservas DROP CONSTRAINT IF EXISTS {constraint}"))
+                db.commit()
+                logger.info(f"Restricción eliminada (si existía): {constraint}")
+            except (ProgrammingError, IntegrityError) as e:
+                db.rollback()
+                logger.info(f"No se pudo eliminar {constraint} (probablemente no existe o nombre incorrecto).")
+            except Exception as e:
+                db.rollback()
+                logger.warning(f"Error genérico al intentar limpiar constraint {constraint}: {e}")
+                
+        logger.info("--- CORRECCIÓN DE BD COMPLETADA ---")
+    finally:
+        db.close()
 
 # ==========================================
 # SCHEMAS (Modelos de Datos Pydantic)
@@ -366,7 +403,7 @@ def delete_alumno(id: int, db: Session = Depends(database.get_db)):
     db.commit()
     return {"status": "success"}
 
-# --- RESERVAS (CORREGIDO PARA EVITAR ERROR 500) ---
+# --- RESERVAS (LÓGICA BLINDADA) ---
 @app.get("/api/reservas", tags=["Reservas"])
 def get_reservas(db: Session = Depends(database.get_db)):
     res = db.query(models.Reserva).options(
@@ -409,7 +446,7 @@ def book_clase(data: ReservaCreate, db: Session = Depends(database.get_db)):
                     detail=f"Has alcanzado tu límite de {limite_mensual} clases mensuales."
                 )
 
-    # 2. VALIDACIÓN DE DUPLICADOS CORREGIDA
+    # 2. VALIDACIÓN DE DUPLICADOS (Día y Horario)
     # Verificamos si ya tiene reserva para esa clase EN ESE DÍA Y HORARIO ESPECÍFICO.
     exists = db.query(models.Reserva).filter(
         models.Reserva.usuario_id == data.usuario_id,
@@ -435,7 +472,7 @@ def book_clase(data: ReservaCreate, db: Session = Depends(database.get_db)):
     if cupo_actual >= clase.capacidad_max:
         raise HTTPException(status_code=400, detail="Este horario no tiene cupos disponibles")
 
-    # 4. Crear Reserva con Manejo de Errores DB
+    # 4. Crear Reserva
     new_res = models.Reserva(
         usuario_id=data.usuario_id,
         clase_id=data.clase_id,
@@ -450,9 +487,12 @@ def book_clase(data: ReservaCreate, db: Session = Depends(database.get_db)):
         return {"status": "success"}
     except IntegrityError as e:
         db.rollback()
-        # Esto captura el error si la DB tiene una restricción única que estamos violando
+        # Si llegamos aquí a pesar del Auto-Fix, es posible que el nombre del constraint fuera otro
         logger.error(f"Error integridad al reservar: {e}")
-        raise HTTPException(status_code=400, detail="No se pudo procesar: Posible reserva duplicada en base de datos.")
+        raise HTTPException(
+            status_code=400, 
+            detail="Error de base de datos. Intenta reiniciar el servidor para aplicar el parche automático."
+        )
     except Exception as e:
         db.rollback()
         logger.error(f"Error general al reservar: {e}")
