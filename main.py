@@ -41,7 +41,6 @@ def startup_event():
     """
     db = database.SessionLocal()
     try:
-        # Lista de posibles nombres que SQLAlchemy o Postgres asignan a la restricción
         constraints_to_drop = [
             "reservas_usuario_id_clase_id_key",             # Nombre default común
             "reservas_usuario_id_clase_id_fecha_reserva_key", # Variante con fecha
@@ -51,7 +50,6 @@ def startup_event():
         logger.info("--- INICIANDO CORRECCIÓN DE RESTRICCIONES DE BD ---")
         for constraint in constraints_to_drop:
             try:
-                # Intentamos borrar la restricción. Si no existe, fallará y pasaremos al siguiente.
                 db.execute(text(f"ALTER TABLE reservas DROP CONSTRAINT IF EXISTS {constraint}"))
                 db.commit()
                 logger.info(f"Restricción eliminada (si existía): {constraint}")
@@ -73,6 +71,10 @@ def startup_event():
 class UsuarioLogin(BaseModel):
     dni: str
     password: str
+
+# --- NUEVO: Schema para Validación de QR ---
+class AccessCheck(BaseModel):
+    qr_data: str # Recibirá el DNI contenido en el código QR
 
 class TipoPlanSchema(BaseModel):
     id: int
@@ -305,6 +307,73 @@ def login(data: UsuarioLogin, db: Session = Depends(database.get_db)):
         "imc": user.imc
     }
 
+# --- NUEVO: VALIDACIÓN DE ACCESO (QR) ---
+@app.post("/api/acceso/validar", tags=["Seguridad"])
+def validar_acceso_qr(data: AccessCheck, db: Session = Depends(database.get_db)):
+    """
+    Control de Acceso mediante escaneo de DNI.
+    Reglas:
+    - Staff (Admin, Profe, etc): Pase libre.
+    - Alumno: Solo si su plan está al día.
+    """
+    # Buscar usuario por DNI
+    user = db.query(models.Usuario).options(joinedload(models.Usuario.perfil)).filter(models.Usuario.dni == data.qr_data).first()
+    
+    if not user:
+        return {
+            "status": "DENIED",
+            "message": "Usuario no registrado",
+            "nombre": "Desconocido",
+            "rol": "Externo",
+            "color": "red"
+        }
+
+    rol = user.perfil.nombre.lower() if user.perfil else "alumno"
+
+    # 1. Lista de roles que pasan SIEMPRE (Staff)
+    roles_staff = ["administracion", "profesor", "staff", "admin", "dueño"]
+    
+    if rol in roles_staff:
+        return {
+            "status": "AUTHORIZED",
+            "message": "Bienvenido Staff",
+            "nombre": user.nombre_completo,
+            "rol": user.perfil.nombre,
+            "color": "blue"
+        }
+
+    # 2. Validación para Alumnos
+    if user.fecha_vencimiento:
+        if user.fecha_vencimiento >= date.today():
+            dias_rest = (user.fecha_vencimiento - date.today()).days
+            msg = f"Pase Válido ({dias_rest} días rest.)"
+            if dias_rest <= 3: msg = "¡Atención: Próximo a vencer!"
+            
+            return {
+                "status": "AUTHORIZED",
+                "message": msg,
+                "nombre": user.nombre_completo,
+                "rol": "Alumno",
+                "color": "green"
+            }
+        else:
+            return {
+                "status": "DENIED",
+                "message": f"Plan Vencido el {user.fecha_vencimiento}",
+                "nombre": user.nombre_completo,
+                "rol": "Alumno",
+                "color": "red"
+            }
+    else:
+        # Alumno sin plan registrado
+        return {
+            "status": "DENIED",
+            "message": "Sin plan activo asignado",
+            "nombre": user.nombre_completo,
+            "rol": "Alumno",
+            "color": "red"
+        }
+
 # --- ALUMNOS ---
 @app.get("/api/alumnos", response_model=List[UsuarioResponse], tags=["Alumnos"])
 def get_alumnos(db: Session = Depends(database.get_db)):
@@ -315,7 +384,6 @@ def get_alumnos(db: Session = Depends(database.get_db)):
     
     for al in alumnos:
         al.rol_nombre = al.perfil.nombre if al.perfil else "Alumno"
-        # Actualizar estado dinámicamente si está vencido hoy
         if al.fecha_vencimiento and al.fecha_vencimiento < date.today():
             al.estado_cuenta = "Vencido"
         
@@ -403,7 +471,7 @@ def delete_alumno(id: int, db: Session = Depends(database.get_db)):
     db.commit()
     return {"status": "success"}
 
-# --- RESERVAS (LÓGICA BLINDADA) ---
+# --- RESERVAS ---
 @app.get("/api/reservas", tags=["Reservas"])
 def get_reservas(db: Session = Depends(database.get_db)):
     res = db.query(models.Reserva).options(
@@ -427,7 +495,6 @@ def book_clase(data: ReservaCreate, db: Session = Depends(database.get_db)):
     if not user:
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
 
-    # 1. Verificar límites del plan
     if user.plan:
         limite_mensual = user.plan.clases_mensuales
         if limite_mensual < 999:
@@ -446,8 +513,6 @@ def book_clase(data: ReservaCreate, db: Session = Depends(database.get_db)):
                     detail=f"Has alcanzado tu límite de {limite_mensual} clases mensuales."
                 )
 
-    # 2. VALIDACIÓN DE DUPLICADOS (Día y Horario)
-    # Verificamos si ya tiene reserva para esa clase EN ESE DÍA Y HORARIO ESPECÍFICO.
     exists = db.query(models.Reserva).filter(
         models.Reserva.usuario_id == data.usuario_id,
         models.Reserva.clase_id == data.clase_id,
@@ -458,7 +523,6 @@ def book_clase(data: ReservaCreate, db: Session = Depends(database.get_db)):
     if exists:
         raise HTTPException(status_code=400, detail="Ya tienes reservado este turno específico.")
     
-    # 3. Verificar Cupo
     clase = db.query(models.Clase).filter(models.Clase.id == data.clase_id).first()
     if not clase:
         raise HTTPException(status_code=404, detail="Clase no encontrada")
@@ -472,7 +536,6 @@ def book_clase(data: ReservaCreate, db: Session = Depends(database.get_db)):
     if cupo_actual >= clase.capacidad_max:
         raise HTTPException(status_code=400, detail="Este horario no tiene cupos disponibles")
 
-    # 4. Crear Reserva
     new_res = models.Reserva(
         usuario_id=data.usuario_id,
         clase_id=data.clase_id,
@@ -487,12 +550,8 @@ def book_clase(data: ReservaCreate, db: Session = Depends(database.get_db)):
         return {"status": "success"}
     except IntegrityError as e:
         db.rollback()
-        # Si llegamos aquí a pesar del Auto-Fix, es posible que el nombre del constraint fuera otro
         logger.error(f"Error integridad al reservar: {e}")
-        raise HTTPException(
-            status_code=400, 
-            detail="Error de base de datos. Intenta reiniciar el servidor para aplicar el parche automático."
-        )
+        raise HTTPException(status_code=400, detail="Error de base de datos.")
     except Exception as e:
         db.rollback()
         logger.error(f"Error general al reservar: {e}")
@@ -772,10 +831,6 @@ def procesar_cobro(data: TransactionCreate, db: Session = Depends(database.get_d
             if not producto:
                 raise HTTPException(status_code=404, detail="Producto no encontrado")
             
-            # (Opcional) Validar stock negativo
-            # if producto.stock_actual < data.cantidad:
-            #    raise HTTPException(status_code=400, detail=f"Stock insuficiente")
-            
             producto.stock_actual -= data.cantidad
             
         # 3. Actualización de Alumno (Si es un Plan)
@@ -784,7 +839,7 @@ def procesar_cobro(data: TransactionCreate, db: Session = Depends(database.get_d
             
             # Buscar el Plan usando el producto_id
             plan = db.query(models.TipoPlan).filter(models.TipoPlan.id == data.producto_id).first()
-            # Si no lo encuentra como TipoPlan, intentar buscar en tabla Plan (a veces el ID viene de ahí)
+            # Si no lo encuentra como TipoPlan, intentar buscar en tabla Plan
             if not plan:
                  plan = db.query(models.Plan).filter(models.Plan.id == data.producto_id).first()
 

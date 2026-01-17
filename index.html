@@ -485,68 +485,101 @@
             <!-- DASHBOARD -->
             <div id="view-dashboard" class="view-content active">
             <div id="admin-dashboard-layout">
-				<!-- FILA SUPERIOR: ACCESOS Y ALERTAS -->
-				<div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+			<!-- MODAL DE MI PASE QR (Oculto por defecto) -->
+			<div id="modal-mi-qr" class="fixed inset-0 z-[1500] bg-black/90 hidden flex-col items-center justify-center backdrop-blur-sm" onclick="closeMyQR()">
+				<div class="glass-card p-10 rounded-[3rem] border-white/10 flex flex-col items-center text-center max-w-sm mx-4 transform transition-all scale-95 animate-in fade-in zoom-in duration-300" onclick="event.stopPropagation()">
+					<h3 class="text-2xl font-black italic uppercase text-white mb-2">Mi Pase Vikingo</h3>
+					<p class="text-[10px] text-gray-400 font-bold uppercase mb-8">Escanea esto en el ingreso</p>
 					
-					<!-- PANEL 1: ÚLTIMOS ACCESOS (CORREGIDO: GENTE ENTRANDO) -->
-					<div class="glass-card p-8 rounded-[2.5rem] border-blue-500/10 flex flex-col h-[400px]">
-						<div class="flex justify-between items-center mb-6 border-b border-white/5 pb-4">
-							<div>
-								<h4 class="text-sm font-black uppercase italic text-blue-500 tracking-widest">
-									<i data-lucide="scan-line" class="w-4 h-4 inline mr-2"></i>Accesos Recientes
-								</h4>
-								<p class="text-[9px] text-gray-500 font-bold uppercase mt-1">Guerreros entrando al Valhalla</p>
-							</div>
-							<button onclick="switchView('acceso-virtual')" class="text-[9px] bg-white/5 hover:bg-white/10 px-3 py-1 rounded-lg transition-colors font-black uppercase italic">Ver Molinetes</button>
-						</div>
-						<!-- ID cambiado para reflejar accesos -->
-						<div id="dash-last-access" class="flex-1 overflow-y-auto custom-scrollbar space-y-3 pr-2">
-							<p class="text-center text-gray-600 italic text-[10px] py-10">Esperando lecturas de QR...</p>
-						</div>
+					<div class="p-4 bg-white rounded-3xl shadow-[0_0_50px_rgba(255,255,255,0.2)] mb-6">
+						<!-- La imagen se carga dinámicamente -->
+						<img id="img-mi-qr" src="" alt="Tu Codigo QR" class="w-48 h-48 object-contain">
 					</div>
+					
+					<p id="qr-user-dni" class="text-xl font-black text-white tracking-widest mb-1">------</p>
+					<p id="qr-user-name" class="text-xs text-gray-500 font-bold uppercase italic">------</p>
+					
+					<button onclick="closeMyQR()" class="mt-8 text-[10px] font-black uppercase text-red-500 hover:text-white transition-colors">Cerrar</button>
+				</div>
+			</div>
 
-					<!-- PANEL 2: ALERTAS DE STOCK (MANTENIDO IGUAL) -->
-					<div class="glass-card p-8 rounded-[2.5rem] border-red-500/10 flex flex-col h-[400px]">
-						<div class="flex justify-between items-center mb-6 border-b border-white/5 pb-4">
-							<div>
-								<h4 class="text-sm font-black uppercase italic text-red-600 tracking-widest">
-									<i data-lucide="alert-triangle" class="w-4 h-4 inline mr-2"></i>Alertas de Stock
-								</h4>
-								<p class="text-[9px] text-gray-500 font-bold uppercase mt-1">Provisiones bajas en el Valhalla</p>
-							</div>
-							<button onclick="switchView('stock')" class="text-[9px] bg-white/5 hover:bg-white/10 px-3 py-1 rounded-lg transition-colors font-black uppercase italic">Reponer</button>
+			<!-- HEADER DEL DASHBOARD CON BOTÓN QR -->
+			<div class="flex justify-between items-end mb-8">
+				<div>
+				<h2 class="text-4xl font-black italic text-white uppercase tracking-tighter">Panel de Control</h2>
+				<p class="text-xs text-gray-500 font-bold uppercase tracking-widest mt-1">Resumen Operativo</p>
+				</div>
+				<!-- BOTÓN NUEVO: VER MI QR -->
+				<button onclick="showMyQR()" class="bg-white/5 hover:bg-white/10 border border-white/10 text-white px-5 py-3 rounded-2xl flex items-center gap-3 transition-all hover:scale-105 group">
+					<div class="bg-white text-black p-1.5 rounded-lg group-hover:bg-red-600 group-hover:text-white transition-colors">
+						<i data-lucide="qr-code" class="w-5 h-5"></i>
+					</div>
+					<div class="text-left hidden sm:block">
+						<p class="text-[9px] text-gray-400 font-bold uppercase">Acceso</p>
+						<p class="text-[11px] font-black italic uppercase">Ver Mi QR</p>
+					</div>
+				</button>
+			</div>
+
+			<!-- FILA SUPERIOR: ACCESOS Y ALERTAS -->
+			<div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+				
+				<!-- PANEL 1: ÚLTIMOS ACCESOS -->
+				<div class="glass-card p-8 rounded-[2.5rem] border-blue-500/10 flex flex-col h-[400px]">
+					<div class="flex justify-between items-center mb-6 border-b border-white/5 pb-4">
+						<div>
+							<h4 class="text-sm font-black uppercase italic text-blue-500 tracking-widest">
+								<i data-lucide="scan-line" class="w-4 h-4 inline mr-2"></i>Accesos Recientes
+							</h4>
+							<p class="text-[9px] text-gray-500 font-bold uppercase mt-1">Guerreros entrando al Valhalla</p>
 						</div>
-						<div id="dash-low-stock" class="flex-1 overflow-y-auto custom-scrollbar space-y-3 pr-2">
-							<p class="text-center text-gray-600 italic text-[10px] py-10">Escaneando almacén...</p>
-						</div>
+						<!-- Botón para ver la cámara (ADMIN) -->
+						<button onclick="startScanner()" class="text-[9px] bg-blue-500/10 text-blue-400 hover:bg-blue-500 hover:text-black px-3 py-1 rounded-lg transition-colors font-black uppercase italic border border-blue-500/20">
+							<i data-lucide="camera" class="w-3 h-3 inline mr-1"></i> Abrir Scanner
+						</button>
+					</div>
+					<div id="dash-last-access" class="flex-1 overflow-y-auto custom-scrollbar space-y-3 pr-2">
+						<p class="text-center text-gray-600 italic text-[10px] py-10">Esperando lecturas de QR...</p>
 					</div>
 				</div>
 
-				<!-- FILA INFERIOR: ESTADÍSTICAS OPERATIVAS (MANTENIDO IGUAL) -->
-				<div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-10">
-					
-					<!-- PANEL 3: FRECUENCIA HORARIA -->
-					<div class="glass-card p-8 rounded-[2.5rem] lg:col-span-2 flex flex-col">
-						<h4 class="text-sm font-black uppercase italic text-white mb-2 tracking-widest border-l-4 border-red-600 pl-4">Frecuencia Horaria</h4>
-						<p class="text-[9px] text-gray-500 font-bold uppercase mb-6 pl-5">Reservas activas por hora</p>
-						
-						<div class="flex-1 min-h-[250px] relative pt-4 pl-8 border-l border-white/10 border-b flex items-end justify-between pr-4 gap-2" id="dash-chart-container">
-							<div class="absolute left-0 top-0 bottom-0 w-8 flex flex-col justify-between text-[8px] text-gray-600 font-bold py-2">
-								<span>MAX</span>
-								<span>MED</span>
-								<span>0</span>
-							</div>
+				<!-- PANEL 2: ALERTAS DE STOCK -->
+				<div class="glass-card p-8 rounded-[2.5rem] border-red-500/10 flex flex-col h-[400px]">
+					<div class="flex justify-between items-center mb-6 border-b border-white/5 pb-4">
+						<div>
+							<h4 class="text-sm font-black uppercase italic text-red-600 tracking-widest">
+								<i data-lucide="alert-triangle" class="w-4 h-4 inline mr-2"></i>Alertas de Stock
+							</h4>
+							<p class="text-[9px] text-gray-500 font-bold uppercase mt-1">Provisiones bajas en el Valhalla</p>
 						</div>
-						<div id="dash-chart-labels" class="flex justify-between pl-8 pr-4 mt-2 text-[8px] text-gray-500 font-black uppercase"></div>
+						<button onclick="switchView('stock')" class="text-[9px] bg-white/5 hover:bg-white/10 px-3 py-1 rounded-lg transition-colors font-black uppercase italic">Reponer</button>
 					</div>
-
-					<!-- PANEL 4: TOP 5 CLASES -->
-					<div class="glass-card p-8 rounded-[2.5rem] flex flex-col">
-						<h4 class="text-sm font-black uppercase italic text-white mb-6 tracking-widest border-l-4 border-red-600 pl-4">Top 5 Clases</h4>
-						<div id="dash-top-clases" class="space-y-4 flex-1"></div>
+					<div id="dash-low-stock" class="flex-1 overflow-y-auto custom-scrollbar space-y-3 pr-2">
+						<p class="text-center text-gray-600 italic text-[10px] py-10">Escaneando almacén...</p>
 					</div>
 				</div>
 			</div>
+
+			<!-- FILA INFERIOR: ESTADÍSTICAS -->
+			<div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-10">
+				<!-- FRECUENCIA HORARIA -->
+				<div class="glass-card p-8 rounded-[2.5rem] lg:col-span-2 flex flex-col">
+					<h4 class="text-sm font-black uppercase italic text-white mb-2 tracking-widest border-l-4 border-red-600 pl-4">Frecuencia Horaria</h4>
+					<p class="text-[9px] text-gray-500 font-bold uppercase mb-6 pl-5">Reservas activas por hora</p>
+					
+					<div class="flex-1 min-h-[250px] relative pt-4 pl-8 border-l border-white/10 border-b flex items-end justify-between pr-4 gap-2" id="dash-chart-container">
+						<!-- Gráfico se llena con JS -->
+					</div>
+					<div id="dash-chart-labels" class="flex justify-between pl-8 pr-4 mt-2 text-[8px] text-gray-500 font-black uppercase"></div>
+				</div>
+
+				<!-- TOP 5 CLASES -->
+				<div class="glass-card p-8 rounded-[2.5rem] flex flex-col">
+					<h4 class="text-sm font-black uppercase italic text-white mb-6 tracking-widest border-l-4 border-red-600 pl-4">Top 5 Clases</h4>
+					<div id="dash-top-clases" class="space-y-4 flex-1"></div>
+				</div>
+			</div>
+		</div>
 
                 <div id="alumno-dashboard-layout" class="hidden">
 				<!-- SECCIÓN SUPERIOR: DATOS Y MÉTRICAS -->
@@ -3381,7 +3414,7 @@
             await Promise.all([fetchAlumnos(), loadStaff(), loadPlanes(), loadStock(), loadClases(), fetchReservas(), loadDashboard(), loadMusculacionMetadata(), loadCaja()]);
         }
 
-        async function loadDashboard() {
+		async function loadDashboard() {
 			// 1. Cargar datos necesarios
 			// Nota: Como los accesos suelen ser evento en tiempo real o websocket,
 			// usaremos state.accesos del cliente o simularemos si está vacío.
@@ -4798,6 +4831,33 @@ async function loadProfesores() {
 				if (window.lucide) lucide.createIcons();
 			}
 			
+			// FUNCIONES PARA EL MODAL DE MI QR
+				function showMyQR() {
+					const modal = document.getElementById('modal-mi-qr');
+					const img = document.getElementById('img-mi-qr');
+					const dniTxt = document.getElementById('qr-user-dni');
+					const nameTxt = document.getElementById('qr-user-name');
+					
+					// Obtenemos los datos del usuario logueado (Global State)
+					const user = state.currentUser; 
+					
+					if(user) {
+						dniTxt.innerText = user.dni;
+						nameTxt.innerText = user.nombre_completo;
+						// Generador de QR seguro y gratuito
+						img.src = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${user.dni}&color=000000&bgcolor=ffffff`;
+					}
+					
+					modal.classList.remove('hidden');
+					modal.classList.add('flex');
+				}
+
+				function closeMyQR() {
+					const modal = document.getElementById('modal-mi-qr');
+					modal.classList.add('hidden');
+					modal.classList.remove('flex');
+				}
+
 			// ==========================================
 			// NUEVA LÓGICA DE ALUMNOS (FIX PANTALLA VACÍA)
 			// ==========================================
