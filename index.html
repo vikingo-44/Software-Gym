@@ -1729,11 +1729,9 @@
 			const cal = document.getElementById('calendar-grid'); 
 			if (!cal) return;
 
-			// Aseguramos que el contenedor tenga el Grid CSS correcto (Hora + 6 Días)
-			// Esto es vital para que tu loop dibuje las columnas alineadas
+			// Configuración del Grid
 			cal.className = "calendar-container h-[700px] overflow-y-auto custom-scrollbar grid grid-cols-[50px_repeat(6,1fr)] auto-rows-max gap-[1px] bg-white/5 p-1 rounded-3xl";
 
-			// Cargar datos si no existen (Protección)
 			if (!state.clases || state.clases.length === 0) {
 				state.clases = await apiFetch('/clases');
 			}
@@ -1741,38 +1739,33 @@
 			const isAdmin = (state.user?.rol_nombre === "Administrador" || state.user?.rol_nombre === "Supervisor" || state.user?.rol_nombre === "Profesor");
 			const esAlumno = (state.user?.rol_nombre === "Alumno");
 
-			// --- 1. CÁLCULO DE FECHAS (Semana Dinámica) ---
+			// --- 1. CÁLCULO DE FECHAS ---
 			const hoy = new Date();
-			const diaSemanaActual = hoy.getDay(); // 0=Domingo, 1=Lunes...
-			// Si es Domingo (0), vamos al Lunes pasado (-6). Si es Lunes (1), -0.
+			const diaSemanaActual = hoy.getDay(); 
 			const diffParaLunes = diaSemanaActual === 0 ? 6 : diaSemanaActual - 1;
 			const fechaLunes = new Date(hoy);
 			fechaLunes.setDate(hoy.getDate() - diffParaLunes);
 
-			// --- 2. GENERAR CABECERAS DINÁMICAS ---
+			// --- 2. CABECERAS ---
 			const diasNombres = ["LUNES", "MARTES", "MIÉRCOLES", "JUEVES", "VIERNES", "SÁBADO"];
 			
-			// Header de HORA (Fijo)
 			let headersHTML = `
 				<div class="cal-header sticky top-0 z-20 bg-[#1a1a1a] flex items-center justify-center font-black italic text-[9px] text-white/30 p-2 border-b border-white/10 rounded-tl-2xl">
 					HORA
 				</div>
 			`;
 
-			// Headers de DÍAS (Con Fecha)
 			diasNombres.forEach((nombreDia, index) => {
 				const fecha = new Date(fechaLunes);
 				fecha.setDate(fechaLunes.getDate() + index);
-				
 				const numeroDia = fecha.getDate();
 				const mesNombre = fecha.toLocaleString('es-ES', { month: 'short' }).toUpperCase().replace('.', '');
 				const esHoy = fecha.getDate() === hoy.getDate() && fecha.getMonth() === hoy.getMonth();
 
-				// Estilos para resaltar HOY
 				const bgClass = esHoy ? "bg-red-600 text-black shadow-lg shadow-red-600/20" : "bg-[#1a1a1a] text-gray-400";
 				const textClass = esHoy ? "text-black" : "text-white";
 				const subTextClass = esHoy ? "text-black/70" : "text-gray-500";
-				const roundedClass = index === 5 ? "rounded-tr-2xl" : ""; // Borde redondeado solo al último
+				const roundedClass = index === 5 ? "rounded-tr-2xl" : ""; 
 
 				headersHTML += `
 					<div class="cal-header sticky top-0 z-20 ${bgClass} ${roundedClass} p-2 flex flex-col items-center justify-center border-b border-white/10 transition-colors">
@@ -1783,15 +1776,11 @@
 				`;
 			});
 
-			// Inyectamos las cabeceras
 			cal.innerHTML = headersHTML;
 
-			// --- 3. TU LÓGICA DE GRILLA (INTACTA) ---
-			// Generar grilla de tiempo (7hs a 21:30hs)
+			// --- 3. GRILLA ---
 			for(let h=7; h<=21.5; h+=0.5) {
 				const label = h % 1 === 0 ? `${h}:00` : `${Math.floor(h)}:30`;
-				
-				// Creamos el label de la hora
 				const hourLabel = document.createElement('div');
 				hourLabel.className = "cal-cell flex items-center justify-center font-black text-[9px] text-white/40 bg-white/5 border-r border-white/20 min-h-[50px]";
 				hourLabel.innerText = label;
@@ -1807,29 +1796,22 @@
 					cell.className = `cal-cell relative min-h-[50px] border-b border-r border-white/5 hover:bg-white/5 transition-colors ${isClosed ? 'bg-stripes-gray opacity-30 pointer-events-none' : ''}`;
 					
 					if (isAdmin && !isClosed) {
-						// Evento crucial: preventDefault() permite que la celda acepte el drop
 						cell.ondragover = (e) => {
 							e.preventDefault(); 
-							e.dataTransfer.dropEffect = "move"; // Cambia el cursor a "mover"
+							e.dataTransfer.dropEffect = "move";
 							cell.classList.add('bg-red-600/10');
 						};
-						
 						cell.ondragleave = () => cell.classList.remove('bg-red-600/10');
-						
 						cell.ondrop = async (e) => {
 							e.preventDefault();
 							cell.classList.remove('bg-red-600/10');
-							
 							const claseId = e.dataTransfer.getData("claseId");
 							const oldDia = e.dataTransfer.getData("oldDia");
 							const oldHorario = e.dataTransfer.getData("oldHorario");
-							
 							if (!claseId) return;
-
 							const parts = cell.id.split('-');
 							const newDia = parseInt(parts[1]);
 							const newHorario = parseFloat(parts[2].replace('_', '.'));
-
 							if (oldDia == newDia && oldHorario == newHorario) return;
 
 							const res = await apiFetch(`/clases/${claseId}/move`, 'PUT', {
@@ -1838,10 +1820,8 @@
 								new_dia: newDia,
 								new_horario: newHorario
 							});
-
 							if (!res.error) {
 								showVikingToast("¡Turno Reubicado!");
-								// Recargamos datos y volvemos a renderizar
 								state.clases = await apiFetch('/clases');
 								renderCalendar(); 
 							} else {
@@ -1853,11 +1833,29 @@
 				}
 			}
 
-			// --- 4. RENDERIZADO DE CLASES (TU LÓGICA INTACTA) ---
+			// --- 4. RENDERIZADO DE CLASES CON CONTRASTE ---
 			if(state.clases && Array.isArray(state.clases)){
 				state.clases.forEach(c => {
 					const horarios = Array.isArray(c.horarios_detalle) ? c.horarios_detalle : [];
 					
+					// --- LÓGICA DE CONTRASTE (NUEVO) ---
+					// Función auxiliar interna para determinar brillo
+					const getTextColorClass = (hexColor) => {
+						if (!hexColor) return { text: 'text-white', sub: 'text-white/70', bg: 'bg-white/20' };
+						// Convertir hex a RGB
+						const r = parseInt(hexColor.substr(1, 2), 16);
+						const g = parseInt(hexColor.substr(3, 2), 16);
+						const b = parseInt(hexColor.substr(5, 2), 16);
+						// Fórmula de Luminancia (YIQ)
+						const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
+						// Si es oscuro (<128), texto blanco. Si es claro, texto negro.
+						return (yiq >= 128) 
+							? { text: 'text-black', sub: 'text-black/60', bg: 'bg-black/10' } 
+							: { text: 'text-white', sub: 'text-white/80', bg: 'bg-white/20' };
+					};
+
+					const colores = getTextColorClass(c.color || '#FF0000');
+
 					horarios.forEach(slot => {
 						const hKey = slot.horario.toString().replace('.', '_');
 						const cell = document.getElementById(`cell-${slot.dia}-${hKey}`);
@@ -1865,18 +1863,15 @@
 						if (cell) {
 							const reservasArray = Array.isArray(state.reservas) ? state.reservas : [];
 							const cupoMax = c.capacidad_max || 40;
-							
 							const cupoActual = reservasArray.filter(r => 
 								String(r.clase_id) === String(c.id) && 
 								Number(r.dia_semana) === Number(slot.dia) && 
 								Number(r.horario) === Number(slot.horario)
 							).length;
-							
 							const estaLleno = cupoActual >= cupoMax;
 
 							const badge = document.createElement('div');
-							// Ajuste visual: absolute inset-1 para que ocupe bien la celda
-							badge.className = "absolute inset-1 rounded-xl shadow-lg transition-all hover:scale-[1.02] active:scale-95 cursor-pointer flex flex-col items-center justify-center p-1 group z-10 class-badge"; 
+							badge.className = "absolute inset-1 rounded-xl shadow-lg transition-all hover:scale-[1.02] active:scale-95 cursor-pointer flex flex-col items-center justify-center p-1 group z-10 class-badge border border-black/5"; 
 							badge.style.backgroundColor = c.color || '#FF0000';
 							
 							if (isAdmin) {
@@ -1890,15 +1885,16 @@
 								badge.ondragend = () => badge.classList.remove('opacity-40');
 							}
 
+							// Usamos las variables de color calculadas arriba
 							badge.innerHTML = `
 								<div class="flex flex-col items-center justify-center h-full w-full px-1">
-									<span class="text-[10px] leading-tight mb-0.5 font-black uppercase italic text-black text-center truncate w-full">
+									<span class="text-[10px] leading-tight mb-0.5 font-black uppercase italic ${colores.text} text-center truncate w-full drop-shadow-sm">
 										${c.nombre}
 									</span>
-									<span class="text-[8px] font-extrabold text-black/70 mb-0.5 lowercase italic leading-none truncate w-full text-center">
+									<span class="text-[8px] font-extrabold ${colores.sub} mb-0.5 lowercase italic leading-none truncate w-full text-center">
 										${slot.coach || 'staff'}
 									</span>
-									<div class="bg-black/15 px-1.5 py-px rounded-full text-[8px] font-black leading-none ${estaLleno ? 'text-red-800 animate-pulse' : 'text-black/60'}">
+									<div class="${colores.bg} px-1.5 py-px rounded-full text-[8px] font-black leading-none ${estaLleno ? (colores.text === 'text-white' ? 'text-red-300 animate-pulse' : 'text-red-700 animate-pulse') : colores.text}">
 										${cupoActual}/${cupoMax}
 									</div>
 								</div>
