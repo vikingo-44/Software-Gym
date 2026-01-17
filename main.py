@@ -129,7 +129,6 @@ class MovimientoCajaCreate(BaseModel):
     descripcion: str
     metodo_pago: Optional[str] = "Efectivo"
 
-# Este es el esquema que faltaba y estaba mal indentado antes
 class MovimientoCreate(BaseModel):
     descripcion: str
     monto: float
@@ -367,7 +366,7 @@ def delete_alumno(id: int, db: Session = Depends(database.get_db)):
     db.commit()
     return {"status": "success"}
 
-# --- RESERVAS ---
+# --- RESERVAS (CORREGIDO PARA EVITAR ERROR 500) ---
 @app.get("/api/reservas", tags=["Reservas"])
 def get_reservas(db: Session = Depends(database.get_db)):
     res = db.query(models.Reserva).options(
@@ -391,6 +390,7 @@ def book_clase(data: ReservaCreate, db: Session = Depends(database.get_db)):
     if not user:
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
 
+    # 1. Verificar límites del plan
     if user.plan:
         limite_mensual = user.plan.clases_mensuales
         if limite_mensual < 999:
@@ -409,17 +409,19 @@ def book_clase(data: ReservaCreate, db: Session = Depends(database.get_db)):
                     detail=f"Has alcanzado tu límite de {limite_mensual} clases mensuales."
                 )
 
+    # 2. VALIDACIÓN DE DUPLICADOS CORREGIDA
+    # Verificamos si ya tiene reserva para esa clase EN ESE DÍA Y HORARIO ESPECÍFICO.
     exists = db.query(models.Reserva).filter(
         models.Reserva.usuario_id == data.usuario_id,
         models.Reserva.clase_id == data.clase_id,
         models.Reserva.horario == data.horario,
-        models.Reserva.dia_semana == data.dia_semana,
-        models.Reserva.fecha_reserva == date.today()
+        models.Reserva.dia_semana == data.dia_semana
     ).first()
     
     if exists:
-        raise HTTPException(status_code=400, detail="Ya tienes una reserva para este turno hoy")
+        raise HTTPException(status_code=400, detail="Ya tienes reservado este turno específico.")
     
+    # 3. Verificar Cupo
     clase = db.query(models.Clase).filter(models.Clase.id == data.clase_id).first()
     if not clase:
         raise HTTPException(status_code=404, detail="Clase no encontrada")
@@ -427,13 +429,13 @@ def book_clase(data: ReservaCreate, db: Session = Depends(database.get_db)):
     cupo_actual = db.query(models.Reserva).filter(
         models.Reserva.clase_id == data.clase_id,
         models.Reserva.horario == data.horario,
-        models.Reserva.dia_semana == data.dia_semana,
-        models.Reserva.fecha_reserva == date.today()
+        models.Reserva.dia_semana == data.dia_semana
     ).count()
     
     if cupo_actual >= clase.capacidad_max:
         raise HTTPException(status_code=400, detail="Este horario no tiene cupos disponibles")
 
+    # 4. Crear Reserva con Manejo de Errores DB
     new_res = models.Reserva(
         usuario_id=data.usuario_id,
         clase_id=data.clase_id,
@@ -441,9 +443,20 @@ def book_clase(data: ReservaCreate, db: Session = Depends(database.get_db)):
         horario=data.horario,       
         dia_semana=data.dia_semana 
     )
-    db.add(new_res)
-    db.commit()
-    return {"status": "success"}
+    
+    try:
+        db.add(new_res)
+        db.commit()
+        return {"status": "success"}
+    except IntegrityError as e:
+        db.rollback()
+        # Esto captura el error si la DB tiene una restricción única que estamos violando
+        logger.error(f"Error integridad al reservar: {e}")
+        raise HTTPException(status_code=400, detail="No se pudo procesar: Posible reserva duplicada en base de datos.")
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error general al reservar: {e}")
+        raise HTTPException(status_code=500, detail="Error interno al guardar la reserva.")
 
 @app.delete("/api/reservas/{id}", tags=["Reservas"])
 def cancel_reserva(id: int, db: Session = Depends(database.get_db)):
@@ -668,7 +681,7 @@ def get_movimientos(db: Session = Depends(database.get_db)):
 def create_movimiento(data: MovimientoCajaCreate, db: Session = Depends(database.get_db)):
     new_mov = models.MovimientoCaja(
         tipo=data.tipo,
-        monto=data.monto,
+        monto=abs(data.monto), # Forzar positivo
         descripcion=data.descripcion,
         metodo_pago=data.metodo_pago,
         fecha=datetime.now()
@@ -677,13 +690,11 @@ def create_movimiento(data: MovimientoCajaCreate, db: Session = Depends(database
     db.commit()
     return {"status": "success"}
 
-# ESTE ES EL ENDPOINT QUE FALTABA O ESTABA ROTO (PLURAL)
 @app.post("/api/caja/movimientos", tags=["Caja"])
 def crear_movimiento_caja(mov: MovimientoCreate, db: Session = Depends(database.get_db)):
-    # Usamos models.MovimientoCaja porque es el modelo correcto usado en get_movimientos
     nuevo_movimiento = models.MovimientoCaja(
         descripcion=mov.descripcion,
-        monto=mov.monto,
+        monto=abs(mov.monto), # Forzar positivo
         tipo=mov.tipo,
         metodo_pago=mov.metodo_pago,
         fecha=datetime.now()
@@ -698,57 +709,63 @@ def crear_movimiento_caja(mov: MovimientoCreate, db: Session = Depends(database.
 def procesar_cobro(data: TransactionCreate, db: Session = Depends(database.get_db)):
     try:
         # 1. Registro automático en Caja
-        # CORRECCIÓN CLAVE: Usamos abs() para asegurar que el monto sea siempre POSITIVO
-        # Esto soluciona el problema de que los cobros resten en lugar de sumar
         monto_positivo = abs(data.monto)
         
+        # Generar descripción más detallada si es posible
+        detalle = data.descripcion
+        if not detalle:
+            detalle = f"Cobro: {data.tipo}"
+
         nueva_transaccion = models.MovimientoCaja(
-            tipo=data.tipo, 
-            monto=monto_positivo, # <--- Aquí forzamos el valor positivo
-            descripcion=data.descripcion,
+            tipo="Ingreso",  # Siempre es ingreso
+            monto=monto_positivo,
+            descripcion=detalle,
             metodo_pago=data.metodo_pago,
             fecha=datetime.now()
         )
-        # Si tu modelo tiene campos de relación, descomenta estas líneas:
-        # nueva_transaccion.alumno_id = data.alumno_id
-        # nueva_transaccion.producto_id = data.producto_id
         
         db.add(nueva_transaccion)
 
         # 2. Lógica de Stock (Si es mercadería)
-        if data.tipo == "Mercaderia" and data.producto_id:
+        if (data.tipo == "Mercaderia" or "ercader" in data.tipo) and data.producto_id:
             producto = db.query(models.Stock).filter(models.Stock.id == data.producto_id).first()
             if not producto:
                 raise HTTPException(status_code=404, detail="Producto no encontrado")
             
-            if producto.stock_actual < data.cantidad:
-                raise HTTPException(status_code=400, detail=f"Stock insuficiente de {producto.nombre_producto}")
+            # (Opcional) Validar stock negativo
+            # if producto.stock_actual < data.cantidad:
+            #    raise HTTPException(status_code=400, detail=f"Stock insuficiente")
             
             producto.stock_actual -= data.cantidad
             
         # 3. Actualización de Alumno (Si es un Plan)
-        if data.tipo == "Plan" and data.alumno_id:
+        if (data.tipo == "Plan" or "plan" in data.tipo.lower()) and data.alumno_id:
             alumno = db.query(models.Usuario).filter(models.Usuario.id == data.alumno_id).first()
             
-            # Usamos data.producto_id para buscar el Plan específico
+            # Buscar el Plan usando el producto_id
             plan = db.query(models.TipoPlan).filter(models.TipoPlan.id == data.producto_id).first()
-            
+            # Si no lo encuentra como TipoPlan, intentar buscar en tabla Plan (a veces el ID viene de ahí)
+            if not plan:
+                 plan = db.query(models.Plan).filter(models.Plan.id == data.producto_id).first()
+
             if alumno and plan:
                 hoy = datetime.now()
                 
-                # A. Actualizamos fechas de pago
                 alumno.fecha_ultimo_pago = hoy 
                 alumno.fecha_ultima_renovacion = hoy 
                 
-                # B. Calculamos Vencimiento Dinámico
-                dias_duracion = plan.duracion_dias if plan.duracion_dias and plan.duracion_dias > 0 else 30
-                alumno.fecha_vencimiento = hoy + timedelta(days=dias_duracion)
+                # Duración
+                dias = 30
+                if hasattr(plan, 'duracion_dias') and plan.duracion_dias: dias = plan.duracion_dias
                 
-                # C. Actualizamos Estado y Plan
+                alumno.fecha_vencimiento = hoy + timedelta(days=dias)
+                
                 alumno.estado_cuenta = "Al día"
-                alumno.plan_id = plan.id 
+                # Asignar ID de plan si existe en la tabla Plan
+                if hasattr(plan, 'tipo_plan_id'): # Es un objeto Plan
+                    alumno.plan_id = plan.id
                 
-                # D. Reseteamos Clases si corresponde
+                # Reseteo de clases
                 if hasattr(plan, 'clases_mensuales') and plan.clases_mensuales:
                     alumno.clases_restantes = plan.clases_mensuales
 
