@@ -33,8 +33,7 @@ SECRET_KEY = "Vikingo_Security_Strong_Key_2025"
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 # 1 día
 
-# FIX CRÍTICO: Usamos sha256_crypt (como en tu otra app) para ELIMINAR el error de los 72 bytes.
-# Bcrypt es el que causa el problema de longitud; sha256_crypt no tiene ese límite.
+# FIX CRÍTICO: Usamos sha256_crypt para evitar el error de los 72 bytes de bcrypt.
 pwd_context = CryptContext(schemes=["sha256_crypt", "bcrypt"], deprecated="auto")
 
 # Definición para habilitar el botón "Authorize" en FastAPI Docs (/docs)
@@ -71,7 +70,6 @@ def get_password_hash(password):
     if not password: return None
     # Forzamos a string y limpiamos espacios
     safe_password = str(password).strip()
-    # sha256_crypt aceptará cualquier longitud, solucionando el error 500
     return pwd_context.hash(safe_password)
 
 def create_access_token(data: dict):
@@ -143,11 +141,18 @@ class UsuarioLogin(BaseModel):
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str
-    nombre_completo: str
-    rol_nombre: str
-    # Agregados para compatibilidad de frontend
     id: int
+    nombre_completo: str
     dni: str
+    email: Optional[str] = None
+    rol_nombre: str
+    plan: Optional[dict] = None
+    plan_id: Optional[int] = None
+    fecha_vencimiento: Optional[str] = None
+    fecha_ultima_renovacion: Optional[str] = None
+    peso: Optional[float] = None
+    altura: Optional[float] = None
+    imc: Optional[float] = None
 
 # --- NUEVO: Schema para Validación de QR ---
 class AccessCheck(BaseModel):
@@ -398,9 +403,10 @@ async def serve_app():
         return FileResponse("index.html")
     return {"message": "Frontend file not found"}
 
-# --- LOGIN ---
+# --- LOGIN (RESTAURADO COMPLETO) ---
 @app.post("/api/login", response_model=TokenResponse, tags=["Autenticacion"])
 def login(data: UsuarioLogin, db: Session = Depends(database.get_db)):
+    # Query completa con joinedload para traer el plan y el perfil
     user = db.query(models.Usuario).options(
         joinedload(models.Usuario.perfil),
         joinedload(models.Usuario.plan).joinedload(models.Plan.tipo)
@@ -409,16 +415,30 @@ def login(data: UsuarioLogin, db: Session = Depends(database.get_db)):
     if not user or not verify_password(data.password, user.password_hash):
         raise HTTPException(status_code=401, detail="Credenciales incorrectas")
     
-    # Generar Token de Acceso Estándar
+    # Generar Token de Acceso
     token = create_access_token(data={"sub": user.dni})
     
+    # Devolver el payload completo que el frontend necesita para el QR y el perfil
     return {
         "access_token": token,
         "token_type": "bearer",
         "id": user.id, 
         "nombre_completo": user.nombre_completo, 
         "dni": user.dni, 
-        "rol_nombre": user.perfil.nombre if user.perfil else "Usuario"
+        "email": user.email,
+        "rol_nombre": user.perfil.nombre if user.perfil else "Usuario",
+        "plan": {
+            "id": user.plan.id,
+            "nombre": user.plan.nombre,
+            "precio": user.plan.precio,
+            "clases_mensuales": user.plan.clases_mensuales 
+        } if user.plan else None,
+        "plan_id": user.plan_id,
+        "fecha_vencimiento": user.fecha_vencimiento.isoformat() if user.fecha_vencimiento else None,
+        "fecha_ultima_renovacion": user.fecha_ultima_renovacion.isoformat() if user.fecha_ultima_renovacion else None,
+        "peso": user.peso,
+        "altura": user.altura,
+        "imc": user.imc
     }
 
 # --- NUEVO: VALIDACIÓN DE ACCESO (QR CON HASHING) ---
@@ -917,7 +937,7 @@ def crear_movimiento_caja(mov: MovimientoCreate, db: Session = Depends(database.
     db.refresh(nuevo_movimiento)
     return {"mensaje": "Movimiento registrado con éxito", "id": nuevo_movimiento.id}
 
-# --- PROCESAR COBROS (CORREGIDO) ---
+# --- PROCESAR COBROS ---
 @app.post("/api/cobros/procesar", tags=["Finanzas"])
 def procesar_cobro(data: TransactionCreate, db: Session = Depends(database.get_db)):
     try:
@@ -1073,27 +1093,20 @@ def create_plan_rutina(data: PlanRutinaCreate, db: Session = Depends(database.ge
 
 @app.get("/api/rutinas/usuario/{id}", response_model=Optional[PlanRutinaResponse], tags=["Musculación"])
 def get_rutina_activa(id: int, db: Session = Depends(database.get_db)):
-    rutina = db.query(models.PlanRutina).filter(
+    return db.query(models.PlanRutina).filter(
         models.PlanRutina.usuario_id == id, 
         models.PlanRutina.activo == True
     ).options(
-        joinedload(models.PlanRutina.dias)
-            .joinedload(models.DiaRutina.ejercicios)
-            .joinedload(models.EjercicioEnRutina.ejercicio_obj),
-        joinedload(models.PlanRutina.dias)
-            .joinedload(models.DiaRutina.ejercicios)
-            .joinedload(models.EjercicioEnRutina.series_detalle)
+        joinedload(models.PlanRutina.dias).joinedload(models.DiaRutina.ejercicios).joinedload(models.EjercicioEnRutina.ejercicio_obj),
+        joinedload(models.PlanRutina.dias).joinedload(models.DiaRutina.ejercicios).joinedload(models.EjercicioEnRutina.series_detalle)
     ).first()
-    return rutina
 
 @app.get("/api/rutinas/historial/{id}", response_model=List[PlanRutinaResponse], tags=["Musculación"])
 def get_historial_rutinas(id: int, db: Session = Depends(database.get_db)):
     return db.query(models.PlanRutina).filter(
         models.PlanRutina.usuario_id == id
     ).options(
-        joinedload(models.PlanRutina.dias)
-            .joinedload(models.DiaRutina.ejercicios)
-            .joinedload(models.EjercicioEnRutina.series_detalle)
+        joinedload(models.PlanRutina.dias).joinedload(models.DiaRutina.ejercicios).joinedload(models.EjercicioEnRutina.series_detalle)
     ).order_by(models.PlanRutina.fecha_creacion.desc()).all()
 
 if __name__ == "__main__":
