@@ -1615,6 +1615,7 @@
 			document.getElementById('al-dash-plan').innerText = u.plan?.nombre || 'SIN PLAN';
 			document.getElementById('al-dash-vencimiento').innerText = u.fecha_vencimiento || '-';
 			document.getElementById('al-dash-renovacion').innerText = u.fecha_ultima_renovacion || '-';
+			document.getElementById('al-dash-email').innerText = u.email || '-';
 			
 			const initials = u.nombre_completo ? u.nombre_completo.split(' ').filter(n=>n).map(n=>n[0]).join('').toUpperCase() : "??";
 			document.getElementById('al-dash-initials').innerText = initials;
@@ -4731,19 +4732,19 @@ async function loadProfesores() {
 			const video = document.getElementById('scanner-video');
 			const hud = document.getElementById('scanner-hud');
 
-			// Mostrar modal
+			// Mostrar interfaz
 			modal.classList.remove('hidden');
 			modal.classList.add('flex');
 			hud.classList.remove('hidden');
 
-			// Verificar compatibilidad
+			// Verificar compatibilidad y HTTPS
 			if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
 				showCameraError("Navegador no compatible o falta HTTPS.");
 				return;
 			}
 
 			try {
-				// Pedir acceso a la cámara
+				// Pedir acceso a la cámara con resolución ideal para lectura de QR
 				videoStream = await navigator.mediaDevices.getUserMedia({ 
 					video: { 
 						facingMode: "environment",
@@ -4754,12 +4755,11 @@ async function loadProfesores() {
 				
 				video.srcObject = videoStream;
 				
-				// Esperar a que el video cargue para evitar errores de renderizado
 				video.onloadedmetadata = () => {
 					video.play();
 					isScanning = true;
-					console.log("Cámara iniciada, ejecutando bucle...");
-					requestAnimationFrame(scanLoop); // Iniciamos el bucle de forma segura
+					console.log("Ojos de Odín abiertos: Escaneando...");
+					requestAnimationFrame(scanLoop); 
 				};
 
 			} catch (err) {
@@ -4770,23 +4770,81 @@ async function loadProfesores() {
 
 		// 3. EL BUCLE DE ESCANEO (La función que faltaba)
 			function scanLoop() {
-				if (!isScanning) return; // Si cerramos el scanner, cortamos el bucle
+				if (!isScanning) return; 
 
 				const video = document.getElementById('scanner-video');
-				const canvasElement = document.getElementById('scanner-canvas'); // Asegúrate de tener este <canvas> en tu HTML (aunque sea hidden)
+				let canvasElement = document.getElementById('scanner-canvas');
 				
-				if (video.readyState === video.HAVE_ENOUGH_DATA) {
-					// Aquí es donde el video se mantiene "vivo"
-					// Si más adelante instalas jsQR, aquí iría la lógica de lectura:
-					// const code = jsQR(imageData, width, height);
-					
-					// Simulación: solo para verificar que el hilo no se rompe
-					// console.log("Buscando código QR..."); 
+				// Si no existe el canvas oculto para procesar, lo creamos
+				if (!canvasElement) {
+					canvasElement = document.createElement('canvas');
+					canvasElement.id = 'scanner-canvas';
+					canvasElement.className = 'hidden';
+					document.body.appendChild(canvasElement);
 				}
 
-				// Volvemos a llamar a la función en el próximo frame (60fps aprox)
-				// Esto evita el "congelamiento" o fondo de agua en laptops
+				const canvas = canvasElement.getContext("2d", { willReadFrequently: true });
+
+				if (video.readyState === video.HAVE_ENOUGH_DATA) {
+					// Ajustar canvas al tamaño del video
+					canvasElement.height = video.videoHeight;
+					canvasElement.width = video.videoWidth;
+					
+					// Dibujar el frame actual del video en el canvas
+					canvas.drawImage(video, 0, 0, canvasElement.width, canvasElement.height);
+					
+					// Obtener datos de imagen para procesar
+					const imageData = canvas.getImageData(0, 0, canvasElement.width, canvasElement.height);
+					
+					// Intentar detectar código QR con jsQR
+					const code = jsQR(imageData.data, imageData.width, imageData.height, {
+						inversionAttempts: "dontInvert",
+					});
+
+					if (code) {
+						console.log("QR Detectado:", code.data);
+						processQRCode(code.data);
+						return; // Detenemos el bucle al detectar un código para procesar
+					}
+				}
+
+				// Continuar el bucle
 				requestAnimationFrame(scanLoop);
+			}
+
+			// 4. PROCESAR EL CÓDIGO DETECTADO
+			async function processQRCode(qrData) {
+				isScanning = false; // Pausar escaneo mientras validamos
+				
+				try {
+					// Enviamos el dato (DNI:HASH o DNI plano) al backend
+					const response = await apiFetch('/acceso/validar', 'POST', { qr_data: qrData });
+					
+					showFeedback(response);
+					
+					// Registrar en el log del dashboard
+					if(typeof registerAccessLog === 'function') {
+						registerAccessLog(
+							response.nombre || "Desconocido", 
+							qrData.split(':')[0], 
+							"QR SCAN", 
+							response.status
+						);
+					}
+
+				} catch (e) {
+					console.error(e);
+					showFeedback({ status: "DENIED", message: "Error de Validación", nombre: "Sistema" });
+				}
+
+				// Esperar 4 segundos antes de permitir un nuevo escaneo
+				setTimeout(() => {
+					if (document.getElementById('modal-scanner-live').classList.contains('flex')) {
+						hideFeedback();
+						isScanning = true;
+						requestAnimationFrame(scanLoop);
+					}
+				}, 4000);
 			}
 
 		// 4. FUNCIÓN PARA CERRAR EL ESCÁNER (Limpieza de memoria)
@@ -4796,50 +4854,35 @@ async function loadProfesores() {
 				const video = document.getElementById('scanner-video');
 
 				if (videoStream) {
-					videoStream.getTracks().forEach(track => track.stop()); // Apaga la luz de la cámara
+					videoStream.getTracks().forEach(track => track.stop());
 					videoStream = null;
 				}
 				
 				video.srcObject = null;
 				modal.classList.add('hidden');
 				modal.classList.remove('flex');
+				hideFeedback(); // Limpiar UI por si quedó un cartel de éxito/error
 			}
 
 		// 3. Simular Lectura (Para probar sin QR real)
 		async function simulateScan(type) {
-			let dniToTest = "00000000"; // Default inválido
+			let dniToTest = "00000000";
 			
 			if (type === 'ok') {
-				// Buscamos un alumno real del estado local para probar
 				const alumno = state.alumnos.find(a => a.estado_cuenta === 'Al día');
 				if(alumno) dniToTest = alumno.dni;
-				else alert("Crea un alumno al día primero para probar.");
+				else { alert("Crea un alumno al día primero."); return; }
 			} else if (type === 'expired') {
 				const alumno = state.alumnos.find(a => a.estado_cuenta !== 'Al día');
 				if(alumno) dniToTest = alumno.dni;
-				else dniToTest = "99999999"; // DNI inexistente o forzar uno vencido
+				else dniToTest = "99999999";
 			}
 
-			// LLAMADA AL BACKEND REAL
-			try {
-				const response = await apiFetch('/acceso/validar', 'POST', { qr_data: dniToTest });
-				
-				showFeedback(response);
-				
-				// Registrar visualmente en el dashboard
-				if(typeof registerAccessLog === 'function') {
-					registerAccessLog(
-						response.nombre || "Desconocido", 
-						dniToTest, 
-						"QR SCAN", 
-						response.status // AUTHORIZED / DENIED
-					);
-				}
-
-			} catch (e) {
-				console.error(e);
-				showFeedback({ status: "DENIED", message: "Error de Conexión", nombre: "Sistema", color: "red" });
-			}
+			// Generamos el hash para que el formato sea DNI:HASH (como espera el servidor)
+			const hash = await generateVikingHash(dniToTest);
+			const qrSimulado = `${dniToTest}:${hash}`;
+			
+			processQRCode(qrSimulado);
 		}
 
 		// 4. Mostrar Feedback Visual sobre el Video
@@ -4850,37 +4893,36 @@ async function loadProfesores() {
 			const name = document.getElementById('scanner-user-name');
 			const msg = document.getElementById('scanner-msg');
 
+			if (!overlay) return;
+
 			overlay.classList.remove('hidden');
 			overlay.classList.add('flex');
 
-			name.innerText = data.nombre;
-			msg.innerText = data.message;
+			name.innerText = data.nombre || "Desconocido";
+			msg.innerText = data.message || "";
 
 			if (data.status === 'AUTHORIZED') {
 				status.innerText = "ACCESO PERMITIDO";
 				status.className = "text-4xl font-black uppercase italic text-green-500 mb-2 tracking-wide text-center";
 				icon.innerHTML = '<div class="w-32 h-32 bg-green-500 rounded-full flex items-center justify-center shadow-[0_0_60px_#22c55e] animate-bounce"><i data-lucide="check" class="w-16 h-16 text-black"></i></div>';
-				// Play success sound
 			} else {
 				status.innerText = "ACCESO DENEGADO";
 				status.className = "text-4xl font-black uppercase italic text-red-500 mb-2 tracking-wide text-center";
 				icon.innerHTML = '<div class="w-32 h-32 bg-red-600 rounded-full flex items-center justify-center shadow-[0_0_60px_#dc2626] animate-shake"><i data-lucide="x" class="w-16 h-16 text-black"></i></div>';
-				// Play error sound
 			}
 			
 			if(window.lucide) lucide.createIcons();
-
-			setTimeout(() => hideFeedback(), 3000);
 		}
 
 		function hideFeedback() {
-			document.getElementById('scanner-feedback-overlay').classList.add('hidden');
-			document.getElementById('scanner-feedback-overlay').classList.remove('flex');
+			const overlay = document.getElementById('scanner-feedback-overlay');
+			if (overlay) {
+				overlay.classList.add('hidden');
+				overlay.classList.remove('flex');
+			}
 		}
-
 		// 5. Registrar en el Sistema (Simulación de Backend)
 		function registerAccessLog(nombre, dni, metodo, estado) {
-			// Creamos el objeto de acceso
 			const nuevoAcceso = {
 				nombre: nombre,
 				dni: dni,
@@ -4889,27 +4931,32 @@ async function loadProfesores() {
 				estado: estado
 			};
 
-			// Lo inyectamos en el estado global
 			if (!state.accesos) state.accesos = [];
 			state.accesos.unshift(nuevoAcceso);
 			
-			// Limitar historial
 			if (state.accesos.length > 50) state.accesos.pop();
 
-			// Actualizar UI del Dashboard si está visible
-			// (Esto responde a tu petición de "refresco instantáneo")
-			const accessContainer = document.getElementById('dash-last-access');
-			const accessListVirtual = document.getElementById('acceso-list-view');
-			
-			if (typeof loadDashboard === 'function') loadDashboard(); // Refresca el widget del dashboard
-			if (typeof renderAccesos === 'function') renderAccesos(); // Refresca la vista completa de accesos
+			if (typeof loadDashboard === 'function') loadDashboard();
+			if (typeof renderAccesos === 'function') renderAccesos();
+		}
+
+		async function generateVikingHash(dni) {
+			const message = dni + SECRET_KEY;
+			const encoder = new TextEncoder();
+			const data = encoder.encode(message);
+			const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+			const hashArray = Array.from(new Uint8Array(hashBuffer));
+			return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 		}
 
 		function showCameraError(msg) {
 			const err = document.getElementById('scanner-error-msg');
-			document.getElementById('scanner-error-text').innerText = msg;
-			err.classList.remove('hidden');
-			err.classList.add('flex');
+			const txt = document.getElementById('scanner-error-text');
+			if (txt) txt.innerText = msg;
+			if (err) {
+				err.classList.remove('hidden');
+				err.classList.add('flex');
+			}
 		}
 
 		// Vincular al botón de "Ver Molinetes" o crear uno nuevo en el Dashboard
