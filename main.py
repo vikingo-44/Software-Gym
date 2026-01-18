@@ -11,31 +11,6 @@ from typing import List, Optional, Union
 from pydantic import BaseModel
 from datetime import datetime, timedelta, date
 
-# --- NUEVO: INTEGRACIÓN DE SEGURIDAD PARA HASHING Y AUTHORIZE ---
-from passlib.context import CryptContext
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from jose import JWTError, jwt
-
-# Configuración JWT
-SECRET_KEY = "vikingo_hub_super_secret_key"
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 1440 # 24 Horas
-
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/token")
-
-def get_password_hash(password):
-    return pwd_context.hash(password)
-
-def verify_password(plain_password, hashed_password):
-    return pwd_context.verify(plain_password, hashed_password)
-
-def create_access_token(data: dict):
-    to_encode = data.copy()
-    expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    to_encode.update({"exp": expire})
-    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-
 # Configuración de logs
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -92,11 +67,6 @@ def startup_event():
 # ==========================================
 # SCHEMAS (Modelos de Datos Pydantic)
 # ==========================================
-
-# Nuevo Schema para respuesta de Token
-class Token(BaseModel):
-    access_token: str
-    token_type: str
 
 class UsuarioLogin(BaseModel):
     dni: str
@@ -293,29 +263,6 @@ class GrupoMuscularSchema(BaseModel):
 
 
 # ==========================================
-# DEPENDENCIAS DE AUTORIZACIÓN
-# ==========================================
-
-async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(database.get_db)):
-    credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="No se pudo validar el token",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
-    try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        dni: str = payload.get("sub")
-        if dni is None:
-            raise credentials_exception
-    except JWTError:
-        raise credentials_exception
-    user = db.query(models.Usuario).filter(models.Usuario.dni == dni).first()
-    if user is None:
-        raise credentials_exception
-    return user
-
-
-# ==========================================
 # ENDPOINTS
 # ==========================================
 
@@ -329,30 +276,7 @@ async def serve_app():
         return FileResponse("index.html")
     return {"message": "Frontend file not found"}
 
-# --- ENDPOINT PARA SWAGGER (AUTHORIZE) ---
-@app.post("/api/token", response_model=Token, tags=["Autenticacion"])
-def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(database.get_db)):
-    """
-    Endpoint para que el botón Authorize de Swagger funcione.
-    Recibe username (DNI) y password del formulario de Swagger.
-    """
-    user = db.query(models.Usuario).filter(models.Usuario.dni == form_data.username).first()
-    if not user:
-        raise HTTPException(status_code=401, detail="Usuario no encontrado")
-
-    if user.password_hash.startswith("$2b$") or user.password_hash.startswith("$2a$"):
-        if not verify_password(form_data.password, user.password_hash):
-            raise HTTPException(status_code=401, detail="Contraseña incorrecta")
-    else:
-        if user.password_hash != form_data.password:
-            raise HTTPException(status_code=401, detail="Contraseña incorrecta")
-        user.password_hash = get_password_hash(form_data.password)
-        db.commit()
-
-    access_token = create_access_token(data={"sub": user.dni})
-    return {"access_token": access_token, "token_type": "bearer"}
-
-# --- LOGIN (MODIFICADO PARA VERIFICAR HASH) ---
+# --- LOGIN ---
 @app.post("/api/login", tags=["Autenticacion"])
 def login(data: UsuarioLogin, db: Session = Depends(database.get_db)):
     user = db.query(models.Usuario).options(
@@ -360,21 +284,8 @@ def login(data: UsuarioLogin, db: Session = Depends(database.get_db)):
         joinedload(models.Usuario.plan).joinedload(models.Plan.tipo)
     ).filter(models.Usuario.dni == data.dni).first()
     
-    if not user:
+    if not user or user.password_hash != data.password:
         raise HTTPException(status_code=401, detail="Credenciales incorrectas")
-
-    # Verificación de hash
-    # Si la contraseña en la BD ya es un hash de bcrypt (empieza con $2b$ o $2a$)
-    if user.password_hash.startswith("$2b$") or user.password_hash.startswith("$2a$"):
-        if not verify_password(data.password, user.password_hash):
-            raise HTTPException(status_code=401, detail="Credenciales incorrectas")
-    else:
-        # Si aún está en texto plano, comparamos directo (y opcionalmente migramos)
-        if user.password_hash != data.password:
-            raise HTTPException(status_code=401, detail="Credenciales incorrectas")
-        # Opcional: Migrar a hash automáticamente tras el primer login exitoso
-        user.password_hash = get_password_hash(data.password)
-        db.commit()
     
     return {
         "id": user.id, 
@@ -463,9 +374,9 @@ def validar_acceso_qr(data: AccessCheck, db: Session = Depends(database.get_db))
             "color": "red"
         }
 
-# --- ALUMNOS (MODIFICADO PARA HASHEAR CONTRASEÑA Y PROTEGIDO CON AUTHORIZE) ---
+# --- ALUMNOS ---
 @app.get("/api/alumnos", response_model=List[UsuarioResponse], tags=["Alumnos"])
-def get_alumnos(db: Session = Depends(database.get_db), current_user: models.Usuario = Depends(get_current_user)):
+def get_alumnos(db: Session = Depends(database.get_db)):
     alumnos = db.query(models.Usuario).options(
         joinedload(models.Usuario.perfil),
         joinedload(models.Usuario.plan).joinedload(models.Plan.tipo)
@@ -503,10 +414,6 @@ def create_alumno(alumno: AlumnoUpdate, db: Session = Depends(database.get_db)):
     perfil = db.query(models.Perfil).filter(func.lower(models.Perfil.nombre) == "alumno").first()
     if not perfil:
         raise HTTPException(status_code=500, detail="Perfil Alumno no encontrado")
-    
-    # Hashear contraseña (si no viene, se usa el DNI)
-    plain_password = alumno.password or alumno.dni
-    hashed_password = get_password_hash(plain_password)
         
     new_al = models.Usuario(
         nombre_completo=alumno.nombre_completo, 
@@ -514,7 +421,7 @@ def create_alumno(alumno: AlumnoUpdate, db: Session = Depends(database.get_db)):
         email=alumno.email,
         plan_id=alumno.plan_id, 
         perfil_id=perfil.id, 
-        password_hash=hashed_password,
+        password_hash=alumno.password or alumno.dni,
         fecha_ultima_renovacion=alumno.fecha_ultima_renovacion or date.today(), 
         fecha_vencimiento=alumno.fecha_vencimiento,
         fecha_nacimiento=alumno.fecha_nacimiento,
@@ -554,8 +461,7 @@ def update_alumno(id: int, data: AlumnoUpdate, db: Session = Depends(database.ge
     if data.fecha_vencimiento: al.fecha_vencimiento = data.fecha_vencimiento
 
     if data.password:
-        al.password_hash = get_password_hash(data.password)
-        
+        al.password_hash = data.password
     db.commit()
     return {"status": "success"}
 
@@ -660,7 +566,7 @@ def cancel_reserva(id: int, db: Session = Depends(database.get_db)):
     db.commit()
     return {"status": "success"}
 
-# --- STAFF (MODIFICADO PARA HASHEAR CONTRASEÑA) ---
+# --- STAFF ---
 @app.get("/api/profesores", response_model=List[UsuarioResponse], tags=["Staff"])
 def list_profesores(db: Session = Depends(database.get_db)):
     profs = db.query(models.Usuario).options(joinedload(models.Usuario.perfil)).join(models.Perfil).filter(func.lower(models.Perfil.nombre) == "profesor").all()
@@ -679,15 +585,11 @@ def create_staff(data: dict, db: Session = Depends(database.get_db)):
     if not perfil:
         raise HTTPException(status_code=400, detail="Perfil no válido")
 
-    # Hashear contraseña
-    plain_pwd = data.get('password', data['dni'])
-    hashed_pwd = get_password_hash(plain_pwd)
-
     new_staff = models.Usuario(
         nombre_completo=data['nombre_completo'], 
         dni=data['dni'], 
         email=data.get('email'),
-        password_hash=hashed_pwd, 
+        password_hash=data.get('password', data['dni']), 
         perfil_id=perfil.id,
         especialidad=data.get('especialidad')
     )
@@ -714,7 +616,7 @@ def update_staff(id: int, data: StaffUpdate, db: Session = Depends(database.get_
     if perfil:
         st.perfil_id = perfil.id
     if data.password:
-        st.password_hash = get_password_hash(data.password)
+        st.password_hash = data.password
         
     db.commit()
     return {"status": "success"}
