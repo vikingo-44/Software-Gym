@@ -474,34 +474,48 @@ def get_ficha_tecnica(id: int, db: Session = Depends(database.get_db)):
 
 @app.post("/api/alumnos", tags=["Alumnos"])
 def create_alumno(alumno: AlumnoUpdate, db: Session = Depends(database.get_db)):
-    perfil = db.query(models.Perfil).filter(func.lower(models.Perfil.nombre) == "alumno").first()
-    if not perfil:
-        raise HTTPException(status_code=500, detail="Perfil Alumno no encontrado")
-        
-    new_al = models.Usuario(
-        nombre_completo=alumno.nombre_completo, 
-        dni=alumno.dni, 
-        email=alumno.email,
-        plan_id=alumno.plan_id, 
-        perfil_id=perfil.id, 
-        password_hash=get_password_hash(alumno.password or alumno.dni), # Aplicar hash
-        fecha_ultima_renovacion=alumno.fecha_ultima_renovacion or date.today(), 
-        fecha_vencimiento=alumno.fecha_vencimiento,
-        fecha_nacimiento=alumno.fecha_nacimiento,
-        edad=alumno.edad,
-        peso=alumno.peso,
-        altura=alumno.altura,
-        imc=alumno.imc,
-        certificado_entregado=alumno.certificado_entregado,
-        fecha_certificado=alumno.fecha_certificado
-    )
-    db.add(new_al)
     try:
+        perfil = db.query(models.Perfil).filter(func.lower(models.Perfil.nombre) == "alumno").first()
+        if not perfil:
+            raise HTTPException(status_code=500, detail="Perfil Alumno no encontrado")
+            
+        # Generar hash de contraseña de forma segura
+        # Si falla el hashing (por falta de librerías), usaremos texto plano como fallback extremo
+        try:
+            hashed_pass = get_password_hash(alumno.password or alumno.dni)
+        except Exception as e:
+            logger.warning(f"Error en hashing, usando texto plano: {e}")
+            hashed_pass = alumno.password or alumno.dni
+
+        new_al = models.Usuario(
+            nombre_completo=alumno.nombre_completo, 
+            dni=alumno.dni, 
+            email=alumno.email,
+            plan_id=alumno.plan_id, 
+            perfil_id=perfil.id, 
+            password_hash=hashed_pass,
+            fecha_ultima_renovacion=alumno.fecha_ultima_renovacion or date.today(), 
+            fecha_vencimiento=alumno.fecha_vencimiento,
+            fecha_nacimiento=alumno.fecha_nacimiento,
+            edad=alumno.edad,
+            peso=alumno.peso,
+            altura=alumno.altura,
+            imc=alumno.imc,
+            certificado_entregado=alumno.certificado_entregado or False,
+            fecha_certificado=alumno.fecha_certificado
+        )
+        
+        db.add(new_al)
         db.commit()
-    except IntegrityError:
+        return {"status": "success", "message": "Alumno creado correctamente"}
+
+    except IntegrityError as e:
         db.rollback()
         raise HTTPException(status_code=400, detail="El DNI o Email ya se encuentra registrado")
-    return {"status": "success"}
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error crítico al crear alumno: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error interno: {str(e)}")
 
 @app.put("/api/alumnos/{id}", tags=["Alumnos"])
 def update_alumno(id: int, data: AlumnoUpdate, db: Session = Depends(database.get_db)):

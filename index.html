@@ -3112,27 +3112,36 @@
 			try {
 				const res = await fetch(`${API_BASE}${endpoint}`, options);
 				
-				// Si el servidor devuelve 401, el token no es válido o expiró
+				// 1. Manejo de sesión expirada
 				if (res.status === 401) {
 					localStorage.removeItem('viking_token');
 					location.reload();
 					return { error: "Sesión expirada" };
 				}
 
-				if (!res.ok) {
-					try {
-						const errorData = await res.json();
-						return { error: errorData.detail || "Error en la petición" };
-					} catch(e) {
-						return { error: await res.text() };
-					}
+				// 2. LEER EL CUERPO UNA SOLA VEZ
+				const responseText = await res.text();
+				
+				// 3. Intentar parsear como JSON
+				let responseData;
+				try {
+					responseData = JSON.parse(responseText);
+				} catch (e) {
+					// Si no es JSON, devolvemos el texto plano (útil para errores 500 crudos)
+					responseData = { error: responseText || "Error desconocido del servidor" };
 				}
-				return await res.json();
+
+				if (!res.ok) {
+					return { error: responseData.detail || responseData.error || "Error en la petición" };
+				}
+
+				return responseData;
 			} catch (e) { 
 				console.error("Error Fetch:", e);
 				return { error: "Error de conexión con el Valhalla" }; 
 			}
 		}
+
         function calculateIMC() {
             const peso = parseFloat(document.getElementById('al-peso').value);
             const alturaCm = parseFloat(document.getElementById('al-altura').value);
