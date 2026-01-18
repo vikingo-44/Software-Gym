@@ -1488,18 +1488,18 @@
 		// 1. CONFIGURACIÓN MAESTRA (PEGAR AL INICIO DE TU SCRIPT)
 		// ==========================================
 
-		// Detectamos automáticamente si estás en tu PC o en Render
+		// Detectamos automáticamente si estás en tu PC o en la Nube
 		const IS_LOCALHOST = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
 
-		// Definimos la URL Maestra (Para que tu Login antiguo funcione)
+		// Definimos la URL Maestra (Para compatibilidad con código antiguo y nuevo)
 		const API_URL = IS_LOCALHOST ? "http://localhost:8000/api" : "/api";
-
-		// Definimos un Alias (Para que el Carrito nuevo funcione)
-		// Así, use el nombre que use el código, siempre encontrará la dirección correcta.
 		const API_BASE = API_URL; 
 
+		// Seguridad y Estado Global
+		const SECRET_KEY = "Vikingo_Security_Strong_Key_2025"; 
+		
 		console.log("⚔️ Vikingo System Online ⚔️");
-		console.log("Modo:", IS_LOCALHOST ? "LOCAL (Casa)" : "PRODUCCIÓN (Nube)");
+		console.log("Modo:", IS_LOCALHOST ? "LOCAL (Desarrollo)" : "PRODUCCIÓN (Nube)");
 		console.log("Conectando a:", API_URL);
 
 		// ==========================================
@@ -1521,14 +1521,22 @@
 		});
 
         let state = { 
-            alumnos: [], planes: [], stock: [], clases: [], user: null, 
-            profesores: [], administrativos: [], tiposPlanes: [],
-            reservas: [], 
-            cart: [], currentPaymentMethod: '',
-            cobrarTab: 'mercaderia',
-            gruposMusculares: [], ejerciciosLibreria: [],
+			alumnos: [], 
+			planes: [], 
+			stock: [], 
+			clases: [], 
+			user: null, 
+			profesores: [], 
+			administrativos: [], 
+			tiposPlanes: [],
+			reservas: [], 
+			cart: [], 
+			currentPaymentMethod: '',
+			cobrarTab: 'mercaderia',
+			gruposMusculares: [], 
+			ejerciciosLibreria: [],
 			accesos: []
-        };
+		};
 
         function showVikingToast(msg, error = false) {
             const toast = document.getElementById('viking-toast');
