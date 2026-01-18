@@ -3185,65 +3185,97 @@
             lucide.createIcons();
         }
 
-        async function handleLogin(e) {
-		// 1. Detener el refresco automático
+    async function handleLogin(e) {
+		// 1. Detener el refresco automático del formulario
 		if(e && e.preventDefault) e.preventDefault();
 		
 		const dniInput = document.getElementById('login-dni');
 		const passInput = document.getElementById('login-pass');
+		const errorDiv = document.getElementById('login-error');
+		const loginBtn = document.getElementById('login-button');
 		
-		if (!dniInput || !passInput) return; // Seguridad extra
+		if (!dniInput || !passInput) return; 
+
+		// Feedback visual de carga
+		if(loginBtn) {
+			loginBtn.disabled = true;
+			loginBtn.innerText = "VERIFICANDO...";
+		}
 
 		const data = { 
 			dni: dniInput.value, 
 			password: passInput.value 
 		};
 		
-		const res = await apiFetch('/login', 'POST', data);
-		
-		if (res && !res.error) {
-			state.user = res;
+		try {
+			const res = await apiFetch('/login', 'POST', data);
 			
-			// 2. Ocultar Login y mostrar App
-			document.getElementById('login-overlay').style.display = 'none';
-			document.getElementById('sidebar').classList.remove('hidden');
-			document.getElementById('main-content').classList.remove('hidden');
-			
-			// 3. Cargar datos del usuario en sidebar
-			const elName = document.getElementById('side-user-name');
-			if(elName) elName.innerText = res.nombre_completo || "Usuario";
+			if (res && !res.error) {
+				// Guardamos al usuario en el estado global (importante para el QR)
+				state.user = res;
+				
+				// 2. Ocultar Login y mostrar App
+				document.getElementById('login-overlay').style.display = 'none';
+				document.getElementById('sidebar').classList.remove('hidden');
+				document.getElementById('main-content').classList.remove('hidden');
+				
+				// 3. Cargar datos del usuario en la barra lateral
+				const elName = document.getElementById('side-user-name');
+				if(elName) elName.innerText = res.nombre_completo || "Usuario";
 
-			const elRole = document.getElementById('side-user-role');
-			if(elRole) elRole.innerText = res.rol_nombre || 'Staff';
+				const elRole = document.getElementById('side-user-role');
+				if(elRole) elRole.innerText = res.rol_nombre || 'Staff';
 
-			// --- FIX INICIALES (Punto 1 de Mejoras Visuales) ---
-			// Calculamos las iniciales apenas recibimos los datos del servidor
-			const name = res.nombre_completo || "Usuario Vikingo";
-			const initials = name.split(' ')
-								 .filter(n => n)
-								 .map(n => n[0])
-								 .join('')
-								 .toUpperCase()
-								 .substring(0, 2);
-			
-			const elInitials = document.getElementById('user-initials');
-			if(elInitials) elInitials.innerText = initials;
-			// ---------------------------------------------------
+				// --- LÓGICA DE INICIALES ---
+				const name = res.nombre_completo || "Usuario Vikingo";
+				const initials = name.split(' ')
+									.filter(n => n)
+									.map(n => n[0])
+									.join('')
+									.toUpperCase()
+									.substring(0, 2);
+				
+				const elInitials = document.getElementById('user-initials');
+				if(elInitials) elInitials.innerText = initials;
 
-			// 4. IMPORTANTE: Cargar Profesores para que los selectores funcionen
-			await loadProfesores();
-			
-			// 5. Iniciar resto de la app
-			if (typeof initApp === 'function') {
-				await initApp(); 
+				// 4. Cargar datos maestros (Profesores, Clases, etc.)
+				await loadProfesores();
+				
+				if (typeof initApp === 'function') {
+					await initApp(); 
+				} else {
+					if (typeof loadClases === 'function') loadClases(); 
+					if (typeof loadStock === 'function') loadStock();
+				}
+
+				// 5. Cambiar a la vista principal
+				switchView('dashboard');
+
+				// --- LO QUE FALTABA: Renderizar Dashboard específico si es Alumno ---
+				if (res.rol_nombre === "Alumno" && typeof renderStudentDashboard === 'function') {
+					await renderStudentDashboard();
+				}
+
+				// Refrescar iconos
+				if(window.lucide) lucide.createIcons();
+				
+				showVikingToast(`¡Bienvenido al Valhalla, ${res.nombre_completo.split(' ')[0]}!`);
+
 			} else {
-				loadClases(); 
+				// Mostrar error si las credenciales fallan
+				if(errorDiv) errorDiv.classList.remove('hidden');
+				if(loginBtn) {
+					loginBtn.disabled = false;
+					loginBtn.innerText = "Entrar al Valhalla";
+				}
 			}
-
-			switchView('dashboard');
-		} else {
-			const errorDiv = document.getElementById('login-error');
-			if(errorDiv) errorDiv.classList.remove('hidden');
+		} catch (err) {
+			console.error("Error en el proceso de login:", err);
+			showVikingToast("Error de conexión con el servidor", true);
+			if(loginBtn) {
+				loginBtn.disabled = false;
+				loginBtn.innerText = "Entrar al Valhalla";
+			}
 		}
 	}
 
@@ -4847,18 +4879,20 @@ async function loadProfesores() {
 					const dniTxt = document.getElementById('qr-user-dni');
 					const nameTxt = document.getElementById('qr-user-name');
 					
-					// Obtenemos los datos del usuario logueado (Global State)
-					const user = state.currentUser; 
+					// ERROR CORREGIDO: Usamos 'state.user' que es donde guardas los datos en handleLogin
+					const user = state.user; 
 					
 					if(user) {
 						dniTxt.innerText = user.dni;
 						nameTxt.innerText = user.nombre_completo;
-						// Generador de QR seguro y gratuito
+						// Generamos el QR usando el DNI del usuario
 						img.src = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${user.dni}&color=000000&bgcolor=ffffff`;
+						
+						modal.classList.remove('hidden');
+						modal.classList.add('flex');
+					} else {
+						showVikingToast("Error: No se encontró sesión de usuario", true);
 					}
-					
-					modal.classList.remove('hidden');
-					modal.classList.add('flex');
 				}
 
 				function closeMyQR() {
