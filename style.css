@@ -1,0 +1,313 @@
+body {
+            font-family: 'Inter', sans-serif;
+            background-color: #000000;
+            background-image: linear-gradient(rgba(0, 0, 0, 0.94), rgba(0, 0, 0, 0.94)), url('https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=2070&auto=format&fit=crop');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            color: #ffffff;
+            overflow: hidden;
+        }
+        
+        .viking-red { color: #FF0000; }
+        .viking-bg-red { background-color: #FF0000; }
+        .glass-sidebar {
+            background: rgba(8, 8, 8, 0.98);
+            backdrop-filter: blur(40px);
+            border-right: 1px solid rgba(255, 0, 0, 0.15);
+            transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            transition: all 0.3s ease;
+        }
+        .glass-card:hover { border-color: rgba(255, 0, 0, 0.3); background: rgba(255, 255, 255, 0.05); }
+
+        .logo-viking-glow {
+            filter: drop-shadow(0 0 15px rgba(255, 0, 0, 0.6));
+            animation: pulse-glow 3s infinite alternate;
+        }
+        @keyframes pulse-glow {
+            from { filter: drop-shadow(0 0 5px rgba(255, 0, 0, 0.4)); transform: scale(1); }
+            to { filter: drop-shadow(0 0 25px rgba(255, 0, 0, 0.8)); transform: scale(1.05); }
+        }
+
+        .nav-item { 
+            display: flex !important;
+            align-items: center !important;
+            gap: 1.25rem !important; 
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
+            position: relative; 
+            white-space: nowrap; 
+            text-align: left !important;
+        }
+        .nav-item:hover, .nav-item.active { 
+            color: #FF0000; 
+            background: linear-gradient(90deg, rgba(255, 0, 0, 0.1) 0%, transparent 100%);
+        }
+        .nav-item.active::before {
+            content: ''; position: absolute; left: 0; top: 25%; height: 50%; width: 4px;
+            background: #FF0000; box-shadow: 0 0 15px #FF0000;
+        }
+
+        .view-content { display: none; flex-direction: column; height: 100%; }
+        .view-content.active { display: flex; }
+
+        #login-overlay {
+            position: fixed; inset: 0; z-index: 1000;
+            background: black; display: flex; align-items: center; justify-content: center;
+            background-image: linear-gradient(rgba(0,0,0,0.85), rgba(0,0,0,0.85)), url('https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=2070&auto=format&fit=crop');
+            background-size: cover;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #FF0000; border-radius: 10px; }
+
+        .viking-table-row { border-bottom: 1px solid rgba(255, 255, 255, 0.03); transition: background 0.2s; }
+        .viking-table-row:hover { background: rgba(255, 0, 0, 0.02); }
+
+        .calendar-container {
+            display: grid; grid-template-columns: 50px repeat(6, 1fr);
+            background: rgba(255, 255, 255, 0.02); border-radius: 24px; overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        /* Cabeceras de los días con letra más grande */
+		.cal-header { 
+			background: rgba(255,0,0,0.15); 
+			padding: 12px 4px; 
+			text-align: center; 
+			font-weight: 900; 
+			font-size: 13px; /* Antes era 8px */
+			border-right: 1px solid rgba(255,255,255,0.1); 
+			text-transform: uppercase;
+			letter-spacing: 1px;
+		}
+        /* Celdas más altas para que quepa el Profesor */
+		.cal-cell { 
+			border-right: 1px solid rgba(255,255,255,0.1); 
+			border-bottom: 1px solid rgba(255,255,255,0.1); 
+			height: 50px; /* La mitad de lo anterior */
+			position: relative; 
+		}
+        .cal-cell-closed {
+            background: repeating-linear-gradient(45deg, rgba(255,255,255,0.02), rgba(255,255,255,0.02) 10px, rgba(255,255,255,0.05) 10px, rgba(255,255,255,0.05) 20px);
+            opacity: 0.5;
+        }
+
+        .sidebar-collapsed { width: 80px !important; }
+        .sidebar-collapsed .brand-text, 
+        .sidebar-collapsed .user-details, 
+        .sidebar-collapsed .nav-text, 
+        .sidebar-collapsed .nav-section-title,
+        .sidebar-collapsed .chevron-icon { display: none; }
+        .sidebar-collapsed .nav-item { justify-content: center !important; padding-left: 0; padding-right: 0; gap: 0 !important; }
+        
+        .viking-input {
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 1rem;
+            padding: 0.85rem 1.25rem;
+            width: 100%;
+            outline: none;
+            font-weight: 700;
+            font-size: 0.95rem;
+            color: white;
+            transition: all 0.2s;
+        }
+        .viking-input:focus { border-color: #FF0000; box-shadow: 0 0 10px rgba(255, 0, 0, 0.1); }
+        select.viking-input option { background: #0a0a0a; color: white; }
+
+        .viking-modal {
+            position: fixed; inset: 0; z-index: 1000;
+            background: rgba(0,0,0,0.9); backdrop-filter: blur(15px);
+            display: none; align-items: center; justify-content: center;
+            padding: 20px;
+        }
+
+        /* El recuadro de la clase con diseño más "lindo" y redondeado */
+		.class-badge {
+			color: black; 
+			font-weight: 900;
+			padding: 4px; 
+			text-transform: uppercase; 
+			font-style: italic;
+			cursor: pointer;
+			display: flex; 
+			flex-direction: column; 
+			justify-content: center; 
+			align-items: center;
+			text-align: center; 
+			
+			/* MAGIA: Ocupa el 200% de la celda + 1px del borde */
+			height: calc(200% + 1px); 
+			width: calc(100% - 4px);
+			margin: 2px;
+			
+			border-radius: 14px; /* Un poco menos para que encaje mejor */
+			border: 1px solid rgba(255,255,255,0.3);
+			box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+			
+			position: absolute;
+			top: 0; 
+			left: 0; 
+			z-index: 20; /* Por encima de las líneas */
+			transition: all 0.2s;
+		}
+
+        .class-badge:hover { transform: scale(0.97); z-index: 20; }
+
+        .filter-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #999;
+            padding: 8px 16px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 900;
+            text-transform: uppercase;
+            font-style: italic;
+            transition: all 0.3s;
+        }
+        .filter-btn.active {
+            background: #FF0000;
+            color: #000;
+            border-color: #FF0000;
+        }
+
+        .payment-method-btn {
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            background: rgba(255, 255, 255, 0.02);
+            transition: all 0.2s;
+        }
+        .payment-method-btn.active {
+            border-color: #FF0000;
+            background: rgba(255, 0, 0, 0.1);
+            color: #FF0000;
+        }
+
+        .cobrar-tab {
+            padding: 12px 24px;
+            font-weight: 900;
+            font-size: 11px;
+            text-transform: uppercase;
+            font-style: italic;
+            border-bottom: 2px solid transparent;
+            color: #666;
+            transition: all 0.3s;
+        }
+        .cobrar-tab.active {
+            border-bottom-color: #FF0000;
+            color: #FF0000;
+        }
+
+        .notification-toast {
+            position: fixed; bottom: 30px; right: 30px;
+            background: #FF0000; color: black;
+            padding: 20px 40px; border-radius: 20px;
+            font-weight: 900; text-transform: uppercase; font-style: italic;
+            z-index: 2000; transform: translateY(150%);
+            transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: 0 10px 40px rgba(255, 0, 0, 0.4);
+        }
+        .notification-toast.show { transform: translateY(0); }
+
+        .restricted-action { display: none !important; }
+
+        .multi-select-container {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            background: rgba(255,255,255,0.05);
+            padding: 15px;
+            border-radius: 15px;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+        .multi-option {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 10px;
+            font-weight: 900;
+            text-transform: uppercase;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 8px;
+            background: rgba(0,0,0,0.3);
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+        .multi-option input { display: none; }
+        .multi-option:has(input:checked) {
+            border-color: #FF0000;
+            background: rgba(255,0,0,0.1);
+            color: #FF0000;
+        }
+        #cl-schedule-container {
+            border-top: 1px solid rgba(255,255,255,0.05);
+            padding-top: 15px;
+            margin-top: 10px;
+        }
+        .schedule-slot-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 12px;
+            background: rgba(255,255,255,0.03);
+            border-radius: 12px;
+            margin-bottom: 8px;
+        }
+        /* Estilos para el Editor de Rutinas Mejorado */
+        .rutina-dia-card {
+            background: rgba(255,255,255,0.02);
+            border: 1px solid rgba(255,255,255,0.05);
+            padding: 1.5rem;
+            border-radius: 1.5rem;
+            position: relative;
+        }
+        /* Definición Estricta de la Grilla de Ejercicios para Alineación */
+        .exercise-grid {
+            display: grid;
+            grid-template-columns: 2.5fr 0.8fr 0.8fr 0.8fr 1fr 40px;
+            gap: 12px;
+            align-items: center;
+        }
+        .exercise-results-list div:hover {
+            background: #FF0000;
+            color: black;
+            cursor: pointer;
+        }
+		
+		/* Asegura que el contenedor del avatar se achique proporcionalmente */
+		.sidebar-collapsed #user-avatar-container {
+			width: 40px !important;
+			height: 40px !important;
+			margin-bottom: 10px !important;
+		}
+
+		.sidebar-collapsed #user-initials {
+			font-size: 14px !important;
+		}
+
+		/* Ocultar nombre y rol al colapsar */
+		.sidebar-collapsed #side-user-name,
+		.sidebar-collapsed #side-user-role {
+			display: none !important;
+		}
+
+		/* Centrar el bloque de perfil al colapsar */
+		.sidebar-collapsed .user-profile-block {
+			padding-left: 0 !important;
+			padding-right: 0 !important;
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+		}
+		@keyframes scan-line {
+        0% { top: 10%; opacity: 0; }
+        10% { opacity: 1; }
+        90% { opacity: 1; }
+        100% { top: 90%; opacity: 0; }
+    	}
+    	.animate-scan-line { animation: scan-line 2s cubic-bezier(0.4, 0, 0.2, 1) infinite; }
