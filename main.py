@@ -11,16 +11,30 @@ from typing import List, Optional, Union
 from pydantic import BaseModel
 from datetime import datetime, timedelta, date
 
-# --- NUEVO: INTEGRACIÓN DE SEGURIDAD PARA HASHING ---
+# --- NUEVO: INTEGRACIÓN DE SEGURIDAD PARA HASHING Y AUTHORIZE ---
 from passlib.context import CryptContext
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from jose import JWTError, jwt
+
+# Configuración JWT
+SECRET_KEY = "vikingo_hub_super_secret_key"
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 1440 # 24 Horas
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/token")
 
 def get_password_hash(password):
     return pwd_context.hash(password)
 
 def verify_password(plain_password, hashed_password):
     return pwd_context.verify(plain_password, hashed_password)
+
+def create_access_token(data: dict):
+    to_encode = data.copy()
+    expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    to_encode.update({"exp": expire})
+    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
 # Configuración de logs
 logging.basicConfig(level=logging.INFO)
@@ -78,6 +92,11 @@ def startup_event():
 # ==========================================
 # SCHEMAS (Modelos de Datos Pydantic)
 # ==========================================
+
+# Nuevo Schema para respuesta de Token
+class Token(BaseModel):
+    access_token: str
+    token_type: str
 
 class UsuarioLogin(BaseModel):
     dni: str
@@ -274,6 +293,29 @@ class GrupoMuscularSchema(BaseModel):
 
 
 # ==========================================
+# DEPENDENCIAS DE AUTORIZACIÓN
+# ==========================================
+
+async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(database.get_db)):
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="No se pudo validar el token",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        dni: str = payload.get("sub")
+        if dni is None:
+            raise credentials_exception
+    except JWTError:
+        raise credentials_exception
+    user = db.query(models.Usuario).filter(models.Usuario.dni == dni).first()
+    if user is None:
+        raise credentials_exception
+    return user
+
+
+# ==========================================
 # ENDPOINTS
 # ==========================================
 
@@ -286,6 +328,29 @@ async def serve_app():
     if os.path.exists("index.html"):
         return FileResponse("index.html")
     return {"message": "Frontend file not found"}
+
+# --- ENDPOINT PARA SWAGGER (AUTHORIZE) ---
+@app.post("/api/token", response_model=Token, tags=["Autenticacion"])
+def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(database.get_db)):
+    """
+    Endpoint para que el botón Authorize de Swagger funcione.
+    Recibe username (DNI) y password del formulario de Swagger.
+    """
+    user = db.query(models.Usuario).filter(models.Usuario.dni == form_data.username).first()
+    if not user:
+        raise HTTPException(status_code=401, detail="Usuario no encontrado")
+
+    if user.password_hash.startswith("$2b$") or user.password_hash.startswith("$2a$"):
+        if not verify_password(form_data.password, user.password_hash):
+            raise HTTPException(status_code=401, detail="Contraseña incorrecta")
+    else:
+        if user.password_hash != form_data.password:
+            raise HTTPException(status_code=401, detail="Contraseña incorrecta")
+        user.password_hash = get_password_hash(form_data.password)
+        db.commit()
+
+    access_token = create_access_token(data={"sub": user.dni})
+    return {"access_token": access_token, "token_type": "bearer"}
 
 # --- LOGIN (MODIFICADO PARA VERIFICAR HASH) ---
 @app.post("/api/login", tags=["Autenticacion"])
@@ -398,9 +463,9 @@ def validar_acceso_qr(data: AccessCheck, db: Session = Depends(database.get_db))
             "color": "red"
         }
 
-# --- ALUMNOS (MODIFICADO PARA HASHEAR CONTRASEÑA) ---
+# --- ALUMNOS (MODIFICADO PARA HASHEAR CONTRASEÑA Y PROTEGIDO CON AUTHORIZE) ---
 @app.get("/api/alumnos", response_model=List[UsuarioResponse], tags=["Alumnos"])
-def get_alumnos(db: Session = Depends(database.get_db)):
+def get_alumnos(db: Session = Depends(database.get_db), current_user: models.Usuario = Depends(get_current_user)):
     alumnos = db.query(models.Usuario).options(
         joinedload(models.Usuario.perfil),
         joinedload(models.Usuario.plan).joinedload(models.Plan.tipo)
