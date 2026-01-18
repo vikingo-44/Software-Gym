@@ -484,25 +484,22 @@
         <div id="views-container" class="p-10">
             <!-- DASHBOARD -->
             <div id="view-dashboard" class="view-content active">
-            <div id="admin-dashboard-layout">
-			<!-- MODAL DE MI PASE QR (Oculto por defecto) -->
 			<div id="modal-mi-qr" class="fixed inset-0 z-[1500] bg-black/90 hidden flex-col items-center justify-center backdrop-blur-sm" onclick="closeMyQR()">
 				<div class="glass-card p-10 rounded-[3rem] border-white/10 flex flex-col items-center text-center max-w-sm mx-4 transform transition-all scale-95 animate-in fade-in zoom-in duration-300" onclick="event.stopPropagation()">
 					<h3 class="text-2xl font-black italic uppercase text-white mb-2">Mi Pase Vikingo</h3>
-					<p class="text-[10px] text-gray-400 font-bold uppercase mb-8">Escanea esto en el ingreso</p>
+					<p class="text-[10px] text-red-600 font-bold uppercase mb-8 tracking-widest">Escanea en la entrada</p>
 					
-					<div class="p-4 bg-white rounded-3xl shadow-[0_0_50px_rgba(255,255,255,0.2)] mb-6">
-						<!-- La imagen se carga dinámicamente -->
-						<img id="img-mi-qr" src="" alt="Tu Codigo QR" class="w-48 h-48 object-contain">
+					<div class="p-4 bg-white rounded-3xl shadow-[0_0_50px_rgba(255,0,0,0.2)] mb-6">
+						<img id="img-mi-qr" src="" alt="QR" class="w-48 h-48 object-contain">
 					</div>
 					
 					<p id="qr-user-dni" class="text-xl font-black text-white tracking-widest mb-1">------</p>
 					<p id="qr-user-name" class="text-xs text-gray-500 font-bold uppercase italic">------</p>
 					
-					<button onclick="closeMyQR()" class="mt-8 text-[10px] font-black uppercase text-red-500 hover:text-white transition-colors">Cerrar</button>
+					<button onclick="closeMyQR()" class="mt-8 px-8 py-3 bg-white/5 hover:bg-white/10 rounded-xl text-[10px] font-black uppercase text-gray-400 hover:text-white transition-colors">Cerrar Pase</button>
 				</div>
 			</div>
-
+            <div id="admin-dashboard-layout">
 			<!-- HEADER DEL DASHBOARD CON BOTÓN QR -->
 			<div class="flex justify-between items-end mb-8">
 				<div>
@@ -593,7 +590,27 @@
 								<h3 class="text-3xl font-black uppercase italic leading-none" id="al-dash-name">-</h3>
 								<p class="text-red-600 text-[11px] font-black uppercase tracking-widest mt-1">Guerrero Vikingo en Formación</p>
 							</div>
-						</div>
+							<div class="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 mb-8">
+								<div class="flex items-center gap-6">
+									<div class="w-20 h-20 rounded-[1.5rem] viking-bg-red flex items-center justify-center font-black text-black text-3xl italic shadow-2xl" id="al-dash-initials">??</div>
+									<div>
+										<h3 class="text-3xl font-black uppercase italic leading-none" id="al-dash-name">-</h3>
+										<p class="text-red-600 text-[11px] font-black uppercase tracking-widest mt-1">Guerrero Vikingo en Formación</p>
+									</div>
+								</div>
+								
+								<!-- BOTÓN MyQR ESTILO PREMIUM -->
+								<button onclick="showMyQR()" class="bg-white/5 hover:bg-white/10 border border-white/10 text-white px-5 py-3 rounded-2xl flex items-center gap-3 transition-all hover:scale-105 group">
+									<div class="bg-white text-black p-1.5 rounded-lg group-hover:bg-red-600 group-hover:text-white transition-colors">
+										<i data-lucide="qr-code" class="w-5 h-5"></i>
+									</div>
+									<div class="text-left">
+										<p class="text-[9px] text-gray-400 font-bold uppercase">Acceso</p>
+										<p class="text-[11px] font-black italic uppercase">Ver Mi QR</p>
+									</div>
+								</button>
+							</div>
+													</div>
 						<div class="grid grid-cols-2 md:grid-cols-4 gap-6">
 							<div class="bg-white/5 p-4 rounded-2xl border border-white/5">
 								<p class="text-[9px] text-gray-500 font-black uppercase italic mb-1">DNI / Usuario</p>
@@ -4879,26 +4896,36 @@ async function loadProfesores() {
 					const dniTxt = document.getElementById('qr-user-dni');
 					const nameTxt = document.getElementById('qr-user-name');
 					
-					// ERROR CORREGIDO: Usamos 'state.user' que es donde guardas los datos en handleLogin
+					// Obtenemos el usuario del estado global 'state.user' (que se llena en handleLogin)
 					const user = state.user; 
 					
-					if(user) {
+					if (user && user.dni) {
+						// 1. Cargamos los datos en el modal
 						dniTxt.innerText = user.dni;
-						nameTxt.innerText = user.nombre_completo;
-						// Generamos el QR usando el DNI del usuario
-						img.src = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${user.dni}&color=000000&bgcolor=ffffff`;
+						nameTxt.innerText = user.nombre_completo || user.nombre || "Guerrero";
 						
+						// 2. Generamos la URL del QR (usando su DNI)
+						const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${user.dni}&color=000000&bgcolor=ffffff&margin=10`;
+						img.src = qrUrl;
+						
+						// 3. Mostramos el modal
 						modal.classList.remove('hidden');
 						modal.classList.add('flex');
+						
+						// 4. Refrescamos iconos de Lucide por si el modal tiene alguno
+						if (window.lucide) lucide.createIcons();
 					} else {
-						showVikingToast("Error: No se encontró sesión de usuario", true);
+						showVikingToast("Error: No se encontró sesión activa", true);
+						console.error("DEBUG: state.user está vacío", state);
 					}
 				}
 
 				function closeMyQR() {
 					const modal = document.getElementById('modal-mi-qr');
-					modal.classList.add('hidden');
-					modal.classList.remove('flex');
+					if(modal) {
+						modal.classList.add('hidden');
+						modal.classList.remove('flex');
+					}
 				}
 
 			// ==========================================
