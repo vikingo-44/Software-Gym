@@ -47,9 +47,12 @@ app.add_middleware(
 # --- Funciones de Seguridad Auxiliares ---
 def verify_password(plain_password, hashed_password):
     """Verifica si la contraseña coincide (soporta texto plano para migración)"""
+    if not hashed_password:
+        return False
     try:
         return pwd_context.verify(plain_password, hashed_password)
     except:
+        # Fallback para usuarios que aún tienen contraseña en texto plano
         return plain_password == hashed_password
 
 def get_password_hash(password):
@@ -158,7 +161,7 @@ class AlumnoUpdate(BaseModel):
     peso: Optional[float] = None
     altura: Optional[float] = None
     imc: Optional[float] = None
-    certificado_entregado: bool = False
+    certificado_entregado: Optional[bool] = False
     fecha_certificado: Optional[date] = None
     fecha_ultima_renovacion: Optional[date] = None
     fecha_vencimiento: Optional[date] = None
@@ -480,12 +483,7 @@ def create_alumno(alumno: AlumnoUpdate, db: Session = Depends(database.get_db)):
             raise HTTPException(status_code=500, detail="Perfil Alumno no encontrado")
             
         # Generar hash de contraseña de forma segura
-        # Si falla el hashing (por falta de librerías), usaremos texto plano como fallback extremo
-        try:
-            hashed_pass = get_password_hash(alumno.password or alumno.dni)
-        except Exception as e:
-            logger.warning(f"Error en hashing, usando texto plano: {e}")
-            hashed_pass = alumno.password or alumno.dni
+        hashed_pass = get_password_hash(alumno.password or alumno.dni)
 
         new_al = models.Usuario(
             nombre_completo=alumno.nombre_completo, 
@@ -509,7 +507,7 @@ def create_alumno(alumno: AlumnoUpdate, db: Session = Depends(database.get_db)):
         db.commit()
         return {"status": "success", "message": "Alumno creado correctamente"}
 
-    except IntegrityError as e:
+    except IntegrityError:
         db.rollback()
         raise HTTPException(status_code=400, detail="El DNI o Email ya se encuentra registrado")
     except Exception as e:
@@ -538,7 +536,7 @@ def update_alumno(id: int, data: AlumnoUpdate, db: Session = Depends(database.ge
     if data.fecha_vencimiento: al.fecha_vencimiento = data.fecha_vencimiento
 
     if data.password:
-        al.password_hash = get_password_hash(data.password) # Aplicar hash
+        al.password_hash = get_password_hash(data.password)
     db.commit()
     return {"status": "success"}
 
@@ -666,7 +664,7 @@ def create_staff(data: dict, db: Session = Depends(database.get_db)):
         nombre_completo=data['nombre_completo'], 
         dni=data['dni'], 
         email=data.get('email'),
-        password_hash=get_password_hash(data.get('password', data['dni'])), # Hash
+        password_hash=get_password_hash(data.get('password', data['dni'])), 
         perfil_id=perfil.id,
         especialidad=data.get('especialidad')
     )
@@ -693,7 +691,7 @@ def update_staff(id: int, data: StaffUpdate, db: Session = Depends(database.get_
     if perfil:
         st.perfil_id = perfil.id
     if data.password:
-        st.password_hash = get_password_hash(data.password) # Hash
+        st.password_hash = get_password_hash(data.password)
         
     db.commit()
     return {"status": "success"}
