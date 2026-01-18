@@ -4731,7 +4731,7 @@ async function loadProfesores() {
 		let scanCooldown = false;   // Bloqueo temporal tras una lectura exitosa
 
 		// 1. Abrir Escáner y Encender Cámara
-		aasync function startScanner() {
+		async function startScanner() {
 			const modal = document.getElementById('modal-scanner-live');
 			const video = document.getElementById('scanner-video');
 			const hud = document.getElementById('scanner-hud');
