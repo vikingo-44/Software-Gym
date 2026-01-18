@@ -4721,47 +4721,89 @@ async function loadProfesores() {
             }
         };
 
-		// ==========================================
-		// LÓGICA DE LOS OJOS DE ODÍN (CÁMARA)
-		// ==========================================
+		// 1. VARIABLES GLOBALES (Deben estar fuera de las funciones)
 		let videoStream = null;
-    	let isScanning = false;
+		let isScanning = false;
 
 		// 1. Abrir Escáner y Encender Cámara
 		async function startScanner() {
-        	const modal = document.getElementById('modal-scanner-live');
-        	const video = document.getElementById('scanner-video');
-        	const hud = document.getElementById('scanner-hud');
-        
-        	modal.classList.remove('hidden');
-        	modal.classList.add('flex');
-        	hud.classList.remove('hidden');
+			const modal = document.getElementById('modal-scanner-live');
+			const video = document.getElementById('scanner-video');
+			const hud = document.getElementById('scanner-hud');
 
-        	if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-            	showCameraError("Navegador no compatible o falta HTTPS.");
-            return;
-        	}
+			// Mostrar modal
+			modal.classList.remove('hidden');
+			modal.classList.add('flex');
+			hud.classList.remove('hidden');
 
-        	try {
-            	videoStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
-            	video.srcObject = videoStream;
-            	video.play();
-            	isScanning = true;
-            	scanLoop(); // Iniciar bucle de detección (Simulado por ahora hasta integrar librería JSQR real)
-        	} catch (err) {
-            	console.error(err);
-            	showCameraError("No se pudo acceder a la cámara.");
-        	}
-    	}
+			// Verificar compatibilidad
+			if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+				showCameraError("Navegador no compatible o falta HTTPS.");
+				return;
+			}
 
-		// 2. Detener Cámara y Cerrar
-		function stopScanner() {
-			isScanning = false;
-			if (videoStream) videoStream.getTracks().forEach(track => track.stop());
-			document.getElementById('modal-scanner-live').classList.add('hidden');
-			document.getElementById('modal-scanner-live').classList.remove('flex');
-			hideFeedback();
+			try {
+				// Pedir acceso a la cámara
+				videoStream = await navigator.mediaDevices.getUserMedia({ 
+					video: { 
+						facingMode: "environment",
+						width: { ideal: 1280 },
+						height: { ideal: 720 }
+					} 
+				});
+				
+				video.srcObject = videoStream;
+				
+				// Esperar a que el video cargue para evitar errores de renderizado
+				video.onloadedmetadata = () => {
+					video.play();
+					isScanning = true;
+					console.log("Cámara iniciada, ejecutando bucle...");
+					requestAnimationFrame(scanLoop); // Iniciamos el bucle de forma segura
+				};
+
+			} catch (err) {
+				console.error("Error al iniciar cámara:", err);
+				showCameraError("No se pudo acceder a la cámara. Revisa los permisos.");
+			}
 		}
+
+		// 3. EL BUCLE DE ESCANEO (La función que faltaba)
+			function scanLoop() {
+				if (!isScanning) return; // Si cerramos el scanner, cortamos el bucle
+
+				const video = document.getElementById('scanner-video');
+				const canvasElement = document.getElementById('scanner-canvas'); // Asegúrate de tener este <canvas> en tu HTML (aunque sea hidden)
+				
+				if (video.readyState === video.HAVE_ENOUGH_DATA) {
+					// Aquí es donde el video se mantiene "vivo"
+					// Si más adelante instalas jsQR, aquí iría la lógica de lectura:
+					// const code = jsQR(imageData, width, height);
+					
+					// Simulación: solo para verificar que el hilo no se rompe
+					// console.log("Buscando código QR..."); 
+				}
+
+				// Volvemos a llamar a la función en el próximo frame (60fps aprox)
+				// Esto evita el "congelamiento" o fondo de agua en laptops
+				requestAnimationFrame(scanLoop);
+			}
+
+		// 4. FUNCIÓN PARA CERRAR EL ESCÁNER (Limpieza de memoria)
+			function stopScanner() {
+				isScanning = false;
+				const modal = document.getElementById('modal-scanner-live');
+				const video = document.getElementById('scanner-video');
+
+				if (videoStream) {
+					videoStream.getTracks().forEach(track => track.stop()); // Apaga la luz de la cámara
+					videoStream = null;
+				}
+				
+				video.srcObject = null;
+				modal.classList.add('hidden');
+				modal.classList.remove('flex');
+			}
 
 		// 3. Simular Lectura (Para probar sin QR real)
 		async function simulateScan(type) {
