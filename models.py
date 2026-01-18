@@ -147,7 +147,7 @@ class EjercicioEnRutina(Base):
     __tablename__ = "ejercicios_en_rutina"
     id = Column(Integer, primary_key=True)
     dia_id = Column(Integer, ForeignKey("rutina_dias.id"))
-    ejercicio_id = Column(Integer, ForeignKey("ejercicios_libreria.id"))
+    exercise_id = Column(Integer, ForeignKey("ejercicios_libreria.id"))
     comentario = Column(Text, nullable=True)
     dia = relationship("DiaRutina", back_populates="ejercicios")
     ejercicio_obj = relationship("Ejercicio", back_populates="ejercicios_en_rutina")
