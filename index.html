@@ -6,6 +6,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
 	<script src="https://unpkg.com/jsqr@1.4.0/dist/jsQR.js"></script>
+	<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <title>GF Strength Hub</title>
     <style>
@@ -4726,26 +4727,28 @@ async function loadProfesores() {
 		// 1. VARIABLES GLOBALES (Deben estar fuera de las funciones)
 		let videoStream = null;
 		let isScanning = false;
+		let lastScannedData = null; // Para evitar lecturas duplicadas seguidas
+		let scanCooldown = false;   // Bloqueo temporal tras una lectura exitosa
 
 		// 1. Abrir Escáner y Encender Cámara
-		async function startScanner() {
+		aasync function startScanner() {
 			const modal = document.getElementById('modal-scanner-live');
 			const video = document.getElementById('scanner-video');
 			const hud = document.getElementById('scanner-hud');
+			const errorMsg = document.getElementById('scanner-error-msg');
 
-			// Mostrar interfaz
+			// Reset de UI
+			if (errorMsg) errorMsg.classList.add('hidden');
 			modal.classList.remove('hidden');
 			modal.classList.add('flex');
 			hud.classList.remove('hidden');
 
-			// Verificar compatibilidad y HTTPS
 			if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-				showCameraError("Navegador no compatible o falta HTTPS.");
+				showCameraError("Tu navegador no soporta acceso a cámara o no usas HTTPS.");
 				return;
 			}
 
 			try {
-				// Pedir acceso a la cámara con resolución ideal para lectura de QR
 				videoStream = await navigator.mediaDevices.getUserMedia({ 
 					video: { 
 						facingMode: "environment",
@@ -4755,138 +4758,120 @@ async function loadProfesores() {
 				});
 				
 				video.srcObject = videoStream;
-				
 				video.onloadedmetadata = () => {
 					video.play();
 					isScanning = true;
-					console.log("Ojos de Odín abiertos: Escaneando...");
+					lastScannedData = null; // Limpiar historial de lectura previa
+					console.log("Sistema Vikingo: Buscando QRs...");
 					requestAnimationFrame(scanLoop); 
 				};
 
 			} catch (err) {
-				console.error("Error al iniciar cámara:", err);
-				showCameraError("No se pudo acceder a la cámara. Revisa los permisos.");
+				console.error("Error al abrir cámara:", err);
+				showCameraError("Cámara no detectada o permiso denegado.");
 			}
 		}
 
-		// 3. EL BUCLE DE ESCANEO (La función que faltaba)
-			function scanLoop() {
-				if (!isScanning) return; 
+		/**
+		 * 3. BUCLE DE PROCESAMIENTO (Detección automática)
+		 */
+		function scanLoop() {
+			if (!isScanning) return; 
 
-				const video = document.getElementById('scanner-video');
-				let canvasElement = document.getElementById('scanner-canvas');
+			const video = document.getElementById('scanner-video');
+			let canvasElement = document.getElementById('scanner-canvas');
+			
+			// Crear canvas de procesamiento si no existe
+			if (!canvasElement) {
+				canvasElement = document.createElement('canvas');
+				canvasElement.id = 'scanner-canvas';
+				canvasElement.className = 'hidden';
+				document.body.appendChild(canvasElement);
+			}
+
+			const canvas = canvasElement.getContext("2d", { willReadFrequently: true });
+
+			if (video.readyState === video.HAVE_ENOUGH_DATA) {
+				canvasElement.height = video.videoHeight;
+				canvasElement.width = video.videoWidth;
 				
-				// Si no existe el canvas oculto para procesar, lo creamos
-				if (!canvasElement) {
-					canvasElement = document.createElement('canvas');
-					canvasElement.id = 'scanner-canvas';
-					canvasElement.className = 'hidden';
-					document.body.appendChild(canvasElement);
-				}
+				// Dibujamos el frame actual para que jsQR lo analice
+				canvas.drawImage(video, 0, 0, canvasElement.width, canvasElement.height);
+				const imageData = canvas.getImageData(0, 0, canvasElement.width, canvasElement.height);
+				
+				// Intentar decodificar QR
+				const code = typeof jsQR !== 'undefined' ? jsQR(imageData.data, imageData.width, imageData.height, {
+					inversionAttempts: "dontInvert",
+				}) : null;
 
-				const canvas = canvasElement.getContext("2d", { willReadFrequently: true });
-
-				if (video.readyState === video.HAVE_ENOUGH_DATA) {
-					// Ajustar canvas al tamaño del video
-					canvasElement.height = video.videoHeight;
-					canvasElement.width = video.videoWidth;
-					
-					// Dibujar el frame actual del video en el canvas
-					canvas.drawImage(video, 0, 0, canvasElement.width, canvasElement.height);
-					
-					// Obtener datos de imagen para procesar
-					const imageData = canvas.getImageData(0, 0, canvasElement.width, canvasElement.height);
-					
-					// Intentar detectar código QR con jsQR
-					const code = jsQR(imageData.data, imageData.width, imageData.height, {
-						inversionAttempts: "dontInvert",
-					});
-
-					if (code) {
-						console.log("QR Detectado:", code.data);
+				// Si detecta un QR y no estamos en tiempo de espera (cooldown)
+				if (code && code.data && !scanCooldown) {
+					// Solo procesamos si es un DNI distinto al anterior o si pasó el tiempo de reset
+					if (code.data !== lastScannedData) {
+						console.log("QR Detectado con éxito:", code.data);
+						lastScannedData = code.data;
 						processQRCode(code.data);
-						return; // Detenemos el bucle al detectar un código para procesar
+						return; // Pausamos el bucle hasta que processQRCode termine
 					}
 				}
-
-				// Continuar el bucle
-				requestAnimationFrame(scanLoop);
 			}
 
-			// 4. PROCESAR EL CÓDIGO DETECTADO
-			async function processQRCode(qrData) {
-				isScanning = false; // Pausar escaneo mientras validamos
-				
-				try {
-					// Enviamos el dato (DNI:HASH o DNI plano) al backend
-					const response = await apiFetch('/acceso/validar', 'POST', { qr_data: qrData });
-					
-					showFeedback(response);
-					
-					// Registrar en el log del dashboard
-					if(typeof registerAccessLog === 'function') {
-						registerAccessLog(
-							response.nombre || "Desconocido", 
-							qrData.split(':')[0], 
-							"QR SCAN", 
-							response.status
-						);
-					}
-
-				} catch (e) {
-					console.error(e);
-					showFeedback({ status: "DENIED", message: "Error de Validación", nombre: "Sistema" });
-				}
-
-				// Esperar 4 segundos antes de permitir un nuevo escaneo
-				setTimeout(() => {
-					if (document.getElementById('modal-scanner-live').classList.contains('flex')) {
-						hideFeedback();
-						isScanning = true;
-						requestAnimationFrame(scanLoop);
-					}
-				}, 4000);
-			}
-
-		// 4. FUNCIÓN PARA CERRAR EL ESCÁNER (Limpieza de memoria)
-			function stopScanner() {
-				isScanning = false;
-				const modal = document.getElementById('modal-scanner-live');
-				const video = document.getElementById('scanner-video');
-
-				if (videoStream) {
-					videoStream.getTracks().forEach(track => track.stop());
-					videoStream = null;
-				}
-				
-				video.srcObject = null;
-				modal.classList.add('hidden');
-				modal.classList.remove('flex');
-				hideFeedback(); // Limpiar UI por si quedó un cartel de éxito/error
-			}
-
-		// 3. Simular Lectura (Para probar sin QR real)
-		async function simulateScan(type) {
-			let dniToTest = "00000000";
-			
-			if (type === 'ok') {
-				const alumno = state.alumnos.find(a => a.estado_cuenta === 'Al día');
-				if(alumno) dniToTest = alumno.dni;
-				else { alert("Crea un alumno al día primero."); return; }
-			} else if (type === 'expired') {
-				const alumno = state.alumnos.find(a => a.estado_cuenta !== 'Al día');
-				if(alumno) dniToTest = alumno.dni;
-				else dniToTest = "99999999";
-			}
-
-			// Generamos el hash para que el formato sea DNI:HASH (como espera el servidor)
-			const hash = await generateVikingHash(dniToTest);
-			const qrSimulado = `${dniToTest}:${hash}`;
-			
-			processQRCode(qrSimulado);
+			// Mantener el bucle vivo
+			requestAnimationFrame(scanLoop);
 		}
 
-		// 4. Mostrar Feedback Visual sobre el Video
+		/**
+		 * 4. VALIDACIÓN CON BACKEND
+		 * Envía el DNI leído al servidor y muestra el resultado real.
+		 */
+		async function processQRCode(dniLargo) {
+			scanCooldown = true; // Bloqueo de seguridad para no procesar 2 veces
+			
+			// Limpiamos el texto de feedback anterior antes de la nueva consulta
+			const nameDisplay = document.getElementById('scanner-user-name');
+			if (nameDisplay) nameDisplay.innerText = "Verificando...";
+
+			try {
+				// El servidor recibe el DNI y devuelve {status, nombre, message}
+				const response = await apiFetch('/acceso/validar', 'POST', { qr_data: dniLargo });
+				
+				// Mostramos el feedback con los datos REALES que devuelve el servidor
+				showFeedback(response);
+				
+				// Registrar en los logs visuales del dashboard
+				if(typeof registerAccessLog === 'function') {
+					registerAccessLog(
+						response.nombre || "Desconocido", 
+						dniLargo.split(':')[0], 
+						"CÁMARA", 
+						response.status
+					);
+				}
+
+			} catch (e) {
+				console.error("Error en validación:", e);
+				showFeedback({ 
+					status: "DENIED", 
+					message: "Error de conexión", 
+					nombre: "SISTEMA" 
+				});
+			}
+
+			// Tiempo de espera de 3.5 segundos para que la persona vea su nombre y pase
+			setTimeout(() => {
+				hideFeedback();
+				scanCooldown = false;
+				// Permitimos volver a escanear después del tiempo de feedback
+				if (isScanning) {
+					lastScannedData = null; 
+					requestAnimationFrame(scanLoop);
+				}
+			}, 3500);
+		}
+
+		/**
+		 * 5. FEEDBACK VISUAL
+		 */
 		function showFeedback(data) {
 			const overlay = document.getElementById('scanner-feedback-overlay');
 			const icon = document.getElementById('scanner-icon-container');
@@ -4899,17 +4884,24 @@ async function loadProfesores() {
 			overlay.classList.remove('hidden');
 			overlay.classList.add('flex');
 
-			name.innerText = data.nombre || "Desconocido";
+			// IMPORTANTE: Aquí usamos data.nombre que viene directo del servidor
+			name.innerText = data.nombre || "Guerrero Desconocido";
 			msg.innerText = data.message || "";
 
 			if (data.status === 'AUTHORIZED') {
 				status.innerText = "ACCESO PERMITIDO";
 				status.className = "text-4xl font-black uppercase italic text-green-500 mb-2 tracking-wide text-center";
-				icon.innerHTML = '<div class="w-32 h-32 bg-green-500 rounded-full flex items-center justify-center shadow-[0_0_60px_#22c55e] animate-bounce"><i data-lucide="check" class="w-16 h-16 text-black"></i></div>';
+				icon.innerHTML = `
+					<div class="w-32 h-32 bg-green-500 rounded-full flex items-center justify-center shadow-[0_0_60px_#22c55e] animate-bounce">
+						<i data-lucide="check" class="w-16 h-16 text-black"></i>
+					</div>`;
 			} else {
 				status.innerText = "ACCESO DENEGADO";
 				status.className = "text-4xl font-black uppercase italic text-red-500 mb-2 tracking-wide text-center";
-				icon.innerHTML = '<div class="w-32 h-32 bg-red-600 rounded-full flex items-center justify-center shadow-[0_0_60px_#dc2626] animate-shake"><i data-lucide="x" class="w-16 h-16 text-black"></i></div>';
+				icon.innerHTML = `
+					<div class="w-32 h-32 bg-red-600 rounded-full flex items-center justify-center shadow-[0_0_60px_#dc2626] animate-shake">
+						<i data-lucide="x" class="w-16 h-16 text-black"></i>
+					</div>`;
 			}
 			
 			if(window.lucide) lucide.createIcons();
@@ -4922,32 +4914,24 @@ async function loadProfesores() {
 				overlay.classList.remove('flex');
 			}
 		}
-		// 5. Registrar en el Sistema (Simulación de Backend)
-		function registerAccessLog(nombre, dni, metodo, estado) {
-			const nuevoAcceso = {
-				nombre: nombre,
-				dni: dni,
-				fecha: new Date().toLocaleTimeString(),
-				metodo: metodo,
-				estado: estado
-			};
 
-			if (!state.accesos) state.accesos = [];
-			state.accesos.unshift(nuevoAcceso);
+		/**
+		 * 6. UTILIDADES Y CIERRE
+		 */
+		function stopScanner() {
+			isScanning = false;
+			const modal = document.getElementById('modal-scanner-live');
+			const video = document.getElementById('scanner-video');
+
+			if (videoStream) {
+				videoStream.getTracks().forEach(track => track.stop());
+				videoStream = null;
+			}
 			
-			if (state.accesos.length > 50) state.accesos.pop();
-
-			if (typeof loadDashboard === 'function') loadDashboard();
-			if (typeof renderAccesos === 'function') renderAccesos();
-		}
-
-		async function generateVikingHash(dni) {
-			const message = dni + SECRET_KEY;
-			const encoder = new TextEncoder();
-			const data = encoder.encode(message);
-			const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-			const hashArray = Array.from(new Uint8Array(hashBuffer));
-			return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+			video.srcObject = null;
+			modal.classList.add('hidden');
+			modal.classList.remove('flex');
+			hideFeedback();
 		}
 
 		function showCameraError(msg) {
