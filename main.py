@@ -4,6 +4,7 @@ import hashlib
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy.exc import IntegrityError, ProgrammingError
 from sqlalchemy import func, extract, text
@@ -34,7 +35,14 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 # 1 día
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-app = FastAPI(title="Vikingo Strength Hub API")
+# Definición para habilitar el botón "Authorize" en FastAPI Docs (/docs)
+auth_scheme = HTTPBearer()
+
+app = FastAPI(
+    title="Vikingo Strength Hub API",
+    description="Sistema de gestión integral con seguridad JWT y control de acceso QR",
+    version="2.5.0"
+)
 
 app.add_middleware(
     CORSMiddleware,
@@ -48,12 +56,14 @@ app.add_middleware(
 def verify_password(plain_password, hashed_password):
     """Verifica si la contraseña coincide (soporta texto plano para migración)"""
     try:
+        if not hashed_password: return False
         return pwd_context.verify(plain_password, hashed_password)
     except:
         return plain_password == hashed_password
 
 def get_password_hash(password):
     """Genera hash bcrypt para la contraseña"""
+    if not password: return None
     return pwd_context.hash(password)
 
 def create_access_token(data: dict):
@@ -62,6 +72,22 @@ def create_access_token(data: dict):
     expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+
+# --- Dependencia para proteger Endpoints ---
+def get_current_user(db: Session = Depends(database.get_db), auth: HTTPAuthorizationCredentials = Depends(auth_scheme)):
+    """Valida el token y devuelve el usuario actual"""
+    try:
+        payload = jwt.decode(auth.credentials, SECRET_KEY, algorithms=[ALGORITHM])
+        dni: str = payload.get("sub")
+        if dni is None:
+            raise HTTPException(status_code=401, detail="Token inválido")
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Sesión expirada o token corrupto")
+    
+    user = db.query(models.Usuario).filter(models.Usuario.dni == dni).first()
+    if not user:
+        raise HTTPException(status_code=401, detail="Usuario no encontrado")
+    return user
 
 # ==========================================
 # PARCHE DE BASE DE DATOS (AUTO-FIX)
@@ -106,6 +132,15 @@ class UsuarioLogin(BaseModel):
     dni: str
     password: str
 
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str
+    nombre_completo: str
+    rol_nombre: str
+    # Agregados para compatibilidad de frontend
+    id: int
+    dni: str
+
 # --- NUEVO: Schema para Validación de QR ---
 class AccessCheck(BaseModel):
     qr_data: str # Recibirá el formato "DNI:HASH" contenido en el código QR
@@ -148,8 +183,8 @@ class UsuarioResponse(BaseModel):
     class Config: from_attributes = True
 
 class AlumnoUpdate(BaseModel):
-    nombre_completo: str
-    dni: str
+    nombre_completo: Optional[str] = None
+    dni: Optional[str] = None
     email: Optional[str] = None
     plan_id: Optional[int] = None
     password: Optional[str] = None
@@ -158,17 +193,17 @@ class AlumnoUpdate(BaseModel):
     peso: Optional[float] = None
     altura: Optional[float] = None
     imc: Optional[float] = None
-    certificado_entregado: bool = False
+    certificado_entregado: Optional[bool] = None
     fecha_certificado: Optional[date] = None
     fecha_ultima_renovacion: Optional[date] = None
     fecha_vencimiento: Optional[date] = None
 
 class StaffUpdate(BaseModel):
-    nombre_completo: str
-    dni: str
+    nombre_completo: Optional[str] = None
+    dni: Optional[str] = None
     email: Optional[str] = None
     especialidad: Optional[str] = None
-    perfil_nombre: str
+    perfil_nombre: Optional[str] = None
     password: Optional[str] = None
 
 class StockUpdate(BaseModel):
@@ -296,12 +331,58 @@ class ReservaCreate(BaseModel):
     dia_semana: int
 
 # ==========================================
+# LÓGICA DE ACTUALIZACIÓN GENÉRICA (FIX 500)
+# ==========================================
+
+def update_db_user(user_id: int, data: Union[AlumnoUpdate, StaffUpdate], db: Session):
+    """
+    Función robusta para actualizar usuarios sin causar errores 500.
+    Usa model_dump(exclude_unset=True) para solo tocar lo que el frontend envió.
+    """
+    user = db.query(models.Usuario).filter(models.Usuario.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+
+    # Extraer solo campos enviados
+    update_data = data.model_dump(exclude_unset=True)
+
+    # Lógica especial para perfiles en Staff
+    if 'perfil_nombre' in update_data:
+        p_nombre = update_data.pop('perfil_nombre')
+        perfil = db.query(models.Perfil).filter(func.lower(models.Perfil.nombre) == p_nombre.lower()).first()
+        if perfil:
+            user.perfil_id = perfil.id
+
+    # Aplicar campos dinámicamente
+    for key, value in update_data.items():
+        if key == "password":
+            if value: user.password_hash = get_password_hash(value)
+            continue
+        
+        # Validar DNI único si se intenta cambiar
+        if key == "dni" and value != user.dni:
+            check = db.query(models.Usuario).filter(models.Usuario.dni == value).first()
+            if check: raise HTTPException(status_code=400, detail="El DNI ya pertenece a otro usuario")
+
+        if hasattr(user, key):
+            setattr(user, key, value)
+
+    try:
+        db.commit()
+        db.refresh(user)
+        return {"status": "success", "message": "Actualizado correctamente"}
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error 500 al actualizar ID {user_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail="Fallo en la base de datos al actualizar")
+
+# ==========================================
 # ENDPOINTS
 # ==========================================
 
 @app.get("/", tags=["Sistema"])
 def api_root():
-    return {"status": "Vikingo Strength Hub API is running"}
+    return {"status": "Vikingo Strength Hub API is running", "version": "2.5.0"}
 
 @app.get("/app", tags=["Sistema"])
 async def serve_app():
@@ -310,7 +391,7 @@ async def serve_app():
     return {"message": "Frontend file not found"}
 
 # --- LOGIN ---
-@app.post("/api/login", tags=["Autenticacion"])
+@app.post("/api/login", response_model=TokenResponse, tags=["Autenticacion"])
 def login(data: UsuarioLogin, db: Session = Depends(database.get_db)):
     user = db.query(models.Usuario).options(
         joinedload(models.Usuario.perfil),
@@ -320,7 +401,7 @@ def login(data: UsuarioLogin, db: Session = Depends(database.get_db)):
     if not user or not verify_password(data.password, user.password_hash):
         raise HTTPException(status_code=401, detail="Credenciales incorrectas")
     
-    # Generar Token de Acceso
+    # Generar Token de Acceso Estándar
     token = create_access_token(data={"sub": user.dni})
     
     return {
@@ -329,20 +410,7 @@ def login(data: UsuarioLogin, db: Session = Depends(database.get_db)):
         "id": user.id, 
         "nombre_completo": user.nombre_completo, 
         "dni": user.dni, 
-        "email": user.email,
-        "rol_nombre": user.perfil.nombre if user.perfil else "Usuario",
-        "plan": {
-            "id": user.plan.id,
-            "nombre": user.plan.nombre,
-            "precio": user.plan.precio,
-            "clases_mensuales": user.plan.clases_mensuales 
-        } if user.plan else None,
-        "plan_id": user.plan_id,
-        "fecha_vencimiento": user.fecha_vencimiento.isoformat() if user.fecha_vencimiento else None,
-        "fecha_ultima_renovacion": user.fecha_ultima_renovacion.isoformat() if user.fecha_ultima_renovacion else None,
-        "peso": user.peso,
-        "altura": user.altura,
-        "imc": user.imc
+        "rol_nombre": user.perfil.nombre if user.perfil else "Usuario"
     }
 
 # --- NUEVO: VALIDACIÓN DE ACCESO (QR CON HASHING) ---
@@ -479,13 +547,7 @@ def create_alumno(alumno: AlumnoUpdate, db: Session = Depends(database.get_db)):
         if not perfil:
             raise HTTPException(status_code=500, detail="Perfil Alumno no encontrado")
             
-        # Generar hash de contraseña de forma segura
-        # Si falla el hashing (por falta de librerías), usaremos texto plano como fallback extremo
-        try:
-            hashed_pass = get_password_hash(alumno.password or alumno.dni)
-        except Exception as e:
-            logger.warning(f"Error en hashing, usando texto plano: {e}")
-            hashed_pass = alumno.password or alumno.dni
+        hashed_pass = get_password_hash(alumno.password or alumno.dni)
 
         new_al = models.Usuario(
             nombre_completo=alumno.nombre_completo, 
@@ -519,28 +581,8 @@ def create_alumno(alumno: AlumnoUpdate, db: Session = Depends(database.get_db)):
 
 @app.put("/api/alumnos/{id}", tags=["Alumnos"])
 def update_alumno(id: int, data: AlumnoUpdate, db: Session = Depends(database.get_db)):
-    al = db.query(models.Usuario).filter(models.Usuario.id == id).first()
-    if not al:
-        raise HTTPException(status_code=404, detail="Alumno no encontrado")
-    
-    al.nombre_completo = data.nombre_completo
-    al.dni = data.dni
-    al.email = data.email
-    al.plan_id = data.plan_id
-    al.fecha_nacimiento = data.fecha_nacimiento
-    al.edad = data.edad
-    al.peso = data.peso
-    al.altura = data.altura
-    al.imc = data.imc
-    al.certificado_entregado = data.certificado_entregado
-    al.fecha_certificado = data.fecha_certificado
-    if data.fecha_ultima_renovacion: al.fecha_ultima_renovacion = data.fecha_ultima_renovacion
-    if data.fecha_vencimiento: al.fecha_vencimiento = data.fecha_vencimiento
-
-    if data.password:
-        al.password_hash = get_password_hash(data.password) # Aplicar hash
-    db.commit()
-    return {"status": "success"}
+    # Usamos la lógica de actualización reparada
+    return update_db_user(id, data, db)
 
 @app.delete("/api/alumnos/{id}", tags=["Alumnos"])
 def delete_alumno(id: int, db: Session = Depends(database.get_db)):
@@ -576,12 +618,12 @@ def book_clase(data: ReservaCreate, db: Session = Depends(database.get_db)):
         limite_mensual = user.plan.clases_mensuales
         if limite_mensual < 999:
             mes_actual = date.today().month
-            anio_actual = date.today().year
+            an_actual = date.today().year
             
             count_reservas = db.query(models.Reserva).filter(
                 models.Reserva.usuario_id == user.id,
                 extract('month', models.Reserva.fecha_reserva) == mes_actual,
-                extract('year', models.Reserva.fecha_reserva) == anio_actual
+                extract('year', models.Reserva.fecha_reserva) == an_actual
             ).count()
             
             if count_reservas >= limite_mensual:
@@ -666,7 +708,7 @@ def create_staff(data: dict, db: Session = Depends(database.get_db)):
         nombre_completo=data['nombre_completo'], 
         dni=data['dni'], 
         email=data.get('email'),
-        password_hash=get_password_hash(data.get('password', data['dni'])), # Hash
+        password_hash=get_password_hash(data.get('password', data['dni'])),
         perfil_id=perfil.id,
         especialidad=data.get('especialidad')
     )
@@ -680,23 +722,8 @@ def create_staff(data: dict, db: Session = Depends(database.get_db)):
 
 @app.put("/api/staff/{id}", tags=["Staff"])
 def update_staff(id: int, data: StaffUpdate, db: Session = Depends(database.get_db)):
-    st = db.query(models.Usuario).filter(models.Usuario.id == id).first()
-    if not st:
-        raise HTTPException(status_code=404, detail="Usuario no encontrado")
-        
-    perfil = db.query(models.Perfil).filter(models.Perfil.nombre == data.perfil_nombre).first()
-    
-    st.nombre_completo = data.nombre_completo
-    st.dni = data.dni
-    st.email = data.email
-    st.especialidad = data.especialidad
-    if perfil:
-        st.perfil_id = perfil.id
-    if data.password:
-        st.password_hash = get_password_hash(data.password) # Hash
-        
-    db.commit()
-    return {"status": "success"}
+    # Usamos la lógica de actualización reparada
+    return update_db_user(id, data, db)
 
 @app.delete("/api/staff/{id}", tags=["Staff"])
 def delete_staff(id: int, db: Session = Depends(database.get_db)):
