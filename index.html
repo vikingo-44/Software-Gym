@@ -4918,39 +4918,32 @@ async function loadProfesores() {
 			
 			// FUNCIONES PARA EL MODAL DE MI QR
 				function showMyQR() {
-					const modal = document.getElementById('modal-mi-qr');
-					const img = document.getElementById('img-mi-qr');
-					const dniTxt = document.getElementById('qr-user-dni');
-					const nameTxt = document.getElementById('qr-user-name');
+					const container = document.getElementById('al-dash-myqr-container');
+					const qrImg = document.getElementById('al-dash-myqr-img');
+					const qrDni = document.getElementById('al-dash-myqr-dni');
+					const qrName = document.getElementById('al-dash-myqr-name');
 					
-					// Obtenemos el usuario del estado global (asegúrate que se llame 'state.user')
-					const user = state.user; 
+					// Asumimos que 'currentUser' es tu objeto de estado global con los datos del login
+					const user = typeof currentUser !== 'undefined' ? currentUser : (typeof state !== 'undefined' ? state.user : null); 
 					
 					if (user && user.dni) {
-						// Actualizamos textos
-						dniTxt.innerText = `DNI: ${user.dni}`;
-						nameTxt.innerText = user.nombre_completo || user.nombre || "Guerrero";
+						qrDni.innerText = `DNI: ${user.dni}`;
+						qrName.innerText = user.nombre_completo || user.nombre || "Guerrero";
 						
-						// Generamos la URL del QR usando una API gratuita
-						// data = el DNI del usuario
-						const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${user.dni}&color=000000&bgcolor=ffffff&margin=10`;
-						img.src = qrUrl;
+						// API de generación de QR
+						qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${user.dni}&color=000000&bgcolor=ffffff&margin=10`;
 						
-						// Mostramos el modal
-						modal.classList.remove('hidden');
-						modal.classList.add('flex');
+						container.classList.remove('hidden');
+						container.classList.add('flex');
 						
-						// Forzamos a Lucide a renderizar el icono de cerrar por si acaso
-						if (typeof lucide !== 'undefined') lucide.createIcons();
-					} else {
-						console.error("No se encontró usuario activo o DNI");
+						if (window.lucide) lucide.createIcons();
 					}
 				}
 
 				function closeMyQR() {
-					const modal = document.getElementById('modal-mi-qr');
-					modal.classList.add('hidden');
-					modal.classList.remove('flex');
+					const container = document.getElementById('al-dash-myqr-container');
+					container.classList.add('hidden');
+					container.classList.remove('flex');
 				}
 
 			// ==========================================
