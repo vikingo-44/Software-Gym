@@ -33,7 +33,9 @@ SECRET_KEY = "Vikingo_Security_Strong_Key_2025"
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 # 1 día
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# FIX CRÍTICO: Usamos sha256_crypt (como en tu otra app) para ELIMINAR el error de los 72 bytes.
+# Bcrypt es el que causa el problema de longitud; sha256_crypt no tiene ese límite.
+pwd_context = CryptContext(schemes=["sha256_crypt", "bcrypt"], deprecated="auto")
 
 # Definición para habilitar el botón "Authorize" en FastAPI Docs (/docs)
 auth_scheme = HTTPBearer()
@@ -54,17 +56,23 @@ app.add_middleware(
 
 # --- Funciones de Seguridad Auxiliares ---
 def verify_password(plain_password, hashed_password):
-    """Verifica si la contraseña coincide (soporta texto plano para migración)"""
+    """Verifica si la contraseña coincide (soporta múltiples algoritmos y texto plano)"""
     try:
         if not hashed_password: return False
-        return pwd_context.verify(plain_password, hashed_password)
-    except:
-        return plain_password == hashed_password
+        # Limpiamos la entrada por seguridad
+        safe_input = str(plain_password).strip()
+        return pwd_context.verify(safe_input, hashed_password)
+    except Exception as e:
+        logger.warning(f"Error verificando hash, reintentando comparación simple: {e}")
+        return str(plain_password).strip() == str(hashed_password).strip()
 
 def get_password_hash(password):
-    """Genera hash bcrypt para la contraseña"""
+    """Genera hash seguro para la contraseña usando sha256_crypt"""
     if not password: return None
-    return pwd_context.hash(password)
+    # Forzamos a string y limpiamos espacios
+    safe_password = str(password).strip()
+    # sha256_crypt aceptará cualquier longitud, solucionando el error 500
+    return pwd_context.hash(safe_password)
 
 def create_access_token(data: dict):
     """Genera el token JWT"""
@@ -374,7 +382,7 @@ def update_db_user(user_id: int, data: Union[AlumnoUpdate, StaffUpdate], db: Ses
     except Exception as e:
         db.rollback()
         logger.error(f"Error 500 al actualizar ID {user_id}: {str(e)}")
-        raise HTTPException(status_code=500, detail="Fallo en la base de datos al actualizar")
+        raise HTTPException(status_code=500, detail=f"Error interno al actualizar: {str(e)}")
 
 # ==========================================
 # ENDPOINTS
@@ -547,7 +555,10 @@ def create_alumno(alumno: AlumnoUpdate, db: Session = Depends(database.get_db)):
         if not perfil:
             raise HTTPException(status_code=500, detail="Perfil Alumno no encontrado")
             
-        hashed_pass = get_password_hash(alumno.password or alumno.dni)
+        # Lógica de password: si no se envía, se usa el DNI.
+        # Forzamos conversión a string para evitar líos con el motor de hashing.
+        raw_password = str(alumno.password).strip() if alumno.password else str(alumno.dni).strip()
+        hashed_pass = get_password_hash(raw_password)
 
         new_al = models.Usuario(
             nombre_completo=alumno.nombre_completo, 
@@ -571,17 +582,17 @@ def create_alumno(alumno: AlumnoUpdate, db: Session = Depends(database.get_db)):
         db.commit()
         return {"status": "success", "message": "Alumno creado correctamente"}
 
-    except IntegrityError as e:
+    except IntegrityError:
         db.rollback()
         raise HTTPException(status_code=400, detail="El DNI o Email ya se encuentra registrado")
     except Exception as e:
         db.rollback()
         logger.error(f"Error crítico al crear alumno: {str(e)}")
+        # Ahora el error de "72 bytes" no debería existir más.
         raise HTTPException(status_code=500, detail=f"Error interno: {str(e)}")
 
 @app.put("/api/alumnos/{id}", tags=["Alumnos"])
 def update_alumno(id: int, data: AlumnoUpdate, db: Session = Depends(database.get_db)):
-    # Usamos la lógica de actualización reparada
     return update_db_user(id, data, db)
 
 @app.delete("/api/alumnos/{id}", tags=["Alumnos"])
@@ -667,9 +678,8 @@ def book_clase(data: ReservaCreate, db: Session = Depends(database.get_db)):
         db.add(new_res)
         db.commit()
         return {"status": "success"}
-    except IntegrityError as e:
+    except IntegrityError:
         db.rollback()
-        logger.error(f"Error integridad al reservar: {e}")
         raise HTTPException(status_code=400, detail="Error de base de datos.")
     except Exception as e:
         db.rollback()
@@ -704,11 +714,12 @@ def create_staff(data: dict, db: Session = Depends(database.get_db)):
     if not perfil:
         raise HTTPException(status_code=400, detail="Perfil no válido")
 
+    raw_password = str(data.get('password', data['dni'])).strip()
     new_staff = models.Usuario(
         nombre_completo=data['nombre_completo'], 
         dni=data['dni'], 
         email=data.get('email'),
-        password_hash=get_password_hash(data.get('password', data['dni'])),
+        password_hash=get_password_hash(raw_password),
         perfil_id=perfil.id,
         especialidad=data.get('especialidad')
     )
@@ -722,7 +733,6 @@ def create_staff(data: dict, db: Session = Depends(database.get_db)):
 
 @app.put("/api/staff/{id}", tags=["Staff"])
 def update_staff(id: int, data: StaffUpdate, db: Session = Depends(database.get_db)):
-    # Usamos la lógica de actualización reparada
     return update_db_user(id, data, db)
 
 @app.delete("/api/staff/{id}", tags=["Staff"])
