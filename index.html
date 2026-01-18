@@ -1540,97 +1540,62 @@
         }
 
 		function applyPermissions() {
-			// 1. Verificación de seguridad básica
 			if (!state.user) return;
-
 			const rol = state.user.rol_nombre || "";
 			const isAlumno = rol === "Alumno";
 			const isAdmin = rol === "Administrador" || rol === "Supervisor";
-			const isStaffAutorizado = isAdmin || rol === "Administracion";
+			const isStaffAutorizado = rol === "Administrador" || rol === "Supervisor" || rol === "Administracion";
 			
-			// 2. Control de Dashboards (Vista Principal)
+			// Layout Dashboard
 			const adminDash = document.getElementById('admin-dashboard-layout');
 			const aluDash = document.getElementById('alumno-dashboard-layout');
-			
-			if (adminDash) adminDash.style.setProperty('display', isAlumno ? 'none' : 'block', 'important');
-			if (aluDash) aluDash.style.setProperty('display', isAlumno ? 'block' : 'none', 'important');
+			if(adminDash) adminDash.style.display = isAlumno ? 'none' : 'block';
+			if(aluDash) aluDash.style.display = isAlumno ? 'block' : 'none';
 
-			// 3. Secciones Completas de Navegación
-			const navSections = {
-				'nav-section-staff': isAdmin,               // Solo Jefes
-				'nav-section-operativa': isStaffAutorizado, // Administradores y Jefes
-				'nav-section-virtual': isStaffAutorizado,   // Administradores y Jefes
-				'nav-section-alumnos': !isAlumno            // Todo el staff ve la sección alumnos
-			};
-
-			for (const [id, shouldShow] of Object.entries(navSections)) {
-				const el = document.getElementById(id);
-				if (el) {
-					el.style.setProperty('display', shouldShow ? 'block' : 'none', 'important');
-				}
+			const navVirtual = document.getElementById('nav-section-virtual');
+			if (navVirtual) {
+				// Usamos setProperty para forzar el estilo si el CSS es muy estricto
+				navVirtual.style.setProperty('display', isStaffAutorizado ? 'block' : 'none', 'important');
 			}
 
-			// 4. Botones Individuales de Navegación (Links específicos)
-			const navItems = {
-				'nav-alumnos': !isAlumno,
-				'nav-planes': !isAlumno,
-				'nav-clases': !isAlumno,
-				'nav-stock': !isAlumno,
-				'nav-mi-qr': true // El QR siempre es visible para que todos puedan ver su acceso
-			};
+			// Elementos de Navegación (Usamos setProperty para forzar sobre el CSS)
+			const navAlumnos = document.getElementById('nav-alumnos');
+			const navPlanes = document.getElementById('nav-planes');
+			const navClases = document.getElementById('nav-clases');
+			const navStaff = document.getElementById('nav-section-staff');
+			const navOperativa = document.getElementById('nav-section-operativa');
 
-			for (const [id, shouldShow] of Object.entries(navItems)) {
-				const el = document.getElementById(id);
-				if (el) {
-					el.style.setProperty('display', shouldShow ? 'flex' : 'none', 'important');
-				}
-			}
-
-			// 5. Restricciones de Edición y Creación (Tablas y Formularios)
 			if (isAlumno) {
-				// Ocultar columnas de acciones (Editar/Eliminar) en cualquier tabla
-				document.querySelectorAll('.action-col').forEach(el => {
-					el.style.setProperty('display', 'none', 'important');
-				});
+				// OCULTAR ESTRICTAMENTE PARA ALUMNOS
+				if(navAlumnos) navAlumnos.style.setProperty('display', 'none', 'important');
+				if(navPlanes) navPlanes.style.setProperty('display', 'none', 'important');
+				if(navClases) navClases.style.setProperty('display', 'none', 'important');
+				if(navStaff) navStaff.style.setProperty('display', 'none', 'important');
+				if(navOperativa) navOperativa.style.setProperty('display', 'none', 'important');
 				
-				// Ocultar todos los botones de "Agregar" o "Nuevo"
-				const forbiddenButtons = [
-					'btn-nuevo-alumno', 'btn-nuevo-plan', 'btn-nueva-clase', 
-					'btn-nuevo-stock', 'btn-nuevo-prof', 'btn-nuevo-adm',
-					'btn-registrar-pago'
-				];
+				// Ocultar columnas de acciones en tablas
+				document.querySelectorAll('.action-col').forEach(el => el.style.setProperty('display', 'none', 'important'));
 				
-				forbiddenButtons.forEach(id => { 
+				// Ocultar botones de "Crear Nuevo"
+				['btn-nuevo-alumno', 'btn-nuevo-plan', 'btn-nueva-clase', 'btn-nuevo-stock', 'btn-nuevo-prof', 'btn-nuevo-adm'].forEach(id => { 
 					const b = document.getElementById(id); 
 					if(b) b.style.setProperty('display', 'none', 'important'); 
 				});
-
-				// Deshabilitar inputs de edición si estuvieran abiertos
-				document.querySelectorAll('.admin-only-ui').forEach(el => {
-					el.style.setProperty('display', 'none', 'important');
-				});
-
 			} else {
-				// Restaurar visibilidad para Staff
-				document.querySelectorAll('.action-col').forEach(el => {
-					el.style.display = 'table-cell';
-				});
+				// MOSTRAR PARA STAFF
+				if(navAlumnos) navAlumnos.style.display = 'flex';
+				if(navPlanes) navPlanes.style.display = 'flex';
+				if(navClases) navClases.style.display = 'flex';
 				
-				// Mostrar botones de creación según nivel de staff
-				if (isStaffAutorizado) {
-					document.querySelectorAll('.staff-action-btn').forEach(el => {
-						el.style.display = 'inline-flex';
-					});
-				}
-			}
-
-			// 6. Refrescar iconos para asegurar que los elementos nuevos tengan su arte
-			if (window.lucide) {
-				lucide.createIcons();
+				if(navStaff) navStaff.style.display = (isAdmin) ? 'block' : 'none';
+				if(navOperativa) navOperativa.style.display = (isAdmin || rol === "Administracion") ? 'block' : 'none';
+				
+				document.querySelectorAll('.action-col').forEach(el => el.style.display = 'table-cell');
 			}
 			
-			// Log de seguridad (Opcional para depuración)
-			console.log(`Permisos aplicados para el rol: ${rol}`);
+			
+			
+			if(window.lucide) lucide.createIcons();
 		}
 
 		async function renderStudentDashboard() {
@@ -3229,114 +3194,99 @@
             lucide.createIcons();
         }
 
-		async function handleLogin(e) {
-			// 1. Detener el refresco automático del formulario
-			if(e && e.preventDefault) e.preventDefault();
-			
-			const dniInput = document.getElementById('login-dni');
-			const passInput = document.getElementById('login-pass');
-			const errorDiv = document.getElementById('login-error');
-			const loginBtn = document.getElementById('login-button');
-			
-			if (!dniInput || !passInput) return; 
+    async function handleLogin(e) {
+		// 1. Detener el refresco automático del formulario
+		if(e && e.preventDefault) e.preventDefault();
+		
+		const dniInput = document.getElementById('login-dni');
+		const passInput = document.getElementById('login-pass');
+		const errorDiv = document.getElementById('login-error');
+		const loginBtn = document.getElementById('login-button');
+		
+		if (!dniInput || !passInput) return; 
 
-			// Feedback visual de carga
-			if(loginBtn) {
-				loginBtn.disabled = true;
-				loginBtn.innerText = "VERIFICANDO...";
-			}
+		// Feedback visual de carga
+		if(loginBtn) {
+			loginBtn.disabled = true;
+			loginBtn.innerText = "VERIFICANDO...";
+		}
 
-			const data = { 
-				dni: dniInput.value, 
-				password: passInput.value 
-			};
+		const data = { 
+			dni: dniInput.value, 
+			password: passInput.value 
+		};
+		
+		try {
+			const res = await apiFetch('/login', 'POST', data);
 			
-			try {
-				// Realizamos la petición al backend
-				const res = await apiFetch('/login', 'POST', data);
+			if (res && !res.error) {
+				// Guardamos al usuario en el estado global (importante para el QR)
+				state.user = res;
 				
-				// Verificamos si recibimos el access_token (indicador de login exitoso con JWT)
-				if (res && res.access_token) {
-					
-					// --- LO QUE FALTABA: PERSISTENCIA Y SEGURIDAD ---
-					// 1. Guardamos el token para futuras peticiones
-					localStorage.setItem('viking_token', res.access_token);
-					
-					// 2. Guardamos al usuario en el estado global
-					// Nota: El backend debe devolver el objeto 'user' junto al token
-					state.user = res.user; 
-					
-					// 3. Aplicamos permisos inmediatamente para ajustar la UI (Sidebar, botones, etc.)
-					applyPermissions();
+				// 2. Ocultar Login y mostrar App
+				document.getElementById('login-overlay').style.display = 'none';
+				document.getElementById('sidebar').classList.remove('hidden');
+				document.getElementById('main-content').classList.remove('hidden');
+				
+				// 3. Cargar datos del usuario en la barra lateral
+				const elName = document.getElementById('side-user-name');
+				if(elName) elName.innerText = res.nombre_completo || "Usuario";
 
-					// --- LÓGICA DE INTERFAZ ---
-					// Ocultar Login y mostrar App
-					document.getElementById('login-overlay').style.display = 'none';
-					document.getElementById('sidebar').classList.remove('hidden');
-					document.getElementById('main-content').classList.remove('hidden');
-					
-					// Cargar datos del usuario en la barra lateral
-					const userData = state.user;
-					const elName = document.getElementById('side-user-name');
-					if(elName) elName.innerText = userData.nombre_completo || "Usuario";
+				const elRole = document.getElementById('side-user-role');
+				if(elRole) elRole.innerText = res.rol_nombre || 'Staff';
 
-					const elRole = document.getElementById('side-user-role');
-					if(elRole) elRole.innerText = userData.rol_nombre || 'Staff';
+				// --- LÓGICA DE INICIALES ---
+				const name = res.nombre_completo || "Usuario Vikingo";
+				const initials = name.split(' ')
+									.filter(n => n)
+									.map(n => n[0])
+									.join('')
+									.toUpperCase()
+									.substring(0, 2);
+				
+				const elInitials = document.getElementById('user-initials');
+				if(elInitials) elInitials.innerText = initials;
 
-					// Lógica de iniciales para el avatar
-					const name = userData.nombre_completo || "Usuario Vikingo";
-					const initials = name.split(' ')
-										.filter(n => n)
-										.map(n => n[0])
-										.join('')
-										.toUpperCase()
-										.substring(0, 2);
-					
-					const elInitials = document.getElementById('user-initials');
-					if(elInitials) elInitials.innerText = initials;
-
-					// 4. Cargar datos maestros según corresponda
-					await loadProfesores();
-					
-					if (typeof initApp === 'function' && userData.rol_nombre !== "Alumno") {
-						await initApp(); 
-					} else {
-						if (typeof loadClases === 'function') loadClases(); 
-						if (typeof loadStock === 'function') loadStock();
-					}
-
-					// 5. Cambiar a la vista principal
-					switchView('dashboard');
-
-					// Renderizar Dashboard específico si es Alumno
-					if (userData.rol_nombre === "Alumno" && typeof renderStudentDashboard === 'function') {
-						await renderStudentDashboard();
-					}
-
-					// Refrescar iconos de Lucide
-					if(window.lucide) lucide.createIcons();
-					
-					showVikingToast(`¡Bienvenido al Valhalla, ${name.split(' ')[0]}!`);
-
+				// 4. Cargar datos maestros (Profesores, Clases, etc.)
+				await loadProfesores();
+				
+				if (typeof initApp === 'function') {
+					await initApp(); 
 				} else {
-					// Manejo de errores de credenciales
-					if(errorDiv) errorDiv.classList.remove('hidden');
-					showVikingToast(res.error || "DNI o contraseña incorrectos", true);
-					
-					if(loginBtn) {
-						loginBtn.disabled = false;
-						loginBtn.innerText = "Entrar al Valhalla";
-					}
+					if (typeof loadClases === 'function') loadClases(); 
+					if (typeof loadStock === 'function') loadStock();
 				}
-			} catch (err) {
-				console.error("Error en el proceso de login:", err);
-				showVikingToast("Error de conexión con el servidor", true);
+
+				// 5. Cambiar a la vista principal
+				switchView('dashboard');
+
+				// --- LO QUE FALTABA: Renderizar Dashboard específico si es Alumno ---
+				if (res.rol_nombre === "Alumno" && typeof renderStudentDashboard === 'function') {
+					await renderStudentDashboard();
+				}
+
+				// Refrescar iconos
+				if(window.lucide) lucide.createIcons();
+				
+				showVikingToast(`¡Bienvenido al Valhalla, ${res.nombre_completo.split(' ')[0]}!`);
+
+			} else {
+				// Mostrar error si las credenciales fallan
+				if(errorDiv) errorDiv.classList.remove('hidden');
 				if(loginBtn) {
 					loginBtn.disabled = false;
 					loginBtn.innerText = "Entrar al Valhalla";
 				}
 			}
+		} catch (err) {
+			console.error("Error en el proceso de login:", err);
+			showVikingToast("Error de conexión con el servidor", true);
+			if(loginBtn) {
+				loginBtn.disabled = false;
+				loginBtn.innerText = "Entrar al Valhalla";
+			}
 		}
+	}
 
 	async function loadCaja() {
 		const movs = await apiFetch('/caja/movimientos');
@@ -4931,123 +4881,45 @@ async function loadProfesores() {
 				if (window.lucide) lucide.createIcons();
 			}
 			
-			async function generateQRHash(dni, timestamp) {
-				const SALT = "VIKING_SECRET_2024"; // Esta clave debe ser la misma en el escáner
-				const message = `${dni}|${timestamp}|${SALT}`;
-				
-				// Usamos la API sutil de criptografía del navegador (nativa, sin librerías)
-				const encoder = new TextEncoder();
-				const data = encoder.encode(message);
-				const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-				
-				// Convertir el buffer a string hexadecimal
-				const hashArray = Array.from(new Uint8Array(hashBuffer));
-				const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-				
-				return hashHex.substring(0, 10); // Usamos solo los primeros 10 caracteres para que el QR no sea tan denso
-			}
+			// FUNCIONES PARA EL MODAL DE MI QR
+				function showMyQR() {
+					const user = state.user;
+					if (!user) {
+						showVikingToast("Error: Sesión no encontrada", true);
+						return;
+					}
 
-			// FUNCIONES PARA EL MODAL DE MI QR /**
-			async function showMyQR() {
-				const user = state.user;
-				if (!user) {
-					showVikingToast("Error: Sesión no encontrada", true);
-					return;
-				}
+					// 1. VALIDACIÓN DE SEGURIDAD PARA ALUMNOS
+					if (user.rol_nombre === "Alumno") {
+						const hoy = new Date().toISOString().split('T')[0];
+						const vencimiento = user.fecha_vencimiento || "0000-00-00";
 
-				// 1. VALIDACIÓN DE PLAN (IGUAL QUE ANTES)
-				if (user.rol_nombre === "Alumno") {
-					const hoy = new Date();
-					hoy.setHours(0, 0, 0, 0);
-					const fechaVenc = user.fecha_vencimiento ? new Date(user.fecha_vencimiento) : null;
-					
-					if (!fechaVenc || fechaVenc < hoy) {
-						showVikingToast("ACCESO DENEGADO: Tu plan ha vencido.", true);
-						return; 
+						if (vencimiento < hoy) {
+							showVikingToast("ACCESO DENEGADO: Tu plan ha vencido. Pasa por recepción.", true);
+							console.warn("Intento de apertura de QR con plan vencido:", user.dni);
+							return; // Bloqueamos la ejecución aquí
+						}
+					}
+
+					// 2. SI ES STAFF O ALUMNO AL DÍA, PROCEDEMOS
+					const modal = document.getElementById('modal-mi-qr');
+					const img = document.getElementById('img-mi-qr');
+					const dniTxt = document.getElementById('qr-user-dni');
+					const nameTxt = document.getElementById('qr-user-name');
+
+					if (modal && img) {
+						dniTxt.innerText = user.dni;
+						nameTxt.innerText = user.nombre_completo || "Guerrero";
+						
+						// Generación del QR
+						img.src = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${user.dni}&color=000000&bgcolor=ffffff&margin=10`;
+
+						modal.classList.remove('hidden');
+						modal.classList.add('flex');
+						
+						if (window.lucide) lucide.createIcons();
 					}
 				}
-
-				const modal = document.getElementById('modal-mi-qr');
-				const img = document.getElementById('img-mi-qr');
-				const dniTxt = document.getElementById('qr-user-dni');
-				const nameTxt = document.getElementById('qr-user-name');
-
-				if (modal && img) {
-					dniTxt.innerText = user.dni;
-					nameTxt.innerText = user.nombre_completo || "Guerrero";
-
-					// --- LÓGICA DE HASH Y SEGURIDAD ---
-					// Generamos un timestamp actual (en segundos)
-					const timestamp = Math.floor(Date.now() / 1000);
-					
-					// Generamos el hash de validación
-					const vHash = await generateQRHash(user.dni, timestamp);
-
-					/**
-					 * El contenido del QR ahora es: DNI|TIMESTAMP|HASH
-					 * Ejemplo: 12345678|1700000000|a1b2c3d4e5
-					 * El escáner leerá esto y verificará si el hash coincide con el DNI+Timestamp.
-					 */
-					const qrContent = `${user.dni}|${timestamp}|${vHash}`;
-					const qrDataEncoded = encodeURIComponent(qrContent);
-
-					// Feedback visual de carga
-					img.style.opacity = '0.3';
-					img.src = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${qrDataEncoded}&color=000000&bgcolor=ffffff&margin=10`;
-
-					img.onload = () => { img.style.opacity = '1'; };
-
-					modal.classList.remove('hidden');
-					modal.classList.add('flex');
-					
-					if (window.lucide) lucide.createIcons();
-				}
-			}
-
-			/**
-			 * Cierra el modal y limpia el src del QR
-			 */
-			function closeMyQR() {
-				const modal = document.getElementById('modal-mi-qr');
-				if (modal) {
-					modal.classList.add('hidden');
-					modal.classList.remove('flex');
-					const img = document.getElementById('img-mi-qr');
-					if (img) img.src = '';
-				}
-			}
-
-			/**
-			 * Cierra el modal del QR y limpia los datos sensibles.
-			 */
-			function closeMyQR() {
-				const modal = document.getElementById('modal-mi-qr');
-				if (modal) {
-					modal.classList.add('hidden');
-					modal.classList.remove('flex');
-					
-					// Limpiamos la imagen para que no parpadee el QR anterior al abrirlo de nuevo
-					const img = document.getElementById('img-mi-qr');
-					if (img) img.src = '';
-				}
-			}
-
-			// Inicialización de eventos de cierre (puedes llamar esto en tu initApp)
-			function setupQRListeners() {
-				const modal = document.getElementById('modal-mi-qr');
-				const closeBtn = document.getElementById('close-modal-qr');
-				
-				if (closeBtn) {
-					closeBtn.onclick = closeMyQR;
-				}
-
-				// Cerrar al hacer click fuera del contenido
-				if (modal) {
-					modal.onclick = (e) => {
-						if (e.target === modal) closeMyQR();
-					};
-				}
-			}
 
 				function closeMyQR() {
 					const modal = document.getElementById('modal-mi-qr');
