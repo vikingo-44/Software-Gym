@@ -1,0 +1,3706 @@
+// ==========================================
+		// 1. CONFIGURACIÓN MAESTRA (PEGAR AL INICIO DE TU SCRIPT)
+		// ==========================================
+
+		// Detectamos automáticamente si estás en tu PC o en la Nube
+		const IS_LOCALHOST = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+
+		// Definimos la URL Maestra (Para compatibilidad con código antiguo y nuevo)
+		const API_URL = IS_LOCALHOST ? "http://localhost:8000/api" : "/api";
+		const API_BASE = API_URL; 
+
+		// Seguridad y Estado Global
+		const SECRET_KEY = "Vikingo_Security_Strong_Key_2025"; 
+		
+		console.log("⚔️ Vikingo System Online ⚔️");
+		console.log("Modo:", IS_LOCALHOST ? "LOCAL (Desarrollo)" : "PRODUCCIÓN (Nube)");
+		console.log("Conectando a:", API_URL);
+
+		// ==========================================
+		// 2. CORRECCIÓN DE SEGURIDAD (LOGIN)
+		// ==========================================
+		// Si tu login está en un formulario, esto evita que la página se refresque si hay error
+		document.addEventListener('DOMContentLoaded', () => {
+			const loginForm = document.getElementById('login-form'); // Asegúrate que tu form tenga este ID o el que uses
+			if (loginForm) {
+				loginForm.onsubmit = async (e) => {
+					e.preventDefault(); // ¡ESTO ES CRUCIAL! Evita el refresco
+					if (typeof login === 'function') {
+						login(); // Llama a tu función de login original
+					} else {
+						console.error("No encuentro la función login()");
+					}
+				};
+			}
+		});
+
+        let state = { 
+			alumnos: [], 
+			planes: [], 
+			stock: [], 
+			clases: [], 
+			user: null, 
+			profesores: [], 
+			administrativos: [], 
+			tiposPlanes: [],
+			reservas: [], 
+			cart: [], 
+			currentPaymentMethod: '',
+			cobrarTab: 'mercaderia',
+			gruposMusculares: [], 
+			ejerciciosLibreria: [],
+			accesos: []
+		};
+
+        function showVikingToast(msg, error = false) {
+            const toast = document.getElementById('viking-toast');
+            toast.innerText = msg;
+            toast.style.background = error ? '#660000' : '#FF0000';
+            toast.style.color = error ? '#FF0000' : 'black';
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+
+		function applyPermissions() {
+			if (!state.user) return;
+			const rol = state.user.rol_nombre || "";
+			const isAlumno = rol === "Alumno";
+			const isAdmin = rol === "Administrador" || rol === "Supervisor";
+			const isStaffAutorizado = rol === "Administrador" || rol === "Supervisor" || rol === "Administracion";
+			
+			// Layout Dashboard
+			const adminDash = document.getElementById('admin-dashboard-layout');
+			const aluDash = document.getElementById('alumno-dashboard-layout');
+			if(adminDash) adminDash.style.display = isAlumno ? 'none' : 'block';
+			if(aluDash) aluDash.style.display = isAlumno ? 'block' : 'none';
+
+			const navVirtual = document.getElementById('nav-section-virtual');
+			if (navVirtual) {
+				// Usamos setProperty para forzar el estilo si el CSS es muy estricto
+				navVirtual.style.setProperty('display', isStaffAutorizado ? 'block' : 'none', 'important');
+			}
+
+			// Elementos de Navegación (Usamos setProperty para forzar sobre el CSS)
+			const navAlumnos = document.getElementById('nav-alumnos');
+			const navPlanes = document.getElementById('nav-planes');
+			const navClases = document.getElementById('nav-clases');
+			const navStaff = document.getElementById('nav-section-staff');
+			const navOperativa = document.getElementById('nav-section-operativa');
+
+			if (isAlumno) {
+				// OCULTAR ESTRICTAMENTE PARA ALUMNOS
+				if(navAlumnos) navAlumnos.style.setProperty('display', 'none', 'important');
+				if(navPlanes) navPlanes.style.setProperty('display', 'none', 'important');
+				if(navClases) navClases.style.setProperty('display', 'none', 'important');
+				if(navStaff) navStaff.style.setProperty('display', 'none', 'important');
+				if(navOperativa) navOperativa.style.setProperty('display', 'none', 'important');
+				
+				// Ocultar columnas de acciones en tablas
+				document.querySelectorAll('.action-col').forEach(el => el.style.setProperty('display', 'none', 'important'));
+				
+				// Ocultar botones de "Crear Nuevo"
+				['btn-nuevo-alumno', 'btn-nuevo-plan', 'btn-nueva-clase', 'btn-nuevo-stock', 'btn-nuevo-prof', 'btn-nuevo-adm'].forEach(id => { 
+					const b = document.getElementById(id); 
+					if(b) b.style.setProperty('display', 'none', 'important'); 
+				});
+			} else {
+				// MOSTRAR PARA STAFF
+				if(navAlumnos) navAlumnos.style.display = 'flex';
+				if(navPlanes) navPlanes.style.display = 'flex';
+				if(navClases) navClases.style.display = 'flex';
+				
+				if(navStaff) navStaff.style.display = (isAdmin) ? 'block' : 'none';
+				if(navOperativa) navOperativa.style.display = (isAdmin || rol === "Administracion") ? 'block' : 'none';
+				
+				document.querySelectorAll('.action-col').forEach(el => el.style.display = 'table-cell');
+			}
+			
+			
+			
+			if(window.lucide) lucide.createIcons();
+		}
+
+		async function renderStudentDashboard() {
+			const u = state.user; if (!u) return;
+			
+			// 1. Cargar Datos básicos (Tu código original intacto)
+			document.getElementById('al-dash-name').innerText = u.nombre_completo;
+			document.getElementById('al-dash-dni').innerText = u.dni;
+			document.getElementById('al-dash-plan').innerText = u.plan?.nombre || 'SIN PLAN';
+			document.getElementById('al-dash-vencimiento').innerText = u.fecha_vencimiento || '-';
+			document.getElementById('al-dash-renovacion').innerText = u.fecha_ultima_renovacion || '-';
+			
+			const initials = u.nombre_completo ? u.nombre_completo.split(' ').filter(n=>n).map(n=>n[0]).join('').toUpperCase() : "??";
+			document.getElementById('al-dash-initials').innerText = initials;
+			
+			// Mantenemos Peso, Altura e IMC (Como pediste)
+			document.getElementById('al-dash-peso').innerText = u.peso || '0';
+			document.getElementById('al-dash-altura').innerText = u.altura || '0';
+			document.getElementById('al-dash-imc').innerText = u.imc || '0';
+
+			// --- NUEVA LÓGICA: CRÉDITOS MENSUALES ---
+			const limite = u.plan?.clases_mensuales || 0;
+			const esFull = limite > 100; // Si es más de 100, asumimos ilimitado (Plan Full)
+
+			// Recargamos reservas para asegurar el conteo exacto al momento
+			const allReservas = await apiFetch('/reservas');
+			if (!allReservas.error && Array.isArray(allReservas)) {
+				state.reservas = allReservas; 
+			}
+			
+			// Filtramos reservas de ESTE ALUMNO en ESTE MES
+			const hoy = new Date();
+			const reservasMes = state.reservas.filter(r => {
+				// Aseguramos compatibilidad de fechas
+				const fecha = new Date(r.fecha_clase || r.fecha_reserva || r.fecha); 
+				return (r.alumno_dni === u.dni || r.usuario_id === u.id) && 
+					   fecha.getMonth() === hoy.getMonth() &&
+					   fecha.getFullYear() === hoy.getFullYear();
+			});
+
+			const usadas = reservasMes.length;
+			const restantes = esFull ? "∞" : Math.max(0, limite - usadas);
+
+			// Actualizamos los elementos de Créditos (Solo si agregaste el HTML nuevo, si no, no rompe nada)
+			const elUsadas = document.getElementById('al-dash-usadas');
+			if(elUsadas) elUsadas.innerText = usadas;
+			
+			const elCreditos = document.getElementById('al-dash-creditos');
+			if(elCreditos) {
+				elCreditos.innerHTML = esFull ? 
+				`<span class="text-2xl">∞</span>` : 
+				`<span class="${restantes <= 2 ? 'text-red-500' : 'text-white'}">${restantes}</span>`;
+			}
+			// ----------------------------------------
+
+			// Resumen de Rutina (Tu código original)
+			let res = await apiFetch(`/rutinas/usuario/${u.id}`);
+			let rutina = null;
+			if (Array.isArray(res) && res.length > 0) rutina = res[0]; 
+			else if (res && !res.error && res.id) rutina = res;
+
+			const summaryContainer = document.getElementById('al-dash-rutina-summary'); 
+			const contentContainer = document.getElementById('al-dash-rutina-content');
+
+			if (summaryContainer && contentContainer) {
+				if (rutina) {
+					summaryContainer.classList.remove('hidden');
+					contentContainer.innerHTML = `
+						<p class="text-[12px] font-black italic text-white mb-1">${rutina.objetivo || 'Rutina Personalizada'}</p>
+						<p class="text-[10px] text-gray-500 uppercase font-bold">${(rutina.dias||[]).length} Días de Entrenamiento</p>
+					`;
+				} else {
+					summaryContainer.classList.add('hidden');
+				}
+			}
+			
+			// Próximas Clases (Tu código original, mejorado el filtro)
+			const upcoming = document.getElementById('al-dash-upcoming');
+			const misR = state.reservas.filter(r => r.alumno_dni === u.dni || r.usuario_id === u.id);
+			
+			// Ordenar por fecha para mostrar las más cercanas primero
+			misR.sort((a, b) => new Date(a.fecha_clase) - new Date(b.fecha_clase));
+
+			if (upcoming) {
+				upcoming.innerHTML = misR.length ? misR.map(r => `
+					<div class="flex items-center justify-between p-3 bg-white/5 rounded-xl border border-red-600/10 mb-2">
+						<div>
+							<p class="text-[10px] font-black uppercase italic text-white">${r.clase_nombre}</p>
+							<p class="text-[9px] text-gray-500 font-bold">${r.dia_nombre || 'Fecha'} - ${r.horario || ''}hs</p>
+						</div>
+						<button onclick="cancelBooking(${r.id})" class="text-[9px] text-red-500 hover:text-white">X</button>
+					</div>
+				`).join('') : '<p class="text-gray-500 italic text-[11px]">Sin reservas próximas.</p>';
+			}
+		}
+		
+		// 1. Dibuja una fila de horario (Día + Hora + Coach)
+			function addNewScheduleSlot(data = { dia: 1, horario: 7, coach: "" }) {
+				const container = document.getElementById('cl-schedule-slots');
+				if (container.querySelector('p.italic')) container.innerHTML = "";
+
+				const row = document.createElement('div');
+				row.className = "schedule-slot-row flex flex-col gap-2 bg-white/5 p-3 rounded-2xl border border-white/5 mb-2";
+				
+				const diasMap = {1: 'Lunes', 2: 'Martes', 3: 'Miércoles', 4: 'Jueves', 5: 'Viernes', 6: 'Sábado'};
+				
+				// Opciones de Días
+				let diasOptions = "";
+				for(let d=1; d<=6; d++) diasOptions += `<option value="${d}" ${data.dia == d ? 'selected' : ''}>${diasMap[d]}</option>`;
+
+				// Opciones de Horas
+				let horasOptions = "";
+				for(let i=7; i<=21.5; i+=0.5) {
+					const label = i % 1 === 0 ? `${i}:00` : `${Math.floor(i)}:30`;
+					horasOptions += `<option value="${i}" ${data.horario == i ? 'selected' : ''}>${label} HS</option>`;
+				}
+
+				row.innerHTML = `
+					<div class="flex items-center justify-between gap-2">
+						<select class="viking-input py-1 h-9 text-[10px] flex-1 slot-dia">${diasOptions}</select>
+						<select class="viking-input py-1 h-9 text-[10px] flex-1 slot-hora">${horasOptions}</select>
+						<button type="button" onclick="this.closest('.schedule-slot-row').remove()" class="text-red-500 p-1">
+							<i data-lucide="x" class="w-4 h-4"></i>
+						</button>
+					</div>
+				`;
+				container.appendChild(row);
+				if(window.lucide) lucide.createIcons();
+			}
+
+			// 2. Reemplaza tu función de guardado de clase
+			async function saveClaseVikinga(e) {
+				if(e) e.preventDefault();
+				const id = document.getElementById('cl-id').value;
+				const slotRows = document.querySelectorAll('.schedule-slot-row');
+				
+				const horarios_detalle = [];
+				slotRows.forEach(row => {
+					horarios_detalle.push({
+						dia: parseInt(row.querySelector('.slot-dia').value),
+						horario: parseFloat(row.querySelector('.slot-hora').value)
+					});
+				});
+
+				const payload = {
+					nombre: document.getElementById('cl-nombre').value,
+					coach: document.getElementById('cl-coach-select').value,
+					color: document.getElementById('cl-color').value,
+					capacidad_max: parseInt(document.getElementById('cl-cupo').value),
+					horarios_detalle: horarios_detalle
+				};
+
+				const method = id ? 'PUT' : 'POST';
+				const res = await apiFetch(id ? `/clases/${id}` : '/clases', method, payload);
+				if(!res.error) {
+					closeModal('modal-clase');
+					loadClases();
+					showVikingToast("Operación exitosa");
+				}
+			}
+
+        async function fetchReservas() {
+			const data = await apiFetch('/reservas');
+			if (!data.error) {
+				// Guardamos las reservas en el estado global para que el calendario las vea
+				state.reservas = Array.isArray(data) ? data : [];
+				return state.reservas;
+			} else {
+				console.error("Error cargando reservas:", data.error);
+				return [];
+			}
+		}
+
+        async function bookClass(claseId) {
+            if (state.user.rol_nombre !== "Alumno") return;
+            const clase = state.clases.find(c => c.id === claseId);
+            if (!clase) return;
+
+            const cupoMax = clase.capacidad_max || 40; 
+            const cupoActual = state.reservas.filter(r => r.clase_id === claseId).length;
+
+            if (cupoActual >= cupoMax) {
+                showVikingToast("¡Clase Llena! No hay más cupos.", true);
+                return;
+            }
+
+            const yaReservado = state.reservas.find(r => r.clase_id === claseId && r.alumno_dni === state.user.dni);
+            if (yaReservado) {
+                showVikingToast("Ya estás anotado en esta clase.", true);
+                return;
+            }
+
+            const data = { usuario_id: parseInt(state.user.id), clase_id: parseInt(clase.id) };
+            const res = await apiFetch('/reservas', 'POST', data);
+            if (!res.error) {
+                showVikingToast("¡Reserva confirmada!");
+                await fetchReservas();
+                renderCalendar();
+                renderStudentDashboard();
+            } else {
+                showVikingToast("Error al reservar: " + res.error, true);
+            }
+        }
+
+        async function cancelBooking(id) {
+            const res = await apiFetch(`/reservas/${id}`, 'DELETE');
+            if (!res.error) {
+                showVikingToast("Reserva Cancelada.");
+                await fetchReservas();
+                renderCalendar();
+                renderStudentDashboard();
+            }
+        }
+
+        function openInscriptos(claseId) {
+            const inscriptos = state.reservas.filter(r => r.clase_id === claseId);
+            const listaDiv = document.getElementById('inscriptos-lista');
+            listaDiv.innerHTML = inscriptos.length ? inscriptos.map(r => {
+                return `
+                <div class="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5">
+                    <div>
+                        <p class="text-[12px] font-black uppercase italic text-left">${r.alumno_dni}</p>
+                        <p class="text-[9px] text-gray-500 font-bold">Reserva #${r.id}</p>
+                    </div>
+                    <button onclick="deleteBookingAdmin(${r.id}, ${claseId})" class="text-red-600 hover:text-white"><i data-lucide="user-minus" class="w-4 h-4"></i></button>
+                </div>`;
+            }).join('') : '<p class="text-center text-gray-500 italic py-10">No hay alumnos anotados aún.</p>';
+            lucide.createIcons();
+            openModal('modal-inscriptos');
+        }
+
+        async function deleteBookingAdmin(reservaId, claseId) {
+            if(!confirm("¿Quitar alumno de la clase?")) return;
+            const res = await apiFetch(`/reservas/${reservaId}`, 'DELETE');
+            if(!res.error) {
+                await fetchReservas();
+                openInscriptos(claseId);
+                renderCalendar();
+                showVikingToast("Alumno removido del cupo.");
+            }
+        }
+
+		/**
+		 * RENDERIZADO DEL CALENDARIO VIKINGO (VERSIÓN FINAL)
+		 * Incluye: Drag & Drop funcional, Contador de Cupos Real y Estética de 1 Hora.
+		 */
+		async function renderCalendar() {
+			const cal = document.getElementById('calendar-grid'); 
+			if (!cal) return;
+
+			// Configuración del Grid
+			cal.className = "calendar-container h-[700px] overflow-y-auto custom-scrollbar grid grid-cols-[50px_repeat(6,1fr)] auto-rows-max gap-[1px] bg-white/5 p-1 rounded-3xl";
+
+			if (!state.clases || state.clases.length === 0) {
+				state.clases = await apiFetch('/clases');
+			}
+
+			const isAdmin = (state.user?.rol_nombre === "Administrador" || state.user?.rol_nombre === "Supervisor" || state.user?.rol_nombre === "Profesor");
+			const esAlumno = (state.user?.rol_nombre === "Alumno");
+
+			// --- 1. CÁLCULO DE FECHAS ---
+			const hoy = new Date();
+			const diaSemanaActual = hoy.getDay(); 
+			const diffParaLunes = diaSemanaActual === 0 ? 6 : diaSemanaActual - 1;
+			const fechaLunes = new Date(hoy);
+			fechaLunes.setDate(hoy.getDate() - diffParaLunes);
+
+			// --- 2. CABECERAS ---
+			const diasNombres = ["LUNES", "MARTES", "MIÉRCOLES", "JUEVES", "VIERNES", "SÁBADO"];
+			
+			let headersHTML = `
+				<div class="cal-header sticky top-0 z-20 bg-[#1a1a1a] flex items-center justify-center font-black italic text-[9px] text-white/30 p-2 border-b border-white/10 rounded-tl-2xl">
+					HORA
+				</div>
+			`;
+
+			diasNombres.forEach((nombreDia, index) => {
+				const fecha = new Date(fechaLunes);
+				fecha.setDate(fechaLunes.getDate() + index);
+				const numeroDia = fecha.getDate();
+				const mesNombre = fecha.toLocaleString('es-ES', { month: 'short' }).toUpperCase().replace('.', '');
+				const esHoy = fecha.getDate() === hoy.getDate() && fecha.getMonth() === hoy.getMonth();
+
+				const bgClass = esHoy ? "bg-red-600 text-black shadow-lg shadow-red-600/20" : "bg-[#1a1a1a] text-gray-400";
+				const textClass = esHoy ? "text-black" : "text-white";
+				const subTextClass = esHoy ? "text-black/70" : "text-gray-500";
+				const roundedClass = index === 5 ? "rounded-tr-2xl" : ""; 
+
+				headersHTML += `
+					<div class="cal-header sticky top-0 z-20 ${bgClass} ${roundedClass} p-2 flex flex-col items-center justify-center border-b border-white/10 transition-colors">
+						<span class="text-[8px] font-black uppercase tracking-widest leading-none mb-0.5 ${subTextClass}">${mesNombre}</span>
+						<h4 class="text-xl font-black italic leading-none mb-0.5 ${textClass}">${numeroDia}</h4>
+						<span class="text-[9px] font-bold uppercase ${subTextClass}">${nombreDia}</span>
+					</div>
+				`;
+			});
+
+			cal.innerHTML = headersHTML;
+
+			// --- 3. GRILLA ---
+			for(let h=7; h<=21.5; h+=0.5) {
+				const label = h % 1 === 0 ? `${h}:00` : `${Math.floor(h)}:30`;
+				const hourLabel = document.createElement('div');
+				hourLabel.className = "cal-cell flex items-center justify-center font-black text-[9px] text-white/40 bg-white/5 border-r border-white/20 min-h-[50px]";
+				hourLabel.innerText = label;
+				cal.appendChild(hourLabel);
+				
+				for(let d=1; d<=6; d++) {
+					const isSat = d === 6; 
+					const isClosed = isSat && (h < 10 || h > 13);
+					const cellId = `cell-${d}-${h.toString().replace('.','_')}`;
+					
+					const cell = document.createElement('div');
+					cell.id = cellId;
+					cell.className = `cal-cell relative min-h-[50px] border-b border-r border-white/5 hover:bg-white/5 transition-colors ${isClosed ? 'bg-stripes-gray opacity-30 pointer-events-none' : ''}`;
+					
+					if (isAdmin && !isClosed) {
+						cell.ondragover = (e) => {
+							e.preventDefault(); 
+							e.dataTransfer.dropEffect = "move";
+							cell.classList.add('bg-red-600/10');
+						};
+						cell.ondragleave = () => cell.classList.remove('bg-red-600/10');
+						cell.ondrop = async (e) => {
+							e.preventDefault();
+							cell.classList.remove('bg-red-600/10');
+							const claseId = e.dataTransfer.getData("claseId");
+							const oldDia = e.dataTransfer.getData("oldDia");
+							const oldHorario = e.dataTransfer.getData("oldHorario");
+							if (!claseId) return;
+							const parts = cell.id.split('-');
+							const newDia = parseInt(parts[1]);
+							const newHorario = parseFloat(parts[2].replace('_', '.'));
+							if (oldDia == newDia && oldHorario == newHorario) return;
+
+							const res = await apiFetch(`/clases/${claseId}/move`, 'PUT', {
+								old_dia: parseInt(oldDia),
+								old_horario: parseFloat(oldHorario),
+								new_dia: newDia,
+								new_horario: newHorario
+							});
+							if (!res.error) {
+								showVikingToast("¡Turno Reubicado!");
+								state.clases = await apiFetch('/clases');
+								renderCalendar(); 
+							} else {
+								showVikingToast("Error al mover: " + res.error, true);
+							}
+						};
+					}
+					cal.appendChild(cell);
+				}
+			}
+
+			// --- 4. RENDERIZADO DE CLASES CON CONTRASTE ---
+			if(state.clases && Array.isArray(state.clases)){
+				state.clases.forEach(c => {
+					const horarios = Array.isArray(c.horarios_detalle) ? c.horarios_detalle : [];
+					
+					// --- LÓGICA DE CONTRASTE (NUEVO) ---
+					// Función auxiliar interna para determinar brillo
+					const getTextColorClass = (hexColor) => {
+						if (!hexColor) return { text: 'text-white', sub: 'text-white/70', bg: 'bg-white/20' };
+						// Convertir hex a RGB
+						const r = parseInt(hexColor.substr(1, 2), 16);
+						const g = parseInt(hexColor.substr(3, 2), 16);
+						const b = parseInt(hexColor.substr(5, 2), 16);
+						// Fórmula de Luminancia (YIQ)
+						const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
+						// Si es oscuro (<128), texto blanco. Si es claro, texto negro.
+						return (yiq >= 128) 
+							? { text: 'text-black', sub: 'text-black/60', bg: 'bg-black/10' } 
+							: { text: 'text-white', sub: 'text-white/80', bg: 'bg-white/20' };
+					};
+
+					const colores = getTextColorClass(c.color || '#FF0000');
+
+					horarios.forEach(slot => {
+						const hKey = slot.horario.toString().replace('.', '_');
+						const cell = document.getElementById(`cell-${slot.dia}-${hKey}`);
+						
+						if (cell) {
+							const reservasArray = Array.isArray(state.reservas) ? state.reservas : [];
+							const cupoMax = c.capacidad_max || 40;
+							const cupoActual = reservasArray.filter(r => 
+								String(r.clase_id) === String(c.id) && 
+								Number(r.dia_semana) === Number(slot.dia) && 
+								Number(r.horario) === Number(slot.horario)
+							).length;
+							const estaLleno = cupoActual >= cupoMax;
+
+							const badge = document.createElement('div');
+							badge.className = "absolute inset-1 rounded-xl shadow-lg transition-all hover:scale-[1.02] active:scale-95 cursor-pointer flex flex-col items-center justify-center p-1 group z-10 class-badge border border-black/5"; 
+							badge.style.backgroundColor = c.color || '#FF0000';
+							
+							if (isAdmin) {
+								badge.draggable = true; 
+								badge.ondragstart = (e) => {
+									e.dataTransfer.setData("claseId", c.id);
+									e.dataTransfer.setData("oldDia", slot.dia);
+									e.dataTransfer.setData("oldHorario", slot.horario);
+									badge.classList.add('opacity-40');
+								};
+								badge.ondragend = () => badge.classList.remove('opacity-40');
+							}
+
+							// Usamos las variables de color calculadas arriba
+							badge.innerHTML = `
+								<div class="flex flex-col items-center justify-center h-full w-full px-1">
+									<span class="text-[10px] leading-tight mb-0.5 font-black uppercase italic ${colores.text} text-center truncate w-full drop-shadow-sm">
+										${c.nombre}
+									</span>
+									<span class="text-[8px] font-extrabold ${colores.sub} mb-0.5 lowercase italic leading-none truncate w-full text-center">
+										${slot.coach || 'staff'}
+									</span>
+									<div class="${colores.bg} px-1.5 py-px rounded-full text-[8px] font-black leading-none ${estaLleno ? (colores.text === 'text-white' ? 'text-red-300 animate-pulse' : 'text-red-700 animate-pulse') : colores.text}">
+										${cupoActual}/${cupoMax}
+									</div>
+								</div>
+							`;
+							
+							badge.onclick = (e) => {
+								e.stopPropagation();
+								if (esAlumno) {
+									if (estaLleno) showVikingToast("Cupo lleno para este turno", true);
+									else if(typeof confirmarReservaVikinga === 'function') confirmarReservaVikinga(c, slot.dia, slot.horario);
+								} else {
+									if (typeof openInscriptos === 'function') openInscriptos(c.id, slot.dia, slot.horario);
+								}
+							};
+
+							cell.appendChild(badge);
+						}
+					});
+				});
+			}
+
+			if (window.lucide) lucide.createIcons();
+		}
+		
+		/**
+		 * FUNCIÓN DE RESERVA CORREGIDA
+		 * Evita el error de "Vanhala" manejando fallos internos sin crashear.
+		 */
+		async function confirmarReservaVikinga(clase, dia, horario) {
+			const diasMap = {1: 'Lunes', 2: 'Martes', 3: 'Miércoles', 4: 'Jueves', 5: 'Viernes', 6: 'Sábado'};
+			const horaLabel = horario % 1 === 0 ? `${horario}:00` : `${Math.floor(horario)}:30`;
+			
+			showVikingToast(`Procesando reserva...`);
+
+			const payload = {
+				usuario_id: state.user.id,
+				clase_id: clase.id,
+				dia_semana: dia,
+				horario: horario
+			};
+
+			try {
+				const res = await apiFetch('/reservas', 'POST', payload);
+				
+				if (!res.error) {
+					showVikingToast(`¡Reserva confirmada! ${diasMap[dia]} ${horaLabel}hs`);
+					
+					// INTENTO DE ACTUALIZACIÓN PROTEGIDO:
+					// Si una función falla, no queremos que salte al 'catch' de conexión.
+					try {
+						// 1. Refrescar reservas (Intentamos con el nombre que tengas)
+						if (typeof fetchReservas === 'function') {
+							await fetchReservas(); 
+						} else if (typeof loadReservas === 'function') {
+							await loadReservas();
+						} else {
+							// Si no hay función, pedimos los datos manualmente para actualizar el estado
+							const manualData = await apiFetch('/reservas');
+							if (!manualData.error) state.reservas = manualData;
+						}
+
+						// 2. Redibujar calendario
+						renderCalendar(); 
+						
+						// 3. Redibujar dashboard
+						if (typeof renderStudentDashboard === 'function') {
+							renderStudentDashboard();
+						}
+					} catch (innerError) {
+						console.warn("Reserva exitosa pero fallo el refresco visual:", innerError);
+					}
+
+				} else {
+					// Error del servidor (ej: sin créditos)
+					let errorMsg = res.error || "No se pudo procesar";
+					if (typeof res.error === 'string' && res.error.startsWith('{')) {
+						try { errorMsg = JSON.parse(res.error).detail || errorMsg; } catch(e){}
+					}
+					showVikingToast(errorMsg, true);
+				}
+			} catch (err) {
+				console.error("Error crítico en Reserva:", err);
+				showVikingToast("Error de sincronización con el Valhalla", true);
+			}
+		}
+
+		/**
+		 * PROCESO DE RESERVA
+		 * Separada de renderCalendar para evitar errores de scope y cierres.
+		 */
+		async function confirmarReservaVikinga(clase, dia, horario) {
+			const diasMap = {1: 'Lunes', 2: 'Martes', 3: 'Miércoles', 4: 'Jueves', 5: 'Viernes', 6: 'Sábado'};
+			const horaLabel = horario % 1 === 0 ? `${horario}:00` : `${Math.floor(horario)}:30`;
+			
+			showVikingToast(`Procesando reserva para ${clase.nombre}...`);
+
+			const payload = {
+				usuario_id: state.user.id,
+				clase_id: clase.id,
+				dia_semana: dia,
+				horario: horario
+			};
+
+			try {
+				const res = await apiFetch('/reservas', 'POST', payload);
+				
+				if (!res.error) {
+					showVikingToast(`¡Victoria! Reserva confirmada: ${diasMap[dia]} ${horaLabel}hs`);
+					
+					// Sincronización completa de datos
+					await fetchReservas(); // El nombre correcto según tu código
+					
+					// Actualización visual inmediata
+					renderCalendar(); 
+					if (typeof renderStudentDashboard === 'function') {
+						renderStudentDashboard();
+					}
+				} else {
+					let errorMsg = res.error || "No se pudo procesar la reserva";
+					// Si el error viene como JSON string, lo parseamos
+					if (typeof res.error === 'string' && res.error.startsWith('{')) {
+						try { errorMsg = JSON.parse(res.error).detail || errorMsg; } catch(e){}
+					}
+					showVikingToast(errorMsg, true);
+				}
+			} catch (err) {
+				console.error("Error en Reserva:", err);
+				showVikingToast("Error de sincronización con el Valhalla", true);
+			}
+		}
+
+        function setCobrarTab(tab) {
+            state.cobrarTab = tab;
+            document.querySelectorAll('.cobrar-tab').forEach(t => t.classList.remove('active'));
+            document.getElementById('tab-' + tab).classList.add('active');
+            renderCobrar();
+        }
+		
+		
+
+        function renderCobrar() {
+            const displayArea = document.getElementById('cobrar-display-area');
+            const searchVal = document.getElementById('cobrar-search').value.toLowerCase();
+            if (state.cobrarTab === 'mercaderia') {
+                const filtered = state.stock.filter(s => s.nombre_producto.toLowerCase().includes(searchVal));
+                displayArea.innerHTML = `<div class="grid grid-cols-2 md:grid-cols-4 gap-4 overflow-y-auto max-h-[600px] pr-2 custom-scrollbar" id="cobrar-catalogo"></div>`;
+                const catalog = document.getElementById('cobrar-catalogo');
+                catalog.innerHTML = filtered.map(s => `
+                    <div class="glass-card p-4 rounded-3xl relative group cursor-pointer hover:border-red-600/50" onclick="addToCart(${s.id}, 'stock')">
+                        <div class="w-full h-20 viking-bg-red/10 rounded-2xl mb-3 flex items-center justify-center"><i data-lucide="package" class="w-6 h-6 opacity-20 text-white"></i></div>
+                        <h4 class="text-[10px] font-black uppercase italic mb-1 truncate">${s.nombre_producto}</h4>
+                        <div class="flex items-center justify-between"><p class="text-[12px] font-black italic">$ ${s.precio_venta.toLocaleString()}</p><span class="text-[9px] font-bold ${s.stock_actual < 5 ? 'text-red-500' : 'text-gray-500'}">S: ${s.stock_actual}</span></div>
+                    </div>`).join('');
+            } else {
+				const hoy = new Date().toISOString().split('T')[0];
+				const filteredAl = state.alumnos.filter(a => 
+					a.nombre_completo.toLowerCase().includes(searchVal) || a.dni.includes(searchVal)
+				);
+
+				displayArea.innerHTML = `
+					<div class="glass-card p-8 rounded-[2.5rem] h-[800px] flex flex-col border-white/5">
+						<h4 class="text-[11px] font-black uppercase italic text-red-600 mb-6 tracking-widest border-b border-white/5 pb-4">
+							Guerreros para Renovación
+						</h4>
+						<div class="overflow-y-auto custom-scrollbar flex-1 space-y-3 pr-2">
+							${filteredAl.map(a => {
+								const isActive = a.fecha_vencimiento && a.fecha_vencimiento >= hoy;
+								const statusColor = isActive ? 'text-green-500' : 'text-red-500';
+								const statusBg = isActive ? 'bg-green-500/10' : 'bg-red-500/10';
+								const statusText = isActive ? 'Al día' : 'Vencido';
+
+								return `
+								<div class="flex flex-col gap-3 p-5 bg-white/2 rounded-[2rem] border border-white/5 hover:border-red-600/30 transition-all text-left group">
+									<div class="flex justify-between items-center">
+										<div class="flex items-center gap-3">
+											<div class="w-10 h-10 rounded-xl viking-bg-red flex items-center justify-center font-black text-black text-xs italic shadow-lg">
+												${a.nombre_completo[0].toUpperCase()}
+											</div>
+											<div>
+												<p class="text-[13px] font-black italic uppercase leading-tight text-white group-hover:text-red-500 transition-colors">${a.nombre_completo}</p>
+												<p class="text-[9px] text-gray-500 font-bold uppercase tracking-widest mt-1">DNI: ${a.dni}</p>
+											</div>
+										</div>
+										<span class="text-[8px] px-3 py-1 rounded-full ${statusBg} ${statusColor} font-black uppercase italic border border-white/5">
+											${statusText}
+										</span>
+									</div>
+
+									<div class="flex gap-2 items-center mt-2 pt-3 border-t border-white/5">
+										<div class="flex-1">
+											<p class="text-[8px] text-gray-600 font-black uppercase italic mb-1 px-2">Seleccionar Plan</p>
+											<select id="plan-select-${a.id}" class="viking-input !py-2 !text-[10px] h-10 bg-black/60 border-white/10">
+												${state.planes.map(p => `
+													<option value="${p.id}" ${p.id === a.plan_id ? 'selected' : ''}>
+														${p.nombre} — $${p.precio.toLocaleString()}
+													</option>
+												`).join('')}
+											</select>
+										</div>
+										<button onclick="preparePlanCharge(${a.id})" class="mt-4 px-6 h-10 rounded-xl text-[10px] font-black italic bg-green-600/20 text-green-500 border border-green-500/20 hover:bg-green-600 hover:text-black transition-all flex items-center gap-2 shadow-lg">
+											<i data-lucide="shopping-cart" class="w-3 h-3"></i> COBRAR
+										</button>
+									</div>
+								</div>`;
+							}).join('')}
+						</div>
+					</div>`;
+			}
+            lucide.createIcons();
+            updateCartUI();
+        }
+
+        document.getElementById('cobrar-search').oninput = renderCobrar;
+
+		/**
+		/**
+		 * =========================================================
+		 * 2. FUNCIONES DE CAJA Y CARRITO (LÓGICA VISUAL)
+		 * =========================================================
+		 */
+
+		/**
+		 * FUNCIÓN 1: AGREGAR MERCADERÍA
+		 */
+		function addToCart(productId) {
+			// Protección: Aseguramos que el estado exista
+			if (!state || !state.stock) return;
+
+			const item = state.stock.find(s => s.id == productId);
+			
+			if (!item) {
+				console.error("Producto no encontrado ID:", productId);
+				return;
+			}
+
+			if (item.stock_actual <= 0) {
+				return showVikingToast(`¡Sin stock de ${item.nombre_producto}!`, true);
+			}
+
+			// Verificar si ya existe en el carrito
+			const existing = state.cart.find(c => c.producto_id == productId && c.tipo === 'Mercaderia');
+
+			if (existing) {
+				if (existing.cantidad < item.stock_actual) {
+					existing.cantidad++;
+					showVikingToast(`+1 ${item.nombre_producto}`);
+				} else {
+					return showVikingToast("Stock insuficiente para agregar más", true);
+				}
+			} else {
+				// Estructura estandarizada para el carrito
+				state.cart.push({
+					tipo: 'Mercaderia',
+					producto_id: productId,
+					alumno_id: null,
+					nombre: item.nombre_producto,
+					precio: item.precio_venta, 
+					cantidad: 1,
+					url_imagen: item.url_imagen 
+				});
+				showVikingToast(`${item.nombre_producto} añadido`);
+			}
+
+			if (typeof updateCartUI === 'function') updateCartUI();
+		}
+
+		/**
+		 * FUNCIÓN 2: ACTUALIZAR UI (VISUAL)
+		 */
+		function updateCartUI() {
+			const list = document.getElementById('cobrar-lista-carrito');
+			if (!list) return; 
+			
+			if (state.cart.length === 0) {
+				list.innerHTML = '<p class="text-center text-gray-500 text-[11px] italic py-10">Sin ítems seleccionados</p>';
+				updateTotales(0);
+				return;
+			}
+
+			list.innerHTML = state.cart.map((c, idx) => `
+				<div class="flex items-center justify-between bg-white/5 p-3 rounded-xl border border-white/5">
+					<div class="overflow-hidden text-left">
+						<p class="text-[11px] font-black uppercase italic truncate text-white">${c.nombre}</p>
+						<div class="flex gap-2">
+							<p class="text-[10px] text-gray-500 font-bold">VALOR: $ ${c.precio.toLocaleString()}</p>
+							<p class="text-[10px] text-red-500 font-bold">CANT: ${c.cantidad}</p>
+						</div>
+					</div>
+					<button onclick="removeFromCart(${idx})" class="text-red-600 hover:text-white">
+						<i data-lucide="trash-2" class="w-3 h-3"></i>
+					</button>
+				</div>
+			`).join('');
+
+			const total = state.cart.reduce((acc, c) => acc + (c.cantidad * c.precio), 0);
+			updateTotales(total);
+			
+			if (window.lucide) lucide.createIcons();
+		}
+
+		function updateTotales(monto) {
+			const elSub = document.getElementById('cobrar-subtotal');
+			const elTot = document.getElementById('cobrar-total');
+			if (elSub) elSub.innerText = `$ ${monto.toLocaleString()}`;
+			if (elTot) elTot.innerText = `$ ${monto.toLocaleString()}`;
+		}
+
+		function removeFromCart(i) { 
+			state.cart.splice(i, 1); 
+			updateCartUI(); 
+		}
+
+		function setPaymentMethod(metodo) {
+			const select = document.getElementById('metodo-pago');
+			if (select) select.value = metodo;
+
+			document.querySelectorAll('.btn-pago').forEach(btn => {
+				const btnMethod = btn.getAttribute('data-method');
+				const isActive = btnMethod === metodo;
+				btn.className = isActive 
+					? "btn-pago w-full py-3 rounded-xl text-[10px] font-black uppercase italic transition-all bg-red-600 text-black shadow-lg shadow-red-600/20 transform scale-105"
+					: "btn-pago w-full py-3 rounded-xl text-[10px] font-black uppercase italic transition-all bg-white/5 text-gray-400 hover:text-white border border-transparent hover:border-red-600/30";
+			});
+		}
+
+		/**
+		 * =========================================================
+		 * 3. NUEVA LÓGICA DE COBRO (MODULARIZADA Y CONECTADA)
+		 * =========================================================
+		 */
+
+		/**
+		 * CORE: FUNCIÓN PRINCIPAL DE PAGO
+		 * Usa API_BASE definida arriba para evitar errores de conexión.
+		 */
+		async function procesarPagoVikingo(payload, actualizarUI = true) {
+			if(actualizarUI) showVikingToast("Sincronizando con la Tesorería...");
+
+			try {
+				const response = await fetch(`${API_BASE}/cobros/procesar`, {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify(payload)
+				});
+
+				const res = await response.json();
+
+				if (response.ok) {
+					if(actualizarUI) showVikingToast("¡Victoria! Cobro registrado y Stock actualizado");
+					
+					if (actualizarUI) {
+						// Recargamos datos de forma segura
+						const promises = [];
+						if (typeof loadStock === 'function') promises.push(loadStock());
+						if (typeof loadAlumnos === 'function') promises.push(loadAlumnos());
+						if (typeof loadCaja === 'function') promises.push(loadCaja());
+						
+						await Promise.all(promises);
+
+						// Limpiar si es mercancía
+						if (payload.tipo === 'Mercaderia') {
+							state.cart = [];
+							updateCartUI();
+						}
+						
+						// Refrescar vista
+						if (typeof renderCobrar === 'function') renderCobrar();
+					}
+					return true; 
+				} else {
+					showVikingToast("Error: " + (res.detail || "Error desconocido"), true);
+					return false;
+				}
+			} catch (err) {
+				console.error(err);
+				showVikingToast("Error de conexión con el Valhalla", true);
+				return false;
+			}
+		}
+
+		/**
+		 * ADAPTACIÓN PARA COBRO DE PLANES
+		 */
+		async function preparePlanCharge(alumnoId) {
+			const alumno = state.alumnos.find(a => a.id === alumnoId);
+			if (!alumno) return;
+
+			const planSelect = document.getElementById(`plan-select-${alumnoId}`);
+			const planId = parseInt(planSelect.value);
+			const plan = state.planes.find(p => p.id === planId);
+
+			if (!plan) return showVikingToast("Selecciona un plan válido", true);
+
+			const metodoEl = document.getElementById('metodo-pago');
+			const metodoPago = metodoEl ? metodoEl.value : "Efectivo";
+
+			const confirmacion = confirm(`¿Confirmar cobro de $${plan.precio} a ${alumno.nombre_completo} por el plan ${plan.nombre} (${metodoPago})?`);
+			
+			if (confirmacion) {
+				await procesarPagoVikingo({
+					tipo: "Plan",
+					monto: plan.precio,
+					descripcion: `Renovación Plan ${plan.nombre}: ${alumno.nombre_completo}`,
+					metodo_pago: metodoPago,
+					alumno_id: alumnoId,
+					producto_id: planId, // <--- ESTO FALTABA Y ES LA CLAVE PARA QUE SE ACTUALICE -->
+					cantidad: 1
+				}, true); 
+			}
+		}
+
+		/**
+		 * ADAPTACIÓN PARA COBRO DE MERCADERÍA
+		 */
+		async function finalizarVentaMercaderia() {
+			if (state.cart.length === 0) return showVikingToast("El carrito está vacío", true);
+
+			const total = state.cart.reduce((acc, item) => acc + (item.precio * item.cantidad), 0);
+			const metodoEl = document.getElementById('metodo-pago');
+			const metodoPago = metodoEl ? metodoEl.value : "Efectivo";
+
+			if (confirm(`¿Finalizar venta por un total de $${total.toLocaleString()} (${metodoPago})?`)) {
+				
+				showVikingToast("Procesando venta múltiple...");
+				let errores = 0;
+
+				for (const item of state.cart) {
+					const exito = await procesarPagoVikingo({
+						tipo: "Mercaderia",
+						monto: item.precio * item.cantidad,
+						descripcion: `Venta: ${item.nombre} (x${item.cantidad})`,
+						metodo_pago: metodoPago,
+						producto_id: item.producto_id,
+						cantidad: item.cantidad
+					}, false); // false = no refrescar UI todavía
+
+					if (!exito) errores++;
+				}
+
+				if (errores === 0) {
+					showVikingToast("¡Venta finalizada con gloria!");
+					state.cart = []; 
+					updateCartUI();
+					
+					// Recargamos todo al final
+					if (typeof loadStock === 'function') await loadStock();
+					if (typeof loadCaja === 'function') await loadCaja();
+					if (typeof renderCobrar === 'function') renderCobrar();
+				} else {
+					showVikingToast(`Venta con ${errores} errores. Revisa el stock.`, true);
+					if (typeof loadStock === 'function') await loadStock();
+				}
+			}
+		}
+		// --- REEMPLAZA TU FUNCIÓN openFichaTecnica POR ESTA VERSIÓN CON DISEÑO DE FILAS ---
+		async function openFichaTecnica(alumnoId) {
+			const rutinaContainer = document.getElementById('ficha-rutina-container');
+
+			// Estado de carga visual
+			rutinaContainer.innerHTML = `
+				<div class="col-span-2 py-10 flex flex-col items-center justify-center space-y-4">
+					<div class="w-8 h-8 border-4 border-red-600 border-t-transparent rounded-full animate-spin"></div>
+					<p class="text-[10px] text-gray-500 italic uppercase tracking-widest animate-pulse text-center">Cargando datos del alumno...</p>
+				</div>
+			`;
+
+			// 1. Obtener datos del alumno
+			const res = await apiFetch(`/alumnos/${alumnoId}/ficha`);
+			if (res.error) {
+				showVikingToast("Error al conectar con el servidor", true);
+				return;
+			}
+
+			// Llenar cabecera del modal
+			if (document.getElementById('ficha-nombre')) document.getElementById('ficha-nombre').innerText = res.nombre_completo || 'Sin Nombre';
+			if (document.getElementById('ficha-dni')) document.getElementById('ficha-dni').innerText = "DNI: " + (res.dni || '---');
+			if (document.getElementById('ficha-plan')) document.getElementById('ficha-plan').innerText = "Plan: " + (res.plan || 'Sin Plan Activo');
+			if (document.getElementById('ficha-cuenta')) document.getElementById('ficha-cuenta').innerText = "Estado: " + (res.estado_cuenta || 'Inactivo');
+			if (document.getElementById('ficha-peso')) document.getElementById('ficha-peso').innerText = (res.peso || 0) + " kg";
+			if (document.getElementById('ficha-altura')) document.getElementById('ficha-altura').innerText = (res.altura || 0) + " cm";
+			if (document.getElementById('ficha-imc')) document.getElementById('ficha-imc').innerText = res.imc || 0;
+
+			// 2. Obtener Rutina
+			let rutinaData = await apiFetch(`/rutinas/usuario/${alumnoId}`);
+			const rutinas = Array.isArray(rutinaData) ? rutinaData : (rutinaData && !rutinaData.error ? [rutinaData] : []);
+
+			if (rutinas.length > 0) {
+				const hoy = new Date();
+				hoy.setHours(0, 0, 0, 0);
+
+				const mainHTML = rutinas.map((rutina, rIdx) => {
+					const objetivoId = `obj-group-${rIdx}`;
+					const fechaVenc = rutina.fecha_vencimiento ? new Date(rutina.fecha_vencimiento + 'T23:59:59') : null;
+					const esActiva = fechaVenc ? hoy <= fechaVenc : true;
+
+					const statusBadge = esActiva 
+						? `<span class="bg-green-600/20 text-green-500 border border-green-500/30 px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest animate-pulse">Activa</span>`
+						: `<span class="bg-red-600/20 text-red-500 border border-red-500/30 px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest">Vencida</span>`;
+
+					const diasHTML = (rutina.dias || []).map((d, dIdx) => {
+						const diaId = `ficha-dia-${rIdx}-${dIdx}`;
+						return `
+						<div class="glass-card rounded-2xl border-white/5 overflow-hidden mb-2 transition-all">
+							<!-- Cabecera del Día (Acordeón) -->
+							<button onclick="toggleFichaElement('${diaId}')" class="w-full flex items-center justify-between p-4 bg-white/2 hover:bg-white/5 transition-colors group text-left">
+								<div class="flex items-center gap-3">
+									<div class="w-2 h-2 rounded-full ${esActiva ? 'bg-green-600 shadow-[0_0_8px_#16a34a]' : 'bg-red-600 shadow-[0_0_8px_#dc2626]'}"></div>
+									<span class="text-[11px] font-black italic uppercase tracking-wider text-gray-300 group-hover:text-red-500 transition-colors">${d.nombre_dia}</span>
+								</div>
+								<i data-lucide="chevron-down" class="w-4 h-4 text-gray-600 transition-transform duration-500" id="icon-${diaId}"></i>
+							</button>
+							
+							<!-- Contenido de Ejercicios del Día -->
+							<div id="${diaId}" class="hidden p-4 space-y-4 bg-black/20 border-t border-white/5">
+								${(d.ejercicios || d.ejercicios_list || []).map(ex => {
+									const nombreEjercicio = ex.ejercicio_obj?.nombre || ex.nombre || ex.ejercicio?.nombre || "Ejercicio Sin Nombre";
+									const series = ex.series_detalle || ex.series || [];
+									
+									return `
+										<div class="flex flex-col border-l-2 border-red-600/40 pl-4 py-1.5 hover:bg-white/5 rounded-r-xl transition-all mb-4">
+											<p class="text-[11px] font-black uppercase italic text-white tracking-tight mb-3">${nombreEjercicio}</p>
+											
+											<!-- CAMBIO CLAVE: Cabecera de columnas para las series -->
+											<div class="grid grid-cols-4 gap-2 mb-2 px-2 opacity-50">
+												<span class="text-[8px] font-bold uppercase text-red-600 tracking-wider">Serie</span>
+												<span class="text-[8px] font-bold uppercase text-gray-400 text-center tracking-wider">Reps</span>
+												<span class="text-[8px] font-bold uppercase text-gray-400 text-center tracking-wider">Peso</span>
+												<span class="text-[8px] font-bold uppercase text-gray-400 text-right tracking-wider">Pausa</span>
+											</div>
+
+											<!-- CAMBIO CLAVE: Lista de Series en Filas (Rows) -->
+											<div class="flex flex-col gap-1">
+												${series
+													.sort((a, b) => (a.numero_serie || 0) - (b.numero_serie || 0))
+													.map(s => `
+														<div class="grid grid-cols-4 items-center bg-white/5 px-3 py-2 rounded-lg border border-white/5 hover:border-red-600/30 transition-colors">
+															<!-- Nro Serie -->
+															<span class="text-[9px] font-black text-white uppercase">#${s.numero_serie}</span>
+															
+															<!-- Reps -->
+															<div class="text-center">
+																<span class="text-[11px] font-black text-white">${s.repeticiones}</span>
+															</div>
+															
+															<!-- Peso -->
+															<div class="text-center">
+																<span class="text-[11px] font-black text-white">${s.peso}</span> <span class="text-[8px] text-gray-500">kg</span>
+															</div>
+															
+															<!-- Descanso -->
+															<div class="text-right">
+																<span class="text-[9px] text-gray-400 italic">${s.descanso || '-'}</span>
+															</div>
+														</div>
+													`).join('')}
+											</div>
+
+											${ex.comentario ? `
+												<div class="mt-3 bg-black/40 p-2 rounded-lg border border-white/5 flex gap-2">
+													<i data-lucide="info" class="w-2.5 h-2.5 text-red-600 mt-0.5 shrink-0"></i>
+													<p class="text-[8px] text-gray-400 italic font-medium leading-tight">${ex.comentario}</p>
+												</div>
+											` : ''}
+										</div>
+									`;
+								}).join('')}
+							</div>
+						</div>
+						`;
+					}).join('');
+
+					// Estructura general de la tarjeta de rutina
+					return `
+					<div class="col-span-2 mb-4">
+						<div class="bg-white/5 border border-white/10 rounded-[2rem] overflow-hidden shadow-xl">
+							<button onclick="toggleFichaElement('${objetivoId}')" class="w-full flex items-center justify-between p-6 hover:bg-white/5 transition-all text-left">
+								<div class="flex items-center gap-4">
+									<div class="w-1 h-10 bg-red-600 rounded-full"></div>
+									<div>
+										<p class="text-[8px] text-gray-500 font-black uppercase tracking-[0.3em] mb-1">Plan de Entrenamiento</p>
+										<h5 class="text-lg font-black italic uppercase viking-red leading-none">${rutina.objetivo || 'Rutina de Musculación'}</h5>
+										<p class="text-[9px] text-gray-400 font-bold italic mt-1 flex items-center gap-1">
+											<i data-lucide="calendar" class="w-3 h-3"></i> Vence: ${rutina.fecha_vencimiento || 'Indefinido'}
+										</p>
+									</div>
+								</div>
+								<div class="flex items-center gap-4">
+									${statusBadge}
+									<i data-lucide="chevron-down" class="w-6 h-6 text-red-600 transition-transform duration-500" id="icon-${objetivoId}"></i>
+								</div>
+							</button>
+							<div id="${objetivoId}" class="hidden p-4 bg-black/30 border-t border-white/5">
+								${diasHTML}
+							</div>
+						</div>
+					</div>
+					`;
+				}).join('');
+
+				rutinaContainer.innerHTML = mainHTML;
+			} else {
+				rutinaContainer.innerHTML = `
+					<div class="col-span-2 p-16 border border-dashed border-white/10 rounded-[3rem] text-center bg-white/2">
+						<div class="w-16 h-16 viking-bg-red/10 rounded-full flex items-center justify-center mx-auto mb-6">
+							<i data-lucide="skull" class="w-8 h-8 opacity-40 text-red-600"></i>
+						</div>
+						<p class="text-[12px] text-gray-600 font-black uppercase italic tracking-[0.2em]">No se ha detectado un plan de batalla activo</p>
+						<p class="text-[10px] text-gray-700 mt-2 font-bold">Asigna una rutina desde el gestor para ver los datos aquí.</p>
+					</div>
+				`;
+			}
+
+			if (window.lucide) lucide.createIcons();
+			openModal('modal-ficha-tecnica');
+		}
+
+        function toggleFichaElement(id) {
+            const content = document.getElementById(id);
+            const icon = document.getElementById('icon-' + id);
+            if (!content) return;
+
+            const isHidden = content.classList.contains('hidden');
+            
+            if (isHidden) {
+                content.classList.remove('hidden');
+                content.classList.add('animate-in', 'fade-in', 'slide-in-from-top-2');
+                if (icon) {
+                    icon.style.transform = 'rotate(180deg)';
+                    icon.style.color = '#FF0000'; 
+                }
+            } else {
+                content.classList.add('hidden');
+                if (icon) {
+                    icon.style.transform = 'rotate(0deg)';
+                    icon.style.color = id.startsWith('obj-group') ? '#dc2626' : '#6b7280';
+                }
+            }
+        }
+
+		async function renderRutinas() {
+			const rol = state.user?.rol_nombre;
+			const list = document.getElementById('rutinas-lista'); // Contenedor lista profes
+			const studentView = document.getElementById('musculacion-student-view'); // Vista detalle alumno
+			
+			// 1. CONFIGURACIÓN DE VISTAS SEGÚN ROL
+			if (rol === "Alumno") {
+				// --- MODO ALUMNO ---
+				if(list) list.classList.add('hidden');
+				if(studentView) studentView.classList.remove('hidden');
+				document.getElementById('rutina-title').innerText = "Mi Rutina Musculación";
+				
+				// Lógica de carga de rutina de alumno (INTACTA)
+				let res = await apiFetch(`/rutinas/usuario/${state.user.id}`);
+				let rutina = null;
+				if (Array.isArray(res) && res.length > 0) {
+					const hoy = new Date(); hoy.setHours(0,0,0,0);
+					rutina = res.find(r => !r.fecha_vencimiento || new Date(r.fecha_vencimiento + 'T23:59:59') >= hoy) || res[0];
+				} else if (res && !res.error && res.id) {
+					rutina = res;
+				}
+
+				if (rutina) {
+					document.getElementById('al-rutina-objetivo').innerText = "OBJETIVO: " + (rutina.objetivo || "Entrenamiento").toUpperCase();
+					document.getElementById('student-routine-exercises').innerHTML = (rutina.dias || []).map(d => `
+						<div class="glass-card p-6 rounded-2xl border-red-600/10">
+							<h5 class="font-black italic uppercase viking-red mb-4 border-b border-white/5 pb-2">${d.nombre_dia}</h5>
+							<div class="space-y-4">
+								${(d.ejercicios || []).map(e => {
+									const exName = e.ejercicio_obj?.nombre || e.exercise_name || "Ejercicio";
+									return `
+									<div class="bg-white/5 p-4 rounded-xl border border-white/5">
+										<p class="text-[12px] font-black uppercase italic mb-2 text-white">${exName}</p>
+										<div class="space-y-1">
+											${(e.series_detalle || e.series || []).sort((a,b)=>a.numero_serie-b.numero_serie).map(s => `
+												<div class="flex justify-between items-center text-[10px] bg-black/20 p-2 rounded border border-white/5">
+													<span class="text-red-600 font-bold">Serie ${s.numero_serie}</span>
+													<span class="text-white font-bold">${s.repeticiones} Reps</span>
+													<span class="text-gray-400">${s.peso} Kg</span>
+													<span class="text-gray-500 italic text-[9px]">${s.descanso || '-'}</span>
+												</div>
+											`).join('')}
+										</div>
+										${e.comentario ? `<p class="text-[10px] text-gray-500 italic mt-2 border-t border-white/5 pt-1">* ${e.comentario}</p>` : ''}
+									</div>`;
+								}).join('')}
+							</div>
+						</div>
+					`).join('');
+				} else {
+					document.getElementById('al-rutina-objetivo').innerText = "SIN ASIGNAR";
+					document.getElementById('student-routine-exercises').innerHTML = '<div class="col-span-2 text-center py-10"><p class="text-gray-500 italic">No tienes una rutina de musculación activa.</p></div>';
+				}
+
+			} else {
+				// --- MODO PROFESOR (AQUÍ ESTÁ EL CAMBIO VISUAL) ---
+				if(studentView) studentView.classList.add('hidden');
+				if(list) {
+					list.classList.remove('hidden');
+					// Aseguramos estilo lista vertical
+					list.className = "space-y-3 min-h-[400px] overflow-y-auto custom-scrollbar flex-1 pr-2 pb-10"; 
+				}
+				document.getElementById('rutina-title').innerText = "Rutinas de Alumnos";
+				
+				// Filtro (Logica intacta)
+				const alRutinas = state.alumnos.filter(a => {
+					const planNombre = (a.plan?.nombre || "").toLowerCase();
+					const normalized = planNombre.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+					return normalized.includes('musculacion') || normalized.includes('completo') || normalized.includes('personalizado');
+				});
+
+				if (alRutinas.length === 0) {
+					list.innerHTML = '<div class="p-10 glass-card rounded-3xl text-center"><i data-lucide="clipboard-x" class="w-12 h-12 text-gray-600 mx-auto mb-4"></i><p class="text-gray-500 italic">No se encontraron alumnos con planes de musculación.</p></div>';
+				} else {
+					const hoy = new Date().toISOString().split('T')[0];
+
+					list.innerHTML = alRutinas.map(a => {
+						// Lógica Visual de Estado (Igual a Alumnos)
+						const estaVencido = !a.fecha_vencimiento || a.fecha_vencimiento < hoy;
+						const colorEstado = estaVencido ? 'bg-red-600' : 'bg-green-600';
+						const textoEstado = estaVencido ? 'VENCIDO' : 'AL DÍA';
+						const colorBadge = estaVencido ? 'text-red-500 bg-red-500/10 border-red-500/20' : 'text-green-500 bg-green-500/10 border-green-500/20';
+
+						const initials = a.nombre_completo ? a.nombre_completo.substring(0,2).toUpperCase() : "??";
+						const planNombre = a.plan ? a.plan.nombre : 'Sin Plan';
+
+						// --- TARJETA NUEVA (VISUAL ALUMNOS) ---
+						return `
+						<div class="glass-card p-5 rounded-3xl border-white/5 flex flex-col md:flex-row md:items-center gap-6 hover:border-red-600/20 transition-all group relative overflow-hidden">
+							<!-- Barra lateral estado -->
+							<div class="absolute left-0 top-0 bottom-0 w-1.5 ${colorEstado} opacity-40 group-hover:opacity-100 transition-opacity"></div>
+							
+							<!-- COL 1: Identidad -->
+							<div class="flex items-center gap-4 w-full md:w-1/3">
+								<div class="w-14 h-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center font-black text-white text-lg italic shadow-lg group-hover:bg-red-600 group-hover:text-black transition-colors shrink-0">
+									${initials}
+								</div>
+								<div class="overflow-hidden">
+									<h4 class="text-sm font-black uppercase italic text-white group-hover:text-red-500 transition-colors truncate">${a.nombre_completo}</h4>
+									<p class="text-[10px] text-gray-500 font-bold flex items-center gap-1.5 mt-1">
+										<i data-lucide="id-card" class="w-3 h-3"></i> DNI: ${a.dni}
+									</p>
+								</div>
+							</div>
+
+							<!-- COL 2: Info Plan -->
+							<div class="flex-1 border-t md:border-t-0 md:border-l border-white/5 pt-4 md:pt-0 md:pl-8">
+								<div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
+									<div>
+										<p class="text-[9px] text-gray-500 font-black uppercase tracking-widest mb-1 flex items-center gap-1.5">
+											<i data-lucide="ticket" class="w-3 h-3 text-red-600"></i> Plan Actual
+										</p>
+										<p class="text-sm font-black uppercase italic text-white truncate">${planNombre}</p>
+									</div>
+									<div class="flex flex-row md:flex-col items-center md:items-start justify-between gap-2">
+										<div class="flex items-center gap-2">
+											<span class="px-3 py-1 rounded-lg text-[9px] font-black uppercase border ${colorBadge}">
+												${textoEstado}
+											</span>
+										</div>
+									</div>
+								</div>
+							</div>
+
+							<!-- COL 3: Acciones (BOTONES ESPECÍFICOS DE RUTINA) -->
+							<div class="flex items-center justify-end min-w-[100px] border-t md:border-t-0 border-white/5 pt-3 md:pt-0 gap-2">
+								<button onclick="openFichaTecnica(${a.id})" class="px-4 py-3 border border-white/10 text-white rounded-xl text-[9px] font-black uppercase italic hover:bg-white/10 transition-colors flex items-center gap-2">
+									<i data-lucide="clipboard-list" class="w-3.5 h-3.5"></i> 
+									<span class="hidden lg:inline">Ficha</span>
+								</button>
+								<button onclick="openRoutineEditor(${a.id})" class="px-4 py-3 bg-red-600 text-black rounded-xl text-[9px] font-black uppercase italic hover:scale-105 transition-transform shadow-lg flex items-center gap-2">
+									<i data-lucide="dumbbell" class="w-3.5 h-3.5"></i>
+									<span>Gestionar</span>
+								</button>
+							</div>
+						</div>
+						`;
+					}).join('');
+				}
+			}
+			if(window.lucide) lucide.createIcons();
+		}
+
+        async function loadMusculacionMetadata() {
+            const grupos = await apiFetch('/rutinas/grupos-musculares');
+            const ejercicios = await apiFetch('/rutinas/ejercicios');
+            state.gruposMusculares = Array.isArray(grupos) ? grupos : [];
+            state.ejerciciosLibreria = Array.isArray(ejercicios) ? ejercicios : [];
+            
+            const selectLib = document.getElementById('lib-ex-grupo');
+            if(selectLib) {
+                selectLib.innerHTML = '<option value="">Seleccionar Grupo Muscular</option>' + 
+                    state.gruposMusculares.map(g => `<option value="${g.id}">${g.nombre}</option>`).join('');
+            }
+        }
+
+        async function openRoutineEditor(alumnoId) {
+		// 1. Validar que state y alumnos existan
+		if (!state || !state.alumnos) {
+			console.error("Error: state.alumnos no está definido");
+			return;
+		}
+
+		const al = state.alumnos.find(a => a.id === alumnoId);
+		if (!al) return;
+		
+		// 2. Cargar metadatos asegurando que la función exista
+		if(typeof loadMusculacionMetadata === 'function') {
+			await loadMusculacionMetadata();
+		}
+		
+		// 3. Preparar DOM (Usando tus IDs originales)
+		const lblAlumno = document.getElementById('rutina-editor-alumno');
+		if(lblAlumno) lblAlumno.innerText = "Alumno: " + al.nombre_completo;
+
+		const inputId = document.getElementById('rutina-editor-alumno-id');
+		if(inputId) inputId.value = alumnoId;
+
+		const container = document.getElementById('rutina-editor-container');
+		if(container) container.innerHTML = "";
+
+		try {
+			const rutinaRes = await apiFetch(`/rutinas/usuario/${alumnoId}`);
+			
+			// CORRECCIÓN CLAVE: Verificamos que rutinaRes exista antes de leer .error
+			// Si rutinaRes es null/undefined, entramos al ELSE (Nueva Rutina)
+			if (rutinaRes && !rutinaRes.error && rutinaRes.id) {
+				// --- MODO EDICIÓN (Cargar existente) ---
+				const txtObj = document.getElementById('rutina-objetivo');
+				if(txtObj) txtObj.value = rutinaRes.objetivo || '';
+
+				const txtVenc = document.getElementById('rutina-vencimiento');
+				if(txtVenc) txtVenc.value = rutinaRes.fecha_vencimiento || '';
+				
+				if (rutinaRes.dias && Array.isArray(rutinaRes.dias)) {
+					rutinaRes.dias.forEach(d => {
+						const ejerciciosFormateados = d.ejercicios.map(e => {
+							return {
+								ejercicio_id: e.ejercicio_id,
+								exercise_name: e.ejercicio_obj?.nombre || "Ejercicio",
+								series: e.series_detalle || [], // Backend usa series_detalle
+								comentario: e.comentario
+							};
+						});
+						// Llamamos a tu función addRoutineDay
+						if(typeof addRoutineDay === 'function') {
+							addRoutineDay(d.nombre_dia, ejerciciosFormateados);
+						}
+					});
+				}
+			} else {
+				// --- MODO CREACIÓN (Nueva Rutina) ---
+				// Esto se ejecuta si no hay rutina o si el backend devuelve error (ej: "No hay rutina activa")
+				const txtObj = document.getElementById('rutina-objetivo');
+				if(txtObj) txtObj.value = "";
+
+				const defaultDate = new Date();
+				defaultDate.setDate(defaultDate.getDate() + 30);
+				
+				const txtVenc = document.getElementById('rutina-vencimiento');
+				if(txtVenc) txtVenc.value = defaultDate.toISOString().split('T')[0];
+				
+				if(typeof addRoutineDay === 'function') {
+					addRoutineDay("Día 1", []); 
+				}
+			}
+
+			// 4. Abrir Modal (Tu ID original)
+			if(typeof openModal === 'function') {
+				openModal('modal-rutina-editor');
+			} else {
+				// Fallback por si openModal no es global
+				const m = document.getElementById('modal-rutina-editor');
+				if(m) m.classList.remove('hidden');
+			}
+
+		} catch (e) {
+			console.error("Error crítico en openRoutineEditor:", e);
+			alert("Hubo un error al intentar abrir el editor.");
+		}
+	}
+
+        function addRoutineDay(nombre = "", ejercicios = []) {
+            const container = document.getElementById('rutina-editor-container');
+            const dayId = 'day-' + Math.random().toString(36).substr(2, 9);
+            const dayCard = document.createElement('div');
+            dayCard.className = "rutina-dia-card space-y-6";
+            dayCard.dataset.dayId = dayId;
+            
+            dayCard.innerHTML = `
+                <div class="flex justify-between items-center gap-4 border-b border-white/5 pb-4">
+                    <div class="flex-1">
+                        <p class="text-[9px] font-black text-gray-500 uppercase italic mb-1 tracking-widest">Nombre del Entrenamiento</p>
+                        <input type="text" placeholder="Ej: Rutina A - Piernas" value="${nombre}" class="viking-input py-2 text-[14px] day-title" required>
+                    </div>
+                    <button type="button" onclick="this.closest('.rutina-dia-card').remove()" class="text-red-900 hover:text-red-600 transition-colors mt-4"><i data-lucide="trash-2" class="w-6 h-6"></i></button>
+                </div>
+                
+                <div class="bg-black/40 p-5 rounded-[1.5rem] border border-red-600/10 shadow-inner">
+                    <p class="text-[10px] font-black text-red-600 uppercase italic mb-3 tracking-[0.2em]">Buscar y Añadir Ejercicio</p>
+                    <div class="flex gap-3">
+                        <select class="viking-input py-2 text-[11px] h-10 w-1/3 search-group-filter">
+                            <option value="all">Filtrar Grupo Muscular...</option>
+                            ${state.gruposMusculares.map(g => `<option value="${g.id}">${g.nombre}</option>`).join('')}
+                        </select>
+                        <div class="relative flex-1">
+                            <input type="text" placeholder="Escribe para buscar (ej: Sentadilla)..." class="viking-input py-2 text-[11px] h-10 w-full search-exercise-input" oninput="showExerciseResults(this, '${dayId}')">
+                            <div class="exercise-results-list hidden absolute top-full left-0 w-full bg-[#0a0a0a] border border-red-600/30 rounded-2xl mt-2 z-50 max-h-60 overflow-y-auto custom-scrollbar shadow-2xl"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="exercises-list space-y-4">
+                    <div class="exercise-grid gap-3 px-4 text-[10px] font-black text-gray-500 uppercase italic tracking-widest">
+                        <span>Ejercicio Seleccionado</span>
+                        <span class="text-center">Series</span>
+                        <span class="text-center">Reps</span>
+                        <span class="text-center">Peso</span>
+                        <span class="text-center">Descanso</span>
+                        <span></span>
+                    </div>
+                    <div class="day-exercises-container space-y-3"></div>
+                </div>
+            `;
+            container.appendChild(dayCard);
+            
+            if (ejercicios.length > 0) {
+                ejercicios.forEach(e => addExerciseToDay(dayId, e));
+            }
+            lucide.createIcons();
+        }
+
+        function showExerciseResults(input, dayId) {
+            const query = input.value.toLowerCase();
+            const groupFilter = input.closest('.flex').querySelector('.search-group-filter').value;
+            const resultsDiv = input.nextElementSibling;
+
+            if (query.length < 2 && groupFilter === "all") {
+                resultsDiv.classList.add('hidden');
+                return;
+            }
+
+            const filtered = state.ejerciciosLibreria.filter(ex => {
+                const matchSearch = ex.nombre.toLowerCase().includes(query);
+                const matchGroup = groupFilter === "all" || ex.grupo_muscular_id == groupFilter;
+                return matchSearch && matchGroup;
+            });
+
+            if (filtered.length === 0) {
+                resultsDiv.innerHTML = '<div class="p-4 text-[11px] text-gray-500 italic">No se encontraron resultados</div>';
+            } else {
+                resultsDiv.innerHTML = filtered.map(ex => `
+                    <div class="p-4 border-b border-white/5 text-[11px] font-black uppercase italic transition-colors" onclick="selectExerciseForDay('${dayId}', ${ex.id}, '${ex.nombre}')">
+                        ${ex.nombre}
+                    </div>
+                `).join('');
+            }
+            resultsDiv.classList.remove('hidden');
+        }
+
+        function selectExerciseForDay(dayId, exerciseId, exerciseName) {
+            const container = document.querySelector(`[data-day-id="${dayId}"]`);
+            const searchInput = container.querySelector('.search-exercise-input');
+            const resultsDiv = container.querySelector('.exercise-results-list');
+            
+            addExerciseToDay(dayId, { ejercicio_id: exerciseId, exercise_name: exerciseName });
+            
+            searchInput.value = "";
+            resultsDiv.classList.add('hidden');
+            showVikingToast("Añadido: " + exerciseName);
+        }
+
+			function addExerciseToDay(dayId, data = null) {
+				// 1. Configuración: Series por defecto en 0
+				const SERIES_POR_DEFECTO = 0; 
+
+				const container = document.querySelector(`[data-day-id="${dayId}"] .day-exercises-container`);
+				const div = document.createElement('div');
+				const exerciseUniqueId = 'ex-' + Math.random().toString(36).substr(2, 9);
+				
+				// CAMBIO VISUAL 1: Quitamos 'bg-white/5 p-4 rounded-2xl border' para eliminar el "recuadro".
+				// Usamos solo 'border-b' para separar ejercicios en filas limpias.
+				div.className = "exercise-row border-b border-white/10 pb-4 mb-4";
+				div.dataset.exerciseRowId = exerciseUniqueId;
+
+				let exName = data?.exercise_name || "";
+				if (!exName && data?.ejercicio_id) {
+					const found = state.ejerciciosLibreria.find(e => e.id == data.ejercicio_id);
+					exName = found ? found.nombre : "Ejercicio";
+				}
+
+				const initialNumSeries = (data && data.series) ? data.series.length : SERIES_POR_DEFECTO;
+
+				div.innerHTML = `
+					<div class="flex justify-between items-center mb-3">
+						<div class="flex flex-col text-left">
+							<input type="hidden" class="exercise-id" value="${data?.ejercicio_id}">
+							<!-- Nombre del ejercicio un poco más grande y limpio -->
+							<span class="text-[13px] font-black uppercase italic text-white tracking-wide">${exName}</span>
+						</div>
+						<div class="flex items-center gap-3">
+							<div class="flex items-center gap-2 bg-white/5 px-2 py-1 rounded-lg">
+								<label class="text-[9px] font-black text-gray-500 uppercase">Sets</label>
+								<select class="viking-input !py-0 !px-1 w-10 h-6 text-[11px] text-center font-black bg-[#1a1a1a] text-white border border-white/20 series-select cursor-pointer focus:border-red-600 rounded" 
+										onchange="updateSeriesCount('${exerciseUniqueId}', this.value)">
+									${[0,1,2,3,4,5,6,7,8,9,10].map(n => 
+										`<option value="${n}" class="bg-black text-white font-bold" ${n === initialNumSeries ? 'selected' : ''}>${n}</option>`
+									).join('')}
+								</select>
+							</div>
+							<button type="button" onclick="this.closest('.exercise-row').remove()" class="text-gray-500 hover:text-red-500 transition-colors">
+								<i data-lucide="trash-2" class="w-4 h-4"></i>
+							</button>
+						</div>
+					</div>
+
+					<!-- CAMBIO VISUAL 2: Cabecera de columnas para dar aspecto de tabla ordenada -->
+					<div class="grid grid-cols-4 gap-2 mb-1 px-1">
+						<span class="text-[8px] font-bold uppercase text-red-600 tracking-wider">Serie</span>
+						<span class="text-[8px] font-bold uppercase text-gray-500 text-center tracking-wider">Reps</span>
+						<span class="text-[8px] font-bold uppercase text-gray-500 text-center tracking-wider">Peso</span>
+						<span class="text-[8px] font-bold uppercase text-gray-500 text-center tracking-wider">Pausa</span>
+					</div>
+
+					<div id="series-container-${exerciseUniqueId}" class="space-y-1 mb-3"></div>
+					
+					<div class="mt-2 text-left pl-1">
+						<input type="text" placeholder="Añadir nota técnica o comentario..." 
+							value="${data?.comentario || ''}"
+							class="w-full bg-transparent text-[10px] text-gray-400 border-b border-dashed border-white/10 focus:border-red-600 focus:outline-none py-1 italic placeholder-gray-700 transition-colors exercise-comment">
+					</div>
+				`;
+				container.appendChild(div);
+				
+				generateSeriesRows(exerciseUniqueId, initialNumSeries, data ? data.series : null);
+				if(window.lucide) lucide.createIcons();
+			}
+        function updateSeriesCount(containerId, newCount) {
+            const container = document.getElementById(`series-container-${containerId}`);
+            const currentRows = container.querySelectorAll('.serie-row');
+            let savedData = [];
+            
+            currentRows.forEach(row => {
+                savedData.push({
+                    repeticiones: row.querySelector('.serie-reps').value,
+                    peso: row.querySelector('.serie-weight').value,
+                    descanso: row.querySelector('.serie-rest').value
+                });
+            });
+
+            generateSeriesRows(containerId, newCount, savedData);
+        }
+
+        function generateSeriesRows(containerId, numSeries, existingData = null) {
+			const container = document.getElementById(`series-container-${containerId}`); 
+			if (!container) return; 
+			container.innerHTML = "";
+			
+			for (let i = 1; i <= numSeries; i++) {
+				const rowData = (existingData && existingData[i - 1]) ? existingData[i - 1] : null;
+				
+				container.innerHTML += `
+					<div class="grid grid-cols-4 gap-2 items-center serie-row px-1 py-1 hover:bg-white/5 rounded transition-colors" data-serie-num="${i}">
+						<!-- Número de serie alineado a la izquierda -->
+						<span class="text-[10px] font-black text-white uppercase italic">#${i}</span>
+						
+						<!-- Inputs estilo "línea" (border-b) en lugar de caja completa -->
+						<input type="text" placeholder="0" value="${rowData?.repeticiones || ''}" 
+							class="bg-transparent border-b border-white/10 text-center text-[11px] text-white focus:border-red-600 focus:outline-none py-1 w-full font-bold serie-reps">
+						
+						<input type="text" placeholder="0" value="${rowData?.peso || ''}" 
+							class="bg-transparent border-b border-white/10 text-center text-[11px] text-white focus:border-red-600 focus:outline-none py-1 w-full font-bold serie-weight">
+						
+						<input type="text" placeholder="90s" value="${rowData?.descanso || '90s'}" 
+							class="bg-transparent border-b border-white/10 text-center text-[10px] text-gray-400 focus:border-red-600 focus:outline-none py-1 w-full italic serie-rest">
+					</div>`;
+			}
+		}
+
+        async function apiFetch(endpoint, method = 'GET', body = null) {
+			const token = localStorage.getItem('viking_token');
+			const headers = { 'Content-Type': 'application/json' };
+			
+			if (token) {
+				headers['Authorization'] = `Bearer ${token}`;
+			}
+
+			const options = { method, headers };
+			if (body) options.body = JSON.stringify(body);
+			
+			try {
+				const res = await fetch(`${API_BASE}${endpoint}`, options);
+				
+				// 1. Manejo de sesión expirada
+				if (res.status === 401) {
+					localStorage.removeItem('viking_token');
+					location.reload();
+					return { error: "Sesión expirada" };
+				}
+
+				// 2. LEER EL CUERPO UNA SOLA VEZ
+				const responseText = await res.text();
+				
+				// 3. Intentar parsear como JSON
+				let responseData;
+				try {
+					responseData = JSON.parse(responseText);
+				} catch (e) {
+					// Si no es JSON, devolvemos el texto plano (útil para errores 500 crudos)
+					responseData = { error: responseText || "Error desconocido del servidor" };
+				}
+
+				if (!res.ok) {
+					return { error: responseData.detail || responseData.error || "Error en la petición" };
+				}
+
+				return responseData;
+			} catch (e) { 
+				console.error("Error Fetch:", e);
+				return { error: "Error de conexión con el Valhalla" }; 
+			}
+		}
+
+        function calculateIMC() {
+            const peso = parseFloat(document.getElementById('al-peso').value);
+            const alturaCm = parseFloat(document.getElementById('al-altura').value);
+            if (peso > 5 && alturaCm > 50) {
+                const alturaM = alturaCm / 100;
+                document.getElementById('al-imc').value = (peso / (alturaM * alturaM)).toFixed(2);
+            } else document.getElementById('al-imc').value = "";
+        }
+
+        function calculateIMCProfile() {
+            const peso = parseFloat(document.getElementById('prof-input-peso').value);
+            const alturaCm = parseFloat(document.getElementById('prof-input-altura').value);
+            if (peso > 5 && alturaCm > 50) {
+                const alturaM = alturaCm / 100;
+                document.getElementById('prof-input-imc').value = (peso / (alturaM * alturaM)).toFixed(2);
+            } else document.getElementById('prof-input-imc').value = "";
+        }
+
+        function autoCalculateExpiry() {
+            const planId = document.getElementById('al-plan').value;
+            const renovDate = document.getElementById('al-fecha-renovacion').value;
+            if(!planId || !renovDate) return;
+            const plan = state.planes.find(p => p.id == planId);
+            let months = 1;
+            if (plan) {
+                const n = plan.nombre.toLowerCase();
+                if (n.includes('trimestral')) months = 3;
+                else if (n.includes('semestral')) months = 6;
+                else if (n.includes('anual')) months = 12;
+            }
+            let d = new Date(renovDate + 'T00:00:00');
+            d.setMonth(d.getMonth() + months);
+            document.getElementById('al-fecha-vencimiento').value = d.toISOString().split('T')[0];
+        }
+
+        function toggleSidebar() { document.getElementById('sidebar').classList.toggle('sidebar-collapsed'); lucide.createIcons(); }
+        function toggleSub(id) { document.getElementById(id).classList.toggle('hidden'); }
+        function openModal(id) { document.getElementById(id).style.display = 'flex'; }
+        function closeModal(id) { 
+            document.getElementById(id).style.display = 'none'; 
+            const f = document.querySelector(`#${id} form`); 
+            if (f) {
+                f.reset();
+                if(id === 'modal-clase') {
+                    document.querySelectorAll('input[name="cl-dias-check"]').forEach(c => c.checked = false);
+                    document.getElementById('cl-schedule-slots').innerHTML = '<p class="text-[10px] text-gray-600 italic">Selecciona días arriba para asignar horarios</p>';
+                }
+            }
+        }
+
+        function switchView(view) {
+            document.querySelectorAll('.view-content').forEach(v => v.classList.remove('active'));
+            document.querySelectorAll('.nav-btn, .nav-item').forEach(b => b.classList.remove('active'));
+            document.getElementById('view-' + view).classList.add('active');
+            const n = document.getElementById('nav-' + view); if (n) n.classList.add('active');
+            document.getElementById('view-title').innerText = view.replace('-', ' ').toUpperCase();
+            
+            if(view === 'calendario') renderCalendar();
+            if(view === 'cobrar') renderCobrar();
+            if(view === 'rutinas') renderRutinas();
+            if(view === 'dashboard' && state.user?.rol_nombre === "Alumno") renderStudentDashboard();
+			if(view === 'acceso-virtual') renderAccesos();
+            if(view === 'alumnos') renderAlumnosSection();
+            if(view === 'perfil' && state.user) {
+                const u = state.user;
+                document.getElementById('prof-name').innerText = u.nombre_completo || "Usuario Vikingo";
+                document.getElementById('prof-role').innerText = u.rol_nombre || "Staff";
+                const initials = u.nombre_completo ? u.nombre_completo.split(' ').filter(n => n).map(n => n[0]).join('').toUpperCase() : "??";
+                document.getElementById('user-initials').innerText = initials;
+                document.getElementById('prof-initials-view').innerText = initials;
+                document.getElementById('prof-input-name').value = u.nombre_completo || "";
+                document.getElementById('prof-input-dni').value = u.dni || "";
+                document.getElementById('prof-input-email').value = u.email || "";
+                
+                if (u.rol_nombre === "Alumno") {
+                    document.getElementById('perfil-datos-fisicos').classList.remove('hidden');
+                    document.getElementById('perfil-datos-fisicos').style.display = 'grid';
+                    document.getElementById('prof-input-peso').value = u.peso || "";
+                    document.getElementById('prof-input-altura').value = u.altura || "";
+                    document.getElementById('prof-input-imc').value = u.imc || "";
+                    document.getElementById('plan-alumno-info').classList.remove('hidden');
+                    document.getElementById('perfil-plan-nombre').innerText = u.plan?.nombre || "SIN PLAN";
+                    document.getElementById('perfil-vencimiento').innerText = "Vence: " + (u.fecha_vencimiento || "-");
+                } else {
+                    document.getElementById('perfil-datos-fisicos').classList.add('hidden');
+                    document.getElementById('perfil-datos-fisicos').style.display = 'none';
+                    document.getElementById('plan-alumno-info').classList.add('hidden');
+                }
+            }
+            
+            applyPermissions();
+            lucide.createIcons();
+        }
+
+    async function handleLogin(e) {
+		// 1. Detener el refresco automático del formulario
+		if(e && e.preventDefault) e.preventDefault();
+		
+		const dniInput = document.getElementById('login-dni');
+		const passInput = document.getElementById('login-pass');
+		const errorDiv = document.getElementById('login-error');
+		const loginBtn = document.getElementById('login-button');
+		
+		if (!dniInput || !passInput) return; 
+
+		// Feedback visual de carga
+		if(loginBtn) {
+			loginBtn.disabled = true;
+			loginBtn.innerText = "VERIFICANDO...";
+		}
+
+		const data = { 
+			dni: dniInput.value, 
+			password: passInput.value 
+		};
+		
+		try {
+			const res = await apiFetch('/login', 'POST', data);
+			
+			if (res && !res.error) {
+				// --- NUEVO: GUARDAR TOKEN JWT ---
+				if (res.access_token) {
+					localStorage.setItem('viking_token', res.access_token);
+				}
+
+				// Guardamos al usuario en el estado global
+				state.user = res;
+				
+				// 2. Ocultar Login y mostrar App
+				document.getElementById('login-overlay').style.display = 'none';
+				document.getElementById('sidebar').classList.remove('hidden');
+				document.getElementById('main-content').classList.remove('hidden');
+				
+				// 3. Cargar datos del usuario en la barra lateral
+				const elName = document.getElementById('side-user-name');
+				if(elName) elName.innerText = res.nombre_completo || "Usuario";
+
+				const elRole = document.getElementById('side-user-role');
+				if(elRole) elRole.innerText = res.rol_nombre || 'Staff';
+
+				// --- LÓGICA DE INICIALES ---
+				const name = res.nombre_completo || "Usuario Vikingo";
+				const initials = name.split(' ')
+									.filter(n => n)
+									.map(n => n[0])
+									.join('')
+									.toUpperCase()
+									.substring(0, 2);
+				
+				const elInitials = document.getElementById('user-initials');
+				if(elInitials) elInitials.innerText = initials;
+
+				// 4. Cargar datos maestros (Profesores, Clases, etc.)
+				await loadProfesores();
+				
+				if (typeof initApp === 'function') {
+					await initApp(); 
+				} else {
+					if (typeof loadClases === 'function') loadClases(); 
+					if (typeof loadStock === 'function') loadStock();
+				}
+
+				// 5. Cambiar a la vista principal
+				switchView('dashboard');
+
+				// --- Renderizar Dashboard específico si es Alumno ---
+				if (res.rol_nombre === "Alumno" && typeof renderStudentDashboard === 'function') {
+					await renderStudentDashboard();
+				}
+
+				// Refrescar iconos
+				if(window.lucide) lucide.createIcons();
+				
+				showVikingToast(`¡Bienvenido al Valhalla, ${res.nombre_completo.split(' ')[0]}!`);
+
+			} else {
+				// Mostrar error si las credenciales fallan
+				if(errorDiv) {
+					errorDiv.innerText = res.error || "Credenciales incorrectas";
+					errorDiv.classList.remove('hidden');
+				}
+				if(loginBtn) {
+					loginBtn.disabled = false;
+					loginBtn.innerText = "Entrar al Valhalla";
+				}
+			}
+		} catch (err) {
+			console.error("Error en el proceso de login:", err);
+			showVikingToast("Error de conexión con el servidor", true);
+			if(loginBtn) {
+				loginBtn.disabled = false;
+				loginBtn.innerText = "Entrar al Valhalla";
+			}
+		}
+	}
+
+
+	async function loadCaja() {
+		const movs = await apiFetch('/caja/movimientos');
+		
+		let calcIngresos = 0;
+		let calcGastos = 0;
+
+		// 1. Encabezados Forzados (Flujo | Tipo | Descripcion | Monto)
+		const thead = document.querySelector('#view-caja table thead tr');
+		if(thead) {
+			thead.innerHTML = `
+				<th class="pb-5 pl-2 text-left">Flujo</th>
+				<th class="pb-5 text-left">Tipo</th>
+				<th class="pb-5 text-left">Descripción</th>
+				<th class="pb-5 text-right pr-2">Monto</th>
+			`;
+		}
+
+		if (Array.isArray(movs)) {
+			movs.forEach(m => {
+				const tipo = (m.tipo || '').toLowerCase();
+				const desc = (m.descripcion || '').toLowerCase();
+				const monto = Math.abs(parseFloat(m.monto)); // Leemos siempre positivo para calcular
+
+				// LÓGICA BLINDADA: 
+				// Si dice mercaderia, plan, venta o cobro -> ES INGRESO (Verde)
+				// Solo es Gasto si NO es lo anterior y explícitamente dice gasto/egreso
+				const esPositivo = tipo.includes('mercaderia') || tipo.includes('mercadería') || tipo.includes('plan') || tipo.includes('venta') || tipo.includes('cobro') || tipo.includes('ingreso');
+				const esEgreso = !esPositivo && (tipo === 'gasto' || tipo === 'egreso' || tipo === 'salida');
+
+				if (esEgreso) {
+					calcGastos += monto;
+				} else {
+					calcIngresos += monto;
+				}
+			});
+		}
+
+		const calcBalance = calcIngresos - calcGastos;
+
+		// Actualizar tarjetas
+		if(document.getElementById('caja-ingresos')) 
+			document.getElementById('caja-ingresos').innerText = `$ ${calcIngresos.toLocaleString()}`;
+		
+		if(document.getElementById('caja-gastos')) 
+			document.getElementById('caja-gastos').innerText = `$ ${calcGastos.toLocaleString()}`;
+		
+		if(document.getElementById('caja-balance')) {
+			const elBalance = document.getElementById('caja-balance');
+			elBalance.innerText = `$ ${calcBalance.toLocaleString()}`;
+			elBalance.className = `text-3xl font-black ${calcBalance >= 0 ? 'text-white' : 'text-red-500'}`;
+		}
+
+		// Renderizar Tabla
+		const table = document.getElementById('table-caja');
+		if(table) {
+			if(Array.isArray(movs) && movs.length > 0) {
+				table.innerHTML = movs.map(m => {
+					const tipoRaw = (m.tipo || '').toLowerCase();
+					const monto = Math.abs(parseFloat(m.monto));
+
+					// Misma lógica de detección visual
+					const esPositivo = tipoRaw.includes('mercaderia') || tipoRaw.includes('mercadería') || tipoRaw.includes('plan') || tipoRaw.includes('venta') || tipoRaw.includes('cobro') || tipoRaw.includes('ingreso');
+					const esEgreso = !esPositivo && (tipoRaw === 'gasto' || tipoRaw === 'egreso' || tipoRaw === 'salida');
+					
+					const flujoTexto = esEgreso ? 'EGRESO' : 'INGRESO';
+					const flujoColor = esEgreso 
+						? 'bg-red-500/10 text-red-500 border-red-500/20' 
+						: 'bg-green-500/10 text-green-500 border-green-500/20';
+
+					// Icono según tipo real
+					let icono = 'tag';
+					if(tipoRaw.includes('plan')) icono = 'users';
+					if(tipoRaw.includes('mercaderia')) icono = 'shopping-bag';
+					if(esEgreso) icono = 'arrow-down-circle';
+
+					return `
+					<tr class="viking-table-row border-b border-white/5 hover:bg-white/5 transition-colors">
+						<!-- COL 1: FLUJO -->
+						<td class="py-4 px-2">
+							<span class="px-3 py-1 rounded border text-[9px] font-black uppercase tracking-wider ${flujoColor}">
+								${flujoTexto}
+							</span>
+						</td>
+
+						<!-- COL 2: TIPO -->
+						<td class="py-4 px-2">
+							<span class="text-white text-[10px] font-black uppercase italic opacity-70">
+								<i data-lucide="${icono}" class="w-3 h-3 inline mr-1 opacity-50"></i>${m.tipo}
+							</span>
+						</td>
+
+						<!-- COL 3: DESCRIPCIÓN -->
+						<td class="py-4 px-2">
+							<p class="text-[11px] font-bold text-white uppercase">${m.descripcion}</p>
+							<p class="text-[9px] text-gray-500">${new Date(m.fecha).toLocaleDateString()} - ${m.metodo_pago || 'Efectivo'}</p>
+						</td>
+
+						<!-- COL 4: MONTO -->
+						<td class="py-4 px-2 text-right font-black italic text-white tracking-wide pr-2">
+							$ ${monto.toLocaleString()}
+						</td>
+					</tr>
+				`}).join('');
+				
+				if(window.lucide) lucide.createIcons();
+				
+			} else {
+				table.innerHTML = '<tr><td colspan="4" class="text-center py-6 text-gray-500 italic text-[10px]">Sin movimientos registrados</td></tr>';
+			}
+		}
+	}
+
+		// REEMPLAZA TU FUNCIÓN guardarMovimiento POR ESTA:
+		async function guardarMovimiento(event) {
+			event.preventDefault(); // Evita recarga
+
+			// 1. Capturar Inputs
+			const descInput = document.getElementById('input-desc-gasto');
+			const montoInput = document.getElementById('input-monto-gasto');
+			const tipoInput = document.getElementById('input-tipo-movimiento');
+
+			const descripcion = descInput?.value || 'Varios';
+			const monto = parseFloat(montoInput?.value) || 0;
+			const tipo = tipoInput ? tipoInput.value : 'Ingreso';
+
+			if(monto <= 0) return alert("El monto debe ser mayor a 0");
+
+			// 2. Enviar al Backend
+			try {
+				const res = await apiFetch('/caja/movimientos', 'POST', {
+					tipo: tipo, 
+					descripcion: descripcion,
+					monto: monto,
+					metodo_pago: 'Efectivo' 
+				});
+
+				if(!res.error) {
+					// 3. LIMPIEZA BLINDADA (Aquí borramos lo escrito)
+					if(descInput) descInput.value = "";
+					if(montoInput) montoInput.value = "";
+					
+					// Cerrar modal y recargar
+					document.getElementById('modal-gasto').classList.add('hidden');
+					await loadCaja(); 
+					
+					if(typeof showVikingToast === 'function') showVikingToast('Movimiento registrado correctamente');
+				} else {
+					// Si el error persiste (ej: backend no actualizado), avisa
+					alert("Error del servidor: " + (res.detail || res.error || "Revisa el main.py"));
+				}
+			} catch (e) {
+				console.error(e);
+				alert("Error de conexión al guardar.");
+			}
+		}
+
+        async function initApp() {
+            await Promise.all([fetchAlumnos(), loadStaff(), loadPlanes(), loadStock(), loadClases(), fetchReservas(), loadDashboard(), loadMusculacionMetadata(), loadCaja()]);
+        }
+
+		async function loadDashboard() {
+			// 1. Cargar datos necesarios
+			// Nota: Como los accesos suelen ser evento en tiempo real o websocket,
+			// usaremos state.accesos del cliente o simularemos si está vacío.
+			const [stockData, reservasData] = await Promise.all([
+				apiFetch('/stock'),
+				apiFetch('/reservas')
+			]);
+
+			const stock = Array.isArray(stockData) ? stockData : [];
+			const reservas = Array.isArray(reservasData) ? reservasData : [];
+
+			// --- A. ÚLTIMOS ACCESOS (CORREGIDO: GENTE, NO DINERO) ---
+			const accessContainer = document.getElementById('dash-last-access');
+			
+			// Si no hay accesos registrados en la sesión actual, generamos unos "dummy" para que se vea lindo
+			if (!state.accesos || state.accesos.length === 0) {
+				state.accesos = [
+					{ nombre: "Ragnar Lothbrok", dni: "V-001", fecha: "Ahora", metodo: "QR SCAN", estado: "AUTORIZADO" },
+					{ nombre: "Lagertha", dni: "V-002", fecha: "Hace 5 min", metodo: "HUELLA", estado: "AUTORIZADO" },
+					{ nombre: "Ivar the Boneless", dni: "V-003", fecha: "Hace 12 min", metodo: "MANUAL", estado: "DENEGADO" },
+					{ nombre: "Bjorn Ironside", dni: "V-004", fecha: "Hace 20 min", metodo: "QR SCAN", estado: "AUTORIZADO" }
+				];
+			}
+
+			if (state.accesos.length === 0) {
+				accessContainer.innerHTML = '<div class="flex flex-col items-center justify-center h-full opacity-30"><i data-lucide="scan-line" class="w-12 h-12 mb-2"></i><p class="text-[10px] font-black italic">Sin accesos recientes</p></div>';
+			} else {
+				// Mostramos solo los últimos 8 accesos
+				const ultimosAccesos = state.accesos.slice(0, 8);
+				
+				accessContainer.innerHTML = ultimosAccesos.map(acc => {
+					const isDenied = acc.estado.includes('DENEGADO');
+					const colorClass = isDenied ? 'text-red-500 bg-red-500/10 border-red-500/20' : 'text-blue-500 bg-blue-500/10 border-blue-500/20';
+					const icon = acc.metodo.includes('QR') ? 'qr-code' : (acc.metodo.includes('HUELLA') ? 'fingerprint' : 'user-check');
+
+					return `
+					<div class="flex justify-between items-center p-3 bg-white/5 rounded-2xl border border-white/5 hover:bg-white/10 transition-colors group">
+						<div class="flex items-center gap-3">
+							<div class="w-8 h-8 rounded-lg ${isDenied ? 'bg-red-500/20 text-red-500' : 'bg-blue-500/20 text-blue-500'} flex items-center justify-center">
+								<i data-lucide="${icon}" class="w-4 h-4"></i>
+							</div>
+							<div>
+								<p class="text-[10px] font-black uppercase italic text-white group-hover:text-blue-400 truncate max-w-[120px]">${acc.nombre}</p>
+								<p class="text-[8px] text-gray-500 font-bold">${acc.fecha} • ${acc.metodo}</p>
+							</div>
+						</div>
+						<span class="text-[9px] px-2 py-1 rounded-md font-black uppercase italic ${colorClass}">${acc.estado}</span>
+					</div>
+				`}).join('');
+			}
+
+			// --- B. ALERTAS DE STOCK (MANTENIDO) ---
+			const stockContainer = document.getElementById('dash-low-stock');
+			const lowStock = stock.filter(s => s.stock_actual <= 5).sort((a,b) => a.stock_actual - b.stock_actual);
+
+			if (lowStock.length === 0) {
+				stockContainer.innerHTML = '<div class="flex flex-col items-center justify-center h-full opacity-30"><i data-lucide="check-circle" class="w-12 h-12 mb-2 text-green-500"></i><p class="text-[10px] font-black italic">Stock Saludable</p></div>';
+			} else {
+				stockContainer.innerHTML = lowStock.map(s => `
+					<div class="flex justify-between items-center p-3 bg-red-900/10 rounded-2xl border border-red-500/20">
+						<div class="flex items-center gap-3">
+							<div class="w-8 h-8 rounded-lg bg-red-600 text-black flex items-center justify-center font-bold text-xs shadow-lg shadow-red-600/20">
+								${s.stock_actual}
+							</div>
+							<div>
+								<p class="text-[10px] font-black uppercase italic text-red-200">${s.nombre_producto}</p>
+								<p class="text-[8px] text-red-400/60 font-bold uppercase">Reposición Urgente</p>
+							</div>
+						</div>
+						<button onclick="openEditStock(${s.id})" class="text-[9px] border border-red-500/30 text-red-400 px-2 py-1 rounded hover:bg-red-600 hover:text-black transition-colors">EDITAR</button>
+					</div>
+				`).join('');
+			}
+
+			// --- C. TOP 5 CLASES (MANTENIDO) ---
+			const classCounts = {};
+			reservas.forEach(r => {
+				const name = r.clase_nombre || "Clase Eliminada";
+				classCounts[name] = (classCounts[name] || 0) + 1;
+			});
+
+			const sortedClasses = Object.entries(classCounts)
+				.sort((a, b) => b[1] - a[1]) // Mayor a menor
+				.slice(0, 5); // Top 5
+
+			const topClassesContainer = document.getElementById('dash-top-clases');
+			if (sortedClasses.length === 0) {
+				topClassesContainer.innerHTML = '<p class="text-center text-gray-500 italic text-[10px] py-10">No hay reservas suficientes para el ranking.</p>';
+			} else {
+				topClassesContainer.innerHTML = sortedClasses.map(([name, count], index) => {
+					const medals = ["text-yellow-400", "text-gray-300", "text-amber-600", "text-gray-600", "text-gray-700"];
+					const trophy = index < 3 ? 'trophy' : 'medal';
+					return `
+					<div class="flex items-center justify-between p-3 bg-white/5 rounded-2xl border border-white/5">
+						<div class="flex items-center gap-3">
+							<i data-lucide="${trophy}" class="w-4 h-4 ${medals[index]}"></i>
+							<span class="text-[10px] font-black italic uppercase text-white">${index + 1}. ${name}</span>
+						</div>
+						<span class="text-[9px] font-black text-red-600 bg-red-600/10 px-2 py-0.5 rounded border border-red-600/20">${count} RES.</span>
+					</div>
+				`}).join('');
+			}
+
+			// --- D. FRECUENCIA HORARIA (MANTENIDO) ---
+			const chartContainer = document.getElementById('dash-chart-container');
+			const labelsContainer = document.getElementById('dash-chart-labels');
+			
+			// Inicializar contadores por hora (7am a 22pm)
+			const hoursMap = {};
+			for(let i=7; i<=22; i++) hoursMap[i] = 0;
+
+			// Llenar datos
+			reservas.forEach(r => {
+				if(r.horario) {
+					const h = Math.floor(parseFloat(r.horario));
+					if(hoursMap[h] !== undefined) hoursMap[h]++;
+				}
+			});
+
+			const maxVal = Math.max(...Object.values(hoursMap));
+			const safeMax = maxVal === 0 ? 10 : maxVal;
+
+			const yAxisHTML = `
+				<div class="absolute left-0 top-0 bottom-0 w-8 flex flex-col justify-between text-[8px] text-gray-600 font-bold py-2 pointer-events-none">
+					<span>${safeMax}</span>
+					<span>${Math.round(safeMax/2)}</span>
+					<span>0</span>
+				</div>`;
+			
+			chartContainer.innerHTML = yAxisHTML;
+			labelsContainer.innerHTML = "";
+
+			Object.keys(hoursMap).forEach(h => {
+				const count = hoursMap[h];
+				const heightPercent = (count / safeMax) * 100;
+				const opacity = Math.max(0.2, (count / safeMax)); 
+				
+				const bar = document.createElement('div');
+				bar.className = "flex-1 mx-0.5 rounded-t-sm transition-all duration-500 hover:bg-red-500 relative group";
+				bar.style.height = `${Math.max(5, heightPercent)}%`; 
+				bar.style.backgroundColor = `rgba(220, 38, 38, ${opacity})`;
+
+				bar.innerHTML = `<div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 bg-black text-white text-[8px] font-bold px-1 rounded opacity-0 group-hover:opacity-100 whitespace-nowrap">${count} Res.</div>`;
+
+				chartContainer.appendChild(bar);
+
+				if (h % 2 === 0 || h == 7) { 
+					const lbl = document.createElement('div');
+					lbl.innerText = `${h}hs`;
+					lbl.className = "flex-1 text-center";
+					labelsContainer.appendChild(lbl);
+				} else {
+					const lbl = document.createElement('div');
+					lbl.className = "flex-1";
+					labelsContainer.appendChild(lbl);
+				}
+			});
+
+			if (window.lucide) lucide.createIcons();
+		}
+
+        async function fetchAlumnos() {
+			const d = await apiFetch('/alumnos');
+			state.alumnos = Array.isArray(d) ? d : [];
+
+			// 1. TRANSFORMACIÓN VISUAL DEL DASHBOARD (Mini Lista)
+			// Buscamos la tabla original para reemplazarla por nuestro nuevo diseño de filas
+			const dashTable = document.querySelector('#admin-dashboard-layout table');
+			const dashListId = 'dash-alumnos-list-view';
+			let dashContainer = document.getElementById(dashListId);
+
+			// Si todavía existe la tabla (primera carga), la reemplazamos por un DIV contenedor
+			if (!dashContainer && dashTable) {
+				dashContainer = document.createElement('div');
+				dashContainer.id = dashListId;
+				dashContainer.className = "flex flex-col gap-2"; // Espacio entre filas
+				// Reemplazamos la tabla entera (y sus cabeceras) por nuestra lista limpia
+				if (dashTable.parentNode) dashTable.parentNode.replaceChild(dashContainer, dashTable);
+			}
+
+			if (dashContainer) {
+				const topAlumnos = state.alumnos.slice(0, 5); // Solo mostramos los 5 recientes en dashboard
+				if (topAlumnos.length === 0) {
+					dashContainer.innerHTML = '<p class="text-center text-gray-500 italic text-[11px] py-4">No hay alumnos recientes.</p>';
+				} else {
+					dashContainer.innerHTML = topAlumnos.map(a => createAlumnoRow(a, 'dashboard')).join('');
+				}
+			}
+
+			// 2. TRANSFORMACIÓN VISUAL DE LA SECCIÓN ALUMNOS (Lista Completa)
+			const fullTable = document.querySelector('#view-alumnos table');
+			const fullListId = 'full-alumnos-list-view';
+			let fullContainer = document.getElementById(fullListId);
+
+			if (!fullContainer && fullTable) {
+				fullContainer = document.createElement('div');
+				fullContainer.id = fullListId;
+				fullContainer.className = "flex flex-col gap-3"; // Más espacio en la vista completa
+				if (fullTable.parentNode) fullTable.parentNode.replaceChild(fullContainer, fullTable);
+			}
+
+			if (fullContainer) {
+				if (state.alumnos.length === 0) {
+					fullContainer.innerHTML = '<div class="text-center py-10"><i data-lucide="users" class="w-12 h-12 text-gray-600 mx-auto mb-4"></i><p class="text-gray-500 italic">No hay alumnos registrados.</p></div>';
+				} else {
+					fullContainer.innerHTML = state.alumnos.map(a => createAlumnoRow(a, 'full')).join('');
+				}
+			}
+
+			if (window.lucide) lucide.createIcons();
+			applyPermissions(); // Re-aplicamos permisos para ocultar botones de editar a quien no corresponda
+		}
+
+		// --- REEMPLAZA TU FUNCIÓN loadStaff POR ESTA NUEVA VERSIÓN VISUAL ---
+		async function loadStaff() {
+			// 1. Obtener datos
+			const [p, a] = await Promise.all([
+				apiFetch('/profesores'),
+				apiFetch('/administrativos')
+			]);
+			state.profesores = Array.isArray(p) ? p : [];
+			state.administrativos = Array.isArray(a) ? a : [];
+
+			// 2. TRANSFORMACIÓN VISUAL: PROFESORES
+			const profTable = document.querySelector('#view-profesores table');
+			const profListId = 'profesores-list-view';
+			let profContainer = document.getElementById(profListId);
+
+			// Si existe la tabla antigua, la reemplazamos por el contenedor de tarjetas
+			if (!profContainer && profTable) {
+				profContainer = document.createElement('div');
+				profContainer.id = profListId;
+				profContainer.className = "flex flex-col gap-3";
+				if (profTable.parentNode) profTable.parentNode.replaceChild(profContainer, profTable);
+			}
+
+			if (profContainer) {
+				if (state.profesores.length === 0) {
+					profContainer.innerHTML = '<div class="text-center py-10"><i data-lucide="user-x" class="w-12 h-12 text-gray-600 mx-auto mb-4"></i><p class="text-gray-500 italic">No hay profesores registrados.</p></div>';
+				} else {
+					profContainer.innerHTML = state.profesores.map(u => createStaffRow(u, 'Profesor')).join('');
+				}
+			}
+
+			// 3. TRANSFORMACIÓN VISUAL: ADMINISTRATIVOS
+			const admTable = document.querySelector('#view-administrativos table');
+			const admListId = 'administrativos-list-view';
+			let admContainer = document.getElementById(admListId);
+
+			if (!admContainer && admTable) {
+				admContainer = document.createElement('div');
+				admContainer.id = admListId;
+				admContainer.className = "flex flex-col gap-3";
+				if (admTable.parentNode) admTable.parentNode.replaceChild(admContainer, admTable);
+			}
+
+			if (admContainer) {
+				if (state.administrativos.length === 0) {
+					admContainer.innerHTML = '<div class="text-center py-10"><i data-lucide="shield-alert" class="w-12 h-12 text-gray-600 mx-auto mb-4"></i><p class="text-gray-500 italic">No hay administrativos registrados.</p></div>';
+				} else {
+					admContainer.innerHTML = state.administrativos.map(u => createStaffRow(u, 'Administracion')).join('');
+				}
+			}
+
+			// Actualizar selectores en modales (como en crear clase)
+			const coachSelect = document.getElementById('cl-coach-select');
+			if (coachSelect) {
+				coachSelect.innerHTML = '<option value="">Seleccionar Coach</option>' + 
+					state.profesores.map(x => `<option value="${x.nombre_completo}">${x.nombre_completo}</option>`).join('');
+			}
+
+			if (window.lucide) lucide.createIcons();
+			applyPermissions(); // Asegurar que solo Admin/Supervisor vea los botones de editar
+		}
+
+			// --- NUEVA FUNCIÓN AUXILIAR PARA CREAR TARJETAS DE STAFF ---
+			function createStaffRow(u, type) {
+				const initials = u.nombre_completo ? u.nombre_completo.split(' ').map(n=>n[0]).join('').substring(0,2).toUpperCase() : "??";
+				const roleLabel = type === 'Profesor' ? 'Coach / Especialidad' : 'Cargo / Función';
+				const roleValue = u.especialidad || (type === 'Profesor' ? 'Entrenador General' : 'Administrativo');
+				
+				// Icono según tipo
+				const icon = type === 'Profesor' ? 'dumbbell' : 'shield-check';
+
+				return `
+				<div class="glass-card p-4 rounded-3xl border-white/5 flex flex-col md:flex-row md:items-center gap-4 hover:border-red-600/20 transition-all group relative overflow-hidden">
+					<!-- Barra lateral decorativa -->
+					<div class="absolute left-0 top-0 bottom-0 w-1 bg-red-600 opacity-30 group-hover:opacity-100 transition-opacity"></div>
+					
+					<!-- Info Principal -->
+					<div class="flex items-center gap-4 flex-1">
+						<div class="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center font-black text-white text-sm italic shadow-lg group-hover:bg-red-600 group-hover:text-black transition-colors">
+							${initials}
+						</div>
+						<div>
+							<h4 class="text-sm font-black uppercase italic text-white group-hover:text-red-500 transition-colors">${u.nombre_completo}</h4>
+							<div class="flex flex-wrap gap-x-4 gap-y-1 mt-1">
+								<p class="text-[10px] text-gray-500 font-bold flex items-center gap-1"><i data-lucide="id-card" class="w-3 h-3"></i> ${u.dni}</p>
+								${u.email ? `<p class="text-[10px] text-gray-500 font-bold flex items-center gap-1"><i data-lucide="mail" class="w-3 h-3"></i> ${u.email}</p>` : ''}
+							</div>
+						</div>
+					</div>
+
+					<!-- Rol / Especialidad -->
+					<div class="flex flex-wrap items-center gap-6 md:justify-center border-t md:border-t-0 md:border-l border-white/5 pt-3 md:pt-0 md:pl-6">
+						<div class="min-w-[150px]">
+							<p class="text-[9px] text-gray-500 font-black uppercase tracking-widest mb-1 flex items-center gap-1">
+								<i data-lucide="${icon}" class="w-3 h-3 text-red-600"></i> ${roleLabel}
+							</p>
+							<p class="text-[11px] font-black uppercase italic text-white truncate max-w-[200px]">${roleValue}</p>
+						</div>
+					</div>
+
+					<!-- Acciones -->
+					<div class="flex items-center justify-end border-t md:border-t-0 md:border-l border-white/5 pt-3 md:pt-0 md:pl-6 min-w-[100px]">
+						<button onclick="openEditStaff(${u.id}, '${type}')" class="px-5 py-2.5 bg-white/5 text-white rounded-xl text-[10px] font-black uppercase italic hover:bg-white/10 hover:text-red-500 transition-all flex items-center gap-2 shadow-lg action-col">
+							<i data-lucide="settings-2" class="w-3.5 h-3.5"></i>
+							<span>Editar</span>
+						</button>
+					</div>
+				</div>`;
+			}
+		
+		/**
+		 * GESTIÓN AVANZADA DE ALUMNOS (PUNTO 5)
+		 * Incluye: Buscador, Filtros de Estado y Paginación (20 por hoja)
+		 */
+
+		// 1. Inicialización de variables de estado (asegurar que existan)
+		if (!state.alumnosPage) state.alumnosPage = 1;
+		if (!state.alumnosLimit) state.alumnosLimit = 20;
+		if (!state.alumnosSearch) state.alumnosSearch = "";
+		if (!state.alumnosStatusFilter) state.alumnosStatusFilter = "todos";
+
+		/**
+		 * Función Principal de Renderizado
+		 */
+		function renderAlumnos() {
+			const container = document.getElementById('alumnos-list-view');
+			if (!container) return;
+
+			const hoy = new Date().toISOString().split('T')[0];
+
+			// --- PASO A: FILTRADO ---
+			let filtrados = state.alumnos.filter(a => {
+				const matchesSearch = (a.nombre_completo || "").toLowerCase().includes(state.alumnosSearch.toLowerCase()) || 
+									  String(a.dni || "").includes(state.alumnosSearch);
+				
+				const isActive = a.fecha_vencimiento && a.fecha_vencimiento >= hoy;
+				
+				let matchesStatus = true;
+				if (state.alumnosStatusFilter === "activos") matchesStatus = isActive;
+				if (state.alumnosStatusFilter === "vencidos") matchesStatus = !isActive;
+
+				return matchesSearch && matchesStatus;
+			});
+
+			// --- PASO B: PAGINACIÓN ---
+			const totalItems = filtrados.length;
+			const totalPages = Math.ceil(totalItems / state.alumnosLimit) || 1;
+			if (state.alumnosPage > totalPages) state.alumnosPage = totalPages;
+
+			const inicio = (state.alumnosPage - 1) * state.alumnosLimit;
+			const paginados = filtrados.slice(inicio, inicio + state.alumnosLimit);
+
+			// --- PASO C: UI DE FILTROS (FIX COLOR ROJO) ---
+			document.querySelectorAll('.filter-btn').forEach(btn => {
+				btn.classList.remove('bg-red-600', 'text-black');
+				btn.classList.add('text-gray-500');
+			});
+			
+			const activeFilterBtn = document.getElementById('filter-' + state.alumnosStatusFilter);
+			if (activeFilterBtn) {
+				activeFilterBtn.classList.remove('text-gray-500');
+				activeFilterBtn.classList.add('bg-red-600', 'text-black');
+			}
+
+			// --- PASO D: RENDERIZADO DE CONTENIDO ---
+			if (paginados.length === 0) {
+				container.innerHTML = `
+					<div class="py-20 text-center opacity-20">
+						<i data-lucide="shield-off" class="w-16 h-16 mx-auto mb-4"></i>
+						<p class="font-black uppercase italic tracking-widest">No se encontraron guerreros en esta categoría</p>
+					</div>`;
+			} else {
+				container.innerHTML = paginados.map(a => createAlumnoRow(a, 'listado')).join('');
+			}
+
+			// --- PASO E: ACTUALIZAR PAGINACIÓN Y ICONOS ---
+			updatePaginationUI(totalPages, totalItems);
+			if (window.lucide) lucide.createIcons();
+			
+			// Aplicar permisos para ocultar botones de edición según el rol
+			if (typeof applyPermissions === 'function') applyPermissions();
+		}
+		
+		/**
+		 * UI de Paginación Superior
+		 */
+		function updatePaginationUI(total, items) {
+			const pagContainer = document.getElementById('alumnos-pagination');
+			if (!pagContainer) return;
+
+			const start = items === 0 ? 0 : (state.alumnosPage - 1) * state.alumnosLimit + 1;
+			const end = Math.min(state.alumnosPage * state.alumnosLimit, items);
+
+			pagContainer.innerHTML = `
+				<p class="text-[10px] font-black text-gray-400 uppercase italic">
+					Mostrando <span class="text-white">${start}-${end}</span> de <span class="text-red-500">${items}</span> guerreros
+				</p>
+				<div class="flex items-center gap-3">
+					<button onclick="changeAlumnosPage(${state.alumnosPage - 1})" ${state.alumnosPage === 1 ? 'disabled' : ''} 
+						class="p-2 rounded-xl bg-white/5 text-gray-400 hover:bg-red-600 hover:text-black transition-all disabled:opacity-5">
+						<i data-lucide="chevron-left" class="w-4 h-4"></i>
+					</button>
+					
+					<span class="text-[10px] font-black px-4 italic bg-white/5 py-2 rounded-lg border border-white/5">
+						HOJA <span class="text-red-600">${state.alumnosPage}</span> / ${total}
+					</span>
+					
+					<button onclick="changeAlumnosPage(${state.alumnosPage + 1})" ${state.alumnosPage === total ? 'disabled' : ''} 
+						class="p-2 rounded-xl bg-white/5 text-gray-400 hover:bg-red-600 hover:text-black transition-all disabled:opacity-5">
+						<i data-lucide="chevron-right" class="w-4 h-4"></i>
+					</button>
+				</div>
+			`;
+			if (window.lucide) lucide.createIcons();
+		}
+
+		/**
+		 * CONTROLES DE PAGINACIÓN ESTÉTICOS
+		 */
+		function renderPaginationControls(totalPages, totalItems) {
+			let paginationContainer = document.getElementById('alumnos-pagination');
+			
+			// Si no existe el contenedor en el HTML, lo creamos dinámicamente al final de la vista
+			if (!paginationContainer) {
+				const view = document.getElementById('view-alumnos');
+				paginationContainer = document.createElement('div');
+				paginationContainer.id = 'alumnos-pagination';
+				paginationContainer.className = "flex items-center justify-between mt-8 px-6 py-4 glass-card rounded-2xl border-white/5";
+				view.appendChild(paginationContainer);
+			}
+
+			const inicioMostrado = totalItems === 0 ? 0 : (state.alumnosPage - 1) * state.alumnosLimit + 1;
+			const finMostrado = Math.min(state.alumnosPage * state.alumnosLimit, totalItems);
+
+			paginationContainer.innerHTML = `
+				<p class="text-[10px] font-black text-gray-500 uppercase italic">
+					Mostrando <span class="text-white">${inicioMostrado}-${finMostrado}</span> de <span class="text-white">${totalItems}</span> Guerreros
+				</p>
+				
+				<div class="flex items-center gap-2">
+					<button onclick="changeAlumnosPage(${state.alumnosPage - 1})" 
+							${state.alumnosPage === 1 ? 'disabled' : ''} 
+							class="p-2 rounded-xl bg-white/5 hover:bg-red-600 hover:text-black transition-all disabled:opacity-10 disabled:pointer-events-none">
+						<i data-lucide="chevron-left" class="w-4 h-4"></i>
+					</button>
+					
+					<div class="flex items-center gap-1">
+						${generatePageButtons(totalPages, state.alumnosPage)}
+					</div>
+
+					<button onclick="changeAlumnosPage(${state.alumnosPage + 1})" 
+							${state.alumnosPage === totalPages ? 'disabled' : ''} 
+							class="p-2 rounded-xl bg-white/5 hover:bg-red-600 hover:text-black transition-all disabled:opacity-10 disabled:pointer-events-none">
+						<i data-lucide="chevron-right" class="w-4 h-4"></i>
+					</button>
+				</div>
+			`;
+			if (window.lucide) lucide.createIcons();
+		}
+
+		function generatePageButtons(total, current) {
+			let html = "";
+			// Solo mostramos hasta 5 páginas para no romper el diseño
+			for (let i = 1; i <= total; i++) {
+				if (total > 5 && (i > 2 && i < total - 1 && Math.abs(i - current) > 1)) {
+					if (i === 3 || i === total - 1) html += `<span class="text-gray-700 px-1">...</span>`;
+					continue;
+				}
+				html += `
+					<button onclick="changeAlumnosPage(${i})" 
+						class="w-8 h-8 rounded-lg text-[10px] font-black transition-all ${i === current ? 'viking-bg-red text-black' : 'bg-white/5 text-gray-400 hover:bg-white/10'}">
+						${i}
+					</button>`;
+			}
+			return html;
+		}
+
+		function changeAlumnosPage(p) {
+			state.alumnosPage = p;
+			renderAlumnos();
+			const view = document.getElementById('view-alumnos');
+			if (view) view.scrollIntoView({ behavior: 'smooth' });
+		}
+
+		/**
+		 * FUNCIONES DE FILTRADO (Vincular a los inputs)
+		 */
+		function handleAlumnosSearch(val) {
+			state.alumnosSearch = val;
+			state.alumnosPage = 1; // Reiniciar a página 1 al buscar
+			renderAlumnos();
+		}
+
+		function handleAlumnosStatusFilter(val) {
+			state.alumnosStatusFilter = val;
+			state.alumnosPage = 1;
+			renderAlumnos();
+		}
+
+		/**
+		 * Creación de Tarjeta de Alumno Premium
+		 */
+		function createAlumnoRow(a, type) {
+			const initials = a.nombre_completo ? a.nombre_completo.split(' ').filter(n=>n).map(n=>n[0]).join('').substring(0,2).toUpperCase() : "??";
+			const planName = a.plan?.nombre || 'SIN PLAN ACTIVO';
+			const hoy = new Date().toISOString().split('T')[0];
+			const isActive = a.fecha_vencimiento && a.fecha_vencimiento >= hoy;
+			
+			const statusColor = isActive ? 'text-green-500' : 'text-red-500';
+			const statusText = isActive ? 'ACTIVO' : 'VENCIDO';
+			const statusBg = isActive ? 'bg-green-500/10 border-green-500/20' : 'bg-red-500/10 border-red-500/20';
+
+			if (type === 'dashboard') {
+				return `
+				<div class="glass-card p-3 rounded-2xl border-white/5 flex items-center justify-between hover:bg-white/5 transition-colors group">
+					<div class="flex items-center gap-3">
+						<div class="w-8 h-8 rounded-lg viking-bg-red flex items-center justify-center font-black text-black text-[10px] italic shadow-md">${initials}</div>
+						<div class="flex flex-col">
+							<h4 class="text-[10px] font-black uppercase italic text-white group-hover:text-red-500 leading-none mb-1">${a.nombre_completo}</h4>
+							<span class="text-[7px] px-1.5 py-0.5 rounded w-fit ${statusBg} ${statusColor} font-black uppercase tracking-wider">${statusText}</span>
+						</div>
+					</div>
+					<button onclick="openEditAlumno(${a.id})" class="w-7 h-7 flex items-center justify-center bg-white/5 text-gray-400 rounded-lg hover:bg-white/10 hover:text-white action-col">
+						<i data-lucide="edit-2" class="w-3.5 h-3.5"></i>
+					</button>
+				</div>`;
+			} else {
+				return `
+				<div class="glass-card p-6 rounded-[2.5rem] border-white/5 flex flex-col lg:flex-row lg:items-center gap-6 hover:border-red-600/30 transition-all group relative overflow-hidden mb-3">
+					<!-- Barra de estado lateral -->
+					<div class="absolute left-0 top-0 bottom-0 w-1.5 ${isActive ? 'bg-green-500' : 'bg-red-500'} opacity-40 group-hover:opacity-100 transition-opacity"></div>
+					
+					<!-- Info Identidad -->
+					<div class="flex items-center gap-5 flex-[1.2]">
+						<div class="w-14 h-14 rounded-2xl viking-bg-red flex items-center justify-center font-black text-black text-lg italic shadow-xl group-hover:scale-110 transition-transform">
+							${initials}
+						</div>
+						<div class="min-w-0">
+							<h4 class="text-base font-black uppercase italic text-white group-hover:text-red-500 truncate">${a.nombre_completo}</h4>
+							<p class="text-[10px] text-gray-500 font-bold flex items-center gap-1.5 mt-1">
+								<i data-lucide="id-card" class="w-3.5 h-3.5 text-red-600"></i> DNI: ${a.dni}
+							</p>
+						</div>
+					</div>
+
+					<!-- Info Plan (Ampliado) -->
+					<div class="flex flex-wrap items-center gap-8 border-t lg:border-t-0 lg:border-l border-white/10 pt-4 lg:pt-0 lg:pl-8 flex-[1.6]">
+						<div class="flex-1 min-w-[200px]">
+							<p class="text-[9px] text-gray-500 font-black uppercase tracking-widest mb-1">Plan de Entrenamiento</p>
+							<p class="text-[13px] font-black uppercase italic text-white leading-tight">${planName}</p>
+						</div>
+						<div class="min-w-[90px]">
+							<p class="text-[9px] text-gray-500 font-black uppercase tracking-widest mb-1">Estado</p>
+							<span class="text-[10px] px-3 py-1.5 rounded-xl ${statusBg} ${statusColor} font-black uppercase tracking-widest border border-white/5">${statusText}</span>
+						</div>
+					</div>
+
+					<!-- Fechas Críticas -->
+					<div class="flex items-center gap-6 justify-between lg:justify-end border-t lg:border-t-0 lg:border-l border-white/10 pt-4 lg:pt-0 lg:pl-8 flex-[1.2]">
+						<div class="flex gap-6 text-right">
+							<div class="flex flex-col">
+								<span class="text-[8px] text-gray-600 font-black uppercase tracking-tighter">Activación</span>
+								<span class="text-[11px] font-bold text-gray-400 italic">${a.fecha_ultima_renovacion || '--/--/--'}</span>
+							</div>
+							<div class="flex flex-col">
+								<span class="text-[8px] text-red-600 font-black uppercase tracking-tighter">Vencimiento</span>
+								<span class="text-[13px] font-black text-white italic tracking-wide">${a.fecha_vencimiento || '--/--/--'}</span>
+							</div>
+						</div>
+						
+						<!-- Botón Editar con icono edit-3 -->
+						<button onclick="openEditAlumno(${a.id})" class="p-4 bg-white/5 text-white rounded-2xl hover:bg-red-600 hover:text-black transition-all action-col border border-white/5 shadow-xl">
+							<i data-lucide="edit-3" class="w-5 h-5"></i>
+						</button>
+					</div>
+				</div>`;
+			}
+		}
+
+        async function loadPlanes() {
+            const p = await apiFetch('/planes'); const t = await apiFetch('/tipos-planes');
+            state.planes = Array.isArray(p) ? p : []; state.tiposPlanes = Array.isArray(t) ? t : [];
+            const filterContainer = document.getElementById('planes-filter-container'); filterContainer.innerHTML = ''; 
+            state.tiposPlanes.forEach((t, idx) => { filterContainer.innerHTML += `<button onclick="filterPlanes(${t.id}, this)" class="filter-btn ${idx === 0 ? 'active' : ''}">${t.nombre}</button>`; });
+            if (state.tiposPlanes.length > 0) filterPlanes(state.tiposPlanes[0].id, filterContainer.children[0]);
+            document.getElementById('al-plan').innerHTML = '<option value="">Seleccionar Plan</option>' + state.planes.map(p => `<option value="${p.id}">${p.nombre}</option>`).join('');
+            document.getElementById('plan-tipo').innerHTML = state.tiposPlanes.map(t => `<option value="${t.id}">${t.nombre}</option>`).join('');
+        }
+
+        function filterPlanes(tipoId, btn) {
+            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active');
+            const filtered = state.planes.filter(p => p.tipo_plan_id === tipoId);
+            const hideEdit = (state.user?.rol_nombre === "Profesor" || state.user?.rol_nombre === "Alumno" || state.user?.rol_nombre === "Administracion");
+            document.getElementById('planes-container').innerHTML = filtered.map(p => `<div class="glass-card p-8 rounded-[2.5rem] flex flex-col border-red-600/10 relative text-left">${hideEdit ? '' : `<button onclick="openEditPlan(${p.id})" class="absolute top-4 right-4 text-gray-600 hover:text-red-600"><i data-lucide="edit-3" class="w-4 h-4"></i></button>`}<span class="text-[10px] font-black viking-red uppercase italic tracking-widest mb-2">${p.tipo?.nombre || 'PLAN'}</span><h4 class="text-lg font-black uppercase italic mb-6 leading-tight">${p.nombre}</h4><p class="text-3xl font-black italic mb-8">$ ${p.precio.toLocaleString()}</p></div>`).join('');
+            lucide.createIcons();
+            applyPermissions();
+        }
+
+        /**
+		 * RENDERIZADO DE STOCK CON IMÁGENES (PUNTO 5)
+		 */
+		async function loadStock() {
+			const data = await apiFetch('/stock');
+			state.stock = Array.isArray(data) ? data : [];
+
+			const container = document.getElementById('stock-container');
+			if (!container) return;
+
+			if (state.stock.length === 0) {
+				container.innerHTML = `
+					<div class="col-span-full py-20 text-center opacity-20">
+						<i data-lucide="package-x" class="w-16 h-16 mx-auto mb-4"></i>
+						<p class="font-black uppercase italic tracking-widest">El Valhalla no tiene provisiones</p>
+					</div>`;
+			} else {
+				container.innerHTML = state.stock.map(s => {
+					const stockBajo = s.stock_actual <= 5;
+					// Buscamos la imagen en ambos campos posibles
+					const rawImg = s.url_imagen || s.imagen || "";
+					const hasImg = rawImg && rawImg.length > 100; // Un Base64 real es largo
+					const imgUrl = hasImg ? rawImg : 'https://images.unsplash.com/photo-1583417319070-4a69db38a482?q=80&w=400&auto=format&fit=crop';
+					
+					return `
+					<div class="glass-card p-4 rounded-[2.5rem] border-white/5 flex flex-col gap-4 hover:border-red-600/30 transition-all group relative overflow-hidden shadow-xl">
+						<!-- Foto del Producto -->
+						<div class="w-full h-40 rounded-[1.8rem] overflow-hidden bg-black/40 relative">
+							<img src="${imgUrl}" class="w-full h-full object-cover opacity-70 group-hover:opacity-100 transition-all duration-700"
+								 onerror="this.src='https://images.unsplash.com/photo-1583417319070-4a69db38a482?q=80&w=400&auto=format&fit=crop'">
+							<div class="absolute top-3 right-3 bg-black/70 backdrop-blur-xl px-3 py-1.5 rounded-xl border border-white/10 text-[11px] font-black text-white italic">
+								$${s.precio_venta}
+							</div>
+						</div>
+
+						<!-- Datos y Botón Editar -->
+						<div class="px-2 pb-2">
+							<h4 class="text-[13px] font-black uppercase italic text-white truncate mb-3 tracking-tight">${s.nombre_producto}</h4>
+							<div class="flex items-center justify-between">
+								<div class="flex flex-col">
+									<span class="text-[8px] text-gray-500 font-black uppercase tracking-widest leading-none mb-1">Existencias</span>
+									<span class="text-sm font-black italic ${stockBajo ? 'text-red-500 animate-pulse' : 'text-white'}">
+										${s.stock_actual} <span class="text-[9px] opacity-40 uppercase">unid.</span>
+									</span>
+								</div>
+								
+								<!-- LÁPIZ CENTRADO (GRID + P-0) -->
+								<button onclick="openEditStock(${s.id})" 
+										class="w-10 h-10 grid place-items-center bg-white/5 rounded-xl border border-white/5 text-gray-400 hover:bg-red-600 hover:text-black hover:scale-110 transition-all action-col p-0">
+									<i data-lucide="edit-3" class="w-5 h-5"></i>
+								</button>
+							</div>
+						</div>
+					</div>`;
+				}).join('');
+			}
+			if (window.lucide) lucide.createIcons();
+			if (typeof applyPermissions === 'function') applyPermissions();
+		}
+		
+		// FUNCIÓN PARA PREVISUALIZAR Y CONVERTIR A BASE64
+		function previewStockImage(event) {
+			const file = event.target.files[0];
+			if (!file) return;
+
+			if (file.size > 2 * 1024 * 1024) { // Límite 2MB
+				showVikingToast("La imagen es muy pesada (Máx 2MB)", true);
+				return;
+			}
+
+			const reader = new FileReader();
+			reader.onload = function(e) {
+				const base64 = e.target.result;
+				document.getElementById('stock-imagen-base64').value = base64;
+				
+				const preview = document.getElementById('stock-img-preview');
+				preview.src = base64;
+				preview.classList.remove('hidden');
+				document.getElementById('stock-img-placeholder').classList.add('hidden');
+			};
+			reader.readAsDataURL(file);
+		}
+
+        async function loadClases() {
+			// 1. Pedir datos al servidor
+			const data = await apiFetch('/clases'); 
+			state.clases = Array.isArray(data) ? data : [];
+
+			// 2. Localizar el contenedor en el HTML
+			const container = document.getElementById('clases-container');
+			if (!container) return;
+
+			// 3. Si no hay clases, mostrar mensaje de vacío
+			if (state.clases.length === 0) {
+				container.innerHTML = `
+					<div class="col-span-3 p-16 border border-dashed border-white/10 rounded-[3rem] text-center bg-white/2">
+						<p class="text-[12px] text-gray-600 font-black uppercase italic tracking-[0.2em]">No hay clases configuradas</p>
+						<p class="text-[10px] text-gray-700 mt-2 font-bold">Usa el botón "Alta de Clase" para comenzar.</p>
+					</div>`;
+			} else {
+				// 4. Dibujar las tarjetas (Solo con info técnica y botón de editar)
+				const canEdit = (state.user?.rol_nombre === "Administrador" || state.user?.rol_nombre === "Supervisor");
+				
+				container.innerHTML = state.clases.map(c => `
+					<div class="glass-card p-6 rounded-[2.5rem] border-white/5 flex flex-col justify-between hover:border-red-600/20 transition-all group">
+						<div>
+							<div class="flex items-center gap-4 mb-6">
+								<!-- Icono con el color de la clase -->
+								<div class="w-12 h-12 rounded-2xl flex items-center justify-center font-black text-black text-sm italic shadow-lg" style="background-color: ${c.color || '#FF0000'}">
+									${c.nombre ? c.nombre[0].toUpperCase() : '?'}
+								</div>
+								<div>
+									<h4 class="text-sm font-black uppercase italic text-white group-hover:text-red-500 transition-colors">${c.nombre}</h4>
+									<p class="text-[10px] text-gray-500 font-bold uppercase tracking-wider flex items-center gap-1">
+										<i data-lucide="user" class="w-3 h-3"></i> ${c.coach || 'Sin Coach'}
+									</p>
+								</div>
+							</div>
+						</div>
+
+						<!-- Botón de edición: Solo aparece para Admin/Supervisor -->
+						${canEdit ? `
+						<button onclick="openEditClase(${c.id})" class="w-full py-4 bg-white/5 text-white rounded-2xl text-[10px] font-black uppercase italic hover:bg-white/10 hover:text-red-600 transition-all flex items-center justify-center gap-2 border border-white/5">
+							<i data-lucide="settings-2" class="w-3.5 h-3.5"></i>
+							Configuración Técnica
+						</button>
+						` : '<p class="text-[9px] text-gray-700 italic text-center">Solo lectura</p>'}
+					</div>
+				`).join('');
+			}
+
+			// 5. Refrescar iconos y otros componentes
+			lucide.createIcons();
+			if(document.getElementById('view-calendario')?.classList.contains('active')) renderCalendar();
+			applyPermissions();
+		}
+		
+		async function loadProfesores() {
+			// Esta función llena la memoria con los profesores para usarlos en el select de turnos
+			const res = await apiFetch('/profesores');
+			state.profesores = (!res.error && Array.isArray(res)) ? res : [];
+		}
+
+        function openModalAlumno() { document.getElementById('modal-alumno-title').innerText = "Nuevo Alumno"; document.getElementById('al-id').value = ""; document.getElementById('al-fecha-renovacion').value = new Date().toISOString().split('T')[0]; openModal('modal-alumno'); }
+        function openEditAlumno(id) {
+            const al = state.alumnos.find(x => x.id == id); if(!al) return;
+            document.getElementById('modal-alumno-title').innerText = "Editar Alumno";
+            document.getElementById('al-id').value = al.id; document.getElementById('al-nombre').value = al.nombre_completo; document.getElementById('al-dni').value = al.dni;
+            document.getElementById('al-email').value = al.email || ""; document.getElementById('al-plan').value = al.plan_id || ""; document.getElementById('al-peso').value = al.peso || "";
+            document.getElementById('al-altura').value = al.altura || ""; document.getElementById('al-imc').value = al.imc || ""; document.getElementById('al-fecha-renovacion').value = al.fecha_ultima_renovacion || "";
+            document.getElementById('al-fecha-vencimiento').value = al.fecha_vencimiento || "";
+            const delBtn = document.getElementById('btn-delete-alumno'); if(state.user.rol_nombre === "Administrador" || state.user.rol_nombre === "Supervisor") delBtn.classList.remove('hidden');
+            delBtn.onclick = () => deleteRecord('alumnos', id, 'modal-alumno', fetchAlumnos);
+            openModal('modal-alumno');
+        }
+
+        document.getElementById('form-alumno').onsubmit = async (e) => {
+            e.preventDefault(); const id = document.getElementById('al-id').value;
+            const data = { nombre_completo: document.getElementById('al-nombre').value, dni: document.getElementById('al-dni').value, email: document.getElementById('al-email').value, plan_id: parseInt(document.getElementById('al-plan').value) || null, peso: parseFloat(document.getElementById('al-peso').value) || null, altura: parseFloat(document.getElementById('al-altura').value) || null, imc: parseFloat(document.getElementById('al-imc').value) || null, fecha_ultima_renovacion: document.getElementById('al-fecha-renovacion').value, fecha_vencimiento: document.getElementById('al-fecha-vencimiento').value };
+            const pass = document.getElementById('al-pass').value; if(pass) data.password = pass;
+            const res = await apiFetch(id ? `/alumnos/${id}` : '/alumnos', id ? 'PUT' : 'POST', data);
+            if(!res.error) { closeModal('modal-alumno'); fetchAlumnos(); showVikingToast("Alumno Guardado"); }
+        };
+
+        function openModalStaff(rol) { document.getElementById('modal-staff-title').innerText = "Alta " + rol; document.getElementById('stf-id').value = ""; document.getElementById('stf-rol').value = rol; openModal('modal-staff'); }
+        function openEditStaff(id, rol) {
+            const user = (rol === 'Profesor' ? state.profesores : state.administrativos).find(x => x.id == id); if(!user) return;
+            document.getElementById('modal-staff-title').innerText = "Editar " + rol;
+            document.getElementById('stf-id').value = user.id; document.getElementById('stf-rol').value = rol;
+            document.getElementById('stf-nombre').value = user.nombre_completo; document.getElementById('stf-dni').value = user.dni; document.getElementById('stf-esp').value = user.especialidad || "";
+            const delBtn = document.getElementById('btn-delete-staff'); if(state.user.rol_nombre === "Administrador" || state.user.rol_nombre === "Supervisor") delBtn.classList.remove('hidden');
+            delBtn.onclick = () => deleteRecord('staff', id, 'modal-staff', loadStaff);
+            openModal('modal-staff');
+        }
+
+        document.getElementById('form-staff').onsubmit = async (e) => {
+            e.preventDefault(); const id = document.getElementById('stf-id').value; const rol = document.getElementById('stf-rol').value;
+            const data = { nombre_completo: document.getElementById('stf-nombre').value, dni: document.getElementById('stf-dni').value, especialidad: document.getElementById('stf-esp').value, perfil_nombre: rol };
+            const pass = document.getElementById('stf-pass').value; if(pass) data.password = pass;
+            const res = await apiFetch(id ? `/staff/${id}` : '/staff', id ? 'PUT' : 'POST', data);
+            if(!res.error) { closeModal('modal-staff'); loadStaff(); showVikingToast("Staff Actualizado"); }
+        };
+
+        function openModalPlan() { document.getElementById('plan-id').value = ""; document.getElementById('modal-plan-title').innerText = "Nuevo Plan"; openModal('modal-plan'); }
+        function openEditPlan(id) {
+            const p = state.planes.find(x => x.id == id); if(!p) return;
+            document.getElementById('plan-id').value = p.id; document.getElementById('plan-nombre').value = p.nombre; document.getElementById('plan-tipo').value = p.tipo_plan_id; document.getElementById('plan-precio').value = p.precio;
+            const delBtn = document.getElementById('btn-delete-plan'); if(state.user.rol_nombre === "Administrador" || state.user.rol_nombre === "Supervisor") delBtn.classList.remove('hidden');
+            delBtn.onclick = () => deleteRecord('planes', p.id, 'modal-plan', loadPlanes);
+            openModal('modal-plan');
+        }
+
+        document.getElementById('form-plan').onsubmit = async (e) => {
+            e.preventDefault(); const id = document.getElementById('plan-id').value;
+            const data = { nombre: document.getElementById('plan-nombre').value, precio: parseFloat(document.getElementById('plan-precio').value), tipo_plan_id: parseInt(document.getElementById('plan-tipo').value) };
+            const res = await apiFetch(id ? `/planes/${id}` : '/planes', id ? 'PUT' : 'POST', data);
+            if(!res.error) { closeModal('modal-plan'); loadPlanes(); showVikingToast("Plan Guardado"); }
+        };
+
+        // ABRIR MODAL PARA NUEVO PRODUCTO
+		function openModalStock() {
+			const form = document.getElementById('form-stock');
+			if(form) form.reset();
+			
+			document.getElementById('stock-id').value = "";
+			document.getElementById('stock-imagen-base64').value = "";
+			document.getElementById('stock-img-preview').classList.add('hidden');
+			document.getElementById('stock-img-placeholder').classList.remove('hidden');
+			document.getElementById('modal-stock-title').innerText = "Alta de Mercadería";
+			
+			const delBtn = document.getElementById('btn-delete-stock');
+			if(delBtn) delBtn.classList.add('hidden');
+
+			openModal('modal-stock');
+		}
+		
+		function openEditStock(id) {
+			const s = state.stock.find(x => x.id == id);
+			if (!s) return;
+
+			document.getElementById('stock-id').value = s.id;
+			document.getElementById('stock-nombre').value = s.nombre_producto;
+			document.getElementById('stock-cant').value = s.stock_actual;
+			document.getElementById('stock-precio').value = s.precio_venta;
+			
+			const base64 = s.url_imagen || s.imagen || "";
+			document.getElementById('stock-imagen-base64').value = base64;
+			
+			const preview = document.getElementById('stock-img-preview');
+			if(base64 && base64.length > 100) {
+				preview.src = base64;
+				preview.classList.remove('hidden');
+				document.getElementById('stock-img-placeholder').classList.add('hidden');
+			} else {
+				preview.classList.add('hidden');
+				document.getElementById('stock-img-placeholder').classList.remove('hidden');
+			}
+
+			document.getElementById('modal-stock-title').innerText = "Editar Mercadería";
+			const delBtn = document.getElementById('btn-delete-stock');
+			if(delBtn) {
+				delBtn.classList.remove('hidden');
+				delBtn.onclick = () => deleteRecord('stock', s.id, 'modal-stock', loadStock);
+			}
+
+			openModal('modal-stock');
+		}
+		
+		// 4. GUARDAR CAMBIOS (Vincular al onsubmit del form)
+		async function saveStockVikingo(e) {
+			if(e && e.preventDefault) e.preventDefault();
+			
+			const id = document.getElementById('stock-id').value;
+			const payload = {
+				nombre_producto: document.getElementById('stock-nombre').value,
+				stock_actual: parseInt(document.getElementById('stock-cant').value),
+				precio_venta: parseFloat(document.getElementById('stock-precio').value),
+				url_imagen: document.getElementById('stock-imagen-base64').value 
+			};
+
+			// Validaciones básicas
+			if(!payload.nombre_producto) return showVikingToast("Falta el nombre", true);
+
+			const method = id ? 'PUT' : 'POST';
+			const endpoint = id ? `/stock/${id}` : '/stock';
+
+			showVikingToast("Sincronizando con el Valhalla...");
+			const res = await apiFetch(endpoint, method, payload);
+			
+			if(!res.error) {
+				showVikingToast(id ? "Producto Actualizado" : "Producto Registrado");
+				closeModal('modal-stock');
+				setTimeout(loadStock, 300); // Pequeño delay para asegurar que la DB escribió el Base64
+			} else {
+				showVikingToast("Error: " + res.error, true);
+			}
+		}
+
+        document.getElementById('form-stock').onsubmit = async (e) => {
+            e.preventDefault(); const id = document.getElementById('stock-id').value;
+            const data = { nombre_producto: document.getElementById('stock-nombre').value, stock_actual: parseInt(document.getElementById('stock-cant').value), precio_venta: parseFloat(document.getElementById('stock-precio').value) };
+            const res = await apiFetch(id ? `/stock/${id}` : '/stock', id ? 'PUT' : 'POST', data);
+            if(!res.error) { closeModal('modal-stock'); loadStock(); showVikingToast("Stock Actualizado"); }
+        };
+
+        function openModalClase() { 
+            document.getElementById('cl-id').value = ""; 
+            document.getElementById('modal-clase-title').innerText = "Alta de Clase";
+            openModal('modal-clase'); 
+        }
+
+		// --- 1. GENERAR FILA: DÍA + HORA + PROFESOR ---
+		function addNewScheduleSlot(data = { dia: 1, horario: 7, coach: "" }) {
+			const container = document.getElementById('cl-schedule-slots');
+			if (!container) return;
+
+			// Limpiar mensaje de "vacío" si existe
+			if (container.querySelector('p.italic')) container.innerHTML = "";
+
+			const row = document.createElement('div');
+			// Diseño tipo tarjeta para cada turno
+			row.className = "schedule-slot-row flex flex-col gap-2 bg-white/5 p-3 rounded-xl border border-white/5 mb-3 group hover:border-red-600/30 transition-all";
+			
+			const diasMap = {1: 'Lunes', 2: 'Martes', 3: 'Miércoles', 4: 'Jueves', 5: 'Viernes', 6: 'Sábado'};
+			
+			// 1. Selector de Días
+			let diasOptions = "";
+			for(let d=1; d<=6; d++) {
+				diasOptions += `<option value="${d}" ${data.dia == d ? 'selected' : ''}>${diasMap[d]}</option>`;
+			}
+
+			// 2. Selector de Horas
+			let horasOptions = "";
+			for(let i=7; i<=21.5; i+=0.5) {
+				const label = i % 1 === 0 ? `${i}:00` : `${Math.floor(i)}:30`;
+				horasOptions += `<option value="${i}" ${data.horario == i ? 'selected' : ''}>${label} HS</option>`;
+			}
+
+			// 3. Selector de Profesores (Usando state.profesores cargado previamente)
+			let coachOptions = `<option value="">Asignar Profesor...</option>`;
+			if (state.profesores && state.profesores.length > 0) {
+				coachOptions += state.profesores.map(p => 
+					`<option value="${p.nombre_completo}" ${data.coach === p.nombre_completo ? 'selected' : ''}>${p.nombre_completo}</option>`
+				).join('');
+			} else {
+				coachOptions += `<option value="Staff">Staff General</option>`;
+			}
+
+			row.innerHTML = `
+				<div class="flex items-center justify-between">
+					<span class="text-[9px] font-black text-red-600 uppercase italic tracking-widest">Turno</span>
+					<button type="button" onclick="this.closest('.schedule-slot-row').remove()" class="text-gray-500 hover:text-red-500 transition-all">
+						<i data-lucide="x" class="w-4 h-4"></i>
+					</button>
+				</div>
+				<div class="grid grid-cols-2 gap-2">
+					<select class="viking-input py-1 h-9 text-[10px] slot-dia bg-black/40 border-white/10">${diasOptions}</select>
+					<select class="viking-input py-1 h-9 text-[10px] slot-hora bg-black/40 border-white/10">${horasOptions}</select>
+				</div>
+				<div class="w-full">
+					<select class="viking-input py-1 h-9 text-[10px] w-full slot-coach bg-black/40 border-white/10 text-gray-300">
+						${coachOptions}
+					</select>
+				</div>
+			`;
+			container.appendChild(row);
+			if(window.lucide) lucide.createIcons();
+		}
+
+		// --- ABRIR EDICIÓN (Cargar slots con sus profes) ---
+		function openEditClase(id) {
+			const c = state.clases.find(x => x.id == id); 
+			if(!c) return;
+
+			document.getElementById('cl-id').value = c.id; 
+			document.getElementById('modal-clase-title').innerText = "Editar: " + c.nombre;
+			document.getElementById('cl-nombre').value = c.nombre; 
+			document.getElementById('cl-cupo').value = c.capacidad_max;
+			document.getElementById('cl-color').value = c.color || "#FF0000";
+			
+			// Limpiar y cargar horarios
+			const slotsContainer = document.getElementById('cl-schedule-slots');
+			slotsContainer.innerHTML = "";
+
+			const horarios = Array.isArray(c.horarios_detalle) ? c.horarios_detalle : [];
+			
+			if (horarios.length > 0) {
+				horarios.forEach(h => addNewScheduleSlot(h));
+			} else {
+				// Compatibilidad: si es clase vieja, usamos el coach general
+				addNewScheduleSlot({ dia: 1, horario: 7, coach: c.coach || "" });
+			}
+
+			// Mostrar botón eliminar solo a admin
+			const isAdmin = (state.user?.rol_nombre === "Administrador" || state.user?.rol_nombre === "Supervisor");
+			const delBtn = document.getElementById('btn-delete-clase'); 
+			if(delBtn) {
+				delBtn.classList.toggle('hidden', !isAdmin);
+				delBtn.onclick = () => deleteRecord('clases', c.id, 'modal-clase', loadClases);
+			}
+
+			openModal('modal-clase');
+		}
+
+		// --- 3. FUNCIÓN PARA PREPARAR EL MODAL AL CREAR NUEVA ---
+		function openNewClase() {
+			document.getElementById('form-clase').reset();
+			document.getElementById('cl-id').value = "";
+			document.getElementById('cl-schedule-slots').innerHTML = "";
+			document.getElementById('modal-clase-title').innerText = "Nueva Clase Vikinga";
+			
+			// Añadimos el primer slot vacío
+			addNewScheduleSlot();
+			openModal('modal-clase');
+		}
+
+// --- NUEVA FUNCIÓN PARA CARGAR PROFESORES REALES ---
+async function loadProfesores() {
+    const res = await apiFetch('/profesores');
+    if (!res.error) {
+        state.profesores = res; // Guardamos en el estado global
+    }
+}
+
+		// --- GUARDAR CLASE CON MÚLTIPLES PROFESORES ---
+		async function saveClaseVikinga(e) {
+			if(e) e.preventDefault();
+			
+			const id = document.getElementById('cl-id').value;
+			const slotRows = document.querySelectorAll('.schedule-slot-row');
+			
+			// Recolectar datos de cada tarjeta de turno
+			const horarios_detalle = [];
+			slotRows.forEach(row => {
+				const diaEl = row.querySelector('.slot-dia');
+				const horaEl = row.querySelector('.slot-hora');
+				const coachEl = row.querySelector('.slot-coach'); // Nuevo campo
+				
+				if(diaEl && horaEl) {
+					horarios_detalle.push({
+						dia: parseInt(diaEl.value),
+						horario: parseFloat(horaEl.value),
+						coach: coachEl ? coachEl.value : "Staff" // Guardamos el profe específico
+					});
+				}
+			});
+
+			if(horarios_detalle.length === 0) {
+				return showVikingToast("Añade al menos un horario", true);
+			}
+
+			// Usamos el coach del primer turno como "coach principal" para compatibilidad en tablas viejas
+			const mainCoach = horarios_detalle[0].coach || "Staff";
+
+			const payload = {
+				nombre: document.getElementById('cl-nombre').value,
+				coach: mainCoach, 
+				color: document.getElementById('cl-color').value,
+				capacidad_max: parseInt(document.getElementById('cl-cupo').value),
+				horarios_detalle: horarios_detalle
+			};
+
+			const method = id ? 'PUT' : 'POST';
+			const endpoint = id ? `/clases/${id}` : '/clases';
+			const res = await apiFetch(endpoint, method, payload);
+			
+			if(!res.error) {
+				showVikingToast(id ? "Clase Actualizada" : "Clase Creada");
+				closeModal('modal-clase');
+				loadClases();
+			} else {
+				showVikingToast("Error: " + res.error, true);
+			}
+		}
+
+		// --- 5. VINCULACIÓN DE EVENTOS AL CARGAR LA PÁGINA ---
+		window.onload = () => {
+			// Vincular el submit del formulario
+			const formClase = document.getElementById('form-clase');
+			if(formClase) {
+				formClase.onsubmit = saveClaseVikinga;
+			}
+			
+			// Cargar iconos de Lucide
+			if(window.lucide) lucide.createIcons();
+		};
+    
+
+        async function handleDrop(e, dia, horario) { e.preventDefault(); const id = e.dataTransfer.getData("clase_id"); if (!id) return; const res = await apiFetch(`/clases/${id}/move`, 'PUT', { dia, horario }); if (!res.error) { loadClases(); showVikingToast("Clase Reubicada"); } }
+        
+        async function deleteRecord(entity, id, modalId, callback) { if(!confirm("¿Deseas eliminar este registro?")) return; const res = await apiFetch(`/${entity}/${id}`, 'DELETE'); if(!res.error) { closeModal(modalId); callback(); showVikingToast("Registro Eliminado", true); } }
+        
+        async function handleProfileUpdate(e) { 
+            e.preventDefault(); 
+            const pass = document.getElementById('prof-input-pass').value; 
+            const isAlumno = state.user.rol_nombre === 'Alumno';
+            
+            let data = { 
+                nombre_completo: document.getElementById('prof-input-name').value, 
+                dni: String(document.getElementById('prof-input-dni').value), 
+                email: document.getElementById('prof-input-email').value
+            }; 
+
+            if(pass) data.password = pass; 
+            let endpoint = "";
+
+            if (isAlumno) {
+                endpoint = `/alumnos/${state.user.id}`;
+                data.plan_id = state.user.plan_id || state.user.plan?.id;
+                data.peso = parseFloat(document.getElementById('prof-input-peso').value) || null;
+                data.altura = parseFloat(document.getElementById('prof-input-altura').value) || null;
+                data.imc = parseFloat(document.getElementById('prof-input-imc').value) || null;
+            } else {
+                endpoint = `/staff/${state.user.id}`;
+                data.perfil_nombre = state.user.rol_nombre;
+            }
+
+            const res = await apiFetch(endpoint, 'PUT', data); 
+            if(!res.error) { 
+                state.user.nombre_completo = data.nombre_completo; 
+                state.user.email = data.email;
+                if (isAlumno) {
+                    state.user.peso = data.peso;
+                    state.user.altura = data.altura;
+                    state.user.imc = data.imc;
+                }
+
+                document.getElementById('side-user-name').innerText = data.nombre_completo; 
+                document.getElementById('prof-name').innerText = data.nombre_completo;
+                const initials = data.nombre_completo.split(' ').filter(n => n).map(n => n[0]).join('').toUpperCase();
+                document.getElementById('user-initials').innerText = initials;
+                document.getElementById('prof-initials-view').innerText = initials;
+                
+                showVikingToast("Perfil Vikingo Actualizado"); 
+                if(isAlumno) renderStudentDashboard();
+            } else {
+                showVikingToast("Error: " + res.error, true);
+            }
+        }
+
+        document.getElementById('form-rutina-editor').onsubmit = async (e) => {
+            e.preventDefault();
+            
+            const elAlumnoId = document.getElementById('rutina-editor-alumno-id') || document.getElementById('edit-rutina-user-id');
+            const elObjetivo = document.getElementById('rutina-objetivo') || document.getElementById('edit-rutina-objetivo');
+            const elVencimiento = document.getElementById('rutina-vencimiento') || document.getElementById('edit-rutina-vencimiento');
+            const elNombreGrupo = document.getElementById('rutina-nombre-grupo');
+            const elDescripcion = document.getElementById('rutina-descripcion');
+
+            if (!elAlumnoId) {
+                console.error("No se encontró el input del ID del alumno. Revisa que el ID en el HTML sea 'rutina-editor-alumno-id'");
+                showVikingToast("Error técnico: Campo de ID no encontrado en el HTML", true);
+                return;
+            }
+
+            const alumnoId = parseInt(elAlumnoId.value);
+            
+            if (isNaN(alumnoId)) {
+                showVikingToast("Error: Debes seleccionar un alumno de la lista", true);
+                return;
+            }
+
+            const payload = {
+                usuario_id: alumnoId,
+                nombre_grupo: elNombreGrupo ? elNombreGrupo.value : "Rutina Nueva",
+                descripcion: elDescripcion ? elDescripcion.value : "",
+                objetivo: elObjetivo ? elObjetivo.value : "Mejora general",
+                fecha_vencimiento: elVencimiento ? elVencimiento.value : null,
+                dias: []
+            };
+
+            const dayCards = document.querySelectorAll('.rutina-dia-card') || document.querySelectorAll('.day-block');
+            let hasValidationError = false;
+
+            payload.dias = Array.from(dayCards).map(card => {
+                const inputNombreDia = card.querySelector('.day-title');
+                const nombre_dia = inputNombreDia ? inputNombreDia.value : "Día";
+                
+                const exercisesRows = card.querySelectorAll('.exercise-row');
+                
+                const ejercicios = Array.from(exercisesRows).map(row => {
+                    const inputExId = row.querySelector('.exercise-id');
+                    const exId = parseInt(inputExId.value);
+
+                    const rowsDeSeries = row.querySelectorAll('.serie-row');
+                    const seriesData = Array.from(rowsDeSeries).map(sRow => {
+                        return {
+                            numero_serie: parseInt(sRow.dataset.serieNum),
+                            repeticiones: sRow.querySelector('.serie-reps').value || "0",
+                            peso: sRow.querySelector('.serie-weight').value || "0",
+                            descanso: sRow.querySelector('.serie-rest').value || "0"
+                        };
+                    });
+
+                    return {
+                        ejercicio_id: exId,
+                        series: seriesData, 
+                        comentario: row.querySelector('.exercise-comment')?.value || ""
+                    };
+                });
+                
+                return { nombre_dia, ejercicios };
+            });
+
+            if (hasValidationError) {
+                showVikingToast("Error: Tienes ejercicios sin seleccionar en la lista", true);
+                return;
+            }
+
+            if (payload.dias.length === 0 || payload.dias.every(d => d.ejercicios.length === 0)) {
+                showVikingToast("Error: La rutina debe tener al menos un ejercicio", true);
+                return;
+            }
+
+            const res = await apiFetch('/rutinas/plan', 'POST', payload);
+            
+            if (!res.error) {
+                closeModal('modal-rutina-editor');
+                showVikingToast("¡Plan de Rutina Vikingo Guardado!");
+                if (typeof renderRutinas === 'function') renderRutinas();
+            } else {
+                let msg = res.error;
+                try { 
+                    const parsed = JSON.parse(res.error);
+                    if (parsed.detail) msg = parsed.detail;
+                } catch(e) {}
+                showVikingToast("Error Vikingo: " + msg, true);
+            }
+        };
+
+		// ==========================================
+		// LÓGICA DE LOS OJOS DE ODÍN (CÁMARA)
+		// ==========================================
+		let videoStream = null;
+    	let isScanning = false;
+
+		// 1. Abrir Escáner y Encender Cámara
+		async function startScanner() {
+        	const modal = document.getElementById('modal-scanner-live');
+        	const video = document.getElementById('scanner-video');
+        	const hud = document.getElementById('scanner-hud');
+        
+        	modal.classList.remove('hidden');
+        	modal.classList.add('flex');
+        	hud.classList.remove('hidden');
+
+        	if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            	showCameraError("Navegador no compatible o falta HTTPS.");
+            return;
+        	}
+
+        	try {
+            	videoStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+            	video.srcObject = videoStream;
+            	video.play();
+            	isScanning = true;
+            	scanLoop(); // Iniciar bucle de detección (Simulado por ahora hasta integrar librería JSQR real)
+        	} catch (err) {
+            	console.error(err);
+            	showCameraError("No se pudo acceder a la cámara.");
+        	}
+    	}
+
+		// 2. Detener Cámara y Cerrar
+		function stopScanner() {
+			isScanning = false;
+			if (videoStream) videoStream.getTracks().forEach(track => track.stop());
+			document.getElementById('modal-scanner-live').classList.add('hidden');
+			document.getElementById('modal-scanner-live').classList.remove('flex');
+			hideFeedback();
+		}
+
+		// 3. Simular Lectura (Para probar sin QR real)
+		async function simulateScan(type) {
+			let dniToTest = "00000000"; // Default inválido
+			
+			if (type === 'ok') {
+				// Buscamos un alumno real del estado local para probar
+				const alumno = state.alumnos.find(a => a.estado_cuenta === 'Al día');
+				if(alumno) dniToTest = alumno.dni;
+				else alert("Crea un alumno al día primero para probar.");
+			} else if (type === 'expired') {
+				const alumno = state.alumnos.find(a => a.estado_cuenta !== 'Al día');
+				if(alumno) dniToTest = alumno.dni;
+				else dniToTest = "99999999"; // DNI inexistente o forzar uno vencido
+			}
+
+			// LLAMADA AL BACKEND REAL
+			try {
+				const response = await apiFetch('/acceso/validar', 'POST', { qr_data: dniToTest });
+				
+				showFeedback(response);
+				
+				// Registrar visualmente en el dashboard
+				if(typeof registerAccessLog === 'function') {
+					registerAccessLog(
+						response.nombre || "Desconocido", 
+						dniToTest, 
+						"QR SCAN", 
+						response.status // AUTHORIZED / DENIED
+					);
+				}
+
+			} catch (e) {
+				console.error(e);
+				showFeedback({ status: "DENIED", message: "Error de Conexión", nombre: "Sistema", color: "red" });
+			}
+		}
+
+		// 4. Mostrar Feedback Visual sobre el Video
+		function showFeedback(data) {
+			const overlay = document.getElementById('scanner-feedback-overlay');
+			const icon = document.getElementById('scanner-icon-container');
+			const status = document.getElementById('scanner-status-text');
+			const name = document.getElementById('scanner-user-name');
+			const msg = document.getElementById('scanner-msg');
+
+			overlay.classList.remove('hidden');
+			overlay.classList.add('flex');
+
+			name.innerText = data.nombre;
+			msg.innerText = data.message;
+
+			if (data.status === 'AUTHORIZED') {
+				status.innerText = "ACCESO PERMITIDO";
+				status.className = "text-4xl font-black uppercase italic text-green-500 mb-2 tracking-wide text-center";
+				icon.innerHTML = '<div class="w-32 h-32 bg-green-500 rounded-full flex items-center justify-center shadow-[0_0_60px_#22c55e] animate-bounce"><i data-lucide="check" class="w-16 h-16 text-black"></i></div>';
+				// Play success sound
+			} else {
+				status.innerText = "ACCESO DENEGADO";
+				status.className = "text-4xl font-black uppercase italic text-red-500 mb-2 tracking-wide text-center";
+				icon.innerHTML = '<div class="w-32 h-32 bg-red-600 rounded-full flex items-center justify-center shadow-[0_0_60px_#dc2626] animate-shake"><i data-lucide="x" class="w-16 h-16 text-black"></i></div>';
+				// Play error sound
+			}
+			
+			if(window.lucide) lucide.createIcons();
+
+			setTimeout(() => hideFeedback(), 3000);
+		}
+
+		function hideFeedback() {
+			document.getElementById('scanner-feedback-overlay').classList.add('hidden');
+			document.getElementById('scanner-feedback-overlay').classList.remove('flex');
+		}
+
+		// 5. Registrar en el Sistema (Simulación de Backend)
+		function registerAccessLog(nombre, dni, metodo, estado) {
+			// Creamos el objeto de acceso
+			const nuevoAcceso = {
+				nombre: nombre,
+				dni: dni,
+				fecha: new Date().toLocaleTimeString(),
+				metodo: metodo,
+				estado: estado
+			};
+
+			// Lo inyectamos en el estado global
+			if (!state.accesos) state.accesos = [];
+			state.accesos.unshift(nuevoAcceso);
+			
+			// Limitar historial
+			if (state.accesos.length > 50) state.accesos.pop();
+
+			// Actualizar UI del Dashboard si está visible
+			// (Esto responde a tu petición de "refresco instantáneo")
+			const accessContainer = document.getElementById('dash-last-access');
+			const accessListVirtual = document.getElementById('acceso-list-view');
+			
+			if (typeof loadDashboard === 'function') loadDashboard(); // Refresca el widget del dashboard
+			if (typeof renderAccesos === 'function') renderAccesos(); // Refresca la vista completa de accesos
+		}
+
+		function showCameraError(msg) {
+			const err = document.getElementById('scanner-error-msg');
+			document.getElementById('scanner-error-text').innerText = msg;
+			err.classList.remove('hidden');
+			err.classList.add('flex');
+		}
+
+		// Vincular al botón de "Ver Molinetes" o crear uno nuevo en el Dashboard
+		// Para probarlo, puedes llamar startScanner() desde la consola o añadir un botón.
+
+        function openModalNewExercise() {
+            openModal('modal-nuevo-ejercicio');
+        }
+		
+		// Renderiza la lista de ingresos con estilo de filas/tarjetas
+			function renderAccesos() {
+				const container = document.getElementById('acceso-list-view');
+				if (!container) return;
+
+				if (state.accesos.length === 0) {
+					container.innerHTML = '<p class="text-center text-gray-600 italic py-10">No hay registros de ingreso hoy.</p>';
+					return;
+				}
+
+				container.innerHTML = state.accesos.map(acc => {
+					const isDenied = acc.estado.includes('DENEGADO');
+					const statusColor = isDenied ? 'text-red-500' : 'text-green-500';
+					const statusBg = isDenied ? 'bg-red-500/10' : 'bg-green-500/10';
+
+					return `
+					<div class="glass-card p-4 rounded-2xl border-white/5 flex items-center justify-between hover:bg-white/5 transition-colors group relative overflow-hidden">
+						<!-- Barra lateral indicadora -->
+						<div class="absolute left-0 top-0 bottom-0 w-1 ${isDenied ? 'bg-red-600' : 'bg-green-600'} opacity-30 group-hover:opacity-100 transition-opacity"></div>
+						
+						<div class="grid grid-cols-5 gap-4 w-full items-center px-2">
+							<!-- Guerrero -->
+							<div class="flex items-center gap-3">
+								<div class="w-8 h-8 rounded-lg ${isDenied ? 'bg-red-600/20 text-red-500' : 'viking-bg-red text-black'} flex items-center justify-center font-black text-[10px] italic">
+									${acc.nombre ? acc.nombre[0].toUpperCase() : '?'}
+								</div>
+								<span class="text-[11px] font-black uppercase italic text-white group-hover:text-red-500 transition-colors">${acc.nombre}</span>
+							</div>
+							
+							<!-- DNI -->
+							<span class="text-[10px] text-gray-500 font-bold tracking-widest">${acc.dni}</span>
+							
+							<!-- Fecha/Hora -->
+							<span class="text-[10px] text-gray-400 font-medium">${acc.fecha}</span>
+							
+							<!-- Método -->
+							<div class="flex items-center gap-2">
+								<i data-lucide="${acc.metodo.includes('QR') ? 'qr-code' : 'door-closed'}" class="w-3.5 h-3.5 text-gray-600"></i>
+								<span class="text-[9px] font-black uppercase text-gray-600">${acc.metodo}</span>
+							</div>
+							
+							<!-- Estado -->
+							<div class="text-right">
+								<span class="text-[9px] px-3 py-1 rounded-full ${statusBg} ${statusColor} font-black uppercase tracking-wider border border-white/5">
+									${acc.estado}
+								</span>
+							</div>
+						</div>
+					</div>
+					`;
+				}).join('');
+				
+				if (window.lucide) lucide.createIcons();
+			}
+			
+			// FUNCIONES PARA EL MODAL DE MI QR
+				async function showMyQR() {
+					const user = state.user;
+					if (!user) {
+						showVikingToast("Error: Sesión no encontrada", true);
+						return;
+					}
+
+					// 1. VALIDACIÓN DE SEGURIDAD PARA ALUMNOS
+					if (user.rol_nombre === "Alumno") {
+						const hoy = new Date().toISOString().split('T')[0];
+						const vencimiento = user.fecha_vencimiento || "0000-00-00";
+
+						if (vencimiento < hoy) {
+							showVikingToast("ACCESO DENEGADO: Tu plan ha vencido. Pasa por recepción.", true);
+							console.warn("Intento de apertura de QR con plan vencido:", user.dni);
+							return; // Bloqueamos la ejecución aquí
+						}
+					}
+
+					// 2. SI ES STAFF O ALUMNO AL DÍA, PROCEDEMOS
+					const modal = document.getElementById('modal-mi-qr');
+					const img = document.getElementById('img-mi-qr');
+					const dniTxt = document.getElementById('qr-user-dni');
+					const nameTxt = document.getElementById('qr-user-name');
+
+					if (modal && img) {
+						dniTxt.innerText = user.dni;
+						nameTxt.innerText = user.nombre_completo || "Guerrero";
+						
+						// --- NUEVO: GENERACIÓN DE HASH SEGURO ---
+						const hash = await generateVikingHash(user.dni);
+						const qrData = `${user.dni}:${hash}`; // Formato que espera el backend
+						
+						// Generación del QR usando el string firmado
+						img.src = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(qrData)}&color=000000&bgcolor=ffffff&margin=10`;
+
+						modal.classList.remove('hidden');
+						modal.classList.add('flex');
+						
+						if (window.lucide) lucide.createIcons();
+					}
+				}
+
+				function closeMyQR() {
+					const modal = document.getElementById('modal-mi-qr');
+					if (modal) {
+						modal.classList.add('hidden');
+						modal.classList.remove('flex');
+					}
+				}
+
+				async function generateVikingHash(dni) {
+					const message = dni + SECRET_KEY;
+					const encoder = new TextEncoder();
+					const data = encoder.encode(message);
+					const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+					const hashArray = Array.from(new Uint8Array(hashBuffer));
+					return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+				}
+
+
+			// ==========================================
+			// NUEVA LÓGICA DE ALUMNOS (FIX PANTALLA VACÍA)
+			// ==========================================
+
+			// 1. Función de Entrada
+			function renderAlumnosSection() {
+				filterAlumnos('todos');
+			}
+
+			// 2. Función de Filtrado
+			window.filterAlumnos = function(filtro) {
+				if(!state.alumnos) return;
+				
+				// Actualizar botones visualmente
+				document.querySelectorAll('.filter-btn').forEach(btn => {
+					btn.classList.remove('bg-red-600', 'text-black');
+					btn.classList.add('text-gray-500', 'hover:text-white');
+				});
+				const activeBtn = document.getElementById('filter-' + filtro);
+				if(activeBtn) {
+					activeBtn.classList.remove('text-gray-500', 'hover:text-white');
+					activeBtn.classList.add('bg-red-600', 'text-black');
+				}
+
+				const hoy = new Date().toISOString().split('T')[0];
+				let filtrados = state.alumnos;
+				
+				if(filtro === 'activos') filtrados = state.alumnos.filter(a => a.fecha_vencimiento && a.fecha_vencimiento >= hoy);
+				if(filtro === 'inactivos') filtrados = state.alumnos.filter(a => !a.fecha_vencimiento || a.fecha_vencimiento < hoy);
+				
+				renderAlumnosList(filtrados);
+			}
+
+			// 3. Función de Búsqueda
+			window.searchAlumno = function(query) {
+				if(!query) { filterAlumnos('todos'); return; }
+				
+				document.querySelectorAll('.filter-btn').forEach(btn => {
+					btn.classList.remove('bg-red-600', 'text-black');
+					btn.classList.add('text-gray-500');
+				});
+
+				const q = query.toLowerCase();
+				const filtrados = state.alumnos.filter(a => a.nombre_completo.toLowerCase().includes(q) || a.dni.includes(q));
+				renderAlumnosList(filtrados);
+			}
+			// 4. Renderizado de la Lista (AQUÍ ESTÁ EL CAMBIO DE DISEÑO "STAFF")
+			window.renderAlumnosList = function(listaDatos) {
+				const contenedor = document.getElementById('lista-alumnos-container');
+				if(!contenedor) return;
+
+				if(listaDatos.length === 0) {
+					contenedor.innerHTML = `<div class="h-full flex flex-col items-center justify-center text-gray-600 opacity-50 py-10"><i data-lucide="users" class="w-12 h-12 mb-2"></i><p class="text-xs font-black uppercase italic">Sin resultados</p></div>`;
+					if(window.lucide) lucide.createIcons();
+					return;
+				}
+
+				const hoy = new Date().toISOString().split('T')[0];
+
+				contenedor.innerHTML = listaDatos.map(a => {
+					// Lógica de Estado
+					const estaVencido = !a.fecha_vencimiento || a.fecha_vencimiento < hoy;
+					const colorEstado = estaVencido ? 'bg-red-600' : 'bg-green-600'; 
+					const textoEstado = estaVencido ? 'VENCIDO' : 'AL DÍA';
+					const colorBadge = estaVencido ? 'text-red-500 bg-red-500/10 border-red-500/20' : 'text-green-500 bg-green-500/10 border-green-500/20';
+
+					const initials = a.nombre_completo ? a.nombre_completo.substring(0,2).toUpperCase() : "??";
+					const planNombre = a.plan ? a.plan.nombre : 'Sin Plan';
+
+					return `
+					<div class="glass-card p-5 rounded-3xl border-white/5 flex flex-col md:flex-row md:items-center gap-6 hover:border-red-600/20 transition-all group relative overflow-hidden">
+						<!-- Barra lateral decorativa -->
+						<div class="absolute left-0 top-0 bottom-0 w-1.5 ${colorEstado} opacity-40 group-hover:opacity-100 transition-opacity"></div>
+						
+						<!-- COLUMNA 1: IDENTIDAD (Ancho fijo para que no robe espacio a la info) -->
+						<div class="flex items-center gap-4 w-full md:w-1/3">
+							<div class="w-14 h-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center font-black text-white text-lg italic shadow-lg group-hover:bg-red-600 group-hover:text-black transition-colors shrink-0">
+								${initials}
+							</div>
+							<div class="overflow-hidden">
+								<h4 class="text-sm font-black uppercase italic text-white group-hover:text-red-500 transition-colors truncate">${a.nombre_completo}</h4>
+								<div class="flex flex-col mt-1">
+									<p class="text-[10px] text-gray-500 font-bold flex items-center gap-1.5"><i data-lucide="id-card" class="w-3 h-3"></i> ${a.dni}</p>
+									${a.email ? `<p class="text-[10px] text-gray-500 font-bold flex items-center gap-1.5 truncate"><i data-lucide="mail" class="w-3 h-3"></i> ${a.email}</p>` : ''}
+								</div>
+							</div>
+						</div>
+
+						<!-- COLUMNA 2: PLAN Y ESTADO (EXPANDIDA: flex-1 para ocupar el resto) -->
+						<div class="flex-1 border-t md:border-t-0 md:border-l border-white/5 pt-4 md:pt-0 md:pl-8">
+							<div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
+								
+								<!-- Info Plan (Más grande) -->
+								<div>
+									<p class="text-[9px] text-gray-500 font-black uppercase tracking-widest mb-1 flex items-center gap-1.5">
+										<i data-lucide="ticket" class="w-3 h-3 text-red-600"></i> Plan Actual
+									</p>
+									<p class="text-sm font-black uppercase italic text-white truncate">${planNombre}</p>
+								</div>
+
+								<!-- Estado y Fechas (Alineado y destacado) -->
+								<div class="flex flex-row md:flex-col items-center md:items-start justify-between gap-2">
+									<div class="flex items-center gap-2">
+										<span class="px-3 py-1 rounded-lg text-[9px] font-black uppercase border ${colorBadge}">
+											${textoEstado}
+										</span>
+									</div>
+									<p class="text-[10px] text-gray-400 font-bold italic flex items-center gap-1">
+										Vence: <span class="text-white">${a.fecha_vencimiento || 'N/A'}</span>
+									</p>
+								</div>
+							</div>
+						</div>
+
+						<!-- COLUMNA 3: ACCIONES (Botón Editar) -->
+						<div class="flex items-center justify-end min-w-[100px] border-t md:border-t-0 border-white/5 pt-3 md:pt-0">
+							<button onclick="openEditAlumno(${a.id})" class="px-6 py-3 bg-white/5 text-white rounded-xl text-[10px] font-black uppercase italic hover:bg-white/10 hover:text-red-500 transition-all flex items-center gap-2 shadow-lg w-full md:w-auto justify-center">
+								<i data-lucide="settings-2" class="w-3.5 h-3.5"></i>
+								<span>Editar</span>
+							</button>
+						</div>
+					</div>
+					`;
+				}).join('');
+				
+				if(window.lucide) lucide.createIcons();
+			}
+			
+			// Función para simular ingresos (puedes conectarla luego a tu backend o QR)
+			function simularAcceso() {
+				const nombres = ["Ragnar Lothbrok", "Lagertha", "Bjorn Ironside", "Ivar the Boneless", "Ubbe"];
+				const metodos = ["QR SCAN", "MOLINETE", "MANUAL"];
+				
+				const nuevoIngreso = {
+					nombre: nombres[Math.floor(Math.random() * nombres.length)],
+					dni: Math.floor(Math.random() * 10000000 + 30000000).toString(),
+					fecha: new Date().toLocaleTimeString(), // Solo hora para la simulación rápida
+					metodo: metodos[Math.floor(Math.random() * metodos.length)],
+					estado: Math.random() > 0.2 ? "AUTORIZADO" : "DENEGADO (Vencido)"
+				};
+
+				state.accesos.unshift(nuevoIngreso); // Agregar al inicio
+				if (state.accesos.length > 50) state.accesos.pop(); // Limitar historial visual
+				
+				renderAccesos();
+				showVikingToast("Nuevo ingreso detectado");
+			}
+
+        document.getElementById('form-nuevo-ejercicio-lib').onsubmit = async (e) => {
+            e.preventDefault();
+            const nombre = document.getElementById('lib-ex-nombre').value;
+            const grupo_id = parseInt(document.getElementById('lib-ex-grupo').value);
+            
+            const res = await apiFetch('/rutinas/ejercicios', 'POST', { nombre, grupo_muscular_id: grupo_id });
+            if (!res.error) {
+                showVikingToast("Ejercicio creado en librería");
+                closeModal('modal-nuevo-ejercicio');
+                await loadMusculacionMetadata();
+            } else {
+                showVikingToast("Error al crear: " + res.error, true);
+            }
+        };
+		
+		document.getElementById('form-clase').onsubmit = saveClaseVikinga;
+
+		/**
+		 * =========================================================
+		 * 4. PUENTES DE COMPATIBILIDAD (ALIAS MÁGICOS)
+		 * =========================================================
+		 * Esto permite que tu HTML viejo llame a funciones con nombres
+		 * antiguos y sean redirigidos automáticamente a las nuevas.
+		 */
+
+		// Si el botón dice onclick="finalizarVenta()", ejecuta finalizarVentaMercaderia()
+		window.finalizarVenta = finalizarVentaMercaderia; 
+
+		// Si el botón dice onclick="confirmarCobroFinal()", ejecuta finalizarVentaMercaderia()
+		window.confirmarCobroFinal = finalizarVentaMercaderia;
+
+        window.onclick = function(event) {
+            if (event.target.classList.contains('search-exercise-input')) return;
+            document.querySelectorAll('.exercise-results-list').forEach(list => list.classList.add('hidden'));
+        };
+        
+		window.addEventListener('load', () => {
+			const f = document.getElementById('form-stock');
+			if(f) f.onsubmit = saveStockVikingo;
+		});
+		
+        window.onload = () => {
+			const formClase = document.getElementById('form-clase');
+			if(formClase) {
+				formClase.onsubmit = saveClaseVikinga;
+			}
+			if(window.lucide) lucide.createIcons();
+		};
