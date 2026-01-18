@@ -3091,15 +3091,40 @@
 		}
 
         async function apiFetch(endpoint, method = 'GET', body = null) {
-            const options = { method, headers: { 'Content-Type': 'application/json' } };
-            if (body) options.body = JSON.stringify(body);
-            try {
-                const res = await fetch(`${API_BASE}${endpoint}`, options);
-                if (!res.ok) return { error: await res.text() };
-                return await res.json();
-            } catch (e) { return { error: "Error de conexión" }; }
-        }
+			const token = localStorage.getItem('viking_token');
+			const headers = { 'Content-Type': 'application/json' };
+			
+			if (token) {
+				headers['Authorization'] = `Bearer ${token}`;
+			}
 
+			const options = { method, headers };
+			if (body) options.body = JSON.stringify(body);
+			
+			try {
+				const res = await fetch(`${API_BASE}${endpoint}`, options);
+				
+				// Si el servidor devuelve 401, el token no es válido o expiró
+				if (res.status === 401) {
+					localStorage.removeItem('viking_token');
+					location.reload();
+					return { error: "Sesión expirada" };
+				}
+
+				if (!res.ok) {
+					try {
+						const errorData = await res.json();
+						return { error: errorData.detail || "Error en la petición" };
+					} catch(e) {
+						return { error: await res.text() };
+					}
+				}
+				return await res.json();
+			} catch (e) { 
+				console.error("Error Fetch:", e);
+				return { error: "Error de conexión con el Valhalla" }; 
+			}
+		}
         function calculateIMC() {
             const peso = parseFloat(document.getElementById('al-peso').value);
             const alturaCm = parseFloat(document.getElementById('al-altura').value);
@@ -3220,7 +3245,12 @@
 			const res = await apiFetch('/login', 'POST', data);
 			
 			if (res && !res.error) {
-				// Guardamos al usuario en el estado global (importante para el QR)
+				// --- NUEVO: GUARDAR TOKEN JWT ---
+				if (res.access_token) {
+					localStorage.setItem('viking_token', res.access_token);
+				}
+
+				// Guardamos al usuario en el estado global
 				state.user = res;
 				
 				// 2. Ocultar Login y mostrar App
@@ -3260,7 +3290,7 @@
 				// 5. Cambiar a la vista principal
 				switchView('dashboard');
 
-				// --- LO QUE FALTABA: Renderizar Dashboard específico si es Alumno ---
+				// --- Renderizar Dashboard específico si es Alumno ---
 				if (res.rol_nombre === "Alumno" && typeof renderStudentDashboard === 'function') {
 					await renderStudentDashboard();
 				}
@@ -3272,7 +3302,10 @@
 
 			} else {
 				// Mostrar error si las credenciales fallan
-				if(errorDiv) errorDiv.classList.remove('hidden');
+				if(errorDiv) {
+					errorDiv.innerText = res.error || "Credenciales incorrectas";
+					errorDiv.classList.remove('hidden');
+				}
 				if(loginBtn) {
 					loginBtn.disabled = false;
 					loginBtn.innerText = "Entrar al Valhalla";
@@ -3287,6 +3320,7 @@
 			}
 		}
 	}
+
 
 	async function loadCaja() {
 		const movs = await apiFetch('/caja/movimientos');
@@ -4882,7 +4916,7 @@ async function loadProfesores() {
 			}
 			
 			// FUNCIONES PARA EL MODAL DE MI QR
-				function showMyQR() {
+				async function showMyQR() {
 					const user = state.user;
 					if (!user) {
 						showVikingToast("Error: Sesión no encontrada", true);
@@ -4911,8 +4945,12 @@ async function loadProfesores() {
 						dniTxt.innerText = user.dni;
 						nameTxt.innerText = user.nombre_completo || "Guerrero";
 						
-						// Generación del QR
-						img.src = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${user.dni}&color=000000&bgcolor=ffffff&margin=10`;
+						// --- NUEVO: GENERACIÓN DE HASH SEGURO ---
+						const hash = await generateVikingHash(user.dni);
+						const qrData = `${user.dni}:${hash}`; // Formato que espera el backend
+						
+						// Generación del QR usando el string firmado
+						img.src = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(qrData)}&color=000000&bgcolor=ffffff&margin=10`;
 
 						modal.classList.remove('hidden');
 						modal.classList.add('flex');

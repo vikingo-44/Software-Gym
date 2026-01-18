@@ -1,5 +1,6 @@
 import os
 import logging
+import hashlib
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
@@ -11,6 +12,10 @@ from typing import List, Optional, Union
 from pydantic import BaseModel
 from datetime import datetime, timedelta, date
 
+# Librerías para Seguridad (JWT y Hashing de contraseñas)
+from jose import JWTError, jwt
+from passlib.context import CryptContext
+
 # Configuración de logs
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -18,6 +23,16 @@ logger = logging.getLogger(__name__)
 import models
 import database
 from database import Base
+
+# ==========================================
+# CONFIGURACIÓN DE SEGURIDAD
+# ==========================================
+# Esta clave debe ser la misma en el generador de QR
+SECRET_KEY = "Vikingo_Security_Strong_Key_2025"
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 # 1 día
+
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 app = FastAPI(title="Vikingo Strength Hub API")
 
@@ -28,6 +43,25 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# --- Funciones de Seguridad Auxiliares ---
+def verify_password(plain_password, hashed_password):
+    """Verifica si la contraseña coincide (soporta texto plano para migración)"""
+    try:
+        return pwd_context.verify(plain_password, hashed_password)
+    except:
+        return plain_password == hashed_password
+
+def get_password_hash(password):
+    """Genera hash bcrypt para la contraseña"""
+    return pwd_context.hash(password)
+
+def create_access_token(data: dict):
+    """Genera el token JWT"""
+    to_encode = data.copy()
+    expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    to_encode.update({"exp": expire})
+    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
 # ==========================================
 # PARCHE DE BASE DE DATOS (AUTO-FIX)
@@ -74,7 +108,7 @@ class UsuarioLogin(BaseModel):
 
 # --- NUEVO: Schema para Validación de QR ---
 class AccessCheck(BaseModel):
-    qr_data: str # Recibirá el DNI contenido en el código QR
+    qr_data: str # Recibirá el formato "DNI:HASH" contenido en el código QR
 
 class TipoPlanSchema(BaseModel):
     id: int
@@ -183,12 +217,6 @@ class TransactionCreate(BaseModel):
     producto_id: Optional[int] = None
     cantidad: int = 1
 
-class ReservaCreate(BaseModel):
-    usuario_id: int
-    clase_id: int
-    horario: float
-    dia_semana: int
-
 # --- SCHEMAS RUTINAS ---
 class SerieResponse(BaseModel):
     id: int
@@ -261,6 +289,11 @@ class GrupoMuscularSchema(BaseModel):
     nombre: str
     class Config: from_attributes = True
 
+class ReservaCreate(BaseModel):
+    usuario_id: int
+    clase_id: int
+    horario: float
+    dia_semana: int
 
 # ==========================================
 # ENDPOINTS
@@ -284,10 +317,15 @@ def login(data: UsuarioLogin, db: Session = Depends(database.get_db)):
         joinedload(models.Usuario.plan).joinedload(models.Plan.tipo)
     ).filter(models.Usuario.dni == data.dni).first()
     
-    if not user or user.password_hash != data.password:
+    if not user or not verify_password(data.password, user.password_hash):
         raise HTTPException(status_code=401, detail="Credenciales incorrectas")
     
+    # Generar Token de Acceso
+    token = create_access_token(data={"sub": user.dni})
+    
     return {
+        "access_token": token,
+        "token_type": "bearer",
         "id": user.id, 
         "nombre_completo": user.nombre_completo, 
         "dni": user.dni, 
@@ -307,17 +345,42 @@ def login(data: UsuarioLogin, db: Session = Depends(database.get_db)):
         "imc": user.imc
     }
 
-# --- NUEVO: VALIDACIÓN DE ACCESO (QR) ---
+# --- NUEVO: VALIDACIÓN DE ACCESO (QR CON HASHING) ---
 @app.post("/api/acceso/validar", tags=["Seguridad"])
 def validar_acceso_qr(data: AccessCheck, db: Session = Depends(database.get_db)):
     """
-    Control de Acceso mediante escaneo de DNI.
-    Reglas:
-    - Staff (Admin, Profe, etc): Pase libre.
-    - Alumno: Solo si su plan está al día.
+    Control de Acceso mediante escaneo de código QR.
+    Se espera que el QR contenga el formato "DNI:HASH" para evitar falsificaciones.
     """
-    # Buscar usuario por DNI
-    user = db.query(models.Usuario).options(joinedload(models.Usuario.perfil)).filter(models.Usuario.dni == data.qr_data).first()
+    raw_data = data.qr_data
+    
+    # 1. Verificar formato del QR
+    if ":" not in raw_data:
+        return {
+            "status": "DENIED",
+            "message": "Formato de QR no válido",
+            "nombre": "Desconocido",
+            "rol": "N/A",
+            "color": "red"
+        }
+
+    dni_recibido, hash_recibido = raw_data.split(":")
+
+    # 2. Validar Hash de seguridad
+    # Re-calculamos el hash en el servidor usando el DNI y nuestra clave secreta
+    esperado = hashlib.sha256(f"{dni_recibido}{SECRET_KEY}".encode()).hexdigest()
+    
+    if hash_recibido != esperado:
+        return {
+            "status": "DENIED",
+            "message": "Código QR no autorizado o falsificado",
+            "nombre": "Error Seguridad",
+            "rol": "N/A",
+            "color": "red"
+        }
+
+    # 3. Buscar usuario por DNI si el hash es correcto
+    user = db.query(models.Usuario).options(joinedload(models.Usuario.perfil)).filter(models.Usuario.dni == dni_recibido).first()
     
     if not user:
         return {
@@ -330,7 +393,7 @@ def validar_acceso_qr(data: AccessCheck, db: Session = Depends(database.get_db))
 
     rol = user.perfil.nombre.lower() if user.perfil else "alumno"
 
-    # 1. Lista de roles que pasan SIEMPRE (Staff)
+    # Lista de roles que pasan SIEMPRE (Staff)
     roles_staff = ["administracion", "profesor", "staff", "admin", "dueño"]
     
     if rol in roles_staff:
@@ -342,7 +405,7 @@ def validar_acceso_qr(data: AccessCheck, db: Session = Depends(database.get_db))
             "color": "blue"
         }
 
-    # 2. Validación para Alumnos
+    # Validación para Alumnos
     if user.fecha_vencimiento:
         if user.fecha_vencimiento >= date.today():
             dias_rest = (user.fecha_vencimiento - date.today()).days
@@ -421,7 +484,7 @@ def create_alumno(alumno: AlumnoUpdate, db: Session = Depends(database.get_db)):
         email=alumno.email,
         plan_id=alumno.plan_id, 
         perfil_id=perfil.id, 
-        password_hash=alumno.password or alumno.dni,
+        password_hash=get_password_hash(alumno.password or alumno.dni), # Aplicar hash
         fecha_ultima_renovacion=alumno.fecha_ultima_renovacion or date.today(), 
         fecha_vencimiento=alumno.fecha_vencimiento,
         fecha_nacimiento=alumno.fecha_nacimiento,
@@ -461,7 +524,7 @@ def update_alumno(id: int, data: AlumnoUpdate, db: Session = Depends(database.ge
     if data.fecha_vencimiento: al.fecha_vencimiento = data.fecha_vencimiento
 
     if data.password:
-        al.password_hash = data.password
+        al.password_hash = get_password_hash(data.password) # Aplicar hash
     db.commit()
     return {"status": "success"}
 
@@ -589,7 +652,7 @@ def create_staff(data: dict, db: Session = Depends(database.get_db)):
         nombre_completo=data['nombre_completo'], 
         dni=data['dni'], 
         email=data.get('email'),
-        password_hash=data.get('password', data['dni']), 
+        password_hash=get_password_hash(data.get('password', data['dni'])), # Hash
         perfil_id=perfil.id,
         especialidad=data.get('especialidad')
     )
@@ -616,7 +679,7 @@ def update_staff(id: int, data: StaffUpdate, db: Session = Depends(database.get_
     if perfil:
         st.perfil_id = perfil.id
     if data.password:
-        st.password_hash = data.password
+        st.password_hash = get_password_hash(data.password) # Hash
         
     db.commit()
     return {"status": "success"}
