@@ -1414,72 +1414,65 @@
         </div>
     </div>
 
-	<!-- ========================================== -->
-	<!-- MÓDULO: LOS OJOS DE ODÍN (SCANNER QR)      -->
-	<!-- Pegar esto antes de cerrar el </body>      -->
-	<!-- ========================================== -->
+		<!-- ========================================== -->
+		<!-- MÓDULO: LOS OJOS DE ODÍN (SCANNER QR)      -->
+		<!-- Versión Conectada a API de Validación      -->
+		<!-- ========================================== -->
 
-	<!-- MODAL DE CÁMARA (Estilo Viewfinder HUD) -->
-	<div id="modal-scanner-live" class="fixed inset-0 z-[2000] bg-black hidden flex-col items-center justify-center">
-		
-		<!-- Header del Escáner -->
-		<div class="absolute top-0 left-0 w-full p-6 flex justify-between items-center bg-gradient-to-b from-black/90 to-transparent z-20">
-			<div>
-				<h3 class="text-xl font-black italic uppercase text-white tracking-widest">
-					<i data-lucide="scan" class="w-5 h-5 inline mr-2 text-red-600 animate-pulse"></i>Acceso Vikingo
-				</h3>
-				<p class="text-[10px] text-gray-400 font-bold uppercase">Sistema de Reconocimiento Visual</p>
-			</div>
-			<button onclick="stopScanner()" class="w-10 h-10 rounded-full bg-white/10 hover:bg-red-600 text-white flex items-center justify-center transition-all backdrop-blur-md border border-white/10">
-				<i data-lucide="x" class="w-5 h-5"></i>
-			</button>
-		</div>
-
-		<!-- Contenedor de Video (La Cámara) -->
-		<div class="relative w-full h-full flex items-center justify-center bg-black">
-			<!-- El Video Real -->
-			<video id="scanner-video" class="w-full h-full object-cover opacity-80" autoplay playsinline muted></video>
+		<div id="modal-scanner-live" class="fixed inset-0 z-[2000] bg-black hidden flex-col items-center justify-center">
 			
-			<!-- Overlay HUD (La mira del escáner) -->
-			<div class="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
-				<!-- Marco de esquinas -->
-				<div class="w-64 h-64 border-2 border-red-600/50 rounded-3xl relative shadow-[0_0_50px_rgba(220,38,38,0.3)]">
-					<!-- Esquinas brillantes -->
-					<div class="absolute top-0 left-0 w-6 h-6 border-t-4 border-l-4 border-red-500 -mt-1 -ml-1 rounded-tl-lg"></div>
-					<div class="absolute top-0 right-0 w-6 h-6 border-t-4 border-r-4 border-red-500 -mt-1 -mr-1 rounded-tr-lg"></div>
-					<div class="absolute bottom-0 left-0 w-6 h-6 border-b-4 border-l-4 border-red-500 -mb-1 -ml-1 rounded-bl-lg"></div>
-					<div class="absolute bottom-0 right-0 w-6 h-6 border-b-4 border-r-4 border-red-500 -mb-1 -mr-1 rounded-br-lg"></div>
-					
-					<!-- Línea de escaneo animada -->
-					<div class="absolute left-2 right-2 h-0.5 bg-red-500 shadow-[0_0_10px_#ef4444] animate-scan-line top-1/2"></div>
-					
-					<!-- Texto Central -->
-					<p class="absolute bottom-[-40px] w-full text-center text-[10px] font-black uppercase tracking-[0.3em] text-white/70 animate-pulse">
-						Buscando Código QR...
-					</p>
+			<!-- Header -->
+			<div class="absolute top-0 left-0 w-full p-6 flex justify-between items-center bg-gradient-to-b from-black/90 to-transparent z-20">
+				<div>
+					<h3 class="text-xl font-black italic uppercase text-white tracking-widest">
+						<i data-lucide="scan" class="w-5 h-5 inline mr-2 text-red-600 animate-pulse"></i>Acceso Vikingo
+					</h3>
+					<p class="text-[10px] text-gray-400 font-bold uppercase">Sistema de Reconocimiento Visual</p>
+				</div>
+				<button onclick="stopScanner()" class="w-10 h-10 rounded-full bg-white/10 hover:bg-red-600 text-white flex items-center justify-center transition-all backdrop-blur-md border border-white/10">
+					<i data-lucide="x" class="w-5 h-5"></i>
+				</button>
+			</div>
+
+			<!-- Video -->
+			<div class="relative w-full h-full flex items-center justify-center bg-black">
+				<video id="scanner-video" class="w-full h-full object-cover opacity-80" autoplay playsinline muted></video>
+				
+				<!-- Error Msg -->
+				<div id="scanner-error-msg" class="absolute inset-0 z-40 hidden flex-col items-center justify-center bg-black/90 p-10 text-center">
+					<i data-lucide="video-off" class="w-16 h-16 text-gray-600 mb-4"></i>
+					<h3 class="text-xl font-black text-white mb-2 uppercase italic">Cámara no disponible</h3>
+					<p id="scanner-error-text" class="text-sm text-gray-400 max-w-md">No se pudo iniciar.</p>
+					<button onclick="stopScanner()" class="mt-6 px-6 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-xs font-bold uppercase">Cerrar</button>
+				</div>
+
+				<!-- HUD -->
+				<div id="scanner-hud" class="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
+					<div class="w-64 h-64 border-2 border-red-600/50 rounded-3xl relative shadow-[0_0_50px_rgba(220,38,38,0.3)]">
+						<div class="absolute top-0 left-0 w-6 h-6 border-t-4 border-l-4 border-red-500 -mt-1 -ml-1 rounded-tl-lg"></div>
+						<div class="absolute top-0 right-0 w-6 h-6 border-t-4 border-r-4 border-red-500 -mt-1 -mr-1 rounded-tr-lg"></div>
+						<div class="absolute bottom-0 left-0 w-6 h-6 border-b-4 border-l-4 border-red-500 -mb-1 -ml-1 rounded-bl-lg"></div>
+						<div class="absolute bottom-0 right-0 w-6 h-6 border-b-4 border-r-4 border-red-500 -mb-1 -mr-1 rounded-br-lg"></div>
+						<div class="absolute left-2 right-2 h-0.5 bg-red-500 shadow-[0_0_10px_#ef4444] animate-scan-line top-1/2"></div>
+						<p class="absolute bottom-[-40px] w-full text-center text-[10px] font-black uppercase tracking-[0.3em] text-white/70 animate-pulse">Buscando Código QR...</p>
+					</div>
+				</div>
+
+				<!-- FEEDBACK OVERLAY -->
+				<div id="scanner-feedback-overlay" class="absolute inset-0 z-30 hidden flex-col items-center justify-center bg-black/95 backdrop-blur-md transition-all duration-300">
+					<div id="scanner-icon-container" class="mb-6 transform scale-150 transition-transform"></div>
+					<h2 id="scanner-status-text" class="text-4xl font-black uppercase italic text-white mb-2 tracking-wide text-center"></h2>
+					<p id="scanner-user-name" class="text-xl font-bold text-white uppercase tracking-widest mb-1"></p>
+					<p id="scanner-msg" class="text-sm font-medium text-gray-400"></p>
 				</div>
 			</div>
 
-			<!-- CAPA DE FEEDBACK (ÉXITO / ERROR) -->
-			<div id="scanner-feedback-overlay" class="absolute inset-0 z-30 hidden flex-col items-center justify-center bg-black/80 backdrop-blur-sm transition-all duration-300">
-				<div id="scanner-icon-container" class="mb-4 transform scale-150 transition-transform">
-					<!-- Aquí se inyecta el icono JS -->
-				</div>
-				<h2 id="scanner-status-text" class="text-3xl font-black uppercase italic text-white mb-2 tracking-wide"></h2>
-				<p id="scanner-user-name" class="text-sm font-bold text-gray-300 uppercase tracking-widest"></p>
+			<!-- Controles Simulación -->
+			<div class="absolute bottom-10 z-20 flex gap-4">
+				<button onclick="simulateScan('ok')" class="px-6 py-3 bg-green-600/80 hover:bg-green-500 backdrop-blur-md rounded-2xl border border-green-400/30 text-white font-black uppercase italic text-[10px] shadow-lg transition-all">Simular Alumno OK</button>
+				<button onclick="simulateScan('expired')" class="px-6 py-3 bg-red-600/80 hover:bg-red-500 backdrop-blur-md rounded-2xl border border-red-400/30 text-white font-black uppercase italic text-[10px] shadow-lg transition-all">Simular Vencido</button>
 			</div>
 		</div>
-
-		<!-- Controles Inferiores (SIMULACIÓN) -->
-		<div class="absolute bottom-10 z-20 flex gap-4">
-			<button onclick="simulateScan('ok')" class="px-6 py-3 bg-green-600/80 hover:bg-green-500 backdrop-blur-md rounded-2xl border border-green-400/30 text-white font-black uppercase italic text-[10px] shadow-lg transition-all">
-				<i data-lucide="check-circle" class="w-4 h-4 inline mr-2"></i>Simular OK
-			</button>
-			<button onclick="simulateScan('error')" class="px-6 py-3 bg-red-600/80 hover:bg-red-500 backdrop-blur-md rounded-2xl border border-red-400/30 text-white font-black uppercase italic text-[10px] shadow-lg transition-all">
-				<i data-lucide="x-circle" class="w-4 h-4 inline mr-2"></i>Simular Error
-			</button>
-		</div>
-	</div>
 
     <script>
         // ==========================================
@@ -4640,106 +4633,115 @@ async function loadProfesores() {
 		// LÓGICA DE LOS OJOS DE ODÍN (CÁMARA)
 		// ==========================================
 		let videoStream = null;
+    	let isScanning = false;
 
 		// 1. Abrir Escáner y Encender Cámara
 		async function startScanner() {
-			const modal = document.getElementById('modal-scanner-live');
-			const video = document.getElementById('scanner-video');
-			
-			modal.classList.remove('hidden');
-			modal.classList.add('flex');
+        	const modal = document.getElementById('modal-scanner-live');
+        	const video = document.getElementById('scanner-video');
+        	const hud = document.getElementById('scanner-hud');
+        
+        	modal.classList.remove('hidden');
+        	modal.classList.add('flex');
+        	hud.classList.remove('hidden');
 
-			try {
-				// Pedir permiso al navegador
-				videoStream = await navigator.mediaDevices.getUserMedia({ 
-					video: { facingMode: "environment" } // Preferir cámara trasera en móviles
-				});
-				video.srcObject = videoStream;
-				video.play();
-				console.log("👁️ Ojos de Odín activados");
-			} catch (err) {
-				console.error("Error de cámara:", err);
-				alert("No pudimos acceder a la cámara. Asegúrate de dar permisos o usar HTTPS/Localhost.");
-				stopScanner();
-			}
-		}
+        	if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            	showCameraError("Navegador no compatible o falta HTTPS.");
+            return;
+        	}
+
+        	try {
+            	videoStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+            	video.srcObject = videoStream;
+            	video.play();
+            	isScanning = true;
+            	scanLoop(); // Iniciar bucle de detección (Simulado por ahora hasta integrar librería JSQR real)
+        	} catch (err) {
+            	console.error(err);
+            	showCameraError("No se pudo acceder a la cámara.");
+        	}
+    	}
 
 		// 2. Detener Cámara y Cerrar
 		function stopScanner() {
-			const modal = document.getElementById('modal-scanner-live');
-			const video = document.getElementById('scanner-video');
-
-			if (videoStream) {
-				videoStream.getTracks().forEach(track => track.stop());
-				videoStream = null;
-			}
-			
-			video.srcObject = null;
-			modal.classList.add('hidden');
-			modal.classList.remove('flex');
-			
-			// Limpiar overlays por si quedaron
+			isScanning = false;
+			if (videoStream) videoStream.getTracks().forEach(track => track.stop());
+			document.getElementById('modal-scanner-live').classList.add('hidden');
+			document.getElementById('modal-scanner-live').classList.remove('flex');
 			hideFeedback();
 		}
 
 		// 3. Simular Lectura (Para probar sin QR real)
-		function simulateScan(type) {
+		async function simulateScan(type) {
+			let dniToTest = "00000000"; // Default inválido
+			
 			if (type === 'ok') {
-				// Elegir un alumno al azar de la lista cargada
-				const randomAl = state.alumnos.length > 0 
-					? state.alumnos[Math.floor(Math.random() * state.alumnos.length)]
-					: { nombre_completo: "Ragnar Lothbrok", dni: "12345678" };
-				
-				showFeedback(true, randomAl.nombre_completo);
-				
-				// AGREGAR AL DASHBOARD EN TIEMPO REAL
-				registerAccessLog(randomAl.nombre_completo, randomAl.dni, "QR CAMERA", "AUTORIZADO");
+				// Buscamos un alumno real del estado local para probar
+				const alumno = state.alumnos.find(a => a.estado_cuenta === 'Al día');
+				if(alumno) dniToTest = alumno.dni;
+				else alert("Crea un alumno al día primero para probar.");
+			} else if (type === 'expired') {
+				const alumno = state.alumnos.find(a => a.estado_cuenta !== 'Al día');
+				if(alumno) dniToTest = alumno.dni;
+				else dniToTest = "99999999"; // DNI inexistente o forzar uno vencido
+			}
 
-			} else {
-				showFeedback(false, "Desconocido / Vencido");
-				registerAccessLog("Desconocido", "------", "QR CAMERA", "DENEGADO");
+			// LLAMADA AL BACKEND REAL
+			try {
+				const response = await apiFetch('/acceso/validar', 'POST', { qr_data: dniToTest });
+				
+				showFeedback(response);
+				
+				// Registrar visualmente en el dashboard
+				if(typeof registerAccessLog === 'function') {
+					registerAccessLog(
+						response.nombre || "Desconocido", 
+						dniToTest, 
+						"QR SCAN", 
+						response.status // AUTHORIZED / DENIED
+					);
+				}
+
+			} catch (e) {
+				console.error(e);
+				showFeedback({ status: "DENIED", message: "Error de Conexión", nombre: "Sistema", color: "red" });
 			}
 		}
 
 		// 4. Mostrar Feedback Visual sobre el Video
-		function showFeedback(success, userName) {
+		function showFeedback(data) {
 			const overlay = document.getElementById('scanner-feedback-overlay');
-			const iconContainer = document.getElementById('scanner-icon-container');
-			const text = document.getElementById('scanner-status-text');
-			const subtext = document.getElementById('scanner-user-name');
+			const icon = document.getElementById('scanner-icon-container');
+			const status = document.getElementById('scanner-status-text');
+			const name = document.getElementById('scanner-user-name');
+			const msg = document.getElementById('scanner-msg');
 
 			overlay.classList.remove('hidden');
 			overlay.classList.add('flex');
 
-			if (success) {
-				iconContainer.innerHTML = '<div class="w-24 h-24 bg-green-500 rounded-full flex items-center justify-center shadow-[0_0_50px_#22c55e] animate-bounce"><i data-lucide="check" class="w-12 h-12 text-black"></i></div>';
-				text.innerText = "ACCESO AUTORIZADO";
-				text.classList.add('text-green-500');
-				text.classList.remove('text-red-500');
-				subtext.innerText = userName;
-				
-				// Sonido de éxito (opcional)
-				// playSound('success');
+			name.innerText = data.nombre;
+			msg.innerText = data.message;
+
+			if (data.status === 'AUTHORIZED') {
+				status.innerText = "ACCESO PERMITIDO";
+				status.className = "text-4xl font-black uppercase italic text-green-500 mb-2 tracking-wide text-center";
+				icon.innerHTML = '<div class="w-32 h-32 bg-green-500 rounded-full flex items-center justify-center shadow-[0_0_60px_#22c55e] animate-bounce"><i data-lucide="check" class="w-16 h-16 text-black"></i></div>';
+				// Play success sound
 			} else {
-				iconContainer.innerHTML = '<div class="w-24 h-24 bg-red-600 rounded-full flex items-center justify-center shadow-[0_0_50px_#dc2626] animate-shake"><i data-lucide="x" class="w-12 h-12 text-black"></i></div>';
-				text.innerText = "ACCESO DENEGADO";
-				text.classList.add('text-red-500');
-				text.classList.remove('text-green-500');
-				subtext.innerText = "Contactar Administración";
+				status.innerText = "ACCESO DENEGADO";
+				status.className = "text-4xl font-black uppercase italic text-red-500 mb-2 tracking-wide text-center";
+				icon.innerHTML = '<div class="w-32 h-32 bg-red-600 rounded-full flex items-center justify-center shadow-[0_0_60px_#dc2626] animate-shake"><i data-lucide="x" class="w-16 h-16 text-black"></i></div>';
+				// Play error sound
 			}
 			
 			if(window.lucide) lucide.createIcons();
 
-			// Ocultar feedback después de 2 segundos y seguir escaneando
-			setTimeout(() => {
-				hideFeedback();
-			}, 2500);
+			setTimeout(() => hideFeedback(), 3000);
 		}
 
 		function hideFeedback() {
-			const overlay = document.getElementById('scanner-feedback-overlay');
-			overlay.classList.add('hidden');
-			overlay.classList.remove('flex');
+			document.getElementById('scanner-feedback-overlay').classList.add('hidden');
+			document.getElementById('scanner-feedback-overlay').classList.remove('flex');
 		}
 
 		// 5. Registrar en el Sistema (Simulación de Backend)
@@ -4767,6 +4769,13 @@ async function loadProfesores() {
 			
 			if (typeof loadDashboard === 'function') loadDashboard(); // Refresca el widget del dashboard
 			if (typeof renderAccesos === 'function') renderAccesos(); // Refresca la vista completa de accesos
+		}
+
+		function showCameraError(msg) {
+			const err = document.getElementById('scanner-error-msg');
+			document.getElementById('scanner-error-text').innerText = msg;
+			err.classList.remove('hidden');
+			err.classList.add('flex');
 		}
 
 		// Vincular al botón de "Ver Molinetes" o crear uno nuevo en el Dashboard
