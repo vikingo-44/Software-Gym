@@ -5374,57 +5374,78 @@ async function loadProfesores() {
 
         // --- PUNTO 3: Dashboard Específico Profesor ---
         async function loadProfessorDashboard() {
-            if (state.user.rol_nombre !== "Profesor") return;
-            
-            console.log("📊 Cargando métricas de Coach...");
-            const [clases, reservas] = await Promise.all([
-                apiFetch('/clases'),
-                apiFetch('/reservas')
-            ]);
+			if (!state.user || state.user.rol_nombre !== "Profesor") return;
+			
+			console.log("📊 Cargando métricas de Coach...");
+			
+			// Obtener datos frescos de la API
+			const [clasesRaw, reservasRaw] = await Promise.all([
+				apiFetch('/clases'),
+				apiFetch('/reservas')
+			]);
 
-            const misClases = clases.filter(c => c.coach === state.user.nombre_completo);
-            const containerHoy = document.getElementById('prof-dash-today-classes');
-            
-            if (containerHoy) {
-                if (misClases.length === 0) {
-                    containerHoy.innerHTML = '<p class="text-center text-gray-500 italic text-[10px] py-10">No tienes clases asignadas.</p>';
-                } else {
-                    containerHoy.innerHTML = misClases.map(c => `
-                        <div class="flex justify-between items-center p-4 bg-white/5 rounded-2xl border border-white/5">
-                            <div>
-                                <p class="text-[11px] font-black uppercase italic text-white">${c.nombre}</p>
-                                <p class="text-[9px] text-gray-500 font-bold uppercase">Cupo: ${c.capacidad_max} Guerreros</p>
-                            </div>
-                            <div class="w-2 h-10 rounded-full" style="background-color: ${c.color}"></div>
-                        </div>
-                    `).join('');
-                }
-            }
+			// Validar que no haya errores en las respuestas
+			const clases = Array.isArray(clasesRaw) ? clasesRaw : [];
+			const reservas = Array.isArray(reservasRaw) ? reservasRaw : [];
 
-            // Cálculo de convocatoria (Alumnos totales en sus clases)
-            const misIds = misClases.map(c => c.id);
-            const misReservas = reservas.filter(r => misIds.includes(r.clase_id));
-            
-            const elTotal = document.getElementById('prof-dash-total-students');
-            if (elTotal) elTotal.innerText = misReservas.length;
+			// 1. Filtrar clases asignadas a este profesor
+			const misClases = clases.filter(c => c.coach === state.user.nombre_completo);
+			const containerHoy = document.getElementById('prof-dash-today-classes');
+			
+			if (containerHoy) {
+				if (misClases.length === 0) {
+					containerHoy.innerHTML = '<p class="text-center text-gray-500 italic text-[10px] py-10">No tienes clases asignadas.</p>';
+				} else {
+					containerHoy.innerHTML = misClases.map(c => `
+						<div class="flex justify-between items-center p-4 bg-white/5 rounded-2xl border border-white/5 hover:border-red-600/30 transition-all">
+							<div>
+								<p class="text-[11px] font-black uppercase italic text-white">${c.nombre}</p>
+								<p class="text-[9px] text-gray-500 font-bold uppercase">Cupo: ${c.capacidad_max} Guerreros</p>
+							</div>
+							<div class="w-2 h-10 rounded-full shadow-[0_0_10px_rgba(255,0,0,0.2)]" style="background-color: ${c.color || '#FF0000'}"></div>
+						</div>
+					`).join('');
+				}
+			}
 
-            // Ranking de alumnos más frecuentes en sus clases
-            const studentCounts = {};
-            misReservas.forEach(r => {
-                studentCounts[r.alumno_dni] = (studentCounts[r.alumno_dni] || 0) + 1;
-            });
+			// 2. Cálculo de convocatoria (Alumnos totales en sus clases)
+			const misIds = misClases.map(c => c.id);
+			const misReservas = reservas.filter(r => misIds.includes(r.clase_id));
+			
+			const elTotal = document.getElementById('prof-dash-total-students');
+			if (elTotal) elTotal.innerText = misReservas.length;
 
-            const topStudents = Object.entries(studentCounts).sort((a,b) => b[1] - a[1]).slice(0,5);
-            const containerTop = document.getElementById('prof-dash-top-students');
-            if (containerTop) {
-                containerTop.innerHTML = topStudents.map(([dni, count]) => `
-                    <div class="flex justify-between items-center p-3 bg-white/5 rounded-xl">
-                        <span class="text-[10px] font-black italic uppercase text-white">${dni}</span>
-                        <span class="text-[9px] font-bold text-red-500">${count} ASISTENCIAS</span>
-                    </div>
-                `).join('');
-            }
-        }
+			// 3. Ranking de alumnos más frecuentes
+			const studentCounts = {};
+			misReservas.forEach(r => {
+				if (r.alumno_dni) {
+					studentCounts[r.alumno_dni] = (studentCounts[r.alumno_dni] || 0) + 1;
+				}
+			});
+
+			const topStudents = Object.entries(studentCounts)
+				.sort((a, b) => b[1] - a[1])
+				.slice(0, 5);
+
+			const containerTop = document.getElementById('prof-dash-top-students');
+			if (containerTop) {
+				if (topStudents.length === 0) {
+					containerTop.innerHTML = '<p class="text-center text-gray-600 italic text-[10px] py-4">Sin actividad registrada.</p>';
+				} else {
+					containerTop.innerHTML = topStudents.map(([dni, count]) => `
+						<div class="flex justify-between items-center p-3 bg-white/5 rounded-xl border border-white/5">
+							<div class="flex items-center gap-3">
+								<div class="w-2 h-2 rounded-full bg-red-600 animate-pulse"></div>
+								<span class="text-[10px] font-black italic uppercase text-white">${dni}</span>
+							</div>
+							<span class="text-[9px] font-black text-red-500 bg-red-500/10 px-2 py-1 rounded-lg">${count} ASISTENCIAS</span>
+						</div>
+					`).join('');
+				}
+			}
+
+			if (window.lucide) lucide.createIcons();
+		}
 
 
 			// ==========================================
