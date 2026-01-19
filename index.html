@@ -727,49 +727,49 @@
 				</div>
             </div>
 
-			<!-- DASHBOARD PROFESOR: DESEMPEÑO PERSONAL -->
-            <div id="professor-dashboard-layout" class="hidden">
-                <div class="flex justify-between items-end mb-8">
-                    <div>
-                        <h2 class="text-4xl font-black italic text-white uppercase tracking-tighter">Mi Desempeño</h2>
-                        <p class="text-xs text-gray-500 font-bold uppercase tracking-widest mt-1">Análisis de Clases y Convocatoria</p>
-                    </div>
-                    <button onclick="showMyQR()" class="bg-white/5 hover:bg-white/10 border border-white/10 text-white px-5 py-3 rounded-2xl flex items-center gap-3 transition-all hover:scale-105 group">
-                        <div class="bg-white text-black p-1.5 rounded-lg group-hover:bg-red-600 group-hover:text-white transition-colors"><i data-lucide="qr-code" class="w-5 h-5"></i></div>
-                        <div class="text-left">
-                            <p class="text-[9px] text-gray-400 font-bold uppercase">Mi Acceso</p>
-                            <p class="text-[11px] font-black italic uppercase">Ver Mi QR</p>
-                        </div>
-                    </button>
-                </div>
+			<!-- DASHBOARD PROFESOR: Ahora con clase view-content para que se oculte al navegar -->
+			<div id="view-professor-dashboard" class="view-content hidden p-10">
+				<div class="flex justify-between items-end mb-8">
+					<div>
+						<h2 class="text-4xl font-black italic text-white uppercase tracking-tighter">Mi Desempeño</h2>
+						<p class="text-xs text-gray-500 font-bold uppercase tracking-widest mt-1">Análisis de Clases y Convocatoria</p>
+					</div>
+					<button onclick="showMyQR()" class="bg-white/5 hover:bg-white/10 border border-white/10 text-white px-5 py-3 rounded-2xl flex items-center gap-3 transition-all hover:scale-105 group">
+						<div class="bg-white text-black p-1.5 rounded-lg group-hover:bg-red-600 group-hover:text-white transition-colors"><i data-lucide="qr-code" class="w-5 h-5"></i></div>
+						<div class="text-left">
+							<p class="text-[9px] text-gray-400 font-bold uppercase">Mi Acceso</p>
+							<p class="text-[11px] font-black italic uppercase">Ver Mi QR</p>
+						</div>
+					</button>
+				</div>
 
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    <!-- RESUMEN DE ASISTENCIA -->
-                    <div class="glass-card p-8 rounded-[2.5rem] border-red-600/10 flex flex-col h-[400px]">
-                        <h4 class="text-sm font-black uppercase italic text-red-600 mb-6 tracking-widest border-b border-white/5 pb-4">Convocatoria Total</h4>
-                        <div class="flex-1 flex flex-col items-center justify-center">
-                            <span class="text-6xl font-black italic text-white" id="prof-total-alumnos">0</span>
-                            <p class="text-[10px] text-gray-500 font-black uppercase mt-2 tracking-widest">Alumnos este mes</p>
-                        </div>
-                    </div>
+				<div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+					<!-- CONVOCATORIA -->
+					<div class="glass-card p-8 rounded-[2.5rem] border-red-600/10 flex flex-col h-[400px]">
+						<h4 class="text-sm font-black uppercase italic text-red-600 mb-6 tracking-widest border-b border-white/5 pb-4">Convocatoria Total</h4>
+						<div class="flex-1 flex flex-col items-center justify-center">
+							<span class="text-6xl font-black italic text-white" id="prof-total-alumnos">0</span>
+							<p class="text-[10px] text-gray-500 font-black uppercase mt-2 tracking-widest">Alumnos este mes</p>
+						</div>
+					</div>
 
-                    <!-- CLASES MÁS FRECUENTADAS -->
-                    <div class="glass-card p-8 rounded-[2.5rem] border-white/5 flex flex-col h-[400px]">
-                        <h4 class="text-sm font-black uppercase italic text-white mb-6 tracking-widest border-b border-white/5 pb-4">Mis Clases Populares</h4>
-                        <div id="prof-top-clases" class="space-y-4 overflow-y-auto custom-scrollbar flex-1 pr-2">
-                            <p class="text-center text-gray-600 italic text-[10px] py-10">Cargando estadísticas...</p>
-                        </div>
-                    </div>
+					<!-- CLASES POPULARES -->
+					<div class="glass-card p-8 rounded-[2.5rem] border-white/5 flex flex-col h-[400px]">
+						<h4 class="text-sm font-black uppercase italic text-white mb-6 tracking-widest border-b border-white/5 pb-4">Mis Clases Populares</h4>
+						<div id="prof-top-clases" class="space-y-4 overflow-y-auto custom-scrollbar flex-1 pr-2">
+							<p class="text-center text-gray-600 italic text-[10px] py-10">Cargando estadísticas...</p>
+						</div>
+					</div>
 
-                    <!-- GRÁFICO DE RENDIMIENTO (Barras Simples) -->
-                    <div class="glass-card p-8 rounded-[2.5rem] border-white/5 flex flex-col h-[400px]">
-                        <h4 class="text-sm font-black uppercase italic text-gray-400 mb-6 tracking-widest border-b border-white/5 pb-4">Asistencia por Turno</h4>
-                        <div id="prof-performance-chart" class="flex-1 flex items-end justify-between gap-2 px-4 pb-4">
-                            <!-- Inyectado por JS -->
-                        </div>
-                    </div>
-                </div>
-            </div>
+					<!-- RANKING DE GUERREROS -->
+					<div class="glass-card p-8 rounded-[2.5rem] border-white/5 flex flex-col h-[400px]">
+						<h4 class="text-sm font-black uppercase italic text-gray-400 mb-6 tracking-widest border-b border-white/5 pb-4">Ranking de Asistencia</h4>
+						<div id="prof-dash-top-students" class="space-y-3 overflow-y-auto custom-scrollbar flex-1 pr-2">
+							<!-- Inyectado por JS -->
+						</div>
+					</div>
+				</div>
+			</div>
 
             <div id="view-cobrar" class="view-content hidden">
 			<div class="grid grid-cols-1 lg:grid-cols-3 gap-10 h-full">
@@ -3278,22 +3278,50 @@
         }
 
         function switchView(view) {
+			// 1. Ocultar TODAS las vistas estándar
 			document.querySelectorAll('.view-content').forEach(v => v.classList.remove('active'));
+			
+			// 2. Ocultar específicamente los layouts externos (Alumno y Profesor) para que no se solapen
+			const aluLayout = document.getElementById('alumno-dashboard-layout');
+			const profLayout = document.getElementById('professor-dashboard-layout');
+			if (aluLayout) aluLayout.classList.add('hidden');
+			if (profLayout) profLayout.classList.add('hidden');
+
+			// 3. Quitar estado activo de los botones de navegación
 			document.querySelectorAll('.nav-btn, .nav-item').forEach(b => b.classList.remove('active'));
-			document.getElementById('view-' + view).classList.add('active');
-			const n = document.getElementById('nav-' + view); if (n) n.classList.add('active');
+			
+			// 4. Activar la vista solicitada (si existe el elemento view-XXX)
+			const targetView = document.getElementById('view-' + view);
+			if (targetView) targetView.classList.add('active');
+			
+			const n = document.getElementById('nav-' + view); 
+			if (n) n.classList.add('active');
+			
 			document.getElementById('view-title').innerText = view.replace('-', ' ').toUpperCase();
 
+			// 5. Lógica de carga y visibilidad según la vista
 			if (view === 'calendario') renderCalendar();
 			if (view === 'cobrar') renderCobrar();
 			if (view === 'rutinas') renderRutinas();
 
-			// --- MEJORA: Agregamos la condición para el Profesor sin tocar la del Alumno ---
-			if (view === 'dashboard' && state.user?.rol_nombre === "Alumno") renderStudentDashboard();
-			if (view === 'dashboard' && state.user?.rol_nombre === "Profesor") loadProfessorDashboard();
+			// DASHBOARDS: Manejo de visibilidad de los layouts externos
+			if (view === 'dashboard') {
+				const rol = state.user?.rol_nombre;
+				if (rol === "Alumno") {
+					if (aluLayout) aluLayout.classList.remove('hidden');
+					renderStudentDashboard();
+				} else if (rol === "Profesor") {
+					if (profLayout) profLayout.classList.remove('hidden');
+					loadProfessorDashboard();
+				} else {
+					// Si es Admin/Administración, el switchView inicial ya activó 'view-dashboard'
+				}
+			}
 
 			if (view === 'acceso-virtual') renderAccesos();
 			if (view === 'alumnos') renderAlumnosSection();
+
+			// 6. Lógica de Perfil (Respetando tu versión completa)
 			if (view === 'perfil' && state.user) {
 				const u = state.user;
 				document.getElementById('prof-name').innerText = u.nombre_completo || "Usuario Vikingo";
@@ -3306,23 +3334,32 @@
 				document.getElementById('prof-input-email').value = u.email || "";
 
 				if (u.rol_nombre === "Alumno") {
-					document.getElementById('perfil-datos-fisicos').classList.remove('hidden');
-					document.getElementById('perfil-datos-fisicos').style.display = 'grid';
+					const fisicos = document.getElementById('perfil-datos-fisicos');
+					if (fisicos) {
+						fisicos.classList.remove('hidden');
+						fisicos.style.display = 'grid';
+					}
 					document.getElementById('prof-input-peso').value = u.peso || "";
 					document.getElementById('prof-input-altura').value = u.altura || "";
 					document.getElementById('prof-input-imc').value = u.imc || "";
-					document.getElementById('plan-alumno-info').classList.remove('hidden');
+					
+					const planInfo = document.getElementById('plan-alumno-info');
+					if (planInfo) planInfo.classList.remove('hidden');
 					document.getElementById('perfil-plan-nombre').innerText = u.plan?.nombre || "SIN PLAN";
 					document.getElementById('perfil-vencimiento').innerText = "Vence: " + (u.fecha_vencimiento || "-");
 				} else {
-					document.getElementById('perfil-datos-fisicos').classList.add('hidden');
-					document.getElementById('perfil-datos-fisicos').style.display = 'none';
-					document.getElementById('plan-alumno-info').classList.add('hidden');
+					const fisicos = document.getElementById('perfil-datos-fisicos');
+					if (fisicos) {
+						fisicos.classList.add('hidden');
+						fisicos.style.display = 'none';
+					}
+					const planInfo = document.getElementById('plan-alumno-info');
+					if (planInfo) planInfo.classList.add('hidden');
 				}
 			}
 
 			applyPermissions();
-			lucide.createIcons();
+			if(window.lucide) lucide.createIcons();
 		}
 
 		async function handleLogin(e) {
