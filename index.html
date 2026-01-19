@@ -1644,25 +1644,31 @@
 			const rol = state.user.rol_nombre || "";
 			
 			// IDs de secciones y botones
-			const navAdminSection = document.getElementById('nav-section-admin'); // Contiene Dashboard, Perfil, Alumnos
-			const navStaffSection = document.getElementById('nav-section-staff'); // Contiene Profesores/Administrativos
-			const navOperativaSection = document.getElementById('nav-section-operativa'); // Facturación, Caja, Stock
-			const navVirtualSection = document.getElementById('nav-section-virtual'); // Acceso Virtual (Molinete)
+			const navAdminSection = document.getElementById('nav-section-admin'); 
+			const navStaffSection = document.getElementById('nav-section-staff'); 
+			const navOperativaSection = document.getElementById('nav-section-operativa'); 
+			const navVirtualSection = document.getElementById('nav-section-virtual'); 
 			const btnPlanes = document.getElementById('nav-planes');
 			const btnClases = document.getElementById('nav-clases');
 			const btnAlumnos = document.getElementById('nav-alumnos');
 
-			// Reset general
+			// Recuadro "Control Staff" en el Dashboard (Panel Rojo)
+			const staffPanel = document.querySelector('.border-red-600\\/20');
+
+			// 1. Reset general: mostrar todo antes de filtrar
 			const allElems = [navAdminSection, navStaffSection, navOperativaSection, navVirtualSection, btnPlanes, btnClases, btnAlumnos];
 			allElems.forEach(el => { if(el) el.style.display = 'block'; });
+			if(staffPanel) staffPanel.style.display = 'flex';
 
-			// RESTRICCIONES SEGÚN ROL
+			// 2. RESTRICCIONES SEGÚN ROL
 			if (rol === "Alumno") {
+				// El alumno no gestiona nada del gimnasio
 				if(navStaffSection) navStaffSection.style.display = 'none';
 				if(navOperativaSection) navOperativaSection.style.display = 'none';
 				if(navVirtualSection) navVirtualSection.style.display = 'none';
 				if(btnPlanes) btnPlanes.style.display = 'none';
 				if(btnClases) btnClases.style.display = 'none';
+				if(btnAlumnos) btnAlumnos.style.display = 'none';
 			}
 
 			if (rol === "Profesor") {
@@ -1675,8 +1681,9 @@
 			}
 
 			if (rol === "Administracion" || rol === "Administrativo") {
+				// REGLA: El administrativo es controlado, no controla al staff
 				if(navStaffSection) navStaffSection.style.display = 'none';
-				// El administrativo NO debe ver la sección Staff.
+				if(staffPanel) staffPanel.style.setProperty('display', 'none', 'important');
 			}
 
 			if(window.lucide) lucide.createIcons();
