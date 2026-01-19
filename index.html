@@ -1643,40 +1643,49 @@
 			if (!state.user) return;
 			const rol = (state.user.rol_nombre || "").toLowerCase();
 			
-			// IDs de las secciones de tu menú e interfaz
-			const secciones = {
+			// 1. CONTENEDORES (Los que tienen el título: Operación, Seguridad, etc.)
+			// Estos DEBEN ser 'block' para que el título quede arriba de los botones.
+			const contenedoresSeccion = {
 				staff: document.getElementById('nav-section-staff'),
 				operativa: document.getElementById('nav-section-operativa'),
-				virtual: document.getElementById('nav-section-virtual'),
-				alumnos: document.getElementById('nav-alumnos'),
-				planes: document.getElementById('nav-planes'),
-				clases: document.getElementById('nav-clases')
+				virtual: document.getElementById('nav-section-virtual')
 			};
 
-			// 1. Reset: Mostramos todo por defecto usando FLEX para no romper el diseño lateral
-			Object.values(secciones).forEach(el => {
+			// 2. ITEMS INDIVIDUALES (Los botones con icono + texto)
+			// Estos DEBEN ser 'flex' para que el icono y el texto estén en la misma línea.
+			const itemsMenu = {
+				alumnos: document.getElementById('nav-alumnos'),
+				planes: document.getElementById('nav-planes'),
+				clases: document.getElementById('nav-clases'),
+				facturacion: document.getElementById('nav-cobrar'),
+				acceso: document.getElementById('nav-acceso-virtual')
+			};
+
+			// RESET: Contenedores a BLOCK
+			Object.values(contenedoresSeccion).forEach(el => {
+				if (el) el.style.setProperty('display', 'block', 'important');
+			});
+
+			// RESET: Items a FLEX
+			Object.values(itemsMenu).forEach(el => {
 				if (el) el.style.setProperty('display', 'flex', 'important');
 			});
 
-			// 2. Filtro para Alumnos y Profesores
+			// --- LÓGICA POR ROL ---
+
+			// A. Alumnos y Profesores (Ocultan casi todo)
 			if (rol === "alumno" || rol === "profesor") {
-				const ocultar = ['staff', 'operativa', 'virtual', 'alumnos', 'planes', 'clases'];
-				ocultar.forEach(key => {
-					if (secciones[key]) {
-						secciones[key].style.setProperty('display', 'none', 'important');
-					}
-				});
+				Object.values(contenedoresSeccion).forEach(el => { if(el) el.style.setProperty('display', 'none', 'important'); });
+				Object.values(itemsMenu).forEach(el => { if(el) el.style.setProperty('display', 'none', 'important'); });
 			}
 
-			// 3. Caso Administrativo
+			// B. Administrativo (Oculta solo Staff y Control Staff en dashboard)
 			else if (rol === "administracion" || rol === "administrativo") {
-				// Ocultar sección Staff en el menú
-				if (secciones.staff) secciones.staff.style.setProperty('display', 'none', 'important');
+				if (contenedoresSeccion.staff) contenedoresSeccion.staff.style.setProperty('display', 'none', 'important');
 				
-				// CORRECCIÓN: Administrativo NO ve "Control Staff" en el Dashboard
+				// Ocultar el panel de "Control Staff" del Dashboard
 				const staffDashboardPanel = document.getElementById('dash-staff-access');
 				if (staffDashboardPanel) {
-					// Buscamos el contenedor padre (el glass-card) para ocultarlo entero
 					const card = staffDashboardPanel.closest('.glass-card');
 					if (card) card.style.setProperty('display', 'none', 'important');
 				}
