@@ -5247,26 +5247,6 @@ async function loadProfesores() {
 				
 				if(window.lucide) lucide.createIcons();
 			}
-			
-			// Función para simular ingresos (puedes conectarla luego a tu backend o QR)
-			function simularAcceso() {
-				const nombres = ["Ragnar Lothbrok", "Lagertha", "Bjorn Ironside", "Ivar the Boneless", "Ubbe"];
-				const metodos = ["QR SCAN", "MOLINETE", "MANUAL"];
-				
-				const nuevoIngreso = {
-					nombre: nombres[Math.floor(Math.random() * nombres.length)],
-					dni: Math.floor(Math.random() * 10000000 + 30000000).toString(),
-					fecha: new Date().toLocaleTimeString(), // Solo hora para la simulación rápida
-					metodo: metodos[Math.floor(Math.random() * metodos.length)],
-					estado: Math.random() > 0.2 ? "AUTORIZADO" : "DENEGADO (Vencido)"
-				};
-
-				state.accesos.unshift(nuevoIngreso); // Agregar al inicio
-				if (state.accesos.length > 50) state.accesos.pop(); // Limitar historial visual
-				
-				renderAccesos();
-				showVikingToast("Nuevo ingreso detectado");
-			}
 
         document.getElementById('form-nuevo-ejercicio-lib').onsubmit = async (e) => {
             e.preventDefault();
