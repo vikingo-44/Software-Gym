@@ -5340,37 +5340,58 @@ async function loadProfesores() {
 			
 			// FUNCIONES PARA EL MODAL DE MI QR
 				async function showMyQR() {
-					const user = state.user;
-					if (!user) return showVikingToast("Error: Sesión no encontrada", true);
+					// Obtenemos el usuario del estado o del localStorage por si se perdió el estado
+					const user = state.user || JSON.parse(localStorage.getItem('user'));
+					
+					if (!user) {
+						console.error("❌ showMyQR: No hay sesión de usuario activa.");
+						if (typeof showVikingToast === 'function') showVikingToast("Sesión no encontrada", true);
+						return;
+					}
 
-					// 1. VALIDACIÓN SOLO PARA ALUMNOS
+					// --- REGLA PARA PROFESORES / STAFF ---
+					// Si NO es Alumno, saltamos cualquier validación de vencimiento
 					if (user.rol_nombre === "Alumno") {
 						const hoy = new Date().toISOString().split('T')[0];
 						const vencimiento = user.fecha_vencimiento || "0000-00-00";
+
 						if (vencimiento < hoy) {
-							showVikingToast("ACCESO DENEGADO: Tu plan ha vencido.", true);
+							if (typeof showVikingToast === 'function') showVikingToast("ACCESO DENEGADO: Plan vencido.", true);
 							return;
 						}
 					}
 
-					// 2. PROCEDER (Staff entra siempre)
+					// --- GENERACIÓN Y APERTURA ---
 					const modal = document.getElementById('modal-mi-qr');
 					const img = document.getElementById('img-mi-qr');
 					const dniTxt = document.getElementById('qr-user-dni');
 					const nameTxt = document.getElementById('qr-user-name');
 
 					if (modal && img) {
-						dniTxt.innerText = user.dni;
-						nameTxt.innerText = user.nombre_completo || "Guerrero";
-						
-						const hash = await generateVikingHash(user.dni);
-						const qrData = `${user.dni}:${hash}`;
-						
-						img.src = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(qrData)}&color=000000&bgcolor=ffffff&margin=10`;
+						try {
+							// Actualizar textos
+							if (dniTxt) dniTxt.innerText = user.dni;
+							if (nameTxt) nameTxt.innerText = user.nombre_completo || "Personal Staff";
+							
+							// Generar los datos del QR (DNI + FIRMA)
+							const hash = await generateVikingHash(user.dni);
+							const qrData = `${user.dni}:${hash}`;
+							
+							// Cargar imagen de la API de QR
+							img.src = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(qrData)}&color=000000&bgcolor=ffffff&margin=10`;
 
-						modal.classList.remove('hidden');
-						modal.classList.add('flex');
-						if (window.lucide) lucide.createIcons();
+							// Forzar visibilidad: quitamos hidden y ponemos flex + display block por seguridad
+							modal.classList.remove('hidden');
+							modal.style.display = 'flex'; 
+							modal.classList.add('flex');
+
+							if (window.lucide) lucide.createIcons();
+							console.log("✅ QR generado con éxito para:", user.rol_nombre);
+						} catch (error) {
+							console.error("❌ Error al generar el QR:", error);
+						}
+					} else {
+						console.error("❌ Error: No se encontró el modal-mi-qr o la imagen en el HTML.");
 					}
 				}
 
