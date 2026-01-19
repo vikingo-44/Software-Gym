@@ -3257,17 +3257,18 @@
         function toggleSidebar() { document.getElementById('sidebar').classList.toggle('sidebar-collapsed'); lucide.createIcons(); }
         function toggleSub(id) { document.getElementById(id).classList.toggle('hidden'); }
         function openModal(id) { document.getElementById(id).style.display = 'flex'; }
-        function closeModal(id) { 
-            document.getElementById(id).style.display = 'none'; 
-            const f = document.querySelector(`#${id} form`); 
-            if (f) {
-                f.reset();
-                if(id === 'modal-clase') {
-                    document.querySelectorAll('input[name="cl-dias-check"]').forEach(c => c.checked = false);
-                    document.getElementById('cl-schedule-slots').innerHTML = '<p class="text-[10px] text-gray-600 italic">Selecciona días arriba para asignar horarios</p>';
-                }
-            }
-        }
+        function closeModal(id) {
+			const modal = document.getElementById(id);
+			if (modal) {
+				modal.style.display = 'none'; // ELIMINA EL BLOQUEO INLINE
+				modal.classList.add('hidden');
+				modal.classList.remove('flex');
+				
+				// Reset de formularios si existen dentro
+				const form = modal.querySelector('form');
+				if (form) form.reset();
+			}
+		}
 
         function switchView(view) {
 			// 1. Ocultar TODAS las vistas que tengan la clase .view-content
@@ -5340,28 +5341,25 @@ async function loadProfesores() {
 			
 			// FUNCIONES PARA EL MODAL DE MI QR
 				async function showMyQR() {
-					// Obtenemos el usuario del estado o del localStorage por si se perdió el estado
+					// Intentamos obtener el usuario del estado o del storage
 					const user = state.user || JSON.parse(localStorage.getItem('user'));
 					
 					if (!user) {
-						console.error("❌ showMyQR: No hay sesión de usuario activa.");
-						if (typeof showVikingToast === 'function') showVikingToast("Sesión no encontrada", true);
+						showVikingToast("Sesión no encontrada", true);
 						return;
 					}
 
-					// --- REGLA PARA PROFESORES / STAFF ---
-					// Si NO es Alumno, saltamos cualquier validación de vencimiento
+					// VALIDACIÓN: Solo los Alumnos chequean vencimiento. 
+					// Profesores, Admins y Staff pasan directo.
 					if (user.rol_nombre === "Alumno") {
 						const hoy = new Date().toISOString().split('T')[0];
 						const vencimiento = user.fecha_vencimiento || "0000-00-00";
-
 						if (vencimiento < hoy) {
-							if (typeof showVikingToast === 'function') showVikingToast("ACCESO DENEGADO: Plan vencido.", true);
+							showVikingToast("ACCESO DENEGADO: Plan vencido.", true);
 							return;
 						}
 					}
 
-					// --- GENERACIÓN Y APERTURA ---
 					const modal = document.getElementById('modal-mi-qr');
 					const img = document.getElementById('img-mi-qr');
 					const dniTxt = document.getElementById('qr-user-dni');
@@ -5369,29 +5367,25 @@ async function loadProfesores() {
 
 					if (modal && img) {
 						try {
-							// Actualizar textos
 							if (dniTxt) dniTxt.innerText = user.dni;
 							if (nameTxt) nameTxt.innerText = user.nombre_completo || "Personal Staff";
 							
-							// Generar los datos del QR (DNI + FIRMA)
+							// Generar Firma de Seguridad
 							const hash = await generateVikingHash(user.dni);
 							const qrData = `${user.dni}:${hash}`;
 							
-							// Cargar imagen de la API de QR
+							// Cargar API de QR
 							img.src = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(qrData)}&color=000000&bgcolor=ffffff&margin=10`;
 
-							// Forzar visibilidad: quitamos hidden y ponemos flex + display block por seguridad
+							// ABRIR: Quitamos hidden y forzamos flex tanto en clase como en style inline
 							modal.classList.remove('hidden');
-							modal.style.display = 'flex'; 
 							modal.classList.add('flex');
+							modal.style.setProperty('display', 'flex', 'important'); 
 
 							if (window.lucide) lucide.createIcons();
-							console.log("✅ QR generado con éxito para:", user.rol_nombre);
 						} catch (error) {
-							console.error("❌ Error al generar el QR:", error);
+							console.error("Error QR:", error);
 						}
-					} else {
-						console.error("❌ Error: No se encontró el modal-mi-qr o la imagen en el HTML.");
 					}
 				}
 
@@ -5400,6 +5394,7 @@ async function loadProfesores() {
 					if (modal) {
 						modal.classList.add('hidden');
 						modal.classList.remove('flex');
+						modal.style.display = 'none'; // ELIMINA EL BLOQUEO
 					}
 				}
 
