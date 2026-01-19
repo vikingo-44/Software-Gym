@@ -727,7 +727,7 @@
 				</div>
             </div>
 
-			<!-- DASHBOARD PROFESOR: Ahora con clase view-content para que se oculte al navegar -->
+			<!-- DASHBOARD PROFESOR CORREGIDO -->
 			<div id="view-professor-dashboard" class="view-content hidden p-10">
 				<div class="flex justify-between items-end mb-8">
 					<div>
@@ -744,26 +744,26 @@
 				</div>
 
 				<div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-					<!-- CONVOCATORIA -->
+					<!-- CONVOCATORIA (ID corregido) -->
 					<div class="glass-card p-8 rounded-[2.5rem] border-red-600/10 flex flex-col h-[400px]">
 						<h4 class="text-sm font-black uppercase italic text-red-600 mb-6 tracking-widest border-b border-white/5 pb-4">Convocatoria Total</h4>
 						<div class="flex-1 flex flex-col items-center justify-center">
-							<span class="text-6xl font-black italic text-white" id="prof-total-alumnos">0</span>
-							<p class="text-[10px] text-gray-500 font-black uppercase mt-2 tracking-widest">Alumnos este mes</p>
+							<span class="text-6xl font-black italic text-white" id="prof-dash-total-students">0</span>
+							<p class="text-[10px] text-gray-500 font-black uppercase mt-2 tracking-widest">Alumnos totales</p>
 						</div>
 					</div>
 
-					<!-- CLASES POPULARES -->
+					<!-- CLASES HOY (ID corregido para que coincida con JS) -->
 					<div class="glass-card p-8 rounded-[2.5rem] border-white/5 flex flex-col h-[400px]">
-						<h4 class="text-sm font-black uppercase italic text-white mb-6 tracking-widest border-b border-white/5 pb-4">Mis Clases Populares</h4>
-						<div id="prof-top-clases" class="space-y-4 overflow-y-auto custom-scrollbar flex-1 pr-2">
-							<p class="text-center text-gray-600 italic text-[10px] py-10">Cargando estadísticas...</p>
+						<h4 class="text-sm font-black uppercase italic text-white mb-6 tracking-widest border-b border-white/5 pb-4">Mis Clases</h4>
+						<div id="prof-dash-today-classes" class="space-y-4 overflow-y-auto custom-scrollbar flex-1 pr-2">
+							<p class="text-center text-gray-600 italic text-[10px] py-10">Cargando clases...</p>
 						</div>
 					</div>
 
-					<!-- RANKING DE GUERREROS -->
+					<!-- RANKING -->
 					<div class="glass-card p-8 rounded-[2.5rem] border-white/5 flex flex-col h-[400px]">
-						<h4 class="text-sm font-black uppercase italic text-gray-400 mb-6 tracking-widest border-b border-white/5 pb-4">Ranking de Asistencia</h4>
+						<h4 class="text-sm font-black uppercase italic text-gray-400 mb-6 tracking-widest border-b border-white/5 pb-4">Top 5 Alumnos</h4>
 						<div id="prof-dash-top-students" class="space-y-3 overflow-y-auto custom-scrollbar flex-1 pr-2">
 							<!-- Inyectado por JS -->
 						</div>
@@ -3278,63 +3278,89 @@
         }
 
         function switchView(view) {
-			// 1. Ocultar TODAS las vistas estándar
-			document.querySelectorAll('.view-content').forEach(v => v.classList.remove('active'));
-			
-			// 2. Ocultar específicamente los layouts externos (Alumno y Profesor) para que no se solapen
+			// 1. Ocultar TODAS las vistas que tengan la clase .view-content
+			document.querySelectorAll('.view-content').forEach(v => {
+				v.classList.remove('active');
+				v.classList.add('hidden');
+			});
+
+			// 2. Referencias a los layouts específicos (IDs que deben existir en tu HTML)
+			const adminLayout = document.getElementById('admin-dashboard-layout');
 			const aluLayout = document.getElementById('alumno-dashboard-layout');
-			const profLayout = document.getElementById('professor-dashboard-layout');
+			// Nota: En tu HTML el del profesor es "view-professor-dashboard", no un layout interno
+			
+			// Ocultar sub-layouts por defecto
+			if (adminLayout) adminLayout.classList.add('hidden');
 			if (aluLayout) aluLayout.classList.add('hidden');
-			if (profLayout) profLayout.classList.add('hidden');
 
 			// 3. Quitar estado activo de los botones de navegación
 			document.querySelectorAll('.nav-btn, .nav-item').forEach(b => b.classList.remove('active'));
-			
-			// 4. Activar la vista solicitada (si existe el elemento view-XXX)
-			const targetView = document.getElementById('view-' + view);
-			if (targetView) targetView.classList.add('active');
-			
-			const n = document.getElementById('nav-' + view); 
-			if (n) n.classList.add('active');
-			
-			document.getElementById('view-title').innerText = view.replace('-', ' ').toUpperCase();
 
-			// 5. Lógica de carga y visibilidad según la vista
-			if (view === 'calendario') renderCalendar();
-			if (view === 'cobrar') renderCobrar();
-			if (view === 'rutinas') renderRutinas();
+			// 4. Lógica especial para el Dashboard según el ROL
+			let targetId = 'view-' + view;
 
-			// DASHBOARDS: Manejo de visibilidad de los layouts externos
 			if (view === 'dashboard') {
 				const rol = state.user?.rol_nombre;
+				
 				if (rol === "Alumno") {
+					targetId = 'view-dashboard'; // Usamos el contenedor base
 					if (aluLayout) aluLayout.classList.remove('hidden');
 					renderStudentDashboard();
-				} else if (rol === "Profesor") {
-					if (profLayout) profLayout.classList.remove('hidden');
+				} 
+				else if (rol === "Profesor") {
+					// En tu HTML, el dashboard de profesor es su propia vista independiente
+					targetId = 'view-professor-dashboard'; 
 					loadProfessorDashboard();
-				} else {
-					// Si es Admin/Administración, el switchView inicial ya activó 'view-dashboard'
+				} 
+				else {
+					// Admin / Administración
+					targetId = 'view-dashboard';
+					if (adminLayout) adminLayout.classList.remove('hidden');
+					if (typeof loadDashboard === 'function') loadDashboard();
 				}
 			}
 
+			// 5. Activar la vista final resultante
+			const targetView = document.getElementById(targetId);
+			if (targetView) {
+				targetView.classList.add('active');
+				targetView.classList.remove('hidden');
+			}
+
+			// 6. Actualizar UI de navegación y títulos
+			const n = document.getElementById('nav-' + view); 
+			if (n) n.classList.add('active');
+			
+			const titleEl = document.getElementById('view-title');
+			if (titleEl) titleEl.innerText = view.replace('-', ' ').toUpperCase();
+
+			// 7. Cargas de datos específicas por sección
+			if (view === 'calendario') renderCalendar();
+			if (view === 'cobrar') renderCobrar();
+			if (view === 'rutinas') renderRutinas();
 			if (view === 'acceso-virtual') renderAccesos();
 			if (view === 'alumnos') renderAlumnosSection();
 
-			// 6. Lógica de Perfil (Respetando tu versión completa)
+			// 8. Lógica de Perfil (Tu versión completa)
 			if (view === 'perfil' && state.user) {
 				const u = state.user;
+				const initials = u.nombre_completo ? u.nombre_completo.split(' ').filter(n => n).map(n => n[0]).join('').toUpperCase() : "??";
+				
+				// Actualizar textos básicos
 				document.getElementById('prof-name').innerText = u.nombre_completo || "Usuario Vikingo";
 				document.getElementById('prof-role').innerText = u.rol_nombre || "Staff";
-				const initials = u.nombre_completo ? u.nombre_completo.split(' ').filter(n => n).map(n => n[0]).join('').toUpperCase() : "??";
 				document.getElementById('user-initials').innerText = initials;
 				document.getElementById('prof-initials-view').innerText = initials;
+				
+				// Llenar inputs
 				document.getElementById('prof-input-name').value = u.nombre_completo || "";
 				document.getElementById('prof-input-dni').value = u.dni || "";
 				document.getElementById('prof-input-email').value = u.email || "";
 
+				const fisicos = document.getElementById('perfil-datos-fisicos');
+				const planInfo = document.getElementById('plan-alumno-info');
+
 				if (u.rol_nombre === "Alumno") {
-					const fisicos = document.getElementById('perfil-datos-fisicos');
 					if (fisicos) {
 						fisicos.classList.remove('hidden');
 						fisicos.style.display = 'grid';
@@ -3343,23 +3369,21 @@
 					document.getElementById('prof-input-altura').value = u.altura || "";
 					document.getElementById('prof-input-imc').value = u.imc || "";
 					
-					const planInfo = document.getElementById('plan-alumno-info');
 					if (planInfo) planInfo.classList.remove('hidden');
 					document.getElementById('perfil-plan-nombre').innerText = u.plan?.nombre || "SIN PLAN";
 					document.getElementById('perfil-vencimiento').innerText = "Vence: " + (u.fecha_vencimiento || "-");
 				} else {
-					const fisicos = document.getElementById('perfil-datos-fisicos');
 					if (fisicos) {
 						fisicos.classList.add('hidden');
 						fisicos.style.display = 'none';
 					}
-					const planInfo = document.getElementById('plan-alumno-info');
 					if (planInfo) planInfo.classList.add('hidden');
 				}
 			}
 
+			// 9. Finalizar
 			applyPermissions();
-			if(window.lucide) lucide.createIcons();
+			if (window.lucide) lucide.createIcons();
 		}
 
 		async function handleLogin(e) {
