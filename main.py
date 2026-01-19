@@ -450,88 +450,103 @@ def validar_acceso_qr(data: AccessCheck, db: Session = Depends(database.get_db))
     """
     raw_data = data.qr_data
     
+    # Preparar respuesta base
+    final_response = {
+        "status": "DENIED",
+        "message": "Error desconocido",
+        "nombre": "Desconocido",
+        "rol": "N/A",
+        "color": "red"
+    }
+
     # 1. Verificar formato del QR
     if ":" not in raw_data:
-        return {
-            "status": "DENIED",
-            "message": "Formato de QR no válido",
-            "nombre": "Desconocido",
-            "rol": "N/A",
-            "color": "red"
-        }
+        final_response["message"] = "Formato de QR no válido"
+        return final_response
 
     dni_recibido, hash_recibido = raw_data.split(":")
 
     # 2. Validar Hash de seguridad
-    # Re-calculamos el hash en el servidor usando el DNI y nuestra clave secreta
     esperado = hashlib.sha256(f"{dni_recibido}{SECRET_KEY}".encode()).hexdigest()
     
     if hash_recibido != esperado:
-        return {
-            "status": "DENIED",
-            "message": "Código QR no autorizado o falsificado",
-            "nombre": "Error Seguridad",
-            "rol": "N/A",
-            "color": "red"
-        }
+        final_response["message"] = "Código QR no autorizado o falsificado"
+        final_response["nombre"] = "Error Seguridad"
+        return final_response
 
-    # 3. Buscar usuario por DNI si el hash es correcto
+    # 3. Buscar usuario por DNI
     user = db.query(models.Usuario).options(joinedload(models.Usuario.perfil)).filter(models.Usuario.dni == dni_recibido).first()
     
     if not user:
-        return {
-            "status": "DENIED",
-            "message": "Usuario no registrado",
-            "nombre": "Desconocido",
-            "rol": "Externo",
-            "color": "red"
-        }
+        final_response["message"] = "Usuario no registrado"
+        return final_response
 
-    rol = user.perfil.nombre.lower() if user.perfil else "alumno"
+    # Datos básicos encontrados
+    final_response["nombre"] = user.nombre_completo
+    final_response["rol"] = user.perfil.nombre if user.perfil else "Usuario"
+    rol_lower = final_response["rol"].lower()
 
-    # Lista de roles que pasan SIEMPRE (Staff)
-    roles_staff = ["administracion", "profesor", "staff", "admin", "dueño"]
+    # Lógica de Roles Staff
+    roles_staff = ["administracion", "profesor", "staff", "admin", "dueño", "supervisor"]
     
-    if rol in roles_staff:
-        return {
-            "status": "AUTHORIZED",
-            "message": "Bienvenido Staff",
-            "nombre": user.nombre_completo,
-            "rol": user.perfil.nombre,
-            "color": "blue"
-        }
-
+    if rol_lower in roles_staff:
+        final_response["status"] = "AUTHORIZED"
+        final_response["message"] = "Bienvenido Staff"
+        final_response["color"] = "blue"
+    
     # Validación para Alumnos
-    if user.fecha_vencimiento:
+    elif user.fecha_vencimiento:
         if user.fecha_vencimiento >= date.today():
             dias_rest = (user.fecha_vencimiento - date.today()).days
-            msg = f"Pase Válido ({dias_rest} días rest.)"
-            if dias_rest <= 3: msg = "¡Atención: Próximo a vencer!"
-            
-            return {
-                "status": "AUTHORIZED",
-                "message": msg,
-                "nombre": user.nombre_completo,
-                "rol": "Alumno",
-                "color": "green"
-            }
+            final_response["status"] = "AUTHORIZED"
+            final_response["message"] = f"Pase Válido ({dias_rest} días rest.)"
+            if dias_rest <= 3: final_response["message"] = "¡Atención: Próximo a vencer!"
+            final_response["color"] = "green"
         else:
-            return {
-                "status": "DENIED",
-                "message": f"Plan Vencido el {user.fecha_vencimiento}",
-                "nombre": user.nombre_completo,
-                "rol": "Alumno",
-                "color": "red"
-            }
+            final_response["status"] = "DENIED"
+            final_response["message"] = f"Plan Vencido el {user.fecha_vencimiento}"
+            final_response["color"] = "red"
     else:
-        # Alumno sin plan registrado
-        return {
-            "status": "DENIED",
-            "message": "Sin plan activo asignado",
-            "nombre": user.nombre_completo,
-            "rol": "Alumno",
-            "color": "red"
-        }
+        final_response["status"] = "DENIED"
+        final_response["message"] = "Sin plan activo asignado"
+
+    # --- REGISTRO EN HISTORIAL (SQL) ---
+    try:
+        nuevo_acceso = models.Acceso(
+            usuario_id=user.id,
+            dni=dni_recibido,
+            nombre=user.nombre_completo,
+            metodo="QR SCAN",
+            estado=final_response["status"],
+            fecha=datetime.now()
+        )
+        db.add(nuevo_acceso)
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error al guardar log de acceso: {e}")
+
+    return final_response
+
+# --- NUEVO: HISTORIAL DE ACCESOS ---
+@app.get("/api/acceso/historial", tags=["Seguridad"])
+def get_historial_accesos(db: Session = Depends(database.get_db)):
+    """
+    Trae los últimos 50 registros de acceso para la vista de Acceso Virtual.
+    """
+    try:
+        accesos = db.query(models.Acceso).order_by(models.Acceso.fecha.desc()).limit(50).all()
+        return [{
+            "id": a.id,
+            "nombre": a.nombre,
+            "dni": a.dni,
+            "fecha": a.fecha.strftime("%H:%M:%S - %d/%m/%Y"),
+            "metodo": a.metodo,
+            "estado": "AUTHORIZED" if a.estado == "AUTHORIZED" else "DENIED"
+        } for a in accesos]
+    except Exception as e:
+        logger.error(f"Error al obtener historial: {e}")
+        return []
 
 # --- ALUMNOS ---
 @app.get("/api/alumnos", response_model=List[UsuarioResponse], tags=["Alumnos"])
@@ -575,8 +590,6 @@ def create_alumno(alumno: AlumnoUpdate, db: Session = Depends(database.get_db)):
         if not perfil:
             raise HTTPException(status_code=500, detail="Perfil Alumno no encontrado")
             
-        # Lógica de password: si no se envía, se usa el DNI.
-        # Forzamos conversión a string para evitar líos con el motor de hashing.
         raw_password = str(alumno.password).strip() if alumno.password else str(alumno.dni).strip()
         hashed_pass = get_password_hash(raw_password)
 
@@ -608,7 +621,6 @@ def create_alumno(alumno: AlumnoUpdate, db: Session = Depends(database.get_db)):
     except Exception as e:
         db.rollback()
         logger.error(f"Error crítico al crear alumno: {str(e)}")
-        # Ahora el error de "72 bytes" no debería existir más.
         raise HTTPException(status_code=500, detail=f"Error interno: {str(e)}")
 
 @app.put("/api/alumnos/{id}", tags=["Alumnos"])
@@ -971,9 +983,7 @@ def procesar_cobro(data: TransactionCreate, db: Session = Depends(database.get_d
         if (data.tipo == "Plan" or "plan" in data.tipo.lower()) and data.alumno_id:
             alumno = db.query(models.Usuario).filter(models.Usuario.id == data.alumno_id).first()
             
-            # Buscar el Plan usando el producto_id
             plan = db.query(models.TipoPlan).filter(models.TipoPlan.id == data.producto_id).first()
-            # Si no lo encuentra como TipoPlan, intentar buscar en tabla Plan
             if not plan:
                  plan = db.query(models.Plan).filter(models.Plan.id == data.producto_id).first()
 
@@ -983,18 +993,15 @@ def procesar_cobro(data: TransactionCreate, db: Session = Depends(database.get_d
                 alumno.fecha_ultimo_pago = hoy 
                 alumno.fecha_ultima_renovacion = hoy 
                 
-                # Duración
                 dias = 30
                 if hasattr(plan, 'duracion_dias') and plan.duracion_dias: dias = plan.duracion_dias
                 
                 alumno.fecha_vencimiento = hoy + timedelta(days=dias)
                 
                 alumno.estado_cuenta = "Al día"
-                # Asignar ID de plan si existe en la tabla Plan
                 if hasattr(plan, 'tipo_plan_id'): # Es un objeto Plan
                     alumno.plan_id = plan.id
                 
-                # Reseteo de clases
                 if hasattr(plan, 'clases_mensuales') and plan.clases_mensuales:
                     alumno.clases_restantes = plan.clases_mensuales
 
@@ -1040,7 +1047,6 @@ def create_plan_rutina(data: PlanRutinaCreate, db: Session = Depends(database.ge
         if not user:
             raise HTTPException(status_code=404, detail="Usuario no encontrado")
 
-        # Desactivar rutinas anteriores
         db.query(models.PlanRutina).filter(
             models.PlanRutina.usuario_id == data.usuario_id
         ).update({"activo": False}, synchronize_session=False)
@@ -1068,7 +1074,7 @@ def create_plan_rutina(data: PlanRutinaCreate, db: Session = Depends(database.ge
                 ej_en_rut = models.EjercicioEnRutina(
                     dia_id=nuevo_dia.id,
                     ejercicio_id=e.ejercicio_id,
-                    comentario=e.comentario
+                    commentario=e.comentario
                 )
                 db.add(ej_en_rut)
                 db.flush()

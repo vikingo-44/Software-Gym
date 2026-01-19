@@ -792,6 +792,7 @@
                         <div class="w-32 h-32 rounded-[2.5rem] viking-bg-red flex items-center justify-center font-black text-black text-4xl italic shadow-2xl mb-6" id="prof-initials-view">??</div>
                         <h3 class="text-xl font-black uppercase italic text-center" id="prof-name">Cargando...</h3>
                         <p class="text-red-600 text-xs font-black uppercase tracking-widest mb-8" id="prof-role">Rol</p>
+						<p id="prof-display-email" class="text-gray-500 font-medium text-[10px] mt-1 italic">email@ejemplo.com</p>
                         <div id="plan-alumno-info" class="w-full space-y-2 mt-4 hidden">
                             <p class="text-[10px] font-black uppercase text-gray-500 italic text-center">Plan Actual</p>
                             <div class="bg-white/5 p-4 rounded-2xl border border-white/5 text-center">
@@ -5002,61 +5003,119 @@ async function loadProfesores() {
         function openModalNewExercise() {
             openModal('modal-nuevo-ejercicio');
         }
+
+		/**
+		 * 1. OBTENER HISTORIAL DE ACCESOS DEL SERVIDOR
+		 * Se llama al entrar a la vista o después de un escaneo.
+		 */
+		async function fetchAccesos() {
+			const res = await apiFetch('/acceso/historial'); // Asegúrate que este endpoint exista en tu FastAPI
+			if (!res.error && Array.isArray(res)) {
+				state.accesos = res;
+				renderAccesos();
+			} else if (res.error) {
+				console.error("Error al traer historial:", res.error);
+			}
+		}
 		
 		// Renderiza la lista de ingresos con estilo de filas/tarjetas
 			function renderAccesos() {
 				const container = document.getElementById('acceso-list-view');
 				if (!container) return;
 
-				if (state.accesos.length === 0) {
-					container.innerHTML = '<p class="text-center text-gray-600 italic py-10">No hay registros de ingreso hoy.</p>';
+				if (!state.accesos || state.accesos.length === 0) {
+					container.innerHTML = `
+						<div class="flex flex-col items-center justify-center py-20 opacity-20">
+							<i data-lucide="database-zap" class="w-12 h-12 mb-4"></i>
+							<p class="text-sm font-black uppercase italic tracking-widest">Esperando Guerreros...</p>
+						</div>`;
+					if(window.lucide) lucide.createIcons();
 					return;
 				}
 
 				container.innerHTML = state.accesos.map(acc => {
-					const isDenied = acc.estado.includes('DENEGADO');
-					const statusColor = isDenied ? 'text-red-500' : 'text-green-500';
-					const statusBg = isDenied ? 'bg-red-500/10' : 'bg-green-500/10';
+					const isAuth = acc.estado === 'AUTHORIZED' || acc.estado === 'AUTORIZADO';
+					const statusColor = isAuth ? 'text-green-500' : 'text-red-500';
+					const bgColor = isAuth ? 'bg-green-500/10' : 'bg-red-500/10';
+					const borderColor = isAuth ? 'border-green-500/20' : 'border-red-500/20';
 
 					return `
-					<div class="glass-card p-4 rounded-2xl border-white/5 flex items-center justify-between hover:bg-white/5 transition-colors group relative overflow-hidden">
-						<!-- Barra lateral indicadora -->
-						<div class="absolute left-0 top-0 bottom-0 w-1 ${isDenied ? 'bg-red-600' : 'bg-green-600'} opacity-30 group-hover:opacity-100 transition-opacity"></div>
-						
-						<div class="grid grid-cols-5 gap-4 w-full items-center px-2">
+						<div class="grid grid-cols-5 gap-4 px-6 py-4 ${bgColor} border ${borderColor} rounded-2xl items-center transition-all hover:scale-[1.01]">
 							<!-- Guerrero -->
 							<div class="flex items-center gap-3">
-								<div class="w-8 h-8 rounded-lg ${isDenied ? 'bg-red-600/20 text-red-500' : 'viking-bg-red text-black'} flex items-center justify-center font-black text-[10px] italic">
-									${acc.nombre ? acc.nombre[0].toUpperCase() : '?'}
+								<div class="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-[10px] font-black italic border border-white/10">
+									${acc.nombre ? acc.nombre.substring(0,2).toUpperCase() : '??'}
 								</div>
-								<span class="text-[11px] font-black uppercase italic text-white group-hover:text-red-500 transition-colors">${acc.nombre}</span>
+								<span class="text-[11px] font-black uppercase italic text-white truncate">${acc.nombre}</span>
 							</div>
-							
+
 							<!-- DNI -->
-							<span class="text-[10px] text-gray-500 font-bold tracking-widest">${acc.dni}</span>
-							
-							<!-- Fecha/Hora -->
-							<span class="text-[10px] text-gray-400 font-medium">${acc.fecha}</span>
-							
+							<span class="text-[10px] font-bold text-gray-400">${acc.dni}</span>
+
+							<!-- Fecha y Hora -->
+							<div class="flex flex-col">
+								<span class="text-[10px] font-black text-white/80">${acc.fecha}</span>
+							</div>
+
 							<!-- Método -->
 							<div class="flex items-center gap-2">
-								<i data-lucide="${acc.metodo.includes('QR') ? 'qr-code' : 'door-closed'}" class="w-3.5 h-3.5 text-gray-600"></i>
-								<span class="text-[9px] font-black uppercase text-gray-600">${acc.metodo}</span>
+								<i data-lucide="${acc.metodo.includes('QR') ? 'qr-code' : 'hard-drive'}" class="w-3 h-3 text-red-600"></i>
+								<span class="text-[9px] font-bold text-gray-500 uppercase">${acc.metodo}</span>
 							</div>
-							
+
 							<!-- Estado -->
 							<div class="text-right">
-								<span class="text-[9px] px-3 py-1 rounded-full ${statusBg} ${statusColor} font-black uppercase tracking-wider border border-white/5">
-									${acc.estado}
+								<span class="px-3 py-1 rounded-full ${statusColor} text-[9px] font-black bg-black/40 border border-current uppercase italic">
+									${isAuth ? 'Permitido' : 'Denegado'}
 								</span>
 							</div>
 						</div>
-					</div>
 					`;
 				}).join('');
-				
-				if (window.lucide) lucide.createIcons();
+
+				if(window.lucide) lucide.createIcons();
 			}
+
+			/**
+			 * 3. REGISTRAR NUEVO ACCESO (LLAMADO DESDE EL ESCÁNER)
+			 * Actualiza la lista en tiempo real sin recargar.
+			 */
+			function registerAccessLog(nombre, dni, metodo, estado) {
+				const nuevoAcceso = {
+					nombre: nombre,
+					dni: dni,
+					fecha: new Date().toLocaleTimeString(),
+					metodo: metodo,
+					estado: estado
+				};
+
+				if (!state.accesos) state.accesos = [];
+				
+				// Lo agregamos al principio del array
+				state.accesos.unshift(nuevoAcceso);
+				
+				// Mantenemos solo los últimos 50 para no matar el navegador
+				if (state.accesos.length > 50) state.accesos.pop();
+
+				// Si estamos viendo la pantalla de accesos, refrescamos la lista
+				const currentView = document.querySelector('.view-content.active')?.id;
+				if (currentView === 'view-acceso-virtual') {
+					renderAccesos();
+				}
+			}
+
+			/**
+			 * 4. ACTUALIZACIÓN DE SWITCHVIEW
+			 * Asegúrate de que al cambiar a esta vista, traiga los datos.
+			 */
+			const originalSwitchView = window.switchView;
+			window.switchView = function(view) {
+				if (typeof originalSwitchView === 'function') originalSwitchView(view);
+				
+				if (view === 'acceso-virtual') {
+					fetchAccesos();
+				}
+			};
 			
 			// FUNCIONES PARA EL MODAL DE MI QR
 				async function showMyQR() {
