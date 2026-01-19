@@ -1639,56 +1639,53 @@
         }
 
 		function applyPermissions() {
-            if (!state.user) return;
-            const rol = state.user.rol_nombre || "";
-            
-            const isAlumno = rol === "Alumno";
-            const isProfesor = rol === "Profesor";
-            const isAdministrativo = rol === "Administracion";
-            const isAdminMaster = rol === "Administrador" || rol === "Supervisor";
+			if (!state.user) return;
+			const rol = state.user.rol_nombre || "";
+			
+			const isAlumno = rol === "Alumno";
+			const isProfesor = rol === "Profesor";
+			const isAdministrativo = rol === "Administracion";
+			const isAdminMaster = rol === "Administrador" || rol === "Supervisor";
 
-            // --- DASHBOARD VISIBILITY ---
-            const adminDash = document.getElementById('admin-dashboard-layout');
-            const aluDash = document.getElementById('alumno-dashboard-layout');
-            const profDash = document.getElementById('professor-dashboard-layout');
+			const adminDash = document.getElementById('admin-dashboard-layout');
+			const aluDash = document.getElementById('alumno-dashboard-layout');
+			const profDash = document.getElementById('professor-dashboard-layout');
 
-            if(adminDash) adminDash.style.display = (isAdminMaster || isAdministrativo) ? 'block' : 'none';
-            if(aluDash) aluDash.style.display = isAlumno ? 'block' : 'none';
-            if(profDash) profDash.style.display = isProfesor ? 'block' : 'none';
+			if(adminDash) adminDash.style.display = (isAdminMaster || isAdministrativo) ? 'block' : 'none';
+			if(aluDash) aluDash.style.display = isAlumno ? 'block' : 'none';
+			if(profDash) profDash.style.display = isProfesor ? 'block' : 'none';
 
-            // --- PUNTO 1: Administrativo NO ve Control Staff ---
-            const staffPanel = document.querySelector('.border-red-600\\/20.bg-red-600\\/\\[0\\.02\\]'); // Buscamos el div de Control Staff
-            if(staffPanel && isAdministrativo) {
-                staffPanel.style.setProperty('display', 'none', 'important');
-            }
+			// Administrativo NO ve Control Staff
+			const staffPanel = document.querySelector('.border-red-600\\/20.bg-red-600\\/\\[0\\.02\\]'); 
+			if(staffPanel && isAdministrativo) {
+				staffPanel.style.setProperty('display', 'none', 'important');
+			}
 
-            // --- PUNTO 3: Menú Navegación Profesor ---
-            const navItems = {
-                alumnos: document.getElementById('nav-alumnos'),
-                staff: document.getElementById('nav-section-staff'),
-                operativa: document.getElementById('nav-section-operativa'),
-                planes: document.getElementById('nav-planes'),
-                clases: document.getElementById('nav-clases'),
-                calendario: document.getElementById('nav-calendario')
-            };
+			// Restricciones para el Profesor
+			const navItems = {
+				alumnos: document.getElementById('nav-alumnos'),
+				staff: document.getElementById('nav-section-staff'),
+				operativa: document.getElementById('nav-section-operativa'),
+				planes: document.getElementById('nav-planes'),
+				clases: document.getElementById('nav-clases'),
+				virtual: document.getElementById('nav-section-virtual') // NUEVO: Acceso Virtual
+			};
 
-            if (isProfesor) {
-                // Ocultamos lo que no debe ver
-                if(navItems.alumnos) navItems.alumnos.style.setProperty('display', 'none', 'important');
-                if(navItems.staff) navItems.staff.style.setProperty('display', 'none', 'important');
-                if(navItems.operativa) navItems.operativa.style.setProperty('display', 'none', 'important');
-                if(navItems.planes) navItems.planes.style.setProperty('display', 'none', 'important');
-                
-                // Restricción Solo Lectura en Clases
-                const btnAltaClase = document.getElementById('btn-nueva-clase');
-                if(btnAltaClase) btnAltaClase.style.setProperty('display', 'none', 'important');
-                
-                // Ocultar acciones de edición en tablas de clases
-                document.querySelectorAll('.action-col').forEach(el => el.style.setProperty('display', 'none', 'important'));
-            }
+			if (isProfesor) {
+				if(navItems.alumnos) navItems.alumnos.style.setProperty('display', 'none', 'important');
+				if(navItems.staff) navItems.staff.style.setProperty('display', 'none', 'important');
+				if(navItems.operativa) navItems.operativa.style.setProperty('display', 'none', 'important');
+				if(navItems.planes) navItems.planes.style.setProperty('display', 'none', 'important');
+				if(navItems.virtual) navItems.virtual.style.setProperty('display', 'none', 'important');
+				
+				// Restricción Solo Lectura
+				const btnAltaClase = document.getElementById('btn-nueva-clase');
+				if(btnAltaClase) btnAltaClase.style.setProperty('display', 'none', 'important');
+				document.querySelectorAll('.action-col').forEach(el => el.style.setProperty('display', 'none', 'important'));
+			}
 
-            if(window.lucide) lucide.createIcons();
-        }
+			if(window.lucide) lucide.createIcons();
+		}
 
 		async function renderStudentDashboard() {
 			const u = state.user; if (!u) return;
@@ -1946,7 +1943,8 @@
 				state.clases = await apiFetch('/clases');
 			}
 
-			const isAdmin = (state.user?.rol_nombre === "Administrador" || state.user?.rol_nombre === "Supervisor" || state.user?.rol_nombre === "Profesor");
+			// RESTRICCIÓN: Solo Admin y Supervisor tienen permisos de edición (Drag & Drop)
+			const isAdmin = (state.user?.rol_nombre === "Administrador" || state.user?.rol_nombre === "Supervisor");
 			const esAlumno = (state.user?.rol_nombre === "Alumno");
 
 			// --- 1. CÁLCULO DE FECHAS ---
@@ -2048,17 +2046,12 @@
 				state.clases.forEach(c => {
 					const horarios = Array.isArray(c.horarios_detalle) ? c.horarios_detalle : [];
 					
-					// --- LÓGICA DE CONTRASTE (NUEVO) ---
-					// Función auxiliar interna para determinar brillo
 					const getTextColorClass = (hexColor) => {
 						if (!hexColor) return { text: 'text-white', sub: 'text-white/70', bg: 'bg-white/20' };
-						// Convertir hex a RGB
 						const r = parseInt(hexColor.substr(1, 2), 16);
 						const g = parseInt(hexColor.substr(3, 2), 16);
 						const b = parseInt(hexColor.substr(5, 2), 16);
-						// Fórmula de Luminancia (YIQ)
 						const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
-						// Si es oscuro (<128), texto blanco. Si es claro, texto negro.
 						return (yiq >= 128) 
 							? { text: 'text-black', sub: 'text-black/60', bg: 'bg-black/10' } 
 							: { text: 'text-white', sub: 'text-white/80', bg: 'bg-white/20' };
@@ -2095,7 +2088,6 @@
 								badge.ondragend = () => badge.classList.remove('opacity-40');
 							}
 
-							// Usamos las variables de color calculadas arriba
 							badge.innerHTML = `
 								<div class="flex flex-col items-center justify-center h-full w-full px-1">
 									<span class="text-[10px] leading-tight mb-0.5 font-black uppercase italic ${colores.text} text-center truncate w-full drop-shadow-sm">
@@ -3284,14 +3276,15 @@
 				v.classList.add('hidden');
 			});
 
-			// 2. Referencias a los layouts específicos (IDs que deben existir en tu HTML)
+			// 2. Referencias a los layouts específicos
 			const adminLayout = document.getElementById('admin-dashboard-layout');
 			const aluLayout = document.getElementById('alumno-dashboard-layout');
-			// Nota: En tu HTML el del profesor es "view-professor-dashboard", no un layout interno
+			const profLayout = document.getElementById('professor-dashboard-layout');
 			
-			// Ocultar sub-layouts por defecto
+			// Ocultar sub-layouts por defecto para evitar solapamientos
 			if (adminLayout) adminLayout.classList.add('hidden');
 			if (aluLayout) aluLayout.classList.add('hidden');
+			if (profLayout) profLayout.classList.add('hidden');
 
 			// 3. Quitar estado activo de los botones de navegación
 			document.querySelectorAll('.nav-btn, .nav-item').forEach(b => b.classList.remove('active'));
@@ -3303,14 +3296,14 @@
 				const rol = state.user?.rol_nombre;
 				
 				if (rol === "Alumno") {
-					targetId = 'view-dashboard'; // Usamos el contenedor base
+					targetId = 'view-dashboard';
 					if (aluLayout) aluLayout.classList.remove('hidden');
-					renderStudentDashboard();
+					if (typeof renderStudentDashboard === 'function') renderStudentDashboard();
 				} 
 				else if (rol === "Profesor") {
-					// En tu HTML, el dashboard de profesor es su propia vista independiente
+					// El dashboard de profesor es su propia vista independiente
 					targetId = 'view-professor-dashboard'; 
-					loadProfessorDashboard();
+					if (typeof loadProfessorDashboard === 'function') loadProfessorDashboard();
 				} 
 				else {
 					// Admin / Administración
@@ -3341,21 +3334,29 @@
 			if (view === 'acceso-virtual') renderAccesos();
 			if (view === 'alumnos') renderAlumnosSection();
 
-			// 8. Lógica de Perfil (Tu versión completa)
+			// 8. Lógica de Perfil
 			if (view === 'perfil' && state.user) {
 				const u = state.user;
 				const initials = u.nombre_completo ? u.nombre_completo.split(' ').filter(n => n).map(n => n[0]).join('').toUpperCase() : "??";
 				
 				// Actualizar textos básicos
-				document.getElementById('prof-name').innerText = u.nombre_completo || "Usuario Vikingo";
-				document.getElementById('prof-role').innerText = u.rol_nombre || "Staff";
-				document.getElementById('user-initials').innerText = initials;
-				document.getElementById('prof-initials-view').innerText = initials;
+				const nameEl = document.getElementById('prof-name');
+				const roleEl = document.getElementById('prof-role');
+				if(nameEl) nameEl.innerText = u.nombre_completo || "Usuario Vikingo";
+				if(roleEl) roleEl.innerText = u.rol_nombre || "Staff";
+				
+				const sideInitials = document.getElementById('user-initials');
+				const viewInitials = document.getElementById('prof-initials-view');
+				if(sideInitials) sideInitials.innerText = initials;
+				if(viewInitials) viewInitials.innerText = initials;
 				
 				// Llenar inputs
-				document.getElementById('prof-input-name').value = u.nombre_completo || "";
-				document.getElementById('prof-input-dni').value = u.dni || "";
-				document.getElementById('prof-input-email').value = u.email || "";
+				const inputName = document.getElementById('prof-input-name');
+				const inputDni = document.getElementById('prof-input-dni');
+				const inputEmail = document.getElementById('prof-input-email');
+				if(inputName) inputName.value = u.nombre_completo || "";
+				if(inputDni) inputDni.value = u.dni || "";
+				if(inputEmail) inputEmail.value = u.email || "";
 
 				const fisicos = document.getElementById('perfil-datos-fisicos');
 				const planInfo = document.getElementById('plan-alumno-info');
@@ -3365,13 +3366,18 @@
 						fisicos.classList.remove('hidden');
 						fisicos.style.display = 'grid';
 					}
-					document.getElementById('prof-input-peso').value = u.peso || "";
-					document.getElementById('prof-input-altura').value = u.altura || "";
-					document.getElementById('prof-input-imc').value = u.imc || "";
+					const pPeso = document.getElementById('prof-input-peso');
+					const pAlt = document.getElementById('prof-input-altura');
+					const pImc = document.getElementById('prof-input-imc');
+					if(pPeso) pPeso.value = u.peso || "";
+					if(pAlt) pAlt.value = u.altura || "";
+					if(pImc) pImc.value = u.imc || "";
 					
 					if (planInfo) planInfo.classList.remove('hidden');
-					document.getElementById('perfil-plan-nombre').innerText = u.plan?.nombre || "SIN PLAN";
-					document.getElementById('perfil-vencimiento').innerText = "Vence: " + (u.fecha_vencimiento || "-");
+					const pPlan = document.getElementById('perfil-plan-nombre');
+					const pVenc = document.getElementById('perfil-vencimiento');
+					if(pPlan) pPlan.innerText = u.plan?.nombre || "SIN PLAN";
+					if(pVenc) pVenc.innerText = "Vence: " + (u.fecha_vencimiento || "-");
 				} else {
 					if (fisicos) {
 						fisicos.classList.add('hidden');
@@ -5335,24 +5341,19 @@ async function loadProfesores() {
 			// FUNCIONES PARA EL MODAL DE MI QR
 				async function showMyQR() {
 					const user = state.user;
-					if (!user) {
-						showVikingToast("Error: Sesión no encontrada", true);
-						return;
-					}
+					if (!user) return showVikingToast("Error: Sesión no encontrada", true);
 
-					// 1. VALIDACIÓN DE SEGURIDAD PARA ALUMNOS
+					// 1. VALIDACIÓN SOLO PARA ALUMNOS
 					if (user.rol_nombre === "Alumno") {
 						const hoy = new Date().toISOString().split('T')[0];
 						const vencimiento = user.fecha_vencimiento || "0000-00-00";
-
 						if (vencimiento < hoy) {
-							showVikingToast("ACCESO DENEGADO: Tu plan ha vencido. Pasa por recepción.", true);
-							console.warn("Intento de apertura de QR con plan vencido:", user.dni);
-							return; // Bloqueamos la ejecución aquí
+							showVikingToast("ACCESO DENEGADO: Tu plan ha vencido.", true);
+							return;
 						}
 					}
 
-					// 2. SI ES STAFF O ALUMNO AL DÍA, PROCEDEMOS
+					// 2. PROCEDER (Staff entra siempre)
 					const modal = document.getElementById('modal-mi-qr');
 					const img = document.getElementById('img-mi-qr');
 					const dniTxt = document.getElementById('qr-user-dni');
@@ -5362,16 +5363,13 @@ async function loadProfesores() {
 						dniTxt.innerText = user.dni;
 						nameTxt.innerText = user.nombre_completo || "Guerrero";
 						
-						// --- NUEVO: GENERACIÓN DE HASH SEGURO ---
 						const hash = await generateVikingHash(user.dni);
-						const qrData = `${user.dni}:${hash}`; // Formato que espera el backend
+						const qrData = `${user.dni}:${hash}`;
 						
-						// Generación del QR usando el string firmado
 						img.src = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(qrData)}&color=000000&bgcolor=ffffff&margin=10`;
 
 						modal.classList.remove('hidden');
 						modal.classList.add('flex');
-						
 						if (window.lucide) lucide.createIcons();
 					}
 				}
