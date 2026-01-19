@@ -1643,46 +1643,38 @@
 			if (!state.user) return;
 			const rol = (state.user.rol_nombre || "").toLowerCase();
 			
-			// Lista de IDs de elementos a controlar
-			const elements = {
-				navAlumnos: document.getElementById('nav-alumnos'),
-				navPlanes: document.getElementById('nav-planes'),
-				navClases: document.getElementById('nav-clases'),
-				navSectionStaff: document.getElementById('nav-section-staff'),
-				navSectionOperativa: document.getElementById('nav-section-operativa'),
-				navSectionVirtual: document.getElementById('nav-section-virtual'),
-				staffPanel: document.querySelector('.border-red-600\\/20') // Panel "Control Staff"
+			// IDs de las secciones de tu menú (sacados de tu HTML)
+			const secciones = {
+				staff: document.getElementById('nav-section-staff'),
+				operativa: document.getElementById('nav-section-operativa'),
+				virtual: document.getElementById('nav-section-virtual'),
+				alumnos: document.getElementById('nav-alumnos'),
+				planes: document.getElementById('nav-planes'),
+				clases: document.getElementById('nav-clases')
 			};
 
-			// 1. Reset general: Mostrar todo primero (solo lo que existe en el DOM)
-			Object.values(elements).forEach(el => {
-				if (el) el.style.setProperty('display', 'flex', 'important');
+			// 1. Reset: Primero mostramos todo por defecto
+			Object.values(secciones).forEach(el => {
+				if (el) el.style.setProperty('display', 'block', 'important');
 			});
 
-			// 2. RESTRICCIONES SEGÚN ROL (Comparación en minúsculas para seguridad)
-			if (rol === "alumno") {
-				const toHide = ['navAlumnos', 'navPlanes', 'navClases', 'navSectionStaff', 'navSectionOperativa', 'navSectionVirtual'];
-				toHide.forEach(key => {
-					if (elements[key]) elements[key].style.setProperty('display', 'none', 'important');
+			// 2. Filtro estricto para Alumnos y Profesores
+			if (rol === "alumno" || rol === "profesor") {
+				// Al alumno y al profesor les ocultamos casi todo lo administrativo
+				const ocultar = ['staff', 'operativa', 'virtual', 'alumnos', 'planes', 'clases'];
+				ocultar.forEach(key => {
+					if (secciones[key]) {
+						secciones[key].style.setProperty('display', 'none', 'important');
+					}
 				});
 			}
 
-			else if (rol === "profesor") {
-				// El profesor no debe ver gestión de otros alumnos, ni staff, ni operativa
-				const toHide = ['navAlumnos', 'navPlanes', 'navClases', 'navSectionStaff', 'navSectionOperativa', 'navSectionVirtual'];
-				toHide.forEach(key => {
-					if (elements[key]) elements[key].style.setProperty('display', 'none', 'important');
-				});
-			}
-
+			// 3. Caso Administrativo (solo oculta Staff)
 			else if (rol === "administracion" || rol === "administrativo") {
-				// El administrativo no ve la sección de Staff ni su propio panel de control en el dashboard
-				if(elements.navSectionStaff) elements.navSectionStaff.style.setProperty('display', 'none', 'important');
-				if(elements.staffPanel) elements.staffPanel.style.setProperty('display', 'none', 'important');
+				if (secciones.staff) secciones.staff.style.setProperty('display', 'none', 'important');
 			}
 
-			// Actualizar iconos por si se ocultaron/mostraron elementos
-			if(window.lucide) lucide.createIcons();
+			if (window.lucide) lucide.createIcons();
 		}
 
 		async function renderStudentDashboard() {
@@ -3269,33 +3261,27 @@
 		}
 
         function switchView(view) {
-			// 1. Ocultar TODAS las vistas principales de contenido
+			// 1. Ocultar todas las vistas de contenido
 			document.querySelectorAll('.view-content').forEach(v => {
 				v.classList.remove('active');
 				v.classList.add('hidden');
 				v.style.setProperty('display', 'none', 'important'); 
 			});
 
-			// 2. Referencias a los sub-layouts internos del Dashboard
-			const layouts = [
-				document.getElementById('admin-dashboard-layout'),
-				document.getElementById('alumno-dashboard-layout'),
-				document.getElementById('professor-dashboard-layout'),
-				document.getElementById('view-professor-dashboard')
-			];
-			
-			// Ocultar sub-layouts por defecto siempre
-			layouts.forEach(l => {
+			// 2. Ocultar layouts internos de Dashboard
+			const layouts = ['admin-dashboard-layout', 'alumno-dashboard-layout', 'view-professor-dashboard'];
+			layouts.forEach(id => {
+				const l = document.getElementById(id);
 				if (l) {
 					l.classList.add('hidden');
 					l.style.setProperty('display', 'none', 'important');
 				}
 			});
 
-			// 3. Quitar estado activo de los botones de navegación
+			// 3. Desactivar botones de navegación
 			document.querySelectorAll('.nav-btn, .nav-item').forEach(b => b.classList.remove('active'));
 
-			// 4. Lógica de Dashboard según el ROL
+			// 4. Lógica de selección de Dashboard por ROL
 			let targetId = 'view-' + view;
 			const rol = (state.user?.rol_nombre || "").toLowerCase();
 
@@ -3303,103 +3289,52 @@
 				if (rol === "alumno") {
 					targetId = 'view-dashboard';
 					const aluLayout = document.getElementById('alumno-dashboard-layout');
-					if (aluLayout) {
-						aluLayout.classList.remove('hidden');
-						aluLayout.style.setProperty('display', 'block', 'important');
-					}
+					if (aluLayout) aluLayout.style.setProperty('display', 'block', 'important');
 					if (typeof renderStudentDashboard === 'function') renderStudentDashboard();
 				} 
 				else if (rol === "profesor") {
-					// El dashboard de profesor suele tener su propia vista independiente
 					targetId = 'view-professor-dashboard'; 
-					const profLayout = document.getElementById('professor-dashboard-layout') || document.getElementById('view-professor-dashboard');
-					if (profLayout) {
-						profLayout.classList.remove('hidden');
-						profLayout.style.setProperty('display', 'block', 'important');
-					}
+					const profView = document.getElementById('view-professor-dashboard');
+					if (profView) profView.style.setProperty('display', 'block', 'important');
 					if (typeof loadProfessorDashboard === 'function') loadProfessorDashboard();
 				} 
 				else {
-					// Admin / Administración / Supervisor
 					targetId = 'view-dashboard';
 					const adminLayout = document.getElementById('admin-dashboard-layout');
-					if (adminLayout) {
-						adminLayout.classList.remove('hidden');
-						adminLayout.style.setProperty('display', 'block', 'important');
-					}
+					if (adminLayout) adminLayout.style.setProperty('display', 'block', 'important');
 					if (typeof loadDashboard === 'function') loadDashboard();
 				}
 			}
 
-			// 5. Activar la vista final resultante
+			// 5. Mostrar la vista final
 			const targetView = document.getElementById(targetId);
 			if (targetView) {
 				targetView.classList.add('active');
 				targetView.classList.remove('hidden');
-				targetView.style.setProperty('display', 'flex', 'important'); 
+				targetView.style.setProperty('display', (view === 'dashboard' ? 'block' : 'flex'), 'important'); 
 			}
 
-			// 6. Actualizar UI de navegación y títulos
+			// 6. Activar botón de menú
 			const n = document.getElementById('nav-' + view); 
 			if (n) n.classList.add('active');
 			
+			// 7. Cambiar título
 			const titleEl = document.getElementById('view-title');
 			if (titleEl) titleEl.innerText = view.replace('-', ' ').toUpperCase();
 
-			// 7. Cargas de datos por sección
+			// 8. Cargas de datos adicionales
 			if (view === 'calendario') renderCalendar();
 			if (view === 'cobrar') renderCobrar();
 			if (view === 'rutinas') renderRutinas();
 			if (view === 'acceso-virtual') renderAccesos();
-			if (view === 'alumnos') renderAlumnosSection();
-
-			// 8. Lógica de Perfil (Mantenemos tu lógica para llenar inputs)
-			if (view === 'perfil' && state.user) {
-				const u = state.user;
-				const initials = u.nombre_completo ? u.nombre_completo.split(' ').filter(n => n).map(n => n[0]).join('').toUpperCase() : "??";
-				
-				const nameEl = document.getElementById('prof-name');
-				const roleEl = document.getElementById('prof-role');
-				if(nameEl) nameEl.innerText = u.nombre_completo || "Usuario Vikingo";
-				if(roleEl) roleEl.innerText = u.rol_nombre || "Staff";
-				
-				const sideInitials = document.getElementById('user-initials');
-				const viewInitials = document.getElementById('prof-initials-view');
-				if(sideInitials) sideInitials.innerText = initials;
-				if(viewInitials) viewInitials.innerText = initials;
-				
-				if(document.getElementById('prof-input-name')) document.getElementById('prof-input-name').value = u.nombre_completo || "";
-				if(document.getElementById('prof-input-dni')) document.getElementById('prof-input-dni').value = u.dni || "";
-				if(document.getElementById('prof-input-email')) document.getElementById('prof-input-email').value = u.email || "";
-
-				const fisicos = document.getElementById('perfil-datos-fisicos');
-				const planInfo = document.getElementById('plan-alumno-info');
-
-				if (u.rol_nombre === "Alumno") {
-					if (fisicos) { 
-						fisicos.classList.remove('hidden'); 
-						fisicos.style.setProperty('display', 'grid', 'important'); 
-					}
-					if(document.getElementById('prof-input-peso')) document.getElementById('prof-input-peso').value = u.peso || "";
-					if(document.getElementById('prof-input-altura')) document.getElementById('prof-input-altura').value = u.altura || "";
-					if(document.getElementById('prof-input-imc')) document.getElementById('prof-input-imc').value = u.imc || "";
-					
-					if (planInfo) planInfo.classList.remove('hidden');
-					const pPlan = document.getElementById('perfil-plan-nombre');
-					const pVenc = document.getElementById('perfil-vencimiento');
-					if(pPlan) pPlan.innerText = u.plan?.nombre || "SIN PLAN";
-					if(pVenc) pVenc.innerText = "Vence: " + (u.fecha_vencimiento || "-");
-				} else {
-					if (fisicos) { 
-						fisicos.classList.add('hidden'); 
-						fisicos.style.setProperty('display', 'none', 'important'); 
-					}
-					if (planInfo) planInfo.classList.add('hidden');
-				}
+			if (view === 'alumnos') {
+				if (typeof renderAlumnosSection === 'function') renderAlumnosSection();
 			}
 
-			// 9. Finalizar con limpieza estricta de menú
+			// 9. LA CLAVE: Llamamos a la función de permisos para limpiar el menú
+			// Esto hace que el menú se actualice CADA VEZ que hacés clic en algo.
 			applyPermissions();
+			
 			if (window.lucide) lucide.createIcons();
 		}
 
