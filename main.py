@@ -138,6 +138,11 @@ class UsuarioLogin(BaseModel):
     dni: str
     password: str
 
+# --- NUEVO: Schema para Reset de Contraseña ---
+class UsuarioResetPassword(BaseModel):
+    dni: str
+    password: str
+
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str
@@ -441,6 +446,23 @@ def login(data: UsuarioLogin, db: Session = Depends(database.get_db)):
         "imc": user.imc
     }
 
+# --- NUEVO: RESET DE CONTRASEÑA (PUNTO 2) ---
+@app.put("/api/usuarios/reset-password", tags=["Autenticacion"])
+def reset_password(data: UsuarioResetPassword, db: Session = Depends(database.get_db)):
+    """Permite cambiar la contraseña verificando el DNI."""
+    user = db.query(models.Usuario).filter(models.Usuario.dni == data.dni).first()
+    
+    if not user:
+        raise HTTPException(status_code=404, detail="El DNI no existe en el sistema.")
+    
+    try:
+        user.password_hash = get_password_hash(data.password)
+        db.commit()
+        return {"status": "success", "message": "Contraseña actualizada correctamente"}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Error al actualizar: {str(e)}")
+
 # --- NUEVO: VALIDACIÓN DE ACCESO (QR CON HASHING) ---
 @app.post("/api/acceso/validar", tags=["Seguridad"])
 def validar_acceso_qr(data: AccessCheck, db: Session = Depends(database.get_db)):
@@ -501,7 +523,7 @@ def validar_acceso_qr(data: AccessCheck, db: Session = Depends(database.get_db))
             final_response["status"] = "AUTHORIZED"
             final_response["message"] = f"Pase Válido ({dias_rest} días rest.)"
             if dias_rest <= 3: final_response["message"] = "¡Atención: Próximo a vencer!"
-            final_response["color"] = "green"
+            final_response["color"] = green"
         else:
             final_response["status"] = "DENIED"
             final_response["message"] = f"Plan Vencido el {user.fecha_vencimiento}"
@@ -1074,7 +1096,7 @@ def create_plan_rutina(data: PlanRutinaCreate, db: Session = Depends(database.ge
                 ej_en_rut = models.EjercicioEnRutina(
                     dia_id=nuevo_dia.id,
                     ejercicio_id=e.ejercicio_id,
-                    commentario=e.comentario
+                    comentario=e.comentario
                 )
                 db.add(ej_en_rut)
                 db.flush()
