@@ -1643,7 +1643,7 @@
 			if (!state.user) return;
 			const rol = (state.user.rol_nombre || "").toLowerCase();
 			
-			// IDs de las secciones de tu menú (sacados de tu HTML)
+			// IDs de las secciones de tu menú e interfaz
 			const secciones = {
 				staff: document.getElementById('nav-section-staff'),
 				operativa: document.getElementById('nav-section-operativa'),
@@ -1653,14 +1653,13 @@
 				clases: document.getElementById('nav-clases')
 			};
 
-			// 1. Reset: Primero mostramos todo por defecto
+			// 1. Reset: Mostramos todo por defecto usando FLEX para no romper el diseño lateral
 			Object.values(secciones).forEach(el => {
-				if (el) el.style.setProperty('display', 'block', 'important');
+				if (el) el.style.setProperty('display', 'flex', 'important');
 			});
 
-			// 2. Filtro estricto para Alumnos y Profesores
+			// 2. Filtro para Alumnos y Profesores
 			if (rol === "alumno" || rol === "profesor") {
-				// Al alumno y al profesor les ocultamos casi todo lo administrativo
 				const ocultar = ['staff', 'operativa', 'virtual', 'alumnos', 'planes', 'clases'];
 				ocultar.forEach(key => {
 					if (secciones[key]) {
@@ -1669,9 +1668,18 @@
 				});
 			}
 
-			// 3. Caso Administrativo (solo oculta Staff)
+			// 3. Caso Administrativo
 			else if (rol === "administracion" || rol === "administrativo") {
+				// Ocultar sección Staff en el menú
 				if (secciones.staff) secciones.staff.style.setProperty('display', 'none', 'important');
+				
+				// CORRECCIÓN: Administrativo NO ve "Control Staff" en el Dashboard
+				const staffDashboardPanel = document.getElementById('dash-staff-access');
+				if (staffDashboardPanel) {
+					// Buscamos el contenedor padre (el glass-card) para ocultarlo entero
+					const card = staffDashboardPanel.closest('.glass-card');
+					if (card) card.style.setProperty('display', 'none', 'important');
+				}
 			}
 
 			if (window.lucide) lucide.createIcons();
@@ -3322,7 +3330,48 @@
 			const titleEl = document.getElementById('view-title');
 			if (titleEl) titleEl.innerText = view.replace('-', ' ').toUpperCase();
 
-			// 8. Cargas de datos adicionales
+			// 8. CORRECCIÓN: Carga de datos en "Mi Perfil"
+			if (view === 'perfil' && state.user) {
+				const u = state.user;
+				const initials = u.nombre_completo ? u.nombre_completo.split(' ').filter(n => n).map(n => n[0]).join('').toUpperCase() : "??";
+				
+				// Textos de cabecera
+				const nameHeader = document.getElementById('prof-name');
+				const roleHeader = document.getElementById('prof-role');
+				if (nameHeader) nameHeader.innerText = u.nombre_completo || "Usuario Vikingo";
+				if (roleHeader) roleHeader.innerText = u.rol_nombre || "Staff";
+				
+				// Iniciales
+				const elInitials = document.getElementById('user-initials');
+				const elInitialsView = document.getElementById('prof-initials-view');
+				if (elInitials) elInitials.innerText = initials;
+				if (elInitialsView) elInitialsView.innerText = initials;
+				
+				// Rellenar Inputs del formulario
+				const inputName = document.getElementById('prof-input-name');
+				const inputDni = document.getElementById('prof-input-dni');
+				const inputEmail = document.getElementById('prof-input-email');
+				if (inputName) inputName.value = u.nombre_completo || "";
+				if (inputDni) inputDni.value = u.dni || "";
+				if (inputEmail) inputEmail.value = u.email || "";
+
+				// Datos físicos (solo si es Alumno)
+				const fisicos = document.getElementById('perfil-datos-fisicos');
+				if (fisicos) {
+					if (rol === "alumno") {
+						fisicos.classList.remove('hidden');
+						fisicos.style.display = 'grid';
+						document.getElementById('prof-input-peso').value = u.peso || "";
+						document.getElementById('prof-input-altura').value = u.altura || "";
+						document.getElementById('prof-input-imc').value = u.imc || "";
+					} else {
+						fisicos.classList.add('hidden');
+						fisicos.style.display = 'none';
+					}
+				}
+			}
+
+			// 9. Cargas de datos adicionales según sección
 			if (view === 'calendario') renderCalendar();
 			if (view === 'cobrar') renderCobrar();
 			if (view === 'rutinas') renderRutinas();
@@ -3331,8 +3380,7 @@
 				if (typeof renderAlumnosSection === 'function') renderAlumnosSection();
 			}
 
-			// 9. LA CLAVE: Llamamos a la función de permisos para limpiar el menú
-			// Esto hace que el menú se actualice CADA VEZ que hacés clic en algo.
+			// 10. Aplicar permisos de visibilidad final
 			applyPermissions();
 			
 			if (window.lucide) lucide.createIcons();
