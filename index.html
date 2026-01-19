@@ -522,7 +522,7 @@
 
 			<!-- FILA SUPERIOR: ACCESOS Y ALERTAS -->
 			<div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
-				
+    
 				<!-- PANEL 1: ACCESOS RECIENTES (ALUMNOS / GENERAL) -->
 				<div class="glass-card p-8 rounded-[2.5rem] border-blue-500/10 flex flex-col h-[450px]">
 					<div class="flex justify-between items-center mb-6 border-b border-white/5 pb-4">
@@ -566,7 +566,8 @@
 							</h4>
 							<p class="text-[9px] text-gray-500 font-bold uppercase mt-1">Provisiones bajas</p>
 						</div>
-						<button onclick="setView('merca')" class="text-[9px] bg-white/5 hover:bg-white/10 px-3 py-1 rounded-lg transition-colors font-black uppercase italic">Reponer</button>
+						<!-- Corregido: Restablecida la lógica original de switchView('stock') -->
+						<button onclick="switchView('stock')" class="text-[9px] bg-white/5 hover:bg-white/10 px-3 py-1 rounded-lg transition-colors font-black uppercase italic border border-white/10">Reponer</button>
 					</div>
 					<div id="dash-low-stock" class="flex-1 overflow-y-auto custom-scrollbar space-y-3 pr-2">
 						<p class="text-center text-gray-600 italic text-[10px] py-10">Analizando inventario...</p>
@@ -3530,7 +3531,7 @@
 			console.log("⚔️ Sincronizando Central de Mando...");
 
 			// 1. Cargar datos necesarios del servidor
-			// Agregamos '/acceso/historial' para tener los datos reales de los QR
+			// Traemos Stock, Reservas e Historial de Acceso real
 			const [stockData, reservasData, accesoData] = await Promise.all([
 				apiFetch('/stock'),
 				apiFetch('/reservas'),
@@ -3628,18 +3629,18 @@
 			}
 
 			// --- D. TOP 5 CLASES (MANTENIDO) ---
-			const classCounts = {};
-			reservas.forEach(r => {
-				const name = r.clase_nombre || "Clase";
-				classCounts[name] = (classCounts[name] || 0) + 1;
-			});
-
-			const sortedClasses = Object.entries(classCounts)
-				.sort((a, b) => b[1] - a[1])
-				.slice(0, 5);
-
 			const topClassesContainer = document.getElementById('dash-top-clases');
 			if (topClassesContainer) {
+				const classCounts = {};
+				reservas.forEach(r => {
+					const name = r.clase_nombre || "Clase";
+					classCounts[name] = (classCounts[name] || 0) + 1;
+				});
+
+				const sortedClasses = Object.entries(classCounts)
+					.sort((a, b) => b[1] - a[1])
+					.slice(0, 5);
+
 				if (sortedClasses.length === 0) {
 					topClassesContainer.innerHTML = '<p class="text-center text-gray-500 italic text-[10px] py-10">No hay reservas registradas.</p>';
 				} else {
