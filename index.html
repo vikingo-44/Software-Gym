@@ -5357,7 +5357,7 @@ async function loadProfesores() {
 
             // Buscamos al usuario por DNI para obtener su ID (Necesario para el endpoint PUT /staff o /alumnos)
             // Primero intentamos buscarlo en la base de datos de usuarios general
-            const res = await apiFetch(`/users/reset-password`, 'PUT', { 
+            const res = await apiFetch(`/usuarios/reset-password`, 'PUT', { 
                 dni: dni, 
                 password: pass 
             });
