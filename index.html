@@ -5029,13 +5029,16 @@ async function loadProfesores() {
 				} else {
 					showFeedback(response);
 					
-					if (typeof registerAccessLog === 'function') {
-						registerAccessLog(
-							response.nombre || "Desconocido", 
-							qrData.split(':')[0], 
-							"LECTOR QR", 
-							response.status
-						);
+					// --- NUEVO: Refrescar datos globales ---
+					// Llamamos a loadDashboard para que los paneles de "Accesos Recientes" se actualicen
+					if (typeof loadDashboard === 'function') {
+						console.log("🔄 Actualizando paneles del Dashboard...");
+						loadDashboard(); 
+					}
+					
+					// Si el usuario está en la vista de Acceso Virtual, refrescamos esa lista también
+					if (typeof renderAccesos === 'function') {
+						renderAccesos();
 					}
 				}
 
