@@ -3283,7 +3283,7 @@
 			// 2. Referencias a los layouts específicos dentro del Dashboard
 			const adminLayout = document.getElementById('admin-dashboard-layout');
 			const aluLayout = document.getElementById('alumno-dashboard-layout');
-			const profLayout = document.getElementById('professor-dashboard-layout'); // Asegúrate que este ID coincida en tu HTML
+			const profLayout = document.getElementById('professor-dashboard-layout'); 
 			
 			// Ocultar sub-layouts por defecto siempre para limpiar la pantalla
 			if (adminLayout) adminLayout.classList.add('hidden');
@@ -3305,8 +3305,6 @@
 					if (typeof renderStudentDashboard === 'function') renderStudentDashboard();
 				} 
 				else if (rol === "Profesor") {
-					// El dashboard de profesor suele estar en un div hermano o hijo
-					// Si es una vista independiente:
 					targetId = 'view-professor-dashboard'; 
 					if (profLayout) profLayout.classList.remove('hidden');
 					if (typeof loadProfessorDashboard === 'function') loadProfessorDashboard();
@@ -3324,7 +3322,7 @@
 			if (targetView) {
 				targetView.classList.add('active');
 				targetView.classList.remove('hidden');
-				targetView.style.display = 'flex'; // O 'block' según tu CSS
+				targetView.style.display = 'flex'; 
 			}
 
 			// 6. Actualizar UI de navegación y títulos
@@ -3341,7 +3339,7 @@
 			if (view === 'acceso-virtual') renderAccesos();
 			if (view === 'alumnos') renderAlumnosSection();
 
-			// 8. Lógica de Perfil (Mantenemos tu lógica intacta para no romper los inputs)
+			// 8. Lógica de Perfil
 			if (view === 'perfil' && state.user) {
 				const u = state.user;
 				const initials = u.nombre_completo ? u.nombre_completo.split(' ').filter(n => n).map(n => n[0]).join('').toUpperCase() : "??";
