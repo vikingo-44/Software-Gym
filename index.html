@@ -521,18 +521,17 @@
 			</div>
 
 			<!-- FILA SUPERIOR: ACCESOS Y ALERTAS -->
-			<div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-				
-				<!-- PANEL 1: ÚLTIMOS ACCESOS -->
-				<div class="glass-card p-8 rounded-[2.5rem] border-blue-500/10 flex flex-col h-[400px]">
+			<div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
+    
+				<!-- PANEL 1: ACCESOS RECIENTES (ALUMNOS / GENERAL) -->
+				<div class="glass-card p-8 rounded-[2.5rem] border-blue-500/10 flex flex-col h-[450px]">
 					<div class="flex justify-between items-center mb-6 border-b border-white/5 pb-4">
 						<div>
 							<h4 class="text-sm font-black uppercase italic text-blue-500 tracking-widest">
-								<i data-lucide="scan-line" class="w-4 h-4 inline mr-2"></i>Accesos Recientes
+								<i data-lucide="history" class="w-4 h-4 inline mr-2"></i>Accesos Recientes
 							</h4>
-							<p class="text-[9px] text-gray-500 font-bold uppercase mt-1">Guerreros entrando al Valhalla</p>
+							<p class="text-[9px] text-gray-500 font-bold uppercase mt-1">Historial de Alumnos</p>
 						</div>
-						<!-- Botón para ver la cámara (ADMIN) -->
 						<button onclick="startScanner()" class="text-[9px] bg-blue-500/10 text-blue-400 hover:bg-blue-500 hover:text-black px-3 py-1 rounded-lg transition-colors font-black uppercase italic border border-blue-500/20">
 							<i data-lucide="camera" class="w-3 h-3 inline mr-1"></i> Abrir Scanner
 						</button>
@@ -542,19 +541,35 @@
 					</div>
 				</div>
 
-				<!-- PANEL 2: ALERTAS DE STOCK -->
-				<div class="glass-card p-8 rounded-[2.5rem] border-red-500/10 flex flex-col h-[400px]">
+				<!-- PANEL 2: CONTROL DE INGRESO (SOLO STAFF) -->
+				<div class="glass-card p-8 rounded-[2.5rem] border-red-600/20 bg-red-600/[0.02] flex flex-col h-[450px]">
 					<div class="flex justify-between items-center mb-6 border-b border-white/5 pb-4">
 						<div>
 							<h4 class="text-sm font-black uppercase italic text-red-600 tracking-widest">
-								<i data-lucide="alert-triangle" class="w-4 h-4 inline mr-2"></i>Alertas de Stock
+								<i data-lucide="shield-check" class="w-4 h-4 inline mr-2"></i>Control Staff
 							</h4>
-							<p class="text-[9px] text-gray-500 font-bold uppercase mt-1">Provisiones bajas en el Valhalla</p>
+							<p class="text-[9px] text-gray-500 font-bold uppercase mt-1">Profesores y Administrativos</p>
 						</div>
-						<button onclick="switchView('stock')" class="text-[9px] bg-white/5 hover:bg-white/10 px-3 py-1 rounded-lg transition-colors font-black uppercase italic">Reponer</button>
+						<span class="text-[9px] bg-red-600/20 text-red-500 px-2 py-1 rounded-full font-bold uppercase tracking-tighter">Presencia</span>
+					</div>
+					<div id="dash-staff-access" class="flex-1 overflow-y-auto custom-scrollbar space-y-3 pr-2">
+						<p class="text-center text-gray-600 italic text-[10px] py-10">Buscando registros de personal...</p>
+					</div>
+				</div>
+
+				<!-- PANEL 3: ALERTAS DE STOCK -->
+				<div class="glass-card p-8 rounded-[2.5rem] border-orange-500/10 flex flex-col h-[450px]">
+					<div class="flex justify-between items-center mb-6 border-b border-white/5 pb-4">
+						<div>
+							<h4 class="text-sm font-black uppercase italic text-orange-500 tracking-widest">
+								<i data-lucide="alert-triangle" class="w-4 h-4 inline mr-2"></i>Alertas Stock
+							</h4>
+							<p class="text-[9px] text-gray-500 font-bold uppercase mt-1">Provisiones bajas</p>
+						</div>
+						<button onclick="setView('merca')" class="text-[9px] bg-white/5 hover:bg-white/10 px-3 py-1 rounded-lg transition-colors font-black uppercase italic">Reponer</button>
 					</div>
 					<div id="dash-low-stock" class="flex-1 overflow-y-auto custom-scrollbar space-y-3 pr-2">
-						<p class="text-center text-gray-600 italic text-[10px] py-10">Escaneando almacén...</p>
+						<p class="text-center text-gray-600 italic text-[10px] py-10">Analizando inventario...</p>
 					</div>
 				</div>
 			</div>
@@ -3512,163 +3527,183 @@
         }
 
 		async function loadDashboard() {
-			// 1. Cargar datos necesarios
-			// Nota: Como los accesos suelen ser evento en tiempo real o websocket,
-			// usaremos state.accesos del cliente o simularemos si está vacío.
-			const [stockData, reservasData] = await Promise.all([
+			console.log("⚔️ Sincronizando Central de Mando...");
+
+			// 1. Cargar datos necesarios del servidor
+			// Agregamos '/acceso/historial' para tener los datos reales de los QR
+			const [stockData, reservasData, accesoData] = await Promise.all([
 				apiFetch('/stock'),
-				apiFetch('/reservas')
+				apiFetch('/reservas'),
+				apiFetch('/acceso/historial')
 			]);
 
 			const stock = Array.isArray(stockData) ? stockData : [];
 			const reservas = Array.isArray(reservasData) ? reservasData : [];
+			const historialAcceso = Array.isArray(accesoData) ? accesoData : [];
 
-			// --- A. ÚLTIMOS ACCESOS (CORREGIDO: GENTE, NO DINERO) ---
+			// Guardamos en el estado global por si otras funciones lo necesitan
+			state.stock = stock;
+			state.reservas = reservas;
+			state.accesos = historialAcceso;
+
+			// --- A. ÚLTIMOS ACCESOS (GENERAL / ALUMNOS) ---
 			const accessContainer = document.getElementById('dash-last-access');
-			
-			// Si no hay accesos registrados en la sesión actual, generamos unos "dummy" para que se vea lindo
-			if (!state.accesos || state.accesos.length === 0) {
-				state.accesos = [
-					{ nombre: "Ragnar Lothbrok", dni: "V-001", fecha: "Ahora", metodo: "QR SCAN", estado: "AUTORIZADO" },
-					{ nombre: "Lagertha", dni: "V-002", fecha: "Hace 5 min", metodo: "HUELLA", estado: "AUTORIZADO" },
-					{ nombre: "Ivar the Boneless", dni: "V-003", fecha: "Hace 12 min", metodo: "MANUAL", estado: "DENEGADO" },
-					{ nombre: "Bjorn Ironside", dni: "V-004", fecha: "Hace 20 min", metodo: "QR SCAN", estado: "AUTORIZADO" }
-				];
-			}
-
-			if (state.accesos.length === 0) {
-				accessContainer.innerHTML = '<div class="flex flex-col items-center justify-center h-full opacity-30"><i data-lucide="scan-line" class="w-12 h-12 mb-2"></i><p class="text-[10px] font-black italic">Sin accesos recientes</p></div>';
-			} else {
-				// Mostramos solo los últimos 8 accesos
-				const ultimosAccesos = state.accesos.slice(0, 8);
-				
-				accessContainer.innerHTML = ultimosAccesos.map(acc => {
-					const isDenied = acc.estado.includes('DENEGADO');
+			if (accessContainer) {
+				// Mostramos los últimos 10 registros de acceso general
+				accessContainer.innerHTML = historialAcceso.length ? historialAcceso.slice(0, 10).map(acc => {
+					const isDenied = acc.estado === 'DENIED' || acc.estado === 'DENEGADO';
 					const colorClass = isDenied ? 'text-red-500 bg-red-500/10 border-red-500/20' : 'text-blue-500 bg-blue-500/10 border-blue-500/20';
-					const icon = acc.metodo.includes('QR') ? 'qr-code' : (acc.metodo.includes('HUELLA') ? 'fingerprint' : 'user-check');
+					const hora = acc.fecha ? acc.fecha.split(' - ')[0] : 'Ahora';
 
 					return `
-					<div class="flex justify-between items-center p-3 bg-white/5 rounded-2xl border border-white/5 hover:bg-white/10 transition-colors group">
-						<div class="flex items-center gap-3">
-							<div class="w-8 h-8 rounded-lg ${isDenied ? 'bg-red-500/20 text-red-500' : 'bg-blue-500/20 text-blue-500'} flex items-center justify-center">
-								<i data-lucide="${icon}" class="w-4 h-4"></i>
+						<div class="flex justify-between items-center p-3 bg-white/5 rounded-2xl border border-white/5 hover:bg-white/10 transition-colors group">
+							<div class="flex items-center gap-3">
+								<div class="w-8 h-8 rounded-lg ${isDenied ? 'bg-red-500/20 text-red-500' : 'bg-blue-500/20 text-blue-500'} flex items-center justify-center">
+									<i data-lucide="user-check" class="w-4 h-4"></i>
+								</div>
+								<div>
+									<p class="text-[10px] font-black uppercase italic text-white group-hover:text-blue-400 truncate max-w-[120px]">${acc.nombre}</p>
+									<p class="text-[8px] text-gray-500 font-bold">${hora} • ${acc.metodo || 'QR'}</p>
+								</div>
 							</div>
-							<div>
-								<p class="text-[10px] font-black uppercase italic text-white group-hover:text-blue-400 truncate max-w-[120px]">${acc.nombre}</p>
-								<p class="text-[8px] text-gray-500 font-bold">${acc.fecha} • ${acc.metodo}</p>
-							</div>
+							<span class="text-[9px] px-2 py-1 rounded-md font-black uppercase italic ${colorClass}">${isDenied ? 'DENEGADO' : 'PERMITIDO'}</span>
 						</div>
-						<span class="text-[9px] px-2 py-1 rounded-md font-black uppercase italic ${colorClass}">${acc.estado}</span>
-					</div>
-				`}).join('');
+					`;
+				}).join('') : '<p class="text-center text-gray-600 italic text-[10px] py-10">Esperando lecturas de QR...</p>';
 			}
 
-			// --- B. ALERTAS DE STOCK (MANTENIDO) ---
+			// --- B. CONTROL DE STAFF (SOLO PROFESORES / ADMIN) ---
+			const staffContainer = document.getElementById('dash-staff-access');
+			if (staffContainer) {
+				// Filtramos el historial para mostrar solo a los que NO son alumnos
+				const staffLog = historialAcceso.filter(acc => {
+					const rol = (acc.rol || '').toLowerCase();
+					return rol !== "alumno" && rol !== "" && rol !== "n/a";
+				});
+
+				staffContainer.innerHTML = staffLog.length ? staffLog.slice(0, 10).map(acc => {
+					const hora = acc.fecha ? acc.fecha.split(' - ')[0] : 'Ahora';
+					return `
+						<div class="flex items-center justify-between p-3 bg-red-600/[0.05] rounded-2xl border border-red-600/10 hover:border-red-600/30 transition-all">
+							<div class="flex items-center gap-3">
+								<div class="w-8 h-8 rounded-full bg-red-600 flex items-center justify-center text-[10px] font-black italic text-black">
+									${(acc.nombre || '??').substring(0,2).toUpperCase()}
+								</div>
+								<div>
+									<p class="text-[10px] font-black uppercase italic text-white leading-none mb-1">${acc.nombre}</p>
+									<p class="text-[8px] text-red-500/70 font-bold uppercase">${acc.rol || 'STAFF'}</p>
+								</div>
+							</div>
+							<div class="text-right">
+								<p class="text-[9px] font-black text-white">${hora}</p>
+								<p class="text-[8px] font-bold text-gray-500 uppercase tracking-tighter">PRESENTE</p>
+							</div>
+						</div>
+					`;
+				}).join('') : '<p class="text-center text-gray-600 italic text-[10px] py-10">Sin personal registrado hoy.</p>';
+			}
+
+			// --- C. ALERTAS DE STOCK (SINCRONIZADO) ---
 			const stockContainer = document.getElementById('dash-low-stock');
-			const lowStock = stock.filter(s => s.stock_actual <= 5).sort((a,b) => a.stock_actual - b.stock_actual);
-
-			if (lowStock.length === 0) {
-				stockContainer.innerHTML = '<div class="flex flex-col items-center justify-center h-full opacity-30"><i data-lucide="check-circle" class="w-12 h-12 mb-2 text-green-500"></i><p class="text-[10px] font-black italic">Stock Saludable</p></div>';
-			} else {
-				stockContainer.innerHTML = lowStock.map(s => `
-					<div class="flex justify-between items-center p-3 bg-red-900/10 rounded-2xl border border-red-500/20">
-						<div class="flex items-center gap-3">
-							<div class="w-8 h-8 rounded-lg bg-red-600 text-black flex items-center justify-center font-bold text-xs shadow-lg shadow-red-600/20">
-								${s.stock_actual}
+			if (stockContainer) {
+				const lowStock = stock.filter(s => s.stock_actual <= 5).sort((a,b) => a.stock_actual - b.stock_actual);
+				if (lowStock.length === 0) {
+					stockContainer.innerHTML = '<div class="flex flex-col items-center justify-center h-full opacity-30"><i data-lucide="check-circle" class="w-12 h-12 mb-2 text-green-500"></i><p class="text-[10px] font-black italic">Stock Saludable</p></div>';
+				} else {
+					stockContainer.innerHTML = lowStock.map(s => `
+						<div class="flex justify-between items-center p-3 bg-white/[0.03] rounded-2xl border border-white/5 hover:border-orange-500/30 transition-all">
+							<div class="flex items-center gap-3">
+								<div class="w-8 h-8 rounded-lg bg-orange-600/20 text-orange-500 flex items-center justify-center font-bold text-xs">
+									${s.stock_actual}
+								</div>
+								<div>
+									<p class="text-[10px] font-black uppercase italic text-white">${s.nombre_producto}</p>
+									<p class="text-[8px] text-red-500 font-bold uppercase">Reposición Urgente</p>
+								</div>
 							</div>
-							<div>
-								<p class="text-[10px] font-black uppercase italic text-red-200">${s.nombre_producto}</p>
-								<p class="text-[8px] text-red-400/60 font-bold uppercase">Reposición Urgente</p>
-							</div>
+							<button onclick="switchView('stock')" class="text-[9px] border border-white/10 text-gray-400 px-2 py-1 rounded hover:bg-white/10 transition-colors italic font-black uppercase">Ver</button>
 						</div>
-						<button onclick="openEditStock(${s.id})" class="text-[9px] border border-red-500/30 text-red-400 px-2 py-1 rounded hover:bg-red-600 hover:text-black transition-colors">EDITAR</button>
-					</div>
-				`).join('');
+					`).join('');
+				}
 			}
 
-			// --- C. TOP 5 CLASES (MANTENIDO) ---
+			// --- D. TOP 5 CLASES (MANTENIDO) ---
 			const classCounts = {};
 			reservas.forEach(r => {
-				const name = r.clase_nombre || "Clase Eliminada";
+				const name = r.clase_nombre || "Clase";
 				classCounts[name] = (classCounts[name] || 0) + 1;
 			});
 
 			const sortedClasses = Object.entries(classCounts)
-				.sort((a, b) => b[1] - a[1]) // Mayor a menor
-				.slice(0, 5); // Top 5
+				.sort((a, b) => b[1] - a[1])
+				.slice(0, 5);
 
 			const topClassesContainer = document.getElementById('dash-top-clases');
-			if (sortedClasses.length === 0) {
-				topClassesContainer.innerHTML = '<p class="text-center text-gray-500 italic text-[10px] py-10">No hay reservas suficientes para el ranking.</p>';
-			} else {
-				topClassesContainer.innerHTML = sortedClasses.map(([name, count], index) => {
-					const medals = ["text-yellow-400", "text-gray-300", "text-amber-600", "text-gray-600", "text-gray-700"];
-					const trophy = index < 3 ? 'trophy' : 'medal';
-					return `
-					<div class="flex items-center justify-between p-3 bg-white/5 rounded-2xl border border-white/5">
-						<div class="flex items-center gap-3">
-							<i data-lucide="${trophy}" class="w-4 h-4 ${medals[index]}"></i>
-							<span class="text-[10px] font-black italic uppercase text-white">${index + 1}. ${name}</span>
+			if (topClassesContainer) {
+				if (sortedClasses.length === 0) {
+					topClassesContainer.innerHTML = '<p class="text-center text-gray-500 italic text-[10px] py-10">No hay reservas registradas.</p>';
+				} else {
+					topClassesContainer.innerHTML = sortedClasses.map(([name, count], index) => {
+						const colors = ["text-yellow-400", "text-gray-300", "text-amber-600", "text-gray-600", "text-gray-700"];
+						return `
+						<div class="flex items-center justify-between p-3 bg-white/5 rounded-2xl border border-white/5">
+							<div class="flex items-center gap-3">
+								<i data-lucide="medal" class="w-4 h-4 ${colors[index]}"></i>
+								<span class="text-[10px] font-black italic uppercase text-white">${index + 1}. ${name}</span>
+							</div>
+							<span class="text-[9px] font-black text-red-600 bg-red-600/10 px-2 py-0.5 rounded border border-red-600/20">${count} RES.</span>
 						</div>
-						<span class="text-[9px] font-black text-red-600 bg-red-600/10 px-2 py-0.5 rounded border border-red-600/20">${count} RES.</span>
-					</div>
-				`}).join('');
+					`}).join('');
+				}
 			}
 
-			// --- D. FRECUENCIA HORARIA (MANTENIDO) ---
+			// --- E. FRECUENCIA HORARIA (GRÁFICO MANTENIDO) ---
 			const chartContainer = document.getElementById('dash-chart-container');
 			const labelsContainer = document.getElementById('dash-chart-labels');
 			
-			// Inicializar contadores por hora (7am a 22pm)
-			const hoursMap = {};
-			for(let i=7; i<=22; i++) hoursMap[i] = 0;
+			if (chartContainer && labelsContainer) {
+				const hoursMap = {};
+				for(let i=7; i<=22; i++) hoursMap[i] = 0;
 
-			// Llenar datos
-			reservas.forEach(r => {
-				if(r.horario) {
-					const h = Math.floor(parseFloat(r.horario));
-					if(hoursMap[h] !== undefined) hoursMap[h]++;
-				}
-			});
+				reservas.forEach(r => {
+					if(r.horario) {
+						const h = Math.floor(parseFloat(r.horario));
+						if(hoursMap[h] !== undefined) hoursMap[h]++;
+					}
+				});
 
-			const maxVal = Math.max(...Object.values(hoursMap));
-			const safeMax = maxVal === 0 ? 10 : maxVal;
+				const maxVal = Math.max(...Object.values(hoursMap));
+				const safeMax = maxVal === 0 ? 10 : maxVal;
 
-			const yAxisHTML = `
-				<div class="absolute left-0 top-0 bottom-0 w-8 flex flex-col justify-between text-[8px] text-gray-600 font-bold py-2 pointer-events-none">
-					<span>${safeMax}</span>
-					<span>${Math.round(safeMax/2)}</span>
-					<span>0</span>
-				</div>`;
-			
-			chartContainer.innerHTML = yAxisHTML;
-			labelsContainer.innerHTML = "";
-
-			Object.keys(hoursMap).forEach(h => {
-				const count = hoursMap[h];
-				const heightPercent = (count / safeMax) * 100;
-				const opacity = Math.max(0.2, (count / safeMax)); 
+				chartContainer.innerHTML = `
+					<div class="absolute left-0 top-0 bottom-0 w-8 flex flex-col justify-between text-[8px] text-gray-600 font-bold py-2 pointer-events-none">
+						<span>${safeMax}</span>
+						<span>${Math.round(safeMax/2)}</span>
+						<span>0</span>
+					</div>`;
 				
-				const bar = document.createElement('div');
-				bar.className = "flex-1 mx-0.5 rounded-t-sm transition-all duration-500 hover:bg-red-500 relative group";
-				bar.style.height = `${Math.max(5, heightPercent)}%`; 
-				bar.style.backgroundColor = `rgba(220, 38, 38, ${opacity})`;
+				labelsContainer.innerHTML = "";
 
-				bar.innerHTML = `<div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 bg-black text-white text-[8px] font-bold px-1 rounded opacity-0 group-hover:opacity-100 whitespace-nowrap">${count} Res.</div>`;
+				Object.keys(hoursMap).forEach(h => {
+					const count = hoursMap[h];
+					const heightPercent = (count / safeMax) * 100;
+					const bar = document.createElement('div');
+					bar.className = "flex-1 mx-0.5 rounded-t-sm transition-all duration-500 hover:bg-red-500 relative group";
+					bar.style.height = `${Math.max(5, heightPercent)}%`;
+					bar.style.backgroundColor = `rgba(220, 38, 38, ${Math.max(0.2, count/safeMax)})`;
+					bar.innerHTML = `<div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 bg-black text-white text-[8px] font-bold px-1 rounded opacity-0 group-hover:opacity-100 whitespace-nowrap">${count}</div>`;
+					chartContainer.appendChild(bar);
 
-				chartContainer.appendChild(bar);
-
-				if (h % 2 === 0 || h == 7) { 
-					const lbl = document.createElement('div');
-					lbl.innerText = `${h}hs`;
-					lbl.className = "flex-1 text-center";
-					labelsContainer.appendChild(lbl);
-				} else {
-					const lbl = document.createElement('div');
-					lbl.className = "flex-1";
-					labelsContainer.appendChild(lbl);
-				}
-			});
+					if (h % 2 === 0 || h == 7) { 
+						const lbl = document.createElement('div');
+						lbl.innerText = `${h}h`;
+						lbl.className = "flex-1 text-center";
+						labelsContainer.appendChild(lbl);
+					} else {
+						labelsContainer.appendChild(document.createElement('div'));
+					}
+				});
+			}
 
 			if (window.lucide) lucide.createIcons();
 		}
@@ -5109,13 +5144,65 @@ async function loadProfesores() {
 			 * Asegúrate de que al cambiar a esta vista, traiga los datos.
 			 */
 			const originalSwitchView = window.switchView;
+
 			window.switchView = function(view) {
-				if (typeof originalSwitchView === 'function') originalSwitchView(view);
+				console.log(`🚀 Navegando a: ${view}`);
+
+				// 2. Ejecutamos primero la función original de navegación
+				if (typeof originalSwitchView === 'function') {
+					originalSwitchView(view);
+				} else {
+					// Fallback en caso de que la función no esté definida globalmente pero se llame
+					console.warn("⚠️ originalSwitchView no definida. Solo se ejecutará lógica de carga.");
+				}
 				
-				if (view === 'acceso-virtual') {
-					fetchAccesos();
+				// 3. Lógica específica por vista (Carga de datos)
+				switch (view) {
+					case 'dashboard':
+						// Si entramos al Dashboard, actualizamos los 3 paneles (Accesos, Staff y Stock)
+						if (typeof loadDashboard === 'function') {
+							loadDashboard();
+						} else {
+							console.error("❌ Error: loadDashboard() no encontrada.");
+						}
+						break;
+
+					case 'acceso-virtual':
+						// Si entramos a la sección de Molinetes / Seguridad
+						if (typeof fetchAccesos === 'function') {
+							fetchAccesos();
+						} else if (typeof renderAccesos === 'function') {
+							// Si no existe el fetch, al menos intentamos renderizar lo que haya en estado
+							renderAccesos();
+						}
+						break;
+
+					case 'alumnos':
+						// Aseguramos que la lista de alumnos esté fresca
+						if (typeof fetchAlumnos === 'function') {
+							fetchAlumnos();
+						}
+						break;
+
+					case 'merca':
+						// Si tienes una función para cargar inventario, podrías llamarla aquí
+						if (typeof fetchStock === 'function') {
+							fetchStock();
+						}
+						break;
+
+					default:
+						// No se requiere acción adicional para otras vistas
+						break;
+				}
+
+				// 4. Refrescar iconos globales de Lucide si están presentes
+				if (window.lucide) {
+					setTimeout(() => lucide.createIcons(), 50);
 				}
 			};
+
+			console.log("✅ Sistema de navegación extendido correctamente.");
 			
 			// FUNCIONES PARA EL MODAL DE MI QR
 				async function showMyQR() {
