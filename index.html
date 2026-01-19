@@ -1432,57 +1432,65 @@
 
 		<div id="modal-scanner-live" class="fixed inset-0 z-[2000] bg-black hidden flex-col items-center justify-center">
 			
-			<!-- Header -->
-			<div class="absolute top-0 left-0 w-full p-6 flex justify-between items-center bg-gradient-to-b from-black/90 to-transparent z-20">
-				<div>
-					<h3 class="text-xl font-black italic uppercase text-white tracking-widest">
-						<i data-lucide="scan" class="w-5 h-5 inline mr-2 text-red-600 animate-pulse"></i>Acceso Vikingo
-					</h3>
-					<p class="text-[10px] text-gray-400 font-bold uppercase">Sistema de Reconocimiento Visual</p>
-				</div>
-				<button onclick="stopScanner()" class="w-10 h-10 rounded-full bg-white/10 hover:bg-red-600 text-white flex items-center justify-center transition-all backdrop-blur-md border border-white/10">
-					<i data-lucide="x" class="w-5 h-5"></i>
-				</button>
-			</div>
-
-			<!-- Video -->
-			<div class="relative w-full h-full flex items-center justify-center bg-black">
-				<video id="scanner-video" class="w-full h-full object-cover opacity-80" autoplay playsinline muted></video>
-				
-				<!-- Error Msg -->
-				<div id="scanner-error-msg" class="absolute inset-0 z-40 hidden flex-col items-center justify-center bg-black/90 p-10 text-center">
-					<i data-lucide="video-off" class="w-16 h-16 text-gray-600 mb-4"></i>
-					<h3 class="text-xl font-black text-white mb-2 uppercase italic">Cámara no disponible</h3>
-					<p id="scanner-error-text" class="text-sm text-gray-400 max-w-md">No se pudo iniciar.</p>
-					<button onclick="stopScanner()" class="mt-6 px-6 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-xs font-bold uppercase">Cerrar</button>
+			<!-- Header: Información del Sistema -->
+				<div class="absolute top-0 left-0 w-full p-6 flex justify-between items-center bg-gradient-to-b from-black/90 to-transparent z-20">
+					<div>
+						<h3 class="text-xl font-black italic uppercase text-white tracking-widest">
+							<i data-lucide="scan" class="w-5 h-5 inline mr-2 text-red-600 animate-pulse"></i>Acceso Vikingo
+						</h3>
+						<p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Sistema de Reconocimiento Visual</p>
+					</div>
+					<button onclick="stopScanner()" class="w-10 h-10 rounded-full bg-white/10 hover:bg-red-600 text-white flex items-center justify-center transition-all backdrop-blur-md border border-white/10">
+						<i data-lucide="x" class="w-5 h-5"></i>
+					</button>
 				</div>
 
-				<!-- HUD -->
-				<div id="scanner-hud" class="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
-					<div class="w-64 h-64 border-2 border-red-600/50 rounded-3xl relative shadow-[0_0_50px_rgba(220,38,38,0.3)]">
-						<div class="absolute top-0 left-0 w-6 h-6 border-t-4 border-l-4 border-red-500 -mt-1 -ml-1 rounded-tl-lg"></div>
-						<div class="absolute top-0 right-0 w-6 h-6 border-t-4 border-r-4 border-red-500 -mt-1 -mr-1 rounded-tr-lg"></div>
-						<div class="absolute bottom-0 left-0 w-6 h-6 border-b-4 border-l-4 border-red-500 -mb-1 -ml-1 rounded-bl-lg"></div>
-						<div class="absolute bottom-0 right-0 w-6 h-6 border-b-4 border-r-4 border-red-500 -mb-1 -mr-1 rounded-br-lg"></div>
-						<div class="absolute left-2 right-2 h-0.5 bg-red-500 shadow-[0_0_10px_#ef4444] animate-scan-line top-1/2"></div>
-						<p class="absolute bottom-[-40px] w-full text-center text-[10px] font-black uppercase tracking-[0.3em] text-white/70 animate-pulse">Buscando Código QR...</p>
+				<!-- Contenedor Principal de Video -->
+				<div class="relative w-full h-full flex items-center justify-center bg-black">
+					<!-- El video ocupa todo el fondo -->
+					<video id="scanner-video" class="w-full h-full object-cover opacity-80" autoplay playsinline muted></video>
+					
+					<!-- Mensaje de Error (Cámara bloqueada o sin permisos) -->
+					<div id="scanner-error-msg" class="absolute inset-0 z-40 hidden flex-col items-center justify-center bg-black/90 p-10 text-center">
+						<i data-lucide="video-off" class="w-16 h-16 text-gray-600 mb-4"></i>
+						<h3 class="text-xl font-black text-white mb-2 uppercase italic">Cámara no disponible</h3>
+						<p id="scanner-error-text" class="text-sm text-gray-400 max-w-md">Verificá los permisos de tu navegador o la conexión HTTPS.</p>
+						<button onclick="stopScanner()" class="mt-6 px-8 py-3 bg-white/10 hover:bg-red-600 rounded-xl text-[10px] font-black uppercase italic transition-all">Cerrar</button>
+					</div>
+
+					<!-- HUD: Guía visual para el usuario -->
+					<div id="scanner-hud" class="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
+						<div class="w-64 h-64 border-2 border-red-600/50 rounded-3xl relative shadow-[0_0_50px_rgba(220,38,38,0.3)]">
+							<!-- Esquinas Reforzadas -->
+							<div class="absolute top-0 left-0 w-6 h-6 border-t-4 border-l-4 border-red-500 -mt-1 -ml-1 rounded-tl-lg"></div>
+							<div class="absolute top-0 right-0 w-6 h-6 border-t-4 border-r-4 border-red-500 -mt-1 -mr-1 rounded-tr-lg"></div>
+							<div class="absolute bottom-0 left-0 w-6 h-6 border-b-4 border-l-4 border-red-500 -mb-1 -ml-1 rounded-bl-lg"></div>
+							<div class="absolute bottom-0 right-0 w-6 h-6 border-b-4 border-r-4 border-red-500 -mb-1 -mr-1 rounded-br-lg"></div>
+							
+							<!-- Línea de Escaneo Animada -->
+							<div class="absolute left-2 right-2 h-0.5 bg-red-500 shadow-[0_0_15px_#ef4444] animate-scan-line top-1/2"></div>
+							
+							<p class="absolute bottom-[-50px] w-full text-center text-[10px] font-black uppercase tracking-[0.3em] text-white/70 animate-pulse">
+								Encuadre el Código QR
+							</p>
+						</div>
+					</div>
+
+					<!-- FEEDBACK OVERLAY: Se activa al detectar un QR -->
+					<div id="scanner-feedback-overlay" class="absolute inset-0 z-30 hidden flex-col items-center justify-center bg-black/95 backdrop-blur-md transition-all duration-300">
+						<div id="scanner-icon-container" class="mb-6 transform scale-150 transition-transform">
+							<!-- Aquí se inyecta el icono de check o x mediante JS -->
+						</div>
+						<h2 id="scanner-status-text" class="text-4xl font-black uppercase italic text-white mb-2 tracking-wide text-center"></h2>
+						<p id="scanner-user-name" class="text-2xl font-bold text-white uppercase tracking-widest mb-1"></p>
+						<p id="scanner-msg" class="text-sm font-medium text-gray-400 italic"></p>
+						
+						<!-- Indicador de reinicio automático -->
+						<div class="mt-10 w-48 h-1 bg-white/10 rounded-full overflow-hidden">
+							<div class="h-full bg-red-600 animate-[width_4s_linear]"></div>
+						</div>
 					</div>
 				</div>
-
-				<!-- FEEDBACK OVERLAY -->
-				<div id="scanner-feedback-overlay" class="absolute inset-0 z-30 hidden flex-col items-center justify-center bg-black/95 backdrop-blur-md transition-all duration-300">
-					<div id="scanner-icon-container" class="mb-6 transform scale-150 transition-transform"></div>
-					<h2 id="scanner-status-text" class="text-4xl font-black uppercase italic text-white mb-2 tracking-wide text-center"></h2>
-					<p id="scanner-user-name" class="text-xl font-bold text-white uppercase tracking-widest mb-1"></p>
-					<p id="scanner-msg" class="text-sm font-medium text-gray-400"></p>
-				</div>
-			</div>
-
-			<!-- Controles Simulación -->
-			<div class="absolute bottom-10 z-20 flex gap-4">
-				<button onclick="simulateScan('ok')" class="px-6 py-3 bg-green-600/80 hover:bg-green-500 backdrop-blur-md rounded-2xl border border-green-400/30 text-white font-black uppercase italic text-[10px] shadow-lg transition-all">Simular Alumno OK</button>
-				<button onclick="simulateScan('expired')" class="px-6 py-3 bg-red-600/80 hover:bg-red-500 backdrop-blur-md rounded-2xl border border-red-400/30 text-white font-black uppercase italic text-[10px] shadow-lg transition-all">Simular Vencido</button>
-			</div>
 		</div>
 
     <script>
@@ -4729,51 +4737,59 @@ async function loadProfesores() {
 		let isScanning = false;
 		let lastScannedData = null; // Para evitar lecturas duplicadas seguidas
 		let scanCooldown = false;   // Bloqueo temporal tras una lectura exitosa
+		let lastScannedDNI = null;
 
 		// 1. Abrir Escáner y Encender Cámara
 		async function startScanner() {
 			const modal = document.getElementById('modal-scanner-live');
 			const video = document.getElementById('scanner-video');
 			const hud = document.getElementById('scanner-hud');
-			const errorMsg = document.getElementById('scanner-error-msg');
+			
+			// Limpiamos cualquier rastro de la lectura anterior en la UI
+			hideFeedback();
+			
+			// Mostramos el modal
+			if (modal) {
+				modal.classList.remove('hidden');
+				modal.classList.add('flex');
+			}
+			if (hud) hud.classList.remove('hidden');
 
-			// Reset de UI
-			if (errorMsg) errorMsg.classList.add('hidden');
-			modal.classList.remove('hidden');
-			modal.classList.add('flex');
-			hud.classList.remove('hidden');
-
+			// Validación de seguridad (HTTPS es obligatorio para cámaras en web)
 			if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-				showCameraError("Tu navegador no soporta acceso a cámara o no usas HTTPS.");
+				showCameraError("ERROR: Se requiere conexión segura (HTTPS) para usar la cámara.");
 				return;
 			}
 
 			try {
 				videoStream = await navigator.mediaDevices.getUserMedia({ 
 					video: { 
-						facingMode: "environment",
+						facingMode: "environment", // Prioriza cámara trasera en móviles
 						width: { ideal: 1280 },
 						height: { ideal: 720 }
 					} 
 				});
 				
-				video.srcObject = videoStream;
-				video.onloadedmetadata = () => {
-					video.play();
-					isScanning = true;
-					lastScannedData = null; // Limpiar historial de lectura previa
-					console.log("Sistema Vikingo: Buscando QRs...");
-					requestAnimationFrame(scanLoop); 
-				};
+				if (video) {
+					video.srcObject = videoStream;
+					video.onloadedmetadata = () => {
+						video.play();
+						isScanning = true;
+						lastScannedDNI = null; 
+						console.log("🛡️ Escáner Activo: Buscando QR...");
+						requestAnimationFrame(scanLoop); 
+					};
+				}
 
 			} catch (err) {
-				console.error("Error al abrir cámara:", err);
-				showCameraError("Cámara no detectada o permiso denegado.");
+				console.error("Error crítico de cámara:", err);
+				showCameraError("No se pudo acceder a la lente. Verificá los permisos del navegador.");
 			}
 		}
 
 		/**
-		 * 3. BUCLE DE PROCESAMIENTO (Detección automática)
+		 * 2. BUCLE DE DETECCIÓN (Detección Real Automática)
+		 * Esta función corre analizando el video frame por frame.
 		 */
 		function scanLoop() {
 			if (!isScanning) return; 
@@ -4781,7 +4797,7 @@ async function loadProfesores() {
 			const video = document.getElementById('scanner-video');
 			let canvasElement = document.getElementById('scanner-canvas');
 			
-			// Crear canvas de procesamiento si no existe
+			// Si no existe el canvas auxiliar, lo creamos dinámicamente
 			if (!canvasElement) {
 				canvasElement = document.createElement('canvas');
 				canvasElement.id = 'scanner-canvas';
@@ -4791,86 +4807,116 @@ async function loadProfesores() {
 
 			const canvas = canvasElement.getContext("2d", { willReadFrequently: true });
 
-			if (video.readyState === video.HAVE_ENOUGH_DATA) {
+			if (video && video.readyState === video.HAVE_ENOUGH_DATA) {
 				canvasElement.height = video.videoHeight;
 				canvasElement.width = video.videoWidth;
 				
-				// Dibujamos el frame actual para que jsQR lo analice
+				// Procesamos la imagen del video
 				canvas.drawImage(video, 0, 0, canvasElement.width, canvasElement.height);
 				const imageData = canvas.getImageData(0, 0, canvasElement.width, canvasElement.height);
 				
-				// Intentar decodificar QR
-				const code = typeof jsQR !== 'undefined' ? jsQR(imageData.data, imageData.width, imageData.height, {
-					inversionAttempts: "dontInvert",
-				}) : null;
+				// Intentamos detectar el QR con la librería jsQR
+				const code = (typeof jsQR !== 'undefined') 
+					? jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: "dontInvert" }) 
+					: null;
 
-				// Si detecta un QR y no estamos en tiempo de espera (cooldown)
+				// Si encontró un código y no estamos esperando (cooldown)
 				if (code && code.data && !scanCooldown) {
-					// Solo procesamos si es un DNI distinto al anterior o si pasó el tiempo de reset
-					if (code.data !== lastScannedData) {
-						console.log("QR Detectado con éxito:", code.data);
-						lastScannedData = code.data;
-						processQRCode(code.data);
-						return; // Pausamos el bucle hasta que processQRCode termine
+					if (code.data !== lastScannedDNI) {
+						console.log("🎯 QR Detectado:", code.data);
+						lastScannedDNI = code.data;
+						processAccess(code.data);
+						return; // Pausamos el bucle hasta procesar
 					}
 				}
 			}
 
-			// Mantener el bucle vivo
 			requestAnimationFrame(scanLoop);
 		}
 
 		/**
-		 * 4. VALIDACIÓN CON BACKEND
-		 * Envía el DNI leído al servidor y muestra el resultado real.
+		 * 3. PROCESAR ACCESO (Comunicación con Backend)
 		 */
-		async function processQRCode(dniLargo) {
-			scanCooldown = true; // Bloqueo de seguridad para no procesar 2 veces
+		async function processAccess(qrData) {
+			scanCooldown = true; 
 			
-			// Limpiamos el texto de feedback anterior antes de la nueva consulta
 			const nameDisplay = document.getElementById('scanner-user-name');
-			if (nameDisplay) nameDisplay.innerText = "Verificando...";
+			if (nameDisplay) nameDisplay.innerText = "VERIFICANDO...";
 
 			try {
-				// El servidor recibe el DNI y devuelve {status, nombre, message}
-				const response = await apiFetch('/acceso/validar', 'POST', { qr_data: dniLargo });
+				// Consultamos al servidor. 
+				const response = await apiFetch('/acceso/validar', 'POST', { qr_data: qrData });
 				
-				// Mostramos el feedback con los datos REALES que devuelve el servidor
-				showFeedback(response);
-				
-				// Registrar en los logs visuales del dashboard
-				if(typeof registerAccessLog === 'function') {
-					registerAccessLog(
-						response.nombre || "Desconocido", 
-						dniLargo.split(':')[0], 
-						"CÁMARA", 
-						response.status
-					);
+				if (response.error) {
+					showFeedback({ 
+						status: "DENIED", 
+						message: response.error, 
+						nombre: "SISTEMA" 
+					});
+				} else {
+					showFeedback(response);
+					
+					if (typeof registerAccessLog === 'function') {
+						registerAccessLog(
+							response.nombre || "Desconocido", 
+							qrData.split(':')[0], 
+							"LECTOR QR", 
+							response.status
+						);
+					}
 				}
 
 			} catch (e) {
-				console.error("Error en validación:", e);
+				console.error("Error en la validación:", e);
 				showFeedback({ 
 					status: "DENIED", 
-					message: "Error de conexión", 
+					message: "Error de red/servidor", 
 					nombre: "SISTEMA" 
 				});
 			}
 
-			// Tiempo de espera de 3.5 segundos para que la persona vea su nombre y pase
+			// Esperamos 4 segundos para el feedback visual
 			setTimeout(() => {
-				hideFeedback();
-				scanCooldown = false;
-				// Permitimos volver a escanear después del tiempo de feedback
 				if (isScanning) {
-					lastScannedData = null; 
+					hideFeedback();
+					scanCooldown = false;
+					lastScannedDNI = null; 
 					requestAnimationFrame(scanLoop);
 				}
-			}, 3500);
+			}, 4000);
 		}
 
 		/**
-		 * 5. FEEDBACK VISUAL
+		 * 4. SIMULACIÓN (Para los botones del modal)
+		 */
+		async function simulateScan(type) {
+			if (scanCooldown) return;
+			
+			let dniToTest = "00000000";
+			
+			if (type === 'ok') {
+				// Buscar un alumno activo en el estado local para simular
+				const hoy = new Date().toISOString().split('T')[0];
+				const alumno = state.alumnos.find(a => a.fecha_vencimiento && a.fecha_vencimiento >= hoy);
+				if (alumno) {
+					dniToTest = alumno.dni;
+				} else {
+					showVikingToast("No hay alumnos activos para simular", true);
+					return;
+				}
+			} else {
+				dniToTest = "99999999"; // DNI que no existe o vencido
+			}
+
+			// Generar el hash para evitar el error de "formato no válido" si el backend lo requiere
+			const hash = await generateVikingHash(dniToTest);
+			const fullData = `${dniToTest}:${hash}`;
+			
+			processAccess(fullData);
+		}
+
+		/**
+		 * 5. UI: MOSTRAR RESULTADO (FEEDBACK)
 		 */
 		function showFeedback(data) {
 			const overlay = document.getElementById('scanner-feedback-overlay');
@@ -4884,29 +4930,25 @@ async function loadProfesores() {
 			overlay.classList.remove('hidden');
 			overlay.classList.add('flex');
 
-			// IMPORTANTE: Aquí usamos data.nombre que viene directo del servidor
-			name.innerText = data.nombre || "Guerrero Desconocido";
+			name.innerText = data.nombre || "DESCONOCIDO";
 			msg.innerText = data.message || "";
 
 			if (data.status === 'AUTHORIZED') {
 				status.innerText = "ACCESO PERMITIDO";
 				status.className = "text-4xl font-black uppercase italic text-green-500 mb-2 tracking-wide text-center";
-				icon.innerHTML = `
-					<div class="w-32 h-32 bg-green-500 rounded-full flex items-center justify-center shadow-[0_0_60px_#22c55e] animate-bounce">
-						<i data-lucide="check" class="w-16 h-16 text-black"></i>
-					</div>`;
+				icon.innerHTML = `<div class="w-32 h-32 bg-green-500 rounded-full flex items-center justify-center shadow-[0_0_60px_#22c55e] animate-bounce"><i data-lucide="check" class="w-16 h-16 text-black"></i></div>`;
 			} else {
 				status.innerText = "ACCESO DENEGADO";
 				status.className = "text-4xl font-black uppercase italic text-red-500 mb-2 tracking-wide text-center";
-				icon.innerHTML = `
-					<div class="w-32 h-32 bg-red-600 rounded-full flex items-center justify-center shadow-[0_0_60px_#dc2626] animate-shake">
-						<i data-lucide="x" class="w-16 h-16 text-black"></i>
-					</div>`;
+				icon.innerHTML = `<div class="w-32 h-32 bg-red-600 rounded-full flex items-center justify-center shadow-[0_0_60px_#dc2626] animate-shake"><i data-lucide="x" class="w-16 h-16 text-black"></i></div>`;
 			}
 			
 			if(window.lucide) lucide.createIcons();
 		}
 
+		/**
+		 * 6. LIMPIEZA Y CIERRE
+		 */
 		function hideFeedback() {
 			const overlay = document.getElementById('scanner-feedback-overlay');
 			if (overlay) {
@@ -4915,9 +4957,6 @@ async function loadProfesores() {
 			}
 		}
 
-		/**
-		 * 6. UTILIDADES Y CIERRE
-		 */
 		function stopScanner() {
 			isScanning = false;
 			const modal = document.getElementById('modal-scanner-live');
@@ -4928,10 +4967,23 @@ async function loadProfesores() {
 				videoStream = null;
 			}
 			
-			video.srcObject = null;
-			modal.classList.add('hidden');
-			modal.classList.remove('flex');
-			hideFeedback();
+			if (video) video.srcObject = null;
+			if (modal) {
+				modal.classList.add('hidden');
+				modal.classList.remove('flex');
+			}
+		}
+
+		/**
+		 * 7. UTILIDADES
+		 */
+		async function generateVikingHash(dni) {
+			const message = dni + SECRET_KEY;
+			const encoder = new TextEncoder();
+			const data = encoder.encode(message);
+			const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+			const hashArray = Array.from(new Uint8Array(hashBuffer));
+			return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 		}
 
 		function showCameraError(msg) {
