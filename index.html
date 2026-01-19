@@ -506,21 +506,6 @@
         <div id="views-container" class="p-10">
             <!-- DASHBOARD -->
             <div id="view-dashboard" class="view-content active">
-				<div id="modal-mi-qr" class="fixed inset-0 z-[1500] bg-black/90 hidden flex-col items-center justify-center backdrop-blur-sm" onclick="closeMyQR()">
-					<div class="glass-card p-10 rounded-[3rem] border-white/10 flex flex-col items-center text-center max-w-sm mx-4 transform transition-all scale-95 animate-in fade-in zoom-in duration-300" onclick="event.stopPropagation()">
-						<h3 class="text-2xl font-black italic uppercase text-white mb-2">Mi Pase Vikingo</h3>
-						<p class="text-[10px] text-red-600 font-bold uppercase mb-8 tracking-widest">Escanea en la entrada</p>
-						
-						<div class="p-4 bg-white rounded-3xl shadow-[0_0_50px_rgba(255,0,0,0.2)] mb-6">
-							<img id="img-mi-qr" src="" alt="QR" class="w-48 h-48 object-contain">
-						</div>
-						
-						<p id="qr-user-dni" class="text-xl font-black text-white tracking-widest mb-1">------</p>
-						<p id="qr-user-name" class="text-xs text-gray-500 font-bold uppercase italic">------</p>
-						
-						<button onclick="closeMyQR()" class="mt-8 px-8 py-3 bg-white/5 hover:bg-white/10 rounded-xl text-[10px] font-black uppercase text-gray-400 hover:text-white transition-colors">Cerrar Pase</button>
-					</div>
-				</div>
 				<div id="admin-dashboard-layout">
 				<!-- HEADER DEL DASHBOARD CON BOTÓN QR -->
 				<div class="flex justify-between items-end mb-8">
@@ -1574,6 +1559,22 @@
 				</div>
 		</div>
 
+				<div id="modal-mi-qr" class="fixed inset-0 z-[1500] bg-black/90 hidden flex-col items-center justify-center backdrop-blur-sm" onclick="closeMyQR()">
+					<div class="glass-card p-10 rounded-[3rem] border-white/10 flex flex-col items-center text-center max-w-sm mx-4 transform transition-all scale-95 animate-in fade-in zoom-in duration-300" onclick="event.stopPropagation()">
+						<h3 class="text-2xl font-black italic uppercase text-white mb-2">Mi Pase Vikingo</h3>
+						<p class="text-[10px] text-red-600 font-bold uppercase mb-8 tracking-widest">Escanea en la entrada</p>
+						
+						<div class="p-4 bg-white rounded-3xl shadow-[0_0_50px_rgba(255,0,0,0.2)] mb-6">
+							<img id="img-mi-qr" src="" alt="QR" class="w-48 h-48 object-contain">
+						</div>
+						
+						<p id="qr-user-dni" class="text-xl font-black text-white tracking-widest mb-1">------</p>
+						<p id="qr-user-name" class="text-xs text-gray-500 font-bold uppercase italic">------</p>
+						
+						<button onclick="closeMyQR()" class="mt-8 px-8 py-3 bg-white/5 hover:bg-white/10 rounded-xl text-[10px] font-black uppercase text-gray-400 hover:text-white transition-colors">Cerrar Pase</button>
+					</div>
+				</div>
+
     <script>
         // ==========================================
 		// 1. CONFIGURACIÓN MAESTRA (PEGAR AL INICIO DE TU SCRIPT)
@@ -1642,42 +1643,40 @@
 			if (!state.user) return;
 			const rol = state.user.rol_nombre || "";
 			
-			const isAlumno = rol === "Alumno";
-			const isProfesor = rol === "Profesor";
-			const isAdminArea = rol === "Administracion" || rol === "Administrador" || rol === "Supervisor";
-
-			// 1. Dashboards
-			const adminDash = document.getElementById('admin-dashboard-layout');
-			const aluDash = document.getElementById('alumno-dashboard-layout');
-			const profDash = document.getElementById('view-professor-dashboard');
-
-			if(adminDash) adminDash.style.display = isAdminArea ? 'block' : 'none';
-			if(aluDash) aluDash.style.display = isAlumno ? 'block' : 'none';
-			if(profDash) profDash.style.display = isProfesor ? 'block' : 'none';
-
-			// 2. Elementos de Navegación
-			const navAdmin = document.getElementById('nav-section-admin');
-			const navOperativa = document.getElementById('nav-section-operativa');
+			// IDs de secciones y botones
+			const navAdminSection = document.getElementById('nav-section-admin'); // Contiene Dashboard, Perfil, Alumnos
+			const navStaffSection = document.getElementById('nav-section-staff'); // Contiene Profesores/Administrativos
+			const navOperativaSection = document.getElementById('nav-section-operativa'); // Facturación, Caja, Stock
+			const navVirtualSection = document.getElementById('nav-section-virtual'); // Acceso Virtual (Molinete)
+			const btnPlanes = document.getElementById('nav-planes');
+			const btnClases = document.getElementById('nav-clases');
 			const btnAlumnos = document.getElementById('nav-alumnos');
-			const btnStaff = document.getElementById('nav-section-staff');
 
-			// Reset de visibilidad inicial
-			if(navAdmin) navAdmin.style.display = 'block';
-			if(navOperativa) navOperativa.style.display = 'block';
-			if(btnAlumnos) btnAlumnos.style.display = 'flex';
-			if(btnStaff) btnStaff.style.display = 'block';
+			// Reset general
+			const allElems = [navAdminSection, navStaffSection, navOperativaSection, navVirtualSection, btnPlanes, btnClases, btnAlumnos];
+			allElems.forEach(el => { if(el) el.style.display = 'block'; });
 
-			// Lógica para Alumnos: No ven administración ni operativa
-			if (isAlumno) {
-				if(navAdmin) navAdmin.style.setProperty('display', 'none', 'important');
-				if(navOperativa) navOperativa.style.setProperty('display', 'none', 'important');
+			// RESTRICCIONES SEGÚN ROL
+			if (rol === "Alumno") {
+				if(navStaffSection) navStaffSection.style.display = 'none';
+				if(navOperativaSection) navOperativaSection.style.display = 'none';
+				if(navVirtualSection) navVirtualSection.style.display = 'none';
+				if(btnPlanes) btnPlanes.style.display = 'none';
+				if(btnClases) btnClases.style.display = 'none';
 			}
 
-			// Lógica para Profesores: Ven Dashboard/Perfil pero NO gestión de Alumnos, Staff u Operativa
-			if (isProfesor) {
-				if(btnAlumnos) btnAlumnos.style.setProperty('display', 'none', 'important');
-				if(btnStaff) btnStaff.style.setProperty('display', 'none', 'important');
-				if(navOperativa) navOperativa.style.setProperty('display', 'none', 'important');
+			if (rol === "Profesor") {
+				if(btnAlumnos) btnAlumnos.style.display = 'none';
+				if(navStaffSection) navStaffSection.style.display = 'none';
+				if(navOperativaSection) navOperativaSection.style.display = 'none';
+				if(navVirtualSection) navVirtualSection.style.display = 'none';
+				if(btnPlanes) btnPlanes.style.display = 'none';
+				if(btnClases) btnClases.style.display = 'none';
+			}
+
+			if (rol === "Administracion" || rol === "Administrativo") {
+				if(navStaffSection) navStaffSection.style.display = 'none';
+				// El administrativo NO debe ver la sección Staff.
 			}
 
 			if(window.lucide) lucide.createIcons();
@@ -3267,18 +3266,19 @@
 		}
 
         function switchView(view) {
-			// 1. Ocultar TODAS las vistas que tengan la clase .view-content
+			// 1. Ocultar TODAS las vistas principales
 			document.querySelectorAll('.view-content').forEach(v => {
 				v.classList.remove('active');
 				v.classList.add('hidden');
+				v.style.display = 'none'; // Forzado para evitar solapamientos
 			});
 
-			// 2. Referencias a los layouts específicos
+			// 2. Referencias a los layouts específicos dentro del Dashboard
 			const adminLayout = document.getElementById('admin-dashboard-layout');
 			const aluLayout = document.getElementById('alumno-dashboard-layout');
-			const profLayout = document.getElementById('professor-dashboard-layout');
+			const profLayout = document.getElementById('professor-dashboard-layout'); // Asegúrate que este ID coincida en tu HTML
 			
-			// Ocultar sub-layouts por defecto para evitar solapamientos
+			// Ocultar sub-layouts por defecto siempre para limpiar la pantalla
 			if (adminLayout) adminLayout.classList.add('hidden');
 			if (aluLayout) aluLayout.classList.add('hidden');
 			if (profLayout) profLayout.classList.add('hidden');
@@ -3286,7 +3286,7 @@
 			// 3. Quitar estado activo de los botones de navegación
 			document.querySelectorAll('.nav-btn, .nav-item').forEach(b => b.classList.remove('active'));
 
-			// 4. Lógica especial para el Dashboard según el ROL
+			// 4. Lógica de Dashboard según el ROL
 			let targetId = 'view-' + view;
 
 			if (view === 'dashboard') {
@@ -3298,8 +3298,10 @@
 					if (typeof renderStudentDashboard === 'function') renderStudentDashboard();
 				} 
 				else if (rol === "Profesor") {
-					// El dashboard de profesor es su propia vista independiente
+					// El dashboard de profesor suele estar en un div hermano o hijo
+					// Si es una vista independiente:
 					targetId = 'view-professor-dashboard'; 
+					if (profLayout) profLayout.classList.remove('hidden');
 					if (typeof loadProfessorDashboard === 'function') loadProfessorDashboard();
 				} 
 				else {
@@ -3315,6 +3317,7 @@
 			if (targetView) {
 				targetView.classList.add('active');
 				targetView.classList.remove('hidden');
+				targetView.style.display = 'flex'; // O 'block' según tu CSS
 			}
 
 			// 6. Actualizar UI de navegación y títulos
@@ -3324,19 +3327,18 @@
 			const titleEl = document.getElementById('view-title');
 			if (titleEl) titleEl.innerText = view.replace('-', ' ').toUpperCase();
 
-			// 7. Cargas de datos específicas por sección
+			// 7. Cargas de datos por sección
 			if (view === 'calendario') renderCalendar();
 			if (view === 'cobrar') renderCobrar();
 			if (view === 'rutinas') renderRutinas();
 			if (view === 'acceso-virtual') renderAccesos();
 			if (view === 'alumnos') renderAlumnosSection();
 
-			// 8. Lógica de Perfil
+			// 8. Lógica de Perfil (Mantenemos tu lógica intacta para no romper los inputs)
 			if (view === 'perfil' && state.user) {
 				const u = state.user;
 				const initials = u.nombre_completo ? u.nombre_completo.split(' ').filter(n => n).map(n => n[0]).join('').toUpperCase() : "??";
 				
-				// Actualizar textos básicos
 				const nameEl = document.getElementById('prof-name');
 				const roleEl = document.getElementById('prof-role');
 				if(nameEl) nameEl.innerText = u.nombre_completo || "Usuario Vikingo";
@@ -3347,28 +3349,18 @@
 				if(sideInitials) sideInitials.innerText = initials;
 				if(viewInitials) viewInitials.innerText = initials;
 				
-				// Llenar inputs
-				const inputName = document.getElementById('prof-input-name');
-				const inputDni = document.getElementById('prof-input-dni');
-				const inputEmail = document.getElementById('prof-input-email');
-				if(inputName) inputName.value = u.nombre_completo || "";
-				if(inputDni) inputDni.value = u.dni || "";
-				if(inputEmail) inputEmail.value = u.email || "";
+				if(document.getElementById('prof-input-name')) document.getElementById('prof-input-name').value = u.nombre_completo || "";
+				if(document.getElementById('prof-input-dni')) document.getElementById('prof-input-dni').value = u.dni || "";
+				if(document.getElementById('prof-input-email')) document.getElementById('prof-input-email').value = u.email || "";
 
 				const fisicos = document.getElementById('perfil-datos-fisicos');
 				const planInfo = document.getElementById('plan-alumno-info');
 
 				if (u.rol_nombre === "Alumno") {
-					if (fisicos) {
-						fisicos.classList.remove('hidden');
-						fisicos.style.display = 'grid';
-					}
-					const pPeso = document.getElementById('prof-input-peso');
-					const pAlt = document.getElementById('prof-input-altura');
-					const pImc = document.getElementById('prof-input-imc');
-					if(pPeso) pPeso.value = u.peso || "";
-					if(pAlt) pAlt.value = u.altura || "";
-					if(pImc) pImc.value = u.imc || "";
+					if (fisicos) { fisicos.classList.remove('hidden'); fisicos.style.display = 'grid'; }
+					if(document.getElementById('prof-input-peso')) document.getElementById('prof-input-peso').value = u.peso || "";
+					if(document.getElementById('prof-input-altura')) document.getElementById('prof-input-altura').value = u.altura || "";
+					if(document.getElementById('prof-input-imc')) document.getElementById('prof-input-imc').value = u.imc || "";
 					
 					if (planInfo) planInfo.classList.remove('hidden');
 					const pPlan = document.getElementById('perfil-plan-nombre');
@@ -3376,10 +3368,7 @@
 					if(pPlan) pPlan.innerText = u.plan?.nombre || "SIN PLAN";
 					if(pVenc) pVenc.innerText = "Vence: " + (u.fecha_vencimiento || "-");
 				} else {
-					if (fisicos) {
-						fisicos.classList.add('hidden');
-						fisicos.style.display = 'none';
-					}
+					if (fisicos) { fisicos.classList.add('hidden'); fisicos.style.display = 'none'; }
 					if (planInfo) planInfo.classList.add('hidden');
 				}
 			}
@@ -5337,7 +5326,6 @@ async function loadProfesores() {
 			
 			// FUNCIONES PARA EL MODAL DE MI QR
 			async function showMyQR() {
-				// Intentamos obtener el usuario del estado o del storage
 				const user = state.user || JSON.parse(localStorage.getItem('user'));
 				
 				if (!user) {
@@ -5345,8 +5333,7 @@ async function loadProfesores() {
 					return;
 				}
 
-				// VALIDACIÓN: Solo los Alumnos chequean vencimiento. 
-				// Profesores, Admins y Staff pasan directo.
+				// Validación de plan SOLO para Alumnos
 				if (user.rol_nombre === "Alumno") {
 					const hoy = new Date().toISOString().split('T')[0];
 					const vencimiento = user.fecha_vencimiento || "0000-00-00";
@@ -5364,16 +5351,14 @@ async function loadProfesores() {
 				if (modal && img) {
 					try {
 						if (dniTxt) dniTxt.innerText = user.dni;
-						if (nameTxt) nameTxt.innerText = user.nombre_completo || "Personal Staff";
+						if (nameTxt) nameTxt.innerText = user.nombre_completo;
 						
-						// Generar Firma de Seguridad
 						const hash = await generateVikingHash(user.dni);
 						const qrData = `${user.dni}:${hash}`;
 						
-						// Cargar API de QR
 						img.src = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(qrData)}&color=000000&bgcolor=ffffff&margin=10`;
 
-						// ABRIR: Quitamos hidden y forzamos flex
+						// Quitamos 'hidden', agregamos 'flex' y forzamos display
 						modal.classList.remove('hidden');
 						modal.classList.add('flex');
 						modal.style.setProperty('display', 'flex', 'important'); 
@@ -5381,10 +5366,13 @@ async function loadProfesores() {
 						if (window.lucide) lucide.createIcons();
 					} catch (error) {
 						console.error("Error QR:", error);
-						showVikingToast("Error al generar el acceso", true);
+						showVikingToast("Error al generar acceso", true);
 					}
+				} else {
+					console.error("No se encontró el modal 'modal-mi-qr' en el DOM.");
 				}
 			}
+
 
 				function closeMyQR() {
 					const modal = document.getElementById('modal-mi-qr');
