@@ -1641,51 +1641,47 @@
 
 		function applyPermissions() {
 			if (!state.user) return;
-			const rol = state.user.rol_nombre || "";
+			const rol = (state.user.rol_nombre || "").toLowerCase();
 			
-			// IDs de secciones y botones
-			const navAdminSection = document.getElementById('nav-section-admin'); 
-			const navStaffSection = document.getElementById('nav-section-staff'); 
-			const navOperativaSection = document.getElementById('nav-section-operativa'); 
-			const navVirtualSection = document.getElementById('nav-section-virtual'); 
-			const btnPlanes = document.getElementById('nav-planes');
-			const btnClases = document.getElementById('nav-clases');
-			const btnAlumnos = document.getElementById('nav-alumnos');
+			// Lista de IDs de elementos a controlar
+			const elements = {
+				navAlumnos: document.getElementById('nav-alumnos'),
+				navPlanes: document.getElementById('nav-planes'),
+				navClases: document.getElementById('nav-clases'),
+				navSectionStaff: document.getElementById('nav-section-staff'),
+				navSectionOperativa: document.getElementById('nav-section-operativa'),
+				navSectionVirtual: document.getElementById('nav-section-virtual'),
+				staffPanel: document.querySelector('.border-red-600\\/20') // Panel "Control Staff"
+			};
 
-			// Recuadro "Control Staff" en el Dashboard (Panel Rojo)
-			const staffPanel = document.querySelector('.border-red-600\\/20');
+			// 1. Reset general: Mostrar todo primero (solo lo que existe en el DOM)
+			Object.values(elements).forEach(el => {
+				if (el) el.style.setProperty('display', 'flex', 'important');
+			});
 
-			// 1. Reset general: mostrar todo antes de filtrar
-			const allElems = [navAdminSection, navStaffSection, navOperativaSection, navVirtualSection, btnPlanes, btnClases, btnAlumnos];
-			allElems.forEach(el => { if(el) el.style.display = 'block'; });
-			if(staffPanel) staffPanel.style.display = 'flex';
-
-			// 2. RESTRICCIONES SEGÚN ROL
-			if (rol === "Alumno") {
-				// El alumno no gestiona nada del gimnasio
-				if(navStaffSection) navStaffSection.style.display = 'none';
-				if(navOperativaSection) navOperativaSection.style.display = 'none';
-				if(navVirtualSection) navVirtualSection.style.display = 'none';
-				if(btnPlanes) btnPlanes.style.display = 'none';
-				if(btnClases) btnClases.style.display = 'none';
-				if(btnAlumnos) btnAlumnos.style.display = 'none';
+			// 2. RESTRICCIONES SEGÚN ROL (Comparación en minúsculas para seguridad)
+			if (rol === "alumno") {
+				const toHide = ['navAlumnos', 'navPlanes', 'navClases', 'navSectionStaff', 'navSectionOperativa', 'navSectionVirtual'];
+				toHide.forEach(key => {
+					if (elements[key]) elements[key].style.setProperty('display', 'none', 'important');
+				});
 			}
 
-			if (rol === "Profesor") {
-				if(btnAlumnos) btnAlumnos.style.display = 'none';
-				if(navStaffSection) navStaffSection.style.display = 'none';
-				if(navOperativaSection) navOperativaSection.style.display = 'none';
-				if(navVirtualSection) navVirtualSection.style.display = 'none';
-				if(btnPlanes) btnPlanes.style.display = 'none';
-				if(btnClases) btnClases.style.display = 'none';
+			else if (rol === "profesor") {
+				// El profesor no debe ver gestión de otros alumnos, ni staff, ni operativa
+				const toHide = ['navAlumnos', 'navPlanes', 'navClases', 'navSectionStaff', 'navSectionOperativa', 'navSectionVirtual'];
+				toHide.forEach(key => {
+					if (elements[key]) elements[key].style.setProperty('display', 'none', 'important');
+				});
 			}
 
-			if (rol === "Administracion" || rol === "Administrativo") {
-				// REGLA: El administrativo es controlado, no controla al staff
-				if(navStaffSection) navStaffSection.style.display = 'none';
-				if(staffPanel) staffPanel.style.setProperty('display', 'none', 'important');
+			else if (rol === "administracion" || rol === "administrativo") {
+				// El administrativo no ve la sección de Staff ni su propio panel de control en el dashboard
+				if(elements.navSectionStaff) elements.navSectionStaff.style.setProperty('display', 'none', 'important');
+				if(elements.staffPanel) elements.staffPanel.style.setProperty('display', 'none', 'important');
 			}
 
+			// Actualizar iconos por si se ocultaron/mostraron elementos
 			if(window.lucide) lucide.createIcons();
 		}
 
@@ -3273,46 +3269,64 @@
 		}
 
         function switchView(view) {
-			// 1. Ocultar TODAS las vistas principales
+			// 1. Ocultar TODAS las vistas principales de contenido
 			document.querySelectorAll('.view-content').forEach(v => {
 				v.classList.remove('active');
 				v.classList.add('hidden');
-				v.style.display = 'none'; // Forzado para evitar solapamientos
+				v.style.setProperty('display', 'none', 'important'); 
 			});
 
-			// 2. Referencias a los layouts específicos dentro del Dashboard
-			const adminLayout = document.getElementById('admin-dashboard-layout');
-			const aluLayout = document.getElementById('alumno-dashboard-layout');
-			const profLayout = document.getElementById('professor-dashboard-layout'); 
+			// 2. Referencias a los sub-layouts internos del Dashboard
+			const layouts = [
+				document.getElementById('admin-dashboard-layout'),
+				document.getElementById('alumno-dashboard-layout'),
+				document.getElementById('professor-dashboard-layout'),
+				document.getElementById('view-professor-dashboard')
+			];
 			
-			// Ocultar sub-layouts por defecto siempre para limpiar la pantalla
-			if (adminLayout) adminLayout.classList.add('hidden');
-			if (aluLayout) aluLayout.classList.add('hidden');
-			if (profLayout) profLayout.classList.add('hidden');
+			// Ocultar sub-layouts por defecto siempre
+			layouts.forEach(l => {
+				if (l) {
+					l.classList.add('hidden');
+					l.style.setProperty('display', 'none', 'important');
+				}
+			});
 
 			// 3. Quitar estado activo de los botones de navegación
 			document.querySelectorAll('.nav-btn, .nav-item').forEach(b => b.classList.remove('active'));
 
 			// 4. Lógica de Dashboard según el ROL
 			let targetId = 'view-' + view;
+			const rol = (state.user?.rol_nombre || "").toLowerCase();
 
 			if (view === 'dashboard') {
-				const rol = state.user?.rol_nombre;
-				
-				if (rol === "Alumno") {
+				if (rol === "alumno") {
 					targetId = 'view-dashboard';
-					if (aluLayout) aluLayout.classList.remove('hidden');
+					const aluLayout = document.getElementById('alumno-dashboard-layout');
+					if (aluLayout) {
+						aluLayout.classList.remove('hidden');
+						aluLayout.style.setProperty('display', 'block', 'important');
+					}
 					if (typeof renderStudentDashboard === 'function') renderStudentDashboard();
 				} 
-				else if (rol === "Profesor") {
+				else if (rol === "profesor") {
+					// El dashboard de profesor suele tener su propia vista independiente
 					targetId = 'view-professor-dashboard'; 
-					if (profLayout) profLayout.classList.remove('hidden');
+					const profLayout = document.getElementById('professor-dashboard-layout') || document.getElementById('view-professor-dashboard');
+					if (profLayout) {
+						profLayout.classList.remove('hidden');
+						profLayout.style.setProperty('display', 'block', 'important');
+					}
 					if (typeof loadProfessorDashboard === 'function') loadProfessorDashboard();
 				} 
 				else {
-					// Admin / Administración
+					// Admin / Administración / Supervisor
 					targetId = 'view-dashboard';
-					if (adminLayout) adminLayout.classList.remove('hidden');
+					const adminLayout = document.getElementById('admin-dashboard-layout');
+					if (adminLayout) {
+						adminLayout.classList.remove('hidden');
+						adminLayout.style.setProperty('display', 'block', 'important');
+					}
 					if (typeof loadDashboard === 'function') loadDashboard();
 				}
 			}
@@ -3322,7 +3336,7 @@
 			if (targetView) {
 				targetView.classList.add('active');
 				targetView.classList.remove('hidden');
-				targetView.style.display = 'flex'; 
+				targetView.style.setProperty('display', 'flex', 'important'); 
 			}
 
 			// 6. Actualizar UI de navegación y títulos
@@ -3339,7 +3353,7 @@
 			if (view === 'acceso-virtual') renderAccesos();
 			if (view === 'alumnos') renderAlumnosSection();
 
-			// 8. Lógica de Perfil
+			// 8. Lógica de Perfil (Mantenemos tu lógica para llenar inputs)
 			if (view === 'perfil' && state.user) {
 				const u = state.user;
 				const initials = u.nombre_completo ? u.nombre_completo.split(' ').filter(n => n).map(n => n[0]).join('').toUpperCase() : "??";
@@ -3362,7 +3376,10 @@
 				const planInfo = document.getElementById('plan-alumno-info');
 
 				if (u.rol_nombre === "Alumno") {
-					if (fisicos) { fisicos.classList.remove('hidden'); fisicos.style.display = 'grid'; }
+					if (fisicos) { 
+						fisicos.classList.remove('hidden'); 
+						fisicos.style.setProperty('display', 'grid', 'important'); 
+					}
 					if(document.getElementById('prof-input-peso')) document.getElementById('prof-input-peso').value = u.peso || "";
 					if(document.getElementById('prof-input-altura')) document.getElementById('prof-input-altura').value = u.altura || "";
 					if(document.getElementById('prof-input-imc')) document.getElementById('prof-input-imc').value = u.imc || "";
@@ -3373,12 +3390,15 @@
 					if(pPlan) pPlan.innerText = u.plan?.nombre || "SIN PLAN";
 					if(pVenc) pVenc.innerText = "Vence: " + (u.fecha_vencimiento || "-");
 				} else {
-					if (fisicos) { fisicos.classList.add('hidden'); fisicos.style.display = 'none'; }
+					if (fisicos) { 
+						fisicos.classList.add('hidden'); 
+						fisicos.style.setProperty('display', 'none', 'important'); 
+					}
 					if (planInfo) planInfo.classList.add('hidden');
 				}
 			}
 
-			// 9. Finalizar
+			// 9. Finalizar con limpieza estricta de menú
 			applyPermissions();
 			if (window.lucide) lucide.createIcons();
 		}
