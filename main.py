@@ -523,7 +523,7 @@ def validar_acceso_qr(data: AccessCheck, db: Session = Depends(database.get_db))
             final_response["status"] = "AUTHORIZED"
             final_response["message"] = f"Pase Válido ({dias_rest} días rest.)"
             if dias_rest <= 3: final_response["message"] = "¡Atención: Próximo a vencer!"
-            final_response["color"] = green"
+            final_response["color"] = "green"
         else:
             final_response["status"] = "DENIED"
             final_response["message"] = f"Plan Vencido el {user.fecha_vencimiento}"
