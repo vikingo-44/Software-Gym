@@ -4964,36 +4964,60 @@ async function loadProfesores() {
 			}
 			if (hud) hud.classList.remove('hidden');
 
-			// Validación de seguridad (HTTPS es obligatorio para cámaras en web)
-			if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-				showCameraError("ERROR: Se requiere conexión segura (HTTPS) para usar la cámara.");
+			// VALIDACIÓN CRÍTICA: HTTPS (Obligatorio para cámaras en la mayoría de tablets)
+			if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
+				showCameraError("ERROR DE SEGURIDAD: La cámara requiere una conexión segura HTTPS. Verifica la URL.");
 				return;
 			}
 
-			try {
-				videoStream = await navigator.mediaDevices.getUserMedia({ 
+			// Definimos una lista de intentos (Constraints) desde lo más ideal a lo más básico
+			const attempts = [
+				// Intento 1: Cámara frontal con resolución flexible
+				{ 
 					video: { 
-						facingMode: "user", // "environment" Prioriza cámara trasera en móviles y "user Prioriza cámara delantera en móviles y tablet"
-						width: { min: 640, ideal: 1280 },
-						height: { min: 480, ideal: 720 },
-						aspectRatio: { ideal: 1.7777777778 } // 16:9
+						facingMode: "user", 
+						width: { min: 320, ideal: 1280 }, 
+						height: { min: 240, ideal: 720 },
+						aspectRatio: { ideal: 1.7777777778 }
 					} 
-				});
-				
-				if (video) {
-					video.srcObject = videoStream;
-					video.onloadedmetadata = () => {
-						video.play();
-						isScanning = true;
-						lastScannedDNI = null; 
-						console.log("🛡️ Escáner Activo: Buscando QR...");
-						requestAnimationFrame(scanLoop); 
-					};
+				},
+				// Intento 2: Cámara frontal sin restricciones de resolución (para tablets viejas)
+				{ 
+					video: { facingMode: "user" } 
+				},
+				// Intento 3: Cualquier cámara disponible (último recurso)
+				{ 
+					video: true 
 				}
+			];
 
-			} catch (err) {
-				console.error("Error crítico de cámara:", err);
-				showCameraError("No se pudo acceder a la lente. Verificá los permisos del navegador.");
+			let lastError = null;
+
+			// Bucle de compatibilidad: Probamos cada configuración hasta que una funcione
+			for (const config of attempts) {
+				try {
+					console.log("Intentando acceso con configuración:", config);
+					videoStream = await navigator.mediaDevices.getUserMedia(config);
+					if (videoStream) break; // Si tuvimos éxito, salimos del bucle
+				} catch (err) {
+					lastError = err;
+					console.warn("Fallo un intento de cámara:", err.name);
+					// Continuamos al siguiente intento...
+				}
+			}
+			
+			if (videoStream && video) {
+				video.srcObject = videoStream;
+				video.onloadedmetadata = () => {
+					video.play();
+					isScanning = true;
+					lastScannedDNI = null; 
+					console.log("🛡️ Ojo de Odín Activo: Buscando QR...");
+					requestAnimationFrame(scanLoop); 
+				};
+			} else {
+				console.error("No se pudo inicializar ninguna cámara después de varios intentos:", lastError);
+				showCameraError("No hay acceso a la cámara. Asegúrate de usar Chrome y tener habilitados los permisos en la tablet.");
 			}
 		}
 
