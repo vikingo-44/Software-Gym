@@ -1307,6 +1307,7 @@
                         <input type="text" id="al-imc" placeholder="-" readonly class="viking-input opacity-60">
                     </div>
                 </div>
+				
                 <div class="grid grid-cols-2 gap-4">
                     <div class="space-y-1">
                         <label class="text-[9px] font-black text-gray-500 uppercase italic">Fecha Renovación</label>
@@ -1317,6 +1318,21 @@
                         <input type="date" id="al-fecha-vencimiento" class="viking-input">
                     </div>
                 </div>
+				<!-- NUEVA SECCIÓN: SALUD Y EDAD -->
+				<div class="grid grid-cols-2 gap-4 border-t border-white/5 pt-4 mt-2">
+					<div class="space-y-1">
+						<label class="text-[9px] font-black text-red-600 uppercase italic">Fecha de Nacimiento</label>
+						<input type="date" id="al-fecha-nacimiento" class="viking-input">
+					</div>
+					<div class="space-y-1">
+						<label class="text-[9px] font-black text-gray-500 uppercase italic">Certificado Médico (Fecha)</label>
+						<input type="date" id="al-fecha-certificado" class="viking-input">
+					</div>
+				</div>
+				<div class="flex items-center gap-3 bg-white/5 p-3 rounded-xl border border-white/5 mt-2">
+					<input type="checkbox" id="al-certificado-entregado" class="w-4 h-4 accent-red-600">
+					<label for="al-certificado-entregado" class="text-[10px] font-black uppercase italic text-gray-300">¿Certificado Físico Entregado?</label>
+				</div>
                 <div class="grid grid-cols-2 gap-4">
                     <select id="al-plan" class="viking-input" required onchange="autoCalculateExpiry()"></select>
                     <input type="password" id="al-pass" placeholder="Contraseña de Acceso" class="viking-input">
@@ -1712,6 +1728,18 @@
 			document.getElementById('al-dash-peso').innerText = u.peso || '0';
 			document.getElementById('al-dash-altura').innerText = u.altura || '0';
 			document.getElementById('al-dash-imc').innerText = u.imc || '0';
+
+			// Lógica de vigencia del certificado (365 días)
+			if (u.fecha_certificado) {
+				const fCert = new Date(u.fecha_certificado);
+				const hoy = new Date();
+				const diff = (hoy - fCert) / (1000 * 60 * 60 * 24);
+				const vencido = diff > 365;
+				
+				// Podrías mostrar un aviso en el dashboard
+				const statusCert = document.getElementById('al-dash-plan'); // O cualquier otro label
+				if (vencido) statusCert.innerHTML += ` <span class="text-[8px] bg-red-600 text-black px-1 rounded ml-2">CERTIF. VENCIDO</span>`;
+			}
 
 			// --- NUEVA LÓGICA: CRÉDITOS MENSUALES ---
 			const limite = u.plan?.clases_mensuales || 0;
@@ -4450,6 +4478,10 @@
             document.getElementById('al-email').value = al.email || ""; document.getElementById('al-plan').value = al.plan_id || ""; document.getElementById('al-peso').value = al.peso || "";
             document.getElementById('al-altura').value = al.altura || ""; document.getElementById('al-imc').value = al.imc || ""; document.getElementById('al-fecha-renovacion').value = al.fecha_ultima_renovacion || "";
             document.getElementById('al-fecha-vencimiento').value = al.fecha_vencimiento || "";
+			// Carga de nuevos campos de salud
+			document.getElementById('al-fecha-nacimiento').value = al.fecha_nacimiento || "";
+			document.getElementById('al-fecha-certificado').value = al.fecha_certificado || "";
+			document.getElementById('al-certificado-entregado').checked = al.certificado_entregado || false;
             const delBtn = document.getElementById('btn-delete-alumno'); if(state.user.rol_nombre === "Administrador" || state.user.rol_nombre === "Supervisor") delBtn.classList.remove('hidden');
             delBtn.onclick = () => deleteRecord('alumnos', id, 'modal-alumno', fetchAlumnos);
             openModal('modal-alumno');
@@ -4457,7 +4489,7 @@
 
         document.getElementById('form-alumno').onsubmit = async (e) => {
             e.preventDefault(); const id = document.getElementById('al-id').value;
-            const data = { nombre_completo: document.getElementById('al-nombre').value, dni: document.getElementById('al-dni').value, email: document.getElementById('al-email').value, plan_id: parseInt(document.getElementById('al-plan').value) || null, peso: parseFloat(document.getElementById('al-peso').value) || null, altura: parseFloat(document.getElementById('al-altura').value) || null, imc: parseFloat(document.getElementById('al-imc').value) || null, fecha_ultima_renovacion: document.getElementById('al-fecha-renovacion').value, fecha_vencimiento: document.getElementById('al-fecha-vencimiento').value };
+            const data = { nombre_completo: document.getElementById('al-nombre').value, dni: document.getElementById('al-dni').value, email: document.getElementById('al-email').value, plan_id: parseInt(document.getElementById('al-plan').value) || null, peso: parseFloat(document.getElementById('al-peso').value) || null, altura: parseFloat(document.getElementById('al-altura').value) || null, imc: parseFloat(document.getElementById('al-imc').value) || null, fecha_ultima_renovacion: document.getElementById('al-fecha-renovacion').value, fecha_vencimiento: document.getElementById('al-fecha-vencimiento').value, fecha_nacimiento: document.getElementById('al-fecha-nacimiento').value || null, fecha_certificado: document.getElementById('al-fecha-certificado').value || null, certificado_entregado: document.getElementById('al-certificado-entregado').checked };
             const pass = document.getElementById('al-pass').value; if(pass) data.password = pass;
             const res = await apiFetch(id ? `/alumnos/${id}` : '/alumnos', id ? 'PUT' : 'POST', data);
             if(!res.error) { closeModal('modal-alumno'); fetchAlumnos(); showVikingToast("Alumno Guardado"); }

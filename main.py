@@ -155,9 +155,14 @@ class TokenResponse(BaseModel):
     plan_id: Optional[int] = None
     fecha_vencimiento: Optional[str] = None
     fecha_ultima_renovacion: Optional[str] = None
+    # --- NUEVOS CAMPOS EN RESPUESTA ---
     peso: Optional[float] = None
     altura: Optional[float] = None
     imc: Optional[float] = None
+    fecha_nacimiento: Optional[str] = None
+    edad: Optional[int] = None
+    certificado_entregado: bool = False
+    fecha_certificado: Optional[str] = None
 
 # --- NUEVO: Schema para Validación de QR ---
 class AccessCheck(BaseModel):
@@ -443,7 +448,11 @@ def login(data: UsuarioLogin, db: Session = Depends(database.get_db)):
         "fecha_ultima_renovacion": user.fecha_ultima_renovacion.isoformat() if user.fecha_ultima_renovacion else None,
         "peso": user.peso,
         "altura": user.altura,
-        "imc": user.imc
+        "imc": user.imc,
+        "fecha_nacimiento": user.fecha_nacimiento.isoformat() if user.fecha_nacimiento else None,
+        "edad": user.edad,
+        "certificado_entregado": user.certificado_entregado,
+        "fecha_certificado": user.fecha_certificado.isoformat() if user.fecha_certificado else None
     }
 
 # --- NUEVO: RESET DE CONTRASEÑA (PUNTO 2) ---
@@ -468,7 +477,7 @@ def reset_password(data: UsuarioResetPassword, db: Session = Depends(database.ge
 def validar_acceso_qr(data: AccessCheck, db: Session = Depends(database.get_db)):
     """
     Control de Acceso mediante escaneo de código QR.
-    Se espera que el QR contenga el formato "DNI:HASH" para evitar falsificaciones.
+    Se espera que el QR contenga el formato "DNI:HASH" contenido en el código QR.
     """
     raw_data = data.qr_data
     
@@ -568,7 +577,7 @@ def get_historial_accesos(db: Session = Depends(database.get_db)):
             "rol": a.rol or "Alumno",
             "fecha": a.fecha.strftime("%H:%M - %d/%m/%y"),
             "metodo": a.metodo or "QR",
-            "estado": a.accion # FIX: Se mapea 'accion' a 'estado' para el frontend
+            "estado": a.accion # Usamos el campo 'accion' de la DB
         } for a in accesos]
     except Exception as e:
         logger.error(f"Error al obtener historial: {e}")
@@ -606,7 +615,11 @@ def get_ficha_tecnica(id: int, db: Session = Depends(database.get_db)):
         "peso": al.peso,
         "altura": al.altura,
         "imc": al.imc,
-        "estado_cuenta": estado
+        "estado_cuenta": estado,
+        "fecha_nacimiento": al.fecha_nacimiento,
+        "edad": al.edad,
+        "certificado_entregado": al.certificado_entregado,
+        "fecha_certificado": al.fecha_certificado
     }
 
 @app.post("/api/alumnos", tags=["Alumnos"])
