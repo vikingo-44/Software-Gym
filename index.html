@@ -4974,8 +4974,9 @@ async function loadProfesores() {
 				videoStream = await navigator.mediaDevices.getUserMedia({ 
 					video: { 
 						facingMode: "user", // "environment" Prioriza cámara trasera en móviles y "user Prioriza cámara delantera en móviles y tablet"
-						width: { ideal: 1280 },
-						height: { ideal: 720 }
+						width: { min: 640, ideal: 1280 },
+						height: { min: 480, ideal: 720 },
+						aspectRatio: { ideal: 1.7777777778 } // 16:9
 					} 
 				});
 				
