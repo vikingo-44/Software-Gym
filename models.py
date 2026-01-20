@@ -57,6 +57,7 @@ class Usuario(Base):
     plan = relationship("Plan", back_populates="usuarios")
     reservas = relationship("Reserva", back_populates="usuario", cascade="all, delete-orphan")
     planes_rutina = relationship("PlanRutina", back_populates="usuario", cascade="all, delete-orphan")
+    accesos = relationship("Acceso", back_populates="usuario")
 
 class Clase(Base):
     __tablename__ = "clases"
@@ -101,6 +102,24 @@ class MovimientoCaja(Base):
     descripcion = Column(String)
     metodo_pago = Column(String, default="Efectivo") # <-- Agregado para reportes
     fecha = Column(DateTime, default=datetime.datetime.now)
+
+# =========================================
+# NUEVA TABLA: ACCESO (HISTORIAL)
+# =========================================
+
+class Acceso(Base):
+    __tablename__ = "accesos"
+    id = Column(Integer, primary_key=True)
+    usuario_id = Column(Integer, ForeignKey("usuarios.id"), nullable=True)
+    nombre = Column(String) # Nombre guardado en el momento (por si el usuario se borra)
+    dni = Column(String)
+    rol = Column(String, default="Alumno") # Alumno, Staff, Admin, etc.
+    metodo = Column(String, default="QR") # QR, Manual, Facial
+    estado = Column(String, default="AUTHORIZED") # AUTHORIZED, DENIED
+    exitoso = Column(Boolean, default=True)
+    fecha = Column(DateTime, default=datetime.datetime.now)
+    
+    usuario = relationship("Usuario", back_populates="accesos")
 
 # =========================================
 # TABLAS MUSCULACIÓN
