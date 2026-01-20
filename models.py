@@ -104,20 +104,24 @@ class MovimientoCaja(Base):
     fecha = Column(DateTime, default=datetime.datetime.now)
 
 # =========================================
-# NUEVA TABLA: ACCESO (HISTORIAL)
+# TABLA DE HISTORIAL (Sincronizada con SQL)
 # =========================================
 
 class Acceso(Base):
-    __tablename__ = "accesos"
+    __tablename__ = "historial_accesos"
     id = Column(Integer, primary_key=True)
-    usuario_id = Column(Integer, ForeignKey("usuarios.id"), nullable=True)
-    nombre = Column(String) # Nombre guardado en el momento (por si el usuario se borra)
-    dni = Column(String)
-    rol = Column(String, default="Alumno") # Alumno, Staff, Admin, etc.
-    metodo = Column(String, default="QR") # QR, Manual, Facial
-    estado = Column(String, default="AUTHORIZED") # AUTHORIZED, DENIED
-    exitoso = Column(Boolean, default=True)
+    usuario_id = Column(Integer, ForeignKey("usuarios.id"), nullable=False)
     fecha = Column(DateTime, default=datetime.datetime.now)
+    accion = Column(String(50), nullable=False) # 'AUTHORIZED', 'DENIED'
+    ip_address = Column(String(45), nullable=True)
+    user_agent = Column(Text, nullable=True)
+    exitoso = Column(Boolean, default=True)
+    
+    # Campos redundantes para el Dashboard
+    nombre = Column(String, nullable=True)
+    dni = Column(String, nullable=True)
+    rol = Column(String, nullable=True)
+    metodo = Column(String, default="QR")
     
     usuario = relationship("Usuario", back_populates="accesos")
 

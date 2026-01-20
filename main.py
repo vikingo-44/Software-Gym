@@ -7,7 +7,7 @@ from fastapi.responses import FileResponse
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy.exc import IntegrityError, ProgrammingError
-from sqlalchemy import func, extract, text
+from sqlalchemy import func, extract, text, desc
 from sqlalchemy.orm.attributes import flag_modified
 from typing import List, Optional, Union
 from pydantic import BaseModel
@@ -468,7 +468,7 @@ def reset_password(data: UsuarioResetPassword, db: Session = Depends(database.ge
 def validar_acceso_qr(data: AccessCheck, db: Session = Depends(database.get_db)):
     """
     Control de Acceso mediante escaneo de código QR.
-    Se espera que el QR contenga el formato "DNI:HASH" para evitar falsificaciones.
+    Se espera que el QR contenga el formato "DNI:HASH" contenido en el código QR.
     """
     raw_data = data.qr_data
     
@@ -539,8 +539,9 @@ def validar_acceso_qr(data: AccessCheck, db: Session = Depends(database.get_db))
             dni=dni_recibido,
             nombre=user.nombre_completo,
             rol=final_response["rol"],
+            accion=final_response["status"], # 'AUTHORIZED' o 'DENIED'
             metodo="QR SCAN",
-            estado=final_response["status"],
+            exitoso=(final_response["status"] == "AUTHORIZED"),
             fecha=datetime.now()
         )
         db.add(nuevo_acceso)
@@ -566,7 +567,7 @@ def get_historial_accesos(db: Session = Depends(database.get_db)):
             "rol": a.rol or "Alumno",
             "fecha": a.fecha.strftime("%H:%M - %d/%m/%y"),
             "metodo": a.metodo or "QR",
-            "estado": a.estado
+            "estado": a.accion # 'AUTHORIZED' o 'DENIED'
         } for a in accesos]
     except Exception as e:
         logger.error(f"Error al obtener historial: {e}")

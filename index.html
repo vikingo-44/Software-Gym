@@ -3664,186 +3664,190 @@
         }
 
 		async function loadDashboard() {
-			console.log("⚔️ Sincronizando Central de Mando...");
+            console.log("⚔️ Sincronizando Central de Mando...");
 
-			// 1. Cargar datos necesarios del servidor
-			// Traemos Stock, Reservas e Historial de Acceso real
-			const [stockData, reservasData, accesoData] = await Promise.all([
-				apiFetch('/stock'),
-				apiFetch('/reservas'),
-				apiFetch('/acceso/historial')
-			]);
+            // 1. Cargar datos necesarios del servidor
+            // Traemos Stock, Reservas e Historial de Acceso real
+            // IMPORTANTE: Respetamos tus strings de apiFetch tal cual los tenías
+            const [stockData, reservasData, accesoData] = await Promise.all([
+                apiFetch('/stock'),
+                apiFetch('/reservas'),
+                apiFetch('/acceso/historial')
+            ]);
 
-			const stock = Array.isArray(stockData) ? stockData : [];
-			const reservas = Array.isArray(reservasData) ? reservasData : [];
-			const historialAcceso = Array.isArray(accesoData) ? accesoData : [];
+            const stock = Array.isArray(stockData) ? stockData : [];
+            const reservas = Array.isArray(reservasData) ? reservasData : [];
+            const historialAcceso = Array.isArray(accesoData) ? accesoData : [];
 
-			// Guardamos en el estado global por si otras funciones lo necesitan
-			state.stock = stock;
-			state.reservas = reservas;
-			state.accesos = historialAcceso;
+            // Guardamos en el estado global por si otras funciones lo necesitan
+            state.stock = stock;
+            state.reservas = reservas;
+            state.accesos = historialAcceso;
 
-			// --- A. ÚLTIMOS ACCESOS (GENERAL / ALUMNOS) ---
-			const accessContainer = document.getElementById('dash-last-access');
-			if (accessContainer) {
-				// Mostramos los últimos 10 registros de acceso general
-				accessContainer.innerHTML = historialAcceso.length ? historialAcceso.slice(0, 10).map(acc => {
-					const isDenied = acc.estado === 'DENIED' || acc.estado === 'DENEGADO';
-					const colorClass = isDenied ? 'text-red-500 bg-red-500/10 border-red-500/20' : 'text-blue-500 bg-blue-500/10 border-blue-500/20';
-					const hora = acc.fecha ? acc.fecha.split(' - ')[0] : 'Ahora';
+            // --- A. ÚLTIMOS ACCESOS (GENERAL / ALUMNOS) ---
+            const accessContainer = document.getElementById('dash-last-access');
+            if (accessContainer) {
+                // Filtramos por rol "alumno" respetando tu lógica de separacion
+                const alumnosLog = historialAcceso.filter(acc => (acc.rol || '').toLowerCase() === 'alumno');
 
-					return `
-						<div class="flex justify-between items-center p-3 bg-white/5 rounded-2xl border border-white/5 hover:bg-white/10 transition-colors group">
-							<div class="flex items-center gap-3">
-								<div class="w-8 h-8 rounded-lg ${isDenied ? 'bg-red-500/20 text-red-500' : 'bg-blue-500/20 text-blue-500'} flex items-center justify-center">
-									<i data-lucide="user-check" class="w-4 h-4"></i>
-								</div>
-								<div>
-									<p class="text-[10px] font-black uppercase italic text-white group-hover:text-blue-400 truncate max-w-[120px]">${acc.nombre}</p>
-									<p class="text-[8px] text-gray-500 font-bold">${hora} • ${acc.metodo || 'QR'}</p>
-								</div>
-							</div>
-							<span class="text-[9px] px-2 py-1 rounded-md font-black uppercase italic ${colorClass}">${isDenied ? 'DENEGADO' : 'PERMITIDO'}</span>
-						</div>
-					`;
-				}).join('') : '<p class="text-center text-gray-600 italic text-[10px] py-10">Esperando lecturas de QR...</p>';
-			}
+                accessContainer.innerHTML = alumnosLog.length ? alumnosLog.slice(0, 10).map(acc => {
+                    // Sincronizamos con el campo 'estado' que el main.py devuelve (que viene de 'accion' en la DB)
+                    const isDenied = acc.estado === 'DENIED' || acc.estado === 'DENEGADO';
+                    const colorClass = isDenied ? 'text-red-500 bg-red-500/10 border-red-500/20' : 'text-blue-500 bg-blue-500/10 border-blue-500/20';
+                    const hora = acc.fecha ? acc.fecha.split(' - ')[0] : 'Ahora';
 
-			// --- B. CONTROL DE STAFF (SOLO PROFESORES / ADMIN) ---
-			const staffContainer = document.getElementById('dash-staff-access');
-			if (staffContainer) {
-				// Filtramos el historial para mostrar solo a los que NO son alumnos
-				const staffLog = historialAcceso.filter(acc => {
-					const rol = (acc.rol || '').toLowerCase();
-					return rol !== "alumno" && rol !== "" && rol !== "n/a";
-				});
+                    return `
+                        <div class="flex justify-between items-center p-3 bg-white/5 rounded-2xl border border-white/5 hover:bg-white/10 transition-colors group">
+                            <div class="flex items-center gap-3">
+                                <div class="w-8 h-8 rounded-lg ${isDenied ? 'bg-red-500/20 text-red-500' : 'bg-blue-500/20 text-blue-500'} flex items-center justify-center">
+                                    <i data-lucide="user-check" class="w-4 h-4"></i>
+                                </div>
+                                <div>
+                                    <p class="text-[10px] font-black uppercase italic text-white group-hover:text-blue-400 truncate max-w-[120px]">${acc.nombre}</p>
+                                    <p class="text-[8px] text-gray-500 font-bold">${hora} • ${acc.metodo || 'QR'}</p>
+                                </div>
+                            </div>
+                            <span class="text-[9px] px-2 py-1 rounded-md font-black uppercase italic ${colorClass}">${isDenied ? 'DENEGADO' : 'PERMITIDO'}</span>
+                        </div>
+                    `;
+                }).join('') : '<p class="text-center text-gray-600 italic text-[10px] py-10">Esperando lecturas de QR...</p>';
+            }
 
-				staffContainer.innerHTML = staffLog.length ? staffLog.slice(0, 10).map(acc => {
-					const hora = acc.fecha ? acc.fecha.split(' - ')[0] : 'Ahora';
-					return `
-						<div class="flex items-center justify-between p-3 bg-red-600/[0.05] rounded-2xl border border-red-600/10 hover:border-red-600/30 transition-all">
-							<div class="flex items-center gap-3">
-								<div class="w-8 h-8 rounded-full bg-red-600 flex items-center justify-center text-[10px] font-black italic text-black">
-									${(acc.nombre || '??').substring(0,2).toUpperCase()}
-								</div>
-								<div>
-									<p class="text-[10px] font-black uppercase italic text-white leading-none mb-1">${acc.nombre}</p>
-									<p class="text-[8px] text-red-500/70 font-bold uppercase">${acc.rol || 'STAFF'}</p>
-								</div>
-							</div>
-							<div class="text-right">
-								<p class="text-[9px] font-black text-white">${hora}</p>
-								<p class="text-[8px] font-bold text-gray-500 uppercase tracking-tighter">PRESENTE</p>
-							</div>
-						</div>
-					`;
-				}).join('') : '<p class="text-center text-gray-600 italic text-[10px] py-10">Sin personal registrado hoy.</p>';
-			}
+            // --- B. CONTROL DE STAFF (SOLO PROFESORES / ADMIN) ---
+            const staffContainer = document.getElementById('dash-staff-access');
+            if (staffContainer) {
+                // Filtramos el historial para mostrar solo a los que NO son alumnos (Staff/Admin)
+                const staffLog = historialAcceso.filter(acc => {
+                    const rol = (acc.rol || '').toLowerCase();
+                    return rol !== "alumno" && rol !== "" && rol !== "n/a";
+                });
 
-			// --- C. ALERTAS DE STOCK (SINCRONIZADO) ---
-			const stockContainer = document.getElementById('dash-low-stock');
-			if (stockContainer) {
-				const lowStock = stock.filter(s => s.stock_actual <= 5).sort((a,b) => a.stock_actual - b.stock_actual);
-				if (lowStock.length === 0) {
-					stockContainer.innerHTML = '<div class="flex flex-col items-center justify-center h-full opacity-30"><i data-lucide="check-circle" class="w-12 h-12 mb-2 text-green-500"></i><p class="text-[10px] font-black italic">Stock Saludable</p></div>';
-				} else {
-					stockContainer.innerHTML = lowStock.map(s => `
-						<div class="flex justify-between items-center p-3 bg-white/[0.03] rounded-2xl border border-white/5 hover:border-orange-500/30 transition-all">
-							<div class="flex items-center gap-3">
-								<div class="w-8 h-8 rounded-lg bg-orange-600/20 text-orange-500 flex items-center justify-center font-bold text-xs">
-									${s.stock_actual}
-								</div>
-								<div>
-									<p class="text-[10px] font-black uppercase italic text-white">${s.nombre_producto}</p>
-									<p class="text-[8px] text-red-500 font-bold uppercase">Reposición Urgente</p>
-								</div>
-							</div>
-							<button onclick="switchView('stock')" class="text-[9px] border border-white/10 text-gray-400 px-2 py-1 rounded hover:bg-white/10 transition-colors italic font-black uppercase">Ver</button>
-						</div>
-					`).join('');
-				}
-			}
+                staffContainer.innerHTML = staffLog.length ? staffLog.slice(0, 10).map(acc => {
+                    const hora = acc.fecha ? acc.fecha.split(' - ')[0] : 'Ahora';
+                    return `
+                        <div class="flex items-center justify-between p-3 bg-red-600/[0.05] rounded-2xl border border-red-600/10 hover:border-red-600/30 transition-all">
+                            <div class="flex items-center gap-3">
+                                <div class="w-8 h-8 rounded-full bg-red-600 flex items-center justify-center text-[10px] font-black italic text-black">
+                                    ${(acc.nombre || '??').substring(0,2).toUpperCase()}
+                                </div>
+                                <div>
+                                    <p class="text-[10px] font-black uppercase italic text-white leading-none mb-1">${acc.nombre}</p>
+                                    <p class="text-[8px] text-red-500/70 font-bold uppercase">${acc.rol || 'STAFF'}</p>
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-[9px] font-black text-white">${hora}</p>
+                                <p class="text-[8px] font-bold text-gray-500 uppercase tracking-tighter">PRESENTE</p>
+                            </div>
+                        </div>
+                    `;
+                }).join('') : '<p class="text-center text-gray-600 italic text-[10px] py-10">Sin personal registrado hoy.</p>';
+            }
 
-			// --- D. TOP 5 CLASES (MANTENIDO) ---
-			const topClassesContainer = document.getElementById('dash-top-clases');
-			if (topClassesContainer) {
-				const classCounts = {};
-				reservas.forEach(r => {
-					const name = r.clase_nombre || "Clase";
-					classCounts[name] = (classCounts[name] || 0) + 1;
-				});
+            // --- C. ALERTAS DE STOCK (SINCRONIZADO) ---
+            const stockContainer = document.getElementById('dash-low-stock');
+            if (stockContainer) {
+                const lowStock = stock.filter(s => s.stock_actual <= 5).sort((a,b) => a.stock_actual - b.stock_actual);
+                if (lowStock.length === 0) {
+                    stockContainer.innerHTML = '<div class="flex flex-col items-center justify-center h-full opacity-30"><i data-lucide="check-circle" class="w-12 h-12 mb-2 text-green-500"></i><p class="text-[10px] font-black italic">Stock Saludable</p></div>';
+                } else {
+                    stockContainer.innerHTML = lowStock.map(s => `
+                        <div class="flex justify-between items-center p-3 bg-white/[0.03] rounded-2xl border border-white/5 hover:border-orange-500/30 transition-all">
+                            <div class="flex items-center gap-3">
+                                <div class="w-8 h-8 rounded-lg bg-orange-600/20 text-orange-500 flex items-center justify-center font-bold text-xs">
+                                    ${s.stock_actual}
+                                </div>
+                                <div>
+                                    <p class="text-[10px] font-black uppercase italic text-white">${s.nombre_producto}</p>
+                                    <p class="text-[8px] text-red-500 font-bold uppercase">Reposición Urgente</p>
+                                </div>
+                            </div>
+                            <button onclick="switchView('stock')" class="text-[9px] border border-white/10 text-gray-400 px-2 py-1 rounded hover:bg-white/10 transition-colors italic font-black uppercase">Ver</button>
+                        </div>
+                    `).join('');
+                }
+            }
 
-				const sortedClasses = Object.entries(classCounts)
-					.sort((a, b) => b[1] - a[1])
-					.slice(0, 5);
+            // --- D. TOP 5 CLASES (MANTENIDO) ---
+            const topClassesContainer = document.getElementById('dash-top-clases');
+            if (topClassesContainer) {
+                const classCounts = {};
+                reservas.forEach(r => {
+                    const name = r.clase_nombre || "Clase";
+                    classCounts[name] = (classCounts[name] || 0) + 1;
+                });
 
-				if (sortedClasses.length === 0) {
-					topClassesContainer.innerHTML = '<p class="text-center text-gray-500 italic text-[10px] py-10">No hay reservas registradas.</p>';
-				} else {
-					topClassesContainer.innerHTML = sortedClasses.map(([name, count], index) => {
-						const colors = ["text-yellow-400", "text-gray-300", "text-amber-600", "text-gray-600", "text-gray-700"];
-						return `
-						<div class="flex items-center justify-between p-3 bg-white/5 rounded-2xl border border-white/5">
-							<div class="flex items-center gap-3">
-								<i data-lucide="medal" class="w-4 h-4 ${colors[index]}"></i>
-								<span class="text-[10px] font-black italic uppercase text-white">${index + 1}. ${name}</span>
-							</div>
-							<span class="text-[9px] font-black text-red-600 bg-red-600/10 px-2 py-0.5 rounded border border-red-600/20">${count} RES.</span>
-						</div>
-					`}).join('');
-				}
-			}
+                const sortedClasses = Object.entries(classCounts)
+                    .sort((a, b) => b[1] - a[1])
+                    .slice(0, 5);
 
-			// --- E. FRECUENCIA HORARIA (GRÁFICO MANTENIDO) ---
-			const chartContainer = document.getElementById('dash-chart-container');
-			const labelsContainer = document.getElementById('dash-chart-labels');
-			
-			if (chartContainer && labelsContainer) {
-				const hoursMap = {};
-				for(let i=7; i<=22; i++) hoursMap[i] = 0;
+                if (sortedClasses.length === 0) {
+                    topClassesContainer.innerHTML = '<p class="text-center text-gray-500 italic text-[10px] py-10">No hay reservas registradas.</p>';
+                } else {
+                    topClassesContainer.innerHTML = sortedClasses.map(([name, count], index) => {
+                        const colors = ["text-yellow-400", "text-gray-300", "text-amber-600", "text-gray-600", "text-gray-700"];
+                        return `
+                        <div class="flex items-center justify-between p-3 bg-white/5 rounded-2xl border border-white/5">
+                            <div class="flex items-center gap-3">
+                                <i data-lucide="medal" class="w-4 h-4 ${colors[index]}"></i>
+                                <span class="text-[10px] font-black italic uppercase text-white">${index + 1}. ${name}</span>
+                            </div>
+                            <span class="text-[9px] font-black text-red-600 bg-red-600/10 px-2 py-0.5 rounded border border-red-600/20">${count} RES.</span>
+                        </div>
+                    `}).join('');
+                }
+            }
 
-				reservas.forEach(r => {
-					if(r.horario) {
-						const h = Math.floor(parseFloat(r.horario));
-						if(hoursMap[h] !== undefined) hoursMap[h]++;
-					}
-				});
+            // --- E. FRECUENCIA HORARIA (GRÁFICO MANTENIDO) ---
+            const chartContainer = document.getElementById('dash-chart-container');
+            const labelsContainer = document.getElementById('dash-chart-labels');
+            
+            if (chartContainer && labelsContainer) {
+                const hoursMap = {};
+                for(let i=7; i<=22; i++) hoursMap[i] = 0;
 
-				const maxVal = Math.max(...Object.values(hoursMap));
-				const safeMax = maxVal === 0 ? 10 : maxVal;
+                reservas.forEach(r => {
+                    if(r.horario) {
+                        const h = Math.floor(parseFloat(r.horario));
+                        if(hoursMap[h] !== undefined) hoursMap[h]++;
+                    }
+                });
 
-				chartContainer.innerHTML = `
-					<div class="absolute left-0 top-0 bottom-0 w-8 flex flex-col justify-between text-[8px] text-gray-600 font-bold py-2 pointer-events-none">
-						<span>${safeMax}</span>
-						<span>${Math.round(safeMax/2)}</span>
-						<span>0</span>
-					</div>`;
-				
-				labelsContainer.innerHTML = "";
+                const maxVal = Math.max(...Object.values(hoursMap));
+                const safeMax = maxVal === 0 ? 10 : maxVal;
 
-				Object.keys(hoursMap).forEach(h => {
-					const count = hoursMap[h];
-					const heightPercent = (count / safeMax) * 100;
-					const bar = document.createElement('div');
-					bar.className = "flex-1 mx-0.5 rounded-t-sm transition-all duration-500 hover:bg-red-500 relative group";
-					bar.style.height = `${Math.max(5, heightPercent)}%`;
-					bar.style.backgroundColor = `rgba(220, 38, 38, ${Math.max(0.2, count/safeMax)})`;
-					bar.innerHTML = `<div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 bg-black text-white text-[8px] font-bold px-1 rounded opacity-0 group-hover:opacity-100 whitespace-nowrap">${count}</div>`;
-					chartContainer.appendChild(bar);
+                chartContainer.innerHTML = `
+                    <div class="absolute left-0 top-0 bottom-0 w-8 flex flex-col justify-between text-[8px] text-gray-600 font-bold py-2 pointer-events-none">
+                        <span>${safeMax}</span>
+                        <span>${Math.round(safeMax/2)}</span>
+                        <span>0</span>
+                    </div>`;
+                
+                labelsContainer.innerHTML = "";
 
-					if (h % 2 === 0 || h == 7) { 
-						const lbl = document.createElement('div');
-						lbl.innerText = `${h}h`;
-						lbl.className = "flex-1 text-center";
-						labelsContainer.appendChild(lbl);
-					} else {
-						labelsContainer.appendChild(document.createElement('div'));
-					}
-				});
-			}
+                Object.keys(hoursMap).forEach(h => {
+                    const count = hoursMap[h];
+                    const heightPercent = (count / safeMax) * 100;
+                    const bar = document.createElement('div');
+                    bar.className = "flex-1 mx-0.5 rounded-t-sm transition-all duration-500 hover:bg-red-500 relative group";
+                    bar.style.height = `${Math.max(5, heightPercent)}%`;
+                    bar.style.backgroundColor = `rgba(220, 38, 38, ${Math.max(0.2, count/safeMax)})`;
+                    bar.innerHTML = `<div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 bg-black text-white text-[8px] font-bold px-1 rounded opacity-0 group-hover:opacity-100 whitespace-nowrap">${count}</div>`;
+                    chartContainer.appendChild(bar);
 
-			if (window.lucide) lucide.createIcons();
-		}
+                    if (h % 2 === 0 || h == 7) { 
+                        const lbl = document.createElement('div');
+                        lbl.innerText = `${h}h`;
+                        lbl.className = "flex-1 text-center";
+                        labelsContainer.appendChild(lbl);
+                    } else {
+                        labelsContainer.appendChild(document.createElement('div'));
+                    }
+                });
+            }
+
+            if (window.lucide) lucide.createIcons();
+        }
 
         async function fetchAlumnos() {
 			const d = await apiFetch('/alumnos');
