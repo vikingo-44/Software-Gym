@@ -7,7 +7,7 @@ from fastapi.responses import FileResponse
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy.exc import IntegrityError, ProgrammingError
-from sqlalchemy import func, extract, text, desc
+from sqlalchemy import func, extract, text
 from sqlalchemy.orm.attributes import flag_modified
 from typing import List, Optional, Union
 from pydantic import BaseModel
@@ -468,7 +468,7 @@ def reset_password(data: UsuarioResetPassword, db: Session = Depends(database.ge
 def validar_acceso_qr(data: AccessCheck, db: Session = Depends(database.get_db)):
     """
     Control de Acceso mediante escaneo de código QR.
-    Se espera que el QR contenga el formato "DNI:HASH" contenido en el código QR.
+    Se espera que el QR contenga el formato "DNI:HASH" para evitar falsificaciones.
     """
     raw_data = data.qr_data
     
@@ -533,15 +533,16 @@ def validar_acceso_qr(data: AccessCheck, db: Session = Depends(database.get_db))
         final_response["message"] = "Sin plan activo asignado"
 
     # --- REGISTRO EN HISTORIAL (SQL) ---
+    # FIX: Se cambia 'estado' por 'accion' para coincidir con el modelo historial_accesos
     try:
         nuevo_acceso = models.Acceso(
             usuario_id=user.id,
             dni=dni_recibido,
             nombre=user.nombre_completo,
             rol=final_response["rol"],
-            accion=final_response["status"], # 'AUTHORIZED' o 'DENIED'
             metodo="QR SCAN",
-            exitoso=(final_response["status"] == "AUTHORIZED"),
+            accion=final_response["status"],  # Campo 'accion' del modelo
+            exitoso=(final_response["status"] == "AUTHORIZED"), # Campo 'exitoso'
             fecha=datetime.now()
         )
         db.add(nuevo_acceso)
@@ -567,7 +568,7 @@ def get_historial_accesos(db: Session = Depends(database.get_db)):
             "rol": a.rol or "Alumno",
             "fecha": a.fecha.strftime("%H:%M - %d/%m/%y"),
             "metodo": a.metodo or "QR",
-            "estado": a.accion # 'AUTHORIZED' o 'DENIED'
+            "estado": a.accion # FIX: Se mapea 'accion' a 'estado' para el frontend
         } for a in accesos]
     except Exception as e:
         logger.error(f"Error al obtener historial: {e}")

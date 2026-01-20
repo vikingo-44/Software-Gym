@@ -104,7 +104,7 @@ class MovimientoCaja(Base):
     fecha = Column(DateTime, default=datetime.datetime.now)
 
 # =========================================
-# TABLA DE HISTORIAL (Sincronizada con SQL)
+# NUEVA TABLA: ACCESO (HISTORIAL)
 # =========================================
 
 class Acceso(Base):
@@ -117,7 +117,7 @@ class Acceso(Base):
     user_agent = Column(Text, nullable=True)
     exitoso = Column(Boolean, default=True)
     
-    # Campos redundantes para el Dashboard
+    # Campos redundantes para que el Dashboard no tenga que hacer JOINs pesados
     nombre = Column(String, nullable=True)
     dni = Column(String, nullable=True)
     rol = Column(String, nullable=True)
