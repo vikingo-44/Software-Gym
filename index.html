@@ -860,8 +860,7 @@
 							<option value="Tarjeta">Tarjeta</option>
 						</select>
 					</div>
-
-					<button id="btn-finalizar-pago" onclick="finalizarVenta()" class="w-full mt-8 viking-bg-red text-black py-5 rounded-2xl font-black uppercase italic tracking-widest hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-red-900/20">
+					<button id="btn-finalizar-pago" onclick="finalizarVentaMercaderia()" class="w-full mt-8 viking-bg-red text-black py-5 rounded-2xl font-black uppercase italic tracking-widest hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-red-900/20">
 						Procesar Pago
 					</button>
 				</div>
@@ -2532,7 +2531,8 @@
 		}
 
 		/**
-		 * ADAPTACIÓN PARA COBRO DE PLANES
+		 * PREPARAR CARGA DE PLAN (Al Carrito)
+		 * En lugar de cobrar directo, lo mete al carrito para elegir el pago ahí.
 		 */
 		async function preparePlanCharge(alumnoId) {
 			const alumno = state.alumnos.find(a => a.id === alumnoId);
@@ -2544,26 +2544,27 @@
 
 			if (!plan) return showVikingToast("Selecciona un plan válido", true);
 
-			const metodoEl = document.getElementById('metodo-pago');
-			const metodoPago = metodoEl ? metodoEl.value : "Efectivo";
+			// Verificamos si ya hay un plan para este alumno en el carrito
+			const existe = state.cart.find(c => c.alumno_id === alumnoId && c.tipo === 'Plan');
+			if(existe) return showVikingToast("Este alumno ya tiene un plan en el carrito", true);
 
-			const confirmacion = confirm(`¿Confirmar cobro de $${plan.precio} a ${alumno.nombre_completo} por el plan ${plan.nombre} (${metodoPago})?`);
-			
-			if (confirmacion) {
-				await procesarPagoVikingo({
-					tipo: "Plan",
-					monto: plan.precio,
-					descripcion: `Renovación Plan ${plan.nombre}: ${alumno.nombre_completo}`,
-					metodo_pago: metodoPago,
-					alumno_id: alumnoId,
-					producto_id: planId, // <--- ESTO FALTABA Y ES LA CLAVE PARA QUE SE ACTUALICE -->
-					cantidad: 1
-				}, true); 
-			}
+			// Lo sumamos al estado del carrito
+			state.cart.push({
+				tipo: 'Plan',
+				producto_id: planId, // ID del Plan
+				alumno_id: alumnoId,  // ID del Alumno (Crucial para el vencimiento)
+				nombre: `${plan.nombre} (${alumno.nombre_completo})`,
+				precio: plan.precio,
+				cantidad: 1
+			});
+
+			showVikingToast("Plan sumado al carrito");
+			updateCartUI(); // Actualizamos la lista visual
 		}
 
 		/**
-		 * ADAPTACIÓN PARA COBRO DE MERCADERÍA
+		 * FINALIZAR COBRO DEL CARRITO (Mercadería + Planes)
+		 * Procesa cada ítem y actualiza stock o vencimientos según corresponda.
 		 */
 		async function finalizarVentaMercaderia() {
 			if (state.cart.length === 0) return showVikingToast("El carrito está vacío", true);
@@ -2572,39 +2573,40 @@
 			const metodoEl = document.getElementById('metodo-pago');
 			const metodoPago = metodoEl ? metodoEl.value : "Efectivo";
 
-			if (confirm(`¿Finalizar venta por un total de $${total.toLocaleString()} (${metodoPago})?`)) {
+			if (confirm(`¿Finalizar cobro total de $${total.toLocaleString()} con ${metodoPago}?`)) {
 				
-				showVikingToast("Procesando venta múltiple...");
+				showVikingToast("Procesando en la Tesorería...");
 				let errores = 0;
 
+				// Recorremos el carrito (pueden ser 3 aguas y 1 Plan de Musculación)
 				for (const item of state.cart) {
 					const exito = await procesarPagoVikingo({
-						tipo: "Mercaderia",
+						tipo: item.tipo, // 'Mercaderia' o 'Plan'
 						monto: item.precio * item.cantidad,
-						descripcion: `Venta: ${item.nombre} (x${item.cantidad})`,
+						descripcion: item.tipo === 'Plan' ? item.nombre : `Venta: ${item.nombre} (x${item.cantidad})`,
 						metodo_pago: metodoPago,
-						producto_id: item.producto_id,
+						producto_id: item.producto_id, // ID del producto o ID del Plan
+						alumno_id: item.alumno_id,     // Si es Plan, esto viaja al servidor
 						cantidad: item.cantidad
-					}, false); // false = no refrescar UI todavía
+					}, false); // false para que no tire mil toasts seguidos
 
 					if (!exito) errores++;
 				}
 
 				if (errores === 0) {
-					showVikingToast("¡Venta finalizada con gloria!");
+					showVikingToast("¡Cobro exitoso! Vencimientos actualizados.");
 					state.cart = []; 
 					updateCartUI();
 					
-					// Recargamos todo al final
-					if (typeof loadStock === 'function') await loadStock();
-					if (typeof loadCaja === 'function') await loadCaja();
-					if (typeof renderCobrar === 'function') renderCobrar();
+					// Recargamos todo para ver los cambios reflejados
+					await Promise.all([loadStock(), loadCaja(), fetchAlumnos()]);
+					renderCobrar();
 				} else {
-					showVikingToast(`Venta con ${errores} errores. Revisa el stock.`, true);
-					if (typeof loadStock === 'function') await loadStock();
+					showVikingToast(`Hubo ${errores} errores en el proceso.`, true);
 				}
 			}
 		}
+
 		// --- REEMPLAZA TU FUNCIÓN openFichaTecnica POR ESTA VERSIÓN CON DISEÑO DE FILAS ---
 		async function openFichaTecnica(alumnoId) {
 			const rutinaContainer = document.getElementById('ficha-rutina-container');
