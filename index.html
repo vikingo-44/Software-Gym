@@ -5334,6 +5334,48 @@ async function loadProfesores() {
 				if(window.lucide) lucide.createIcons();
 			}
 
+			async function procesarEscaneo(codigoQR) {
+				try {
+					// Ajustá esta URL al endpoint real de tu FastAPI
+					const response = await apiFetch('/acceso/validar', {
+						method: 'POST',
+						body: JSON.stringify({ qr_data: codigoQR })
+					});
+
+					if (response.success) {
+						// 1. Mostrás el feedback visual (Modal verde/éxito)
+						// Asegurate de que esta función exista en tu código
+						if (typeof showScannerFeedback === 'function') {
+							showScannerFeedback(true, response.usuario);
+						}
+
+						// 2. LA CLAVE DEL TIEMPO REAL:
+						// Llamamos a fetchAccesos para que la lista de abajo se actualice YA.
+						console.log("⚡ Actualizando historial en tiempo real...");
+						await fetchAccesos(); 
+						
+					} else {
+						if (typeof showScannerFeedback === 'function') {
+							showScannerFeedback(false, null, response.error);
+						}
+					}
+				} catch (error) {
+					console.error("Error en proceso de escaneo:", error);
+				}
+			}
+
+			function iniciarRefrescoAutomatico() {
+				console.log("🛡️ Motor de refresco  iniciado");
+				
+				setInterval(() => {
+					// Solo refrescamos si el usuario está viendo la pestaña
+					if (!document.hidden && typeof fetchAccesos === 'function') {
+						console.log("🔄 Actualización automática de historial");
+						fetchAccesos();
+					}
+				}, 30000); // 30 segundos es un tiempo seguro para no saturar NeonDB
+			}
+
 			/**
 			 * 3. REGISTRAR NUEVO ACCESO (LLAMADO DESDE EL ESCÁNER)
 			 * Actualiza la lista en tiempo real sin recargar.
@@ -5787,7 +5829,12 @@ async function loadProfesores() {
 			}
 			if(window.lucide) lucide.createIcons();
 		};
-		
+
+		window.addEventListener('load', () => {
+			fetchAccesos(); // Carga inicial
+			iniciarRefrescoAutomatico(); // Inicia el ciclo de 30s
+		});
+				
     </script>
 </body>
 </html>
