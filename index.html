@@ -5268,10 +5268,9 @@ async function loadProfesores() {
 			
 			if (!res.error && Array.isArray(res)) {
 				state.accesos = res.map(acc => {
-					// El backend ya manda la fecha formateada como "HH:MM - DD/MM/YY"
-					// La guardamos tal cual en 'fecha_local' para no procesarla más
 					return {
 						...acc,
+						// Guardamos el texto exacto que mandó el servidor
 						fecha_local: acc.fecha 
 					};
 				});
@@ -5314,7 +5313,7 @@ async function loadProfesores() {
 							<span class="text-[10px] font-bold text-gray-400">${acc.dni}</span>
 
 							<div class="flex flex-col">
-								<!-- Usamos la fecha que ya viene lista del servidor -->
+								<!-- Se muestra el texto directo del servidor -->
 								<span class="text-[10px] font-black text-white/80">${acc.fecha_local}</span>
 							</div>
 
