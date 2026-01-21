@@ -566,18 +566,28 @@ def validar_acceso_qr(data: AccessCheck, db: Session = Depends(database.get_db))
 @app.get("/api/acceso/historial", tags=["Seguridad"])
 def get_historial_accesos(db: Session = Depends(database.get_db)):
     """
-    Trae los últimos 50 registros de acceso para la vista de Acceso Virtual.
+    Trae los últimos 50 registros de acceso con corrección horaria para Argentina.
     """
     try:
+        from datetime import timedelta
+        # Traemos los registros de la base de datos
         accesos = db.query(models.Acceso).order_by(models.Acceso.id.desc()).limit(50).all()
+        
+        # Si NeonDB está en UTC y queremos Argentina, restamos 3 horas.
+        # Si ya habías configurado NeonDB en Argentina y te sobran 3 horas, 
+        # cambia esto a timedelta(hours=0) o resta lo que sobre.
+        # Basado en tu comentario de "3 horas adelantado", restamos 3.
+        offset = timedelta(hours=-3) 
+
         return [{
             "id": a.id,
             "nombre": a.nombre,
             "dni": a.dni,
             "rol": a.rol or "Alumno",
-            "fecha": a.fecha.strftime("%H:%M - %d/%m/%y"),
+            # Aplicamos la resta y formateamos a string para que el JS no lo rompa
+            "fecha": (a.fecha + offset).strftime("%H:%M - %d/%m/%y") if a.fecha else "S/D",
             "metodo": a.metodo or "QR",
-            "estado": a.accion # Usamos el campo 'accion' de la DB
+            "estado": a.accion 
         } for a in accesos]
     except Exception as e:
         logger.error(f"Error al obtener historial: {e}")

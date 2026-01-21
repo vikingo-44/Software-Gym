@@ -5268,17 +5268,11 @@ async function loadProfesores() {
 			
 			if (!res.error && Array.isArray(res)) {
 				state.accesos = res.map(acc => {
-					// Como la DB ya manda la hora bien, tratamos el string directamente
-					// para evitar que el navegador aplique desfases UTC.
-					let fechaTexto = acc.fecha || '';
-					
-					// Limpiamos el formato (quitamos T y Z si existen)
-					const fechaLimpia = fechaTexto.replace('Z', '').replace('T', ' ');
-					
+					// El backend ya manda la fecha formateada como "HH:MM - DD/MM/YY"
+					// La guardamos tal cual en 'fecha_local' para no procesarla más
 					return {
 						...acc,
-						// Creamos la propiedad fecha_local con los primeros 16 caracteres (AAAA-MM-DD HH:MM)
-						fecha_local: fechaLimpia.substring(0, 16) 
+						fecha_local: acc.fecha 
 					};
 				});
 				renderAccesos();
@@ -5286,7 +5280,7 @@ async function loadProfesores() {
 				console.error("Error al traer historial:", res.error);
 			}
 		}
-		
+				
 		// Renderiza la lista de ingresos con estilo de filas/tarjetas
 			function renderAccesos() {
 				const container = document.getElementById('acceso-list-view');
@@ -5303,7 +5297,6 @@ async function loadProfesores() {
 				}
 
 				container.innerHTML = state.accesos.map(acc => {
-					// Lógica de estados
 					const isAuth = acc.estado === 'AUTHORIZED' || acc.estado === 'AUTORIZADO';
 					const statusColor = isAuth ? 'text-green-500' : 'text-red-500';
 					const bgColor = isAuth ? 'bg-green-500/10' : 'bg-red-500/10';
@@ -5311,7 +5304,6 @@ async function loadProfesores() {
 
 					return `
 						<div class="grid grid-cols-5 gap-4 px-6 py-4 ${bgColor} border ${borderColor} rounded-2xl items-center transition-all hover:scale-[1.01]">
-							<!-- Guerrero -->
 							<div class="flex items-center gap-3">
 								<div class="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-[10px] font-black italic border border-white/10">
 									${acc.nombre ? acc.nombre.substring(0,2).toUpperCase() : '??'}
@@ -5319,21 +5311,18 @@ async function loadProfesores() {
 								<span class="text-[11px] font-black uppercase italic text-white truncate">${acc.nombre}</span>
 							</div>
 
-							<!-- DNI -->
 							<span class="text-[10px] font-bold text-gray-400">${acc.dni}</span>
 
-							<!-- Fecha y Hora (CORREGIDO: usando fecha_local) -->
 							<div class="flex flex-col">
+								<!-- Usamos la fecha que ya viene lista del servidor -->
 								<span class="text-[10px] font-black text-white/80">${acc.fecha_local}</span>
 							</div>
 
-							<!-- Método -->
 							<div class="flex items-center gap-2">
 								<i data-lucide="${acc.metodo && acc.metodo.includes('QR') ? 'qr-code' : 'hard-drive'}" class="w-3 h-3 text-red-600"></i>
 								<span class="text-[9px] font-bold text-gray-500 uppercase">${acc.metodo || 'S/D'}</span>
 							</div>
 
-							<!-- Estado -->
 							<div class="text-right">
 								<span class="px-3 py-1 rounded-full ${statusColor} text-[9px] font-black bg-black/40 border border-current uppercase italic">
 									${isAuth ? 'Permitido' : 'Denegado'}
@@ -5345,6 +5334,7 @@ async function loadProfesores() {
 
 				if(window.lucide) lucide.createIcons();
 			}
+
 			/**
 			 * 3. REGISTRAR NUEVO ACCESO (LLAMADO DESDE EL ESCÁNER)
 			 * Actualiza la lista en tiempo real sin recargar.
