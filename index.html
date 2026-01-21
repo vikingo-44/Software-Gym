@@ -5265,20 +5265,24 @@ async function loadProfesores() {
 		 */
 		async function fetchAccesos() {
 			const res = await apiFetch('/acceso/historial'); 
+			
 			if (!res.error && Array.isArray(res)) {
-				// Mapeamos los resultados para corregir la fecha de cada uno
 				state.accesos = res.map(acc => {
+					// TRUCO: Si la fecha no trae 'Z' ni 'T', se la agregamos para que JS sepa que es UTC
+					// Reemplazamos el espacio por 'T' y agregamos 'Z' al final
+					const fechaLimpia = acc.fecha.replace(" ", "T") + "Z";
+					const objetoFecha = new Date(fechaLimpia);
+
 					return {
 						...acc,
-						// Creamos una nueva propiedad con la fecha ya corregida
-						fecha_local: new Date(acc.fecha).toLocaleString('es-AR', {
+						// Esta propiedad es la que debes usar en tu renderAccesos()
+						fecha_local: objetoFecha.toLocaleString('es-AR', {
 							timeZone: 'America/Argentina/Buenos_Aires',
 							day: '2-digit',
 							month: '2-digit',
 							year: 'numeric',
 							hour: '2-digit',
 							minute: '2-digit',
-							second: '2-digit',
 							hour12: false
 						})
 					};
