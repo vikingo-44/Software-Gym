@@ -17,7 +17,7 @@
         font-family: 'Inter', sans-serif;
 <style>
     /* =================================================================
-    ESTILOS ORIGINALES (MANTENIDOS AL 100%)
+    ESTILOS ORIGINALES (MANTENIDOS AL 100% - RESPETO TOTAL)
     ================================================================= */
     body {
         font-family: 'Inter', sans-serif;
@@ -28,17 +28,19 @@
         background-attachment: fixed;
         color: #ffffff;
         overflow: hidden; /* Se sobreescribe en móvil más abajo */
-        touch-action: manipulation; /* Optimiza toques y evita zoom accidental */
+        touch-action: manipulation; /* Evita zoom accidental al tocar botones rápido */
     }
     
     .viking-red { color: #FF0000; }
     .viking-bg-red { background-color: #FF0000; }
+
     .glass-sidebar {
         background: rgba(8, 8, 8, 0.98);
         backdrop-filter: blur(40px);
         border-right: 1px solid rgba(255, 0, 0, 0.15);
         transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), left 0.4s ease;
     }
+
     .glass-card {
         background: rgba(255, 255, 255, 0.03);
         backdrop-filter: blur(20px);
@@ -116,14 +118,31 @@
         opacity: 0.5;
     }
 
-    /* Lógica Sidebar Colapsada PC */
+    /* Lógica Sidebar Colapsada PC (Sagrado) */
     .sidebar-collapsed { width: 80px !important; }
     .sidebar-collapsed .brand-text, 
     .sidebar-collapsed .user-details, 
     .sidebar-collapsed .nav-text, 
     .sidebar-collapsed .nav-section-title,
-    .sidebar-collapsed .chevron-icon { display: none; }
+    .sidebar-collapsed .chevron-icon,
+    .sidebar-collapsed #side-user-name,
+    .sidebar-collapsed #side-user-role { display: none !important; }
+    
     .sidebar-collapsed .nav-item { justify-content: center !important; padding-left: 0; padding-right: 0; gap: 0 !important; }
+    
+    .sidebar-collapsed #user-avatar-container {
+        width: 40px !important;
+        height: 40px !important;
+        margin-bottom: 10px !important;
+    }
+    .sidebar-collapsed #user-initials { font-size: 14px !important; }
+    .sidebar-collapsed .user-profile-block {
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
     
     .viking-input {
         background: rgba(0, 0, 0, 0.5);
@@ -280,7 +299,7 @@
     @media (max-width: 1024px) {
         body {
             overflow-y: auto !important; /* Habilitar scroll en móvil */
-            overflow-x: hidden !important; /* Evitar que nada se desplace hacia los lados */
+            overflow-x: hidden !important; /* BLOQUEO DE DESFASE LATERAL */
         }
 
         /* Sidebar: De lateral fijo a Menú Desplegable (Drawer) */
@@ -325,7 +344,7 @@
             padding: 0.75rem !important;
         }
 
-        /* Header Mobile: Ajustamos para que no empuje el contenido */
+        /* Header Mobile: Corregimos padding y visibilidad del botón */
         header {
             padding-left: 1rem !important; 
             padding-right: 1rem !important;
@@ -392,9 +411,9 @@
             border-radius: 1.75rem !important;
         }
 
-        /* BOTONES MÁS PEQUEÑOS Y PROPORCIONADOS (AJUSTE SOLICITADO) */
+        /* AJUSTE SOLICITADO: BOTONES MÁS PEQUEÑOS Y PROPORCIONADOS */
         button, .nav-item, .filter-btn, .payment-method-btn {
-            min-height: 42px !important; /* Más acorde al tamaño de pantalla móvil */
+            min-height: 42px !important; /* Más elegante para pantallas móviles */
             padding-top: 0.5rem !important;
             padding-bottom: 0.5rem !important;
             font-size: 0.85rem !important;
@@ -406,7 +425,7 @@
             height: 18px !important;
         }
 
-        /* Esconder sidebar colapsada */
+        /* Esconder sidebar si se intenta colapsar en móvil */
         .sidebar-collapsed { width: 0 !important; overflow: hidden; }
 
         /* Botón Disparador del Menú */
@@ -422,6 +441,7 @@
         }
     }
 
+    /* Ocultar disparador en resoluciones de computadora */
     @media (min-width: 1025px) {
         .mobile-menu-trigger { display: none !important; }
     }
