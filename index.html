@@ -5264,68 +5264,68 @@ async function loadProfesores() {
 		 * Se llama al entrar a la vista o después de un escaneo.
 		 */
 		async function fetchAccesos() {
-			console.log("🔄 Sincronizando historial con el Valhalla...");
-			try {
-				const res = await apiFetch('/acceso/historial'); 
-				
-				if (!res.error && Array.isArray(res)) {
-					state.accesos = res.map(acc => {
-						let fechaMostrar = acc.fecha;
+            console.log("🔄 Sincronizando historial con el Valhalla...");
+            try {
+                const res = await apiFetch('/acceso/historial'); 
+                
+                if (!res.error && Array.isArray(res)) {
+                    state.accesos = res.map(acc => {
+                        let fechaMostrar = acc.fecha;
 
-						try {
-							/**
-							 * AJUSTE DE SEGURIDAD:
-							 * Si el servidor te manda la hora 3 horas adelantada (ej: 13:00 cuando son las 10:00),
-							 * el manualOffset debe ser -3.
-							 */
-							const manualOffset = -3; 
-							
-							// Intentamos convertir el string del servidor a un objeto Date
-							// Reemplazamos el guion por barra para mejor compatibilidad en navegadores
-							let dateObj = new Date(acc.fecha.replace(/-/g, '/'));
+                        try {
+                            /**
+                             * AJUSTE DE SEGURIDAD:
+                             * Si el servidor (main.py) ya resta las 3 horas, aquí debe ser 0.
+                             * Si ponemos -3 aquí también, se atrasa 6 horas en total.
+                             */
+                            const manualOffset = 0; 
+                            
+                            // Intentamos convertir el string del servidor a un objeto Date
+                            // Reemplazamos el guion por barra para mejor compatibilidad en navegadores
+                            let dateObj = new Date(acc.fecha.replace(/-/g, '/'));
 
-							// Si la fecha es inválida (formato custom), procesamos el string manualmente
-							if (isNaN(dateObj.getTime())) {
-								if (acc.fecha && acc.fecha.includes(' - ')) {
-									let [horaCompleta, fechaCompleta] = acc.fecha.split(' - ');
-									let [hh, mm] = horaCompleta.split(':');
-									
-									// Calculamos la nueva hora asegurando que sea positiva (0-23)
-									let nuevaHH = (parseInt(hh) + manualOffset + 24) % 24;
-									fechaMostrar = `${String(nuevaHH).padStart(2, '0')}:${mm} - ${fechaCompleta}`;
-								}
-							} else {
-								// Si es una fecha válida, restamos las horas directamente al objeto Date
-								dateObj.setHours(dateObj.getHours() + manualOffset);
-								
-								const h = String(dateObj.getHours()).padStart(2, '0');
-								const m = String(dateObj.getMinutes()).padStart(2, '0');
-								const day = String(dateObj.getDate()).padStart(2, '0');
-								const month = String(dateObj.getMonth() + 1).padStart(2, '0');
-								const year = String(dateObj.getFullYear()).substring(2);
-								
-								fechaMostrar = `${h}:${m} - ${day}/${month}/${year}`;
-							}
-						} catch (e) {
-							console.warn("Error crítico procesando fecha, usando original:", e);
-							fechaMostrar = acc.fecha; // Fallback al original
-						}
+                            // Si la fecha es inválida (formato custom), procesamos el string manualmente
+                            if (isNaN(dateObj.getTime())) {
+                                if (acc.fecha && acc.fecha.includes(' - ')) {
+                                    let [horaCompleta, fechaCompleta] = acc.fecha.split(' - ');
+                                    let [hh, mm] = horaCompleta.split(':');
+                                    
+                                    // Calculamos la nueva hora asegurando que sea positiva (0-23)
+                                    let nuevaHH = (parseInt(hh) + manualOffset + 24) % 24;
+                                    fechaMostrar = `${String(nuevaHH).padStart(2, '0')}:${mm} - ${fechaCompleta}`;
+                                }
+                            } else {
+                                // Si es una fecha válida, restamos las horas directamente al objeto Date
+                                dateObj.setHours(dateObj.getHours() + manualOffset);
+                                
+                                const h = String(dateObj.getHours()).padStart(2, '0');
+                                const m = String(dateObj.getMinutes()).padStart(2, '0');
+                                const day = String(dateObj.getDate()).padStart(2, '0');
+                                const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+                                const year = String(dateObj.getFullYear()).substring(2);
+                                
+                                fechaMostrar = `${h}:${m} - ${day}/${month}/${year}`;
+                            }
+                        } catch (e) {
+                            console.warn("Error crítico procesando fecha, usando original:", e);
+                            fechaMostrar = acc.fecha; // Fallback al original
+                        }
 
-						return {
-							...acc,
-							fecha_local: fechaMostrar
-						};
-					});
-					
-					// Gatillo de renderizado
-					if (typeof renderAccesos === 'function') {
-						renderAccesos();
-					}
-				}
-			} catch (error) {
-				console.error("Error en sincronización automática:", error);
-			}
-		}
+                        return {
+                            ...acc,
+                            fecha_local: fechaMostrar
+                        };
+                    });
+                    
+                    // Gatillo de renderizado
+                    if (typeof renderAccesos === 'function') {
+                        renderAccesos();
+                    }
+                }
+            } catch (error) {
+                console.error("Error en sincronización automática:", error);
+            }
+        }
 
 		// 2. EL INTEGRADOR DEL ESCÁNER (Llamar esto desde scanLoop en index.html)
 		async function procesarEscaneoRealTime(codigoQR) {
