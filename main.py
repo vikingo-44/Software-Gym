@@ -531,10 +531,10 @@ def validar_acceso_qr(data: AccessCheck, db: Session = Depends(database.get_db))
             dias_rest = (user.fecha_vencimiento - date.today()).days
             final_response["status"] = "AUTHORIZED"
             
-            # --- CAMBIO AQUÍ: Definimos el color según los días ---
+            # --- CORRECCIÓN DE COLORES ---
             if dias_rest <= 3:
                 final_response["message"] = "¡Atención: Próximo a vencer!"
-                final_response["color"] = "yellow" # <--- Ahora el server manda amarillo
+                final_response["color"] = "yellow"  # <--- Ahora sí avisamos que es amarillo
             else:
                 final_response["message"] = f"Pase Válido ({dias_rest} días rest.)"
                 final_response["color"] = "green"

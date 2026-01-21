@@ -5185,63 +5185,41 @@ async function loadProfesores() {
 
 			if (!overlay) return;
 
-			// Reset visual
+			// Reset total de estilos
 			overlay.classList.remove('hidden');
 			overlay.classList.add('flex');
 			overlay.style.boxShadow = "none";
 			overlay.style.border = "none";
+			overlay.style.backgroundColor = "rgba(0,0,0,0.95)";
 
 			name.innerText = data.nombre || "DESCONOCIDO";
 			msg.innerText = data.message || "";
 
-			// USAMOS EL COLOR QUE VIENE DEL BACKEND (data.color)
 			const colorServidor = data.color || "red";
 
 			if (colorServidor === 'green') {
-				// --- VERDE: TODO OK ---
 				status.innerText = "ACCESO PERMITIDO";
-				status.className = "text-5xl font-black uppercase italic text-green-500 mb-2 tracking-wide text-center drop-shadow-[0_0_10px_rgba(34,197,94,0.8)]";
-				overlay.style.boxShadow = "inset 0 0 100px rgba(34, 197, 94, 0.3)";
-				overlay.style.border = "4px solid #22c55e";
-				icon.innerHTML = `
-					<div class="w-32 h-32 bg-green-500 rounded-full flex items-center justify-center shadow-[0_0_60px_#22c55e] animate-bounce">
-						<i data-lucide="check" class="w-16 h-16 text-black"></i>
-					</div>`;
+				status.className = "text-5xl font-black uppercase italic text-green-500 mb-2 tracking-wide text-center drop-shadow-[0_0_10px_#22c55e]";
+				overlay.style.boxShadow = "inset 0 0 150px rgba(34, 197, 94, 0.4)";
+				overlay.style.border = "8px solid #22c55e";
+				icon.innerHTML = `<div class="w-32 h-32 bg-green-500 rounded-full flex items-center justify-center shadow-[0_0_60px_#22c55e] animate-bounce"><i data-lucide="check" class="w-16 h-16 text-black"></i></div>`;
 				playVikingSound('success');
 
 			} else if (colorServidor === 'yellow') {
-				// --- AMARILLO: VENCE PRONTO ---
-				status.innerText = "¡ATENCIÓN: PRÓXIMO VENCIMIENTO!";
-				status.className = "text-3xl font-black uppercase italic text-yellow-500 mb-2 tracking-wide text-center drop-shadow-[0_0_10px_rgba(234,179,8,0.8)]";
-				overlay.style.boxShadow = "inset 0 0 100px rgba(234, 179, 8, 0.3)";
-				overlay.style.border = "4px solid #eab308";
-				icon.innerHTML = `
-					<div class="w-32 h-32 bg-yellow-500 rounded-full flex items-center justify-center shadow-[0_0_60px_#eab308]">
-						<i data-lucide="alert-triangle" class="w-16 h-16 text-black"></i>
-					</div>`;
-				playVikingSound('warning');
-
-			} else if (colorServidor === 'blue') {
-				// --- AZUL: STAFF ---
-				status.innerText = "ACCESO STAFF";
-				status.className = "text-5xl font-black uppercase italic text-blue-500 mb-2 tracking-wide text-center";
-				overlay.style.border = "4px solid #3b82f6";
-				icon.innerHTML = `
-					<div class="w-32 h-32 bg-blue-500 rounded-full flex items-center justify-center shadow-[0_0_60px_#3b82f6]">
-						<i data-lucide="shield-check" class="w-16 h-16 text-white"></i>
-					</div>`;
-				playVikingSound('success');
+				// --- ESTADO AMARILLO ---
+				status.innerText = "¡ATENCIÓN: VENCE PRONTO!";
+				status.className = "text-4xl font-black uppercase italic text-yellow-500 mb-2 tracking-wide text-center drop-shadow-[0_0_15px_#eab308]";
+				overlay.style.boxShadow = "inset 0 0 150px rgba(234, 179, 8, 0.5)"; // Resplandor amarillo
+				overlay.style.border = "8px solid #eab308"; // Marco amarillo grueso
+				icon.innerHTML = `<div class="w-32 h-32 bg-yellow-500 rounded-full flex items-center justify-center shadow-[0_0_60px_#eab308]"><i data-lucide="alert-triangle" class="w-16 h-16 text-black"></i></div>`;
+				playVikingSound('warning'); // <--- Esto hace el pitido doble
 
 			} else {
-				// --- ROJO: DENEGADO / ERROR ---
 				status.innerText = "ACCESO DENEGADO";
-				status.className = "text-5xl font-black uppercase italic text-red-600 mb-2 tracking-wide text-center drop-shadow-[0_0_10px_rgba(220,38,38,0.8)]";
-				overlay.style.boxShadow = "inset 0 0 100px rgba(220, 38, 38, 0.3)";
-				overlay.style.border = "4px solid #dc2626";
-				icon.innerHTML = `
-					<div class="w-32 h-32 bg-red-600 rounded-full flex items-center justify-center shadow-[0_0_60px_#dc2626] animate-shake">
-						<i data-lucide="x" class="w-16 h-16 text-white"></i>
-					</div>`;
+				status.className = "text-5xl font-black uppercase italic text-red-600 mb-2 tracking-wide text-center drop-shadow-[0_0_10px_#dc2626]";
+				overlay.style.boxShadow = "inset 0 0 150px rgba(220, 38, 38, 0.4)";
+				overlay.style.border = "8px solid #dc2626";
+				icon.innerHTML = `<div class="w-32 h-32 bg-red-600 rounded-full flex items-center justify-center shadow-[0_0_60px_#dc2626] animate-shake"><i data-lucide="x" class="w-16 h-16 text-white"></i></div>`;
 				playVikingSound('error');
 			}
 
