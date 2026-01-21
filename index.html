@@ -5265,18 +5265,56 @@ async function loadProfesores() {
 		 */
 		async function fetchAccesos() {
 			const res = await apiFetch('/acceso/historial'); 
-			
 			if (!res.error && Array.isArray(res)) {
 				state.accesos = res.map(acc => {
+					let fechaMostrar = acc.fecha;
+
+					try {
+						/**
+						 * AJUSTE DE SEGURIDAD:
+						 * Si el servidor te manda la hora 3 horas adelantada (ej: te manda las 13:00 cuando son las 10:00),
+						 * el manualOffset debe ser -3.
+						 */
+						const manualOffset = -3; 
+						
+						// Intentamos convertir el string del servidor a un objeto Date
+						// Nota: Reemplazamos el guion por barra para mejor compatibilidad si es necesario
+						let dateObj = new Date(acc.fecha.replace(/-/g, '/'));
+
+						// Si la fecha es inválida (porque el formato es raro), intentamos procesar el string directamente
+						if (isNaN(dateObj.getTime())) {
+						// Si el formato es "HH:MM - DD/MM/YY", extraemos la hora
+						let [horaCompleta, fechaCompleta] = acc.fecha.split(' - ');
+						let [hh, mm] = horaCompleta.split(':');
+						
+						let nuevaHH = (parseInt(hh) + manualOffset + 24) % 24;
+						fechaMostrar = `${String(nuevaHH).padStart(2, '0')}:${mm} - ${fechaCompleta}`;
+						} else {
+							// Si es una fecha válida, restamos las horas
+							dateObj.setHours(dateObj.getHours() + manualOffset);
+							
+							const h = String(dateObj.getHours()).padStart(2, '0');
+							const m = String(dateObj.getMinutes()).padStart(2, '0');
+							const day = String(dateObj.getDate()).padStart(2, '0');
+							const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+							const year = String(dateObj.getFullYear()).substring(2);
+							
+							fechaMostrar = `${h}:${m} - ${day}/${month}/${year}`;
+						}
+					} catch (e) {
+						console.warn("Error crítico procesando fecha:", e);
+						fechaMostrar = acc.fecha; // Fallback al original
+					}
+
 					return {
 						...acc,
-						// Guardamos el texto exacto que mandó el servidor
-						fecha_local: acc.fecha 
+						fecha_local: fechaMostrar
 					};
 				});
-				renderAccesos();
-			} else if (res.error) {
-				console.error("Error al traer historial:", res.error);
+				
+				if (typeof renderAccesos === 'function') {
+					renderAccesos();
+				}
 			}
 		}
 				
@@ -5336,22 +5374,18 @@ async function loadProfesores() {
 
 			async function procesarEscaneo(codigoQR) {
 				try {
-					// Ajustá esta URL al endpoint real de tu FastAPI
 					const response = await apiFetch('/acceso/validar', {
 						method: 'POST',
 						body: JSON.stringify({ qr_data: codigoQR })
 					});
 
 					if (response.success) {
-						// 1. Mostrás el feedback visual (Modal verde/éxito)
-						// Asegurate de que esta función exista en tu código
 						if (typeof showScannerFeedback === 'function') {
 							showScannerFeedback(true, response.usuario);
 						}
 
-						// 2. LA CLAVE DEL TIEMPO REAL:
-						// Llamamos a fetchAccesos para que la lista de abajo se actualice YA.
-						console.log("⚡ Actualizando historial en tiempo real...");
+						// Actualización inmediata al detectar un guerrero
+						console.log("⚡ Guerrero detectado: Actualizando historial...");
 						await fetchAccesos(); 
 						
 					} else {
@@ -5365,15 +5399,14 @@ async function loadProfesores() {
 			}
 
 			function iniciarRefrescoAutomatico() {
-				console.log("🛡️ Motor de refresco  iniciado");
+				console.log("🛡️ Motor de refresco Vikingo iniciado");
 				
 				setInterval(() => {
-					// Solo refrescamos si el usuario está viendo la pestaña
 					if (!document.hidden && typeof fetchAccesos === 'function') {
-						console.log("🔄 Actualización automática de historial");
+						console.log("🔄 Sincronización de guardia");
 						fetchAccesos();
 					}
-				}, 30000); // 30 segundos es un tiempo seguro para no saturar NeonDB
+				}, 30000); 
 			}
 
 			/**

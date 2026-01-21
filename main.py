@@ -573,10 +573,9 @@ def get_historial_accesos(db: Session = Depends(database.get_db)):
         from datetime import timedelta
         accesos = db.query(models.Acceso).order_by(models.Acceso.id.desc()).limit(50).all()
         
-        # Si NeonDB ya está en hora de Argentina, dejamos hours=0.
-        # Si ves que en la web falta tiempo, podés poner hours=3.
-        # Si sobra tiempo, podés poner hours=-3.
-        offset = timedelta(hours=0) 
+        # PRIORIDAD 0: CORRECCIÓN HORARIA.
+        # Restamos 3 horas al envío para corregir el adelanto del servidor y sincronizar con Argentina.
+        offset = timedelta(hours=-3) 
 
         return [{
             "id": a.id,
@@ -1000,6 +999,10 @@ def crear_movimiento_caja(mov: MovimientoCreate, db: Session = Depends(database.
 # --- PROCESAR COBROS ---
 @app.post("/api/cobros/procesar", tags=["Finanzas"])
 def procesar_cobro(data: TransactionCreate, db: Session = Depends(database.get_db)):
+    """
+    PRIORIDAD 3: Lógica de cobros con actualización de vencimiento automática.
+    Actualiza la membresía sumando días del plan a la fecha de vencimiento actual (si existe) o desde hoy.
+    """
     try:
         # 1. Registro automático en Caja
         monto_positivo = abs(data.monto)
@@ -1027,30 +1030,36 @@ def procesar_cobro(data: TransactionCreate, db: Session = Depends(database.get_d
             
             producto.stock_actual -= data.cantidad
             
-        # 3. Actualización de Alumno (Si es un Plan)
+        # 3. Lógica de Planes (Actualización de Vencimiento Automatizada)
         if (data.tipo == "Plan" or "plan" in data.tipo.lower()) and data.alumno_id:
             alumno = db.query(models.Usuario).filter(models.Usuario.id == data.alumno_id).first()
             
-            plan = db.query(models.TipoPlan).filter(models.TipoPlan.id == data.producto_id).first()
-            if not plan:
-                 plan = db.query(models.Plan).filter(models.Plan.id == data.producto_id).first()
+            # Buscamos el plan para saber la duración de días. 
+            # El producto_id en el cobro de planes se refiere al ID del Plan.
+            plan = db.query(models.Plan).options(joinedload(models.Plan.tipo)).filter(models.Plan.id == data.producto_id).first()
 
             if alumno and plan:
-                hoy = datetime.now()
+                hoy = date.today()
                 
-                alumno.fecha_ultimo_pago = hoy 
-                alumno.fecha_ultima_renovacion = hoy 
+                # Definir días de duración (por defecto 30 si el tipo de plan no lo tiene)
+                dias_duracion = 30
+                if plan.tipo and plan.tipo.duracion_dias:
+                    dias_duracion = plan.tipo.duracion_dias
                 
-                dias = 30
-                if hasattr(plan, 'duracion_dias') and plan.duracion_dias: dias = plan.duracion_dias
+                # LÓGICA DE RENOVACIÓN INTELIGENTE:
+                # Si el alumno ya venció (o vence hoy), empezamos a contar desde HOY.
+                # Si aún NO venció, sumamos los días a su fecha de vencimiento actual.
+                base_fecha = hoy
+                if alumno.fecha_vencimiento and alumno.fecha_vencimiento > hoy:
+                    base_fecha = alumno.fecha_vencimiento
                 
-                alumno.fecha_vencimiento = hoy + timedelta(days=dias)
-                
+                alumno.fecha_ultima_renovacion = hoy
+                alumno.fecha_vencimiento = base_fecha + timedelta(days=dias_duracion)
                 alumno.estado_cuenta = "Al día"
-                if hasattr(plan, 'tipo_plan_id'): # Es un objeto Plan
-                    alumno.plan_id = plan.id
+                alumno.plan_id = plan.id
                 
-                if hasattr(plan, 'clases_mensuales') and plan.clases_mensuales:
+                # Actualizar cupos de clases si el plan los define
+                if plan.clases_mensuales:
                     alumno.clases_restantes = plan.clases_mensuales
 
         db.commit()
@@ -1122,7 +1131,7 @@ def create_plan_rutina(data: PlanRutinaCreate, db: Session = Depends(database.ge
                 ej_en_rut = models.EjercicioEnRutina(
                     dia_id=nuevo_dia.id,
                     ejercicio_id=e.ejercicio_id,
-                    commentario=e.comentario
+                    comentario=e.comentario
                 )
                 db.add(ej_en_rut)
                 db.flush()
