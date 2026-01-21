@@ -5174,7 +5174,7 @@ async function loadProfesores() {
 		}
 
 		/**
-		 * 5. UI: MOSTRAR RESULTADO (FEEDBACK)
+		 * UI: MOSTRAR RESULTADO CON AUDIO
 		 */
 		function showFeedback(data) {
 			const overlay = document.getElementById('scanner-feedback-overlay');
@@ -5191,14 +5191,33 @@ async function loadProfesores() {
 			name.innerText = data.nombre || "DESCONOCIDO";
 			msg.innerText = data.message || "";
 
+			// --- LÓGICA DE COLORES Y SONIDOS ---
+			
 			if (data.status === 'AUTHORIZED') {
-				status.innerText = "ACCESO PERMITIDO";
-				status.className = "text-4xl font-black uppercase italic text-green-500 mb-2 tracking-wide text-center";
-				icon.innerHTML = `<div class="w-32 h-32 bg-green-500 rounded-full flex items-center justify-center shadow-[0_0_60px_#22c55e] animate-bounce"><i data-lucide="check" class="w-16 h-16 text-black"></i></div>`;
+				// Chequeamos si es Amarillo (Vencimiento próximo: menos de 3 días)
+				const hoy = new Date();
+				const venc = data.fecha_vencimiento ? new Date(data.fecha_vencimiento) : null;
+				const diasRestantes = venc ? Math.ceil((venc - hoy) / (1000 * 60 * 60 * 24)) : 99;
+
+				if (diasRestantes >= 0 && diasRestantes <= 3) {
+					// AMARILLO
+					status.innerText = "¡ATENCIÓN: PRÓXIMO VENCIMIENTO!";
+					status.className = "text-3xl font-black uppercase italic text-yellow-500 mb-2 tracking-wide text-center";
+					icon.innerHTML = `<div class="w-32 h-32 bg-yellow-500 rounded-full flex items-center justify-center shadow-[0_0_60px_#eab308]"><i data-lucide="alert-triangle" class="w-16 h-16 text-black"></i></div>`;
+					playVikingSound('warning');
+				} else {
+					// VERDE
+					status.innerText = "ACCESO PERMITIDO";
+					status.className = "text-4xl font-black uppercase italic text-green-500 mb-2 tracking-wide text-center";
+					icon.innerHTML = `<div class="w-32 h-32 bg-green-500 rounded-full flex items-center justify-center shadow-[0_0_60px_#22c55e] animate-bounce"><i data-lucide="check" class="w-16 h-16 text-black"></i></div>`;
+					playVikingSound('success');
+				}
 			} else {
+				// ROJO (Error de lectura o sistema)
 				status.innerText = "ACCESO DENEGADO";
 				status.className = "text-4xl font-black uppercase italic text-red-500 mb-2 tracking-wide text-center";
 				icon.innerHTML = `<div class="w-32 h-32 bg-red-600 rounded-full flex items-center justify-center shadow-[0_0_60px_#dc2626] animate-shake"><i data-lucide="x" class="w-16 h-16 text-black"></i></div>`;
+				playVikingSound('error');
 			}
 			
 			if(window.lucide) lucide.createIcons();
@@ -5646,6 +5665,46 @@ async function loadProfesores() {
             btn.disabled = false;
             btn.innerText = "Cambiar Contraseña";
         }
+
+		/**
+		 * MOTOR DE AUDIO VIKINGO
+		 * Genera tonos sintéticos para feedback inmediato en el molinete.
+		 */
+		function playVikingSound(type) {
+			const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+			const oscillator = audioCtx.createOscillator();
+			const gainNode = audioCtx.createGain();
+
+			oscillator.connect(gainNode);
+			gainNode.connect(audioCtx.destination);
+
+			switch(type) {
+				case 'success': // VERDE: Tono agudo y corto
+					oscillator.type = 'sine';
+					oscillator.frequency.setValueAtTime(880, audioCtx.currentTime); // La5
+					gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
+					oscillator.start();
+					oscillator.stop(audioCtx.currentTime + 0.2);
+					break;
+					
+				case 'warning': // AMARILLO: Dos tonos (Aviso de vencimiento)
+					oscillator.type = 'triangle';
+					oscillator.frequency.setValueAtTime(440, audioCtx.currentTime); 
+					gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
+					oscillator.start();
+					oscillator.frequency.exponentialRampToValueAtTime(660, audioCtx.currentTime + 0.3);
+					oscillator.stop(audioCtx.currentTime + 0.4);
+					break;
+
+				case 'error': // ROJO: Tono grave y vibrante
+					oscillator.type = 'sawtooth';
+					oscillator.frequency.setValueAtTime(150, audioCtx.currentTime);
+					gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
+					oscillator.start();
+					oscillator.stop(audioCtx.currentTime + 0.5);
+					break;
+			}
+		}
 
         // --- PUNTO 3: Dashboard Específico Profesor ---
         async function loadProfessorDashboard() {
