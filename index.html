@@ -5174,8 +5174,7 @@ async function loadProfesores() {
 		}
 
 		/**
-		 * UI: MOSTRAR RESULTADO (ESTADOS DINÁMICOS)
-		 * Esta función ahora cambia el resplandor de todo el overlay para que sea obvio.
+		 * UI: MOSTRAR RESULTADO BASADO EN EL COLOR DEL SERVIDOR
 		 */
 		function showFeedback(data) {
 			const overlay = document.getElementById('scanner-feedback-overlay');
@@ -5186,71 +5185,67 @@ async function loadProfesores() {
 
 			if (!overlay) return;
 
-			// 1. Resetear el estado visual del overlay
-			overlay.classList.remove('hidden', 'flex');
+			// Reset visual
+			overlay.classList.remove('hidden');
 			overlay.classList.add('flex');
-			
-			// Quitamos sombras de estados anteriores
 			overlay.style.boxShadow = "none";
 			overlay.style.border = "none";
 
 			name.innerText = data.nombre || "DESCONOCIDO";
 			msg.innerText = data.message || "";
 
-			// 2. LÓGICA DE COLORES Y SONIDOS
-			if (data.status === 'AUTHORIZED') {
-				const hoy = new Date();
-				const venc = data.fecha_vencimiento ? new Date(data.fecha_vencimiento) : null;
-				const diasRestantes = venc ? Math.ceil((venc - hoy) / (1000 * 60 * 60 * 24)) : 99;
+			// USAMOS EL COLOR QUE VIENE DEL BACKEND (data.color)
+			const colorServidor = data.color || "red";
 
-				if (diasRestantes >= 0 && diasRestantes <= 3) {
-					// --- ESTADO AMARILLO (VENCE PRONTO) ---
-					status.innerText = "¡ATENCIÓN: PRÓXIMO VENCIMIENTO!";
-					status.className = "text-4xl font-black uppercase italic text-yellow-500 mb-2 tracking-wide text-center drop-shadow-[0_0_10px_rgba(234,179,8,0.8)]";
-					
-					// Hacemos que todo el cuadro brille en amarillo
-					overlay.style.boxShadow = "inset 0 0 100px rgba(234, 179, 8, 0.3)";
-					overlay.style.border = "4px solid #eab308";
-					
-					icon.innerHTML = `
-						<div class="w-32 h-32 bg-yellow-500 rounded-full flex items-center justify-center shadow-[0_0_60px_#eab308]">
-							<i data-lucide="alert-triangle" class="w-16 h-16 text-black"></i>
-						</div>`;
-					playVikingSound('warning');
-					
-				} else {
-					// --- ESTADO VERDE (TODO OK) ---
-					status.innerText = "ACCESO PERMITIDO";
-					status.className = "text-5xl font-black uppercase italic text-green-500 mb-2 tracking-wide text-center drop-shadow-[0_0_10px_rgba(34,197,94,0.8)]";
-					
-					// Hacemos que todo el cuadro brille en verde
-					overlay.style.boxShadow = "inset 0 0 100px rgba(34, 197, 94, 0.3)";
-					overlay.style.border = "4px solid #22c55e";
+			if (colorServidor === 'green') {
+				// --- VERDE: TODO OK ---
+				status.innerText = "ACCESO PERMITIDO";
+				status.className = "text-5xl font-black uppercase italic text-green-500 mb-2 tracking-wide text-center drop-shadow-[0_0_10px_rgba(34,197,94,0.8)]";
+				overlay.style.boxShadow = "inset 0 0 100px rgba(34, 197, 94, 0.3)";
+				overlay.style.border = "4px solid #22c55e";
+				icon.innerHTML = `
+					<div class="w-32 h-32 bg-green-500 rounded-full flex items-center justify-center shadow-[0_0_60px_#22c55e] animate-bounce">
+						<i data-lucide="check" class="w-16 h-16 text-black"></i>
+					</div>`;
+				playVikingSound('success');
 
-					icon.innerHTML = `
-						<div class="w-32 h-32 bg-green-500 rounded-full flex items-center justify-center shadow-[0_0_60px_#22c55e] animate-bounce">
-							<i data-lucide="check" class="w-16 h-16 text-black"></i>
-						</div>`;
-					playVikingSound('success');
-				}
+			} else if (colorServidor === 'yellow') {
+				// --- AMARILLO: VENCE PRONTO ---
+				status.innerText = "¡ATENCIÓN: PRÓXIMO VENCIMIENTO!";
+				status.className = "text-3xl font-black uppercase italic text-yellow-500 mb-2 tracking-wide text-center drop-shadow-[0_0_10px_rgba(234,179,8,0.8)]";
+				overlay.style.boxShadow = "inset 0 0 100px rgba(234, 179, 8, 0.3)";
+				overlay.style.border = "4px solid #eab308";
+				icon.innerHTML = `
+					<div class="w-32 h-32 bg-yellow-500 rounded-full flex items-center justify-center shadow-[0_0_60px_#eab308]">
+						<i data-lucide="alert-triangle" class="w-16 h-16 text-black"></i>
+					</div>`;
+				playVikingSound('warning');
+
+			} else if (colorServidor === 'blue') {
+				// --- AZUL: STAFF ---
+				status.innerText = "ACCESO STAFF";
+				status.className = "text-5xl font-black uppercase italic text-blue-500 mb-2 tracking-wide text-center";
+				overlay.style.border = "4px solid #3b82f6";
+				icon.innerHTML = `
+					<div class="w-32 h-32 bg-blue-500 rounded-full flex items-center justify-center shadow-[0_0_60px_#3b82f6]">
+						<i data-lucide="shield-check" class="w-16 h-16 text-white"></i>
+					</div>`;
+				playVikingSound('success');
+
 			} else {
-				// --- ESTADO ROJO (ERROR / DENEGADO) ---
+				// --- ROJO: DENEGADO / ERROR ---
 				status.innerText = "ACCESO DENEGADO";
 				status.className = "text-5xl font-black uppercase italic text-red-600 mb-2 tracking-wide text-center drop-shadow-[0_0_10px_rgba(220,38,38,0.8)]";
-				
-				// Hacemos que todo el cuadro brille en rojo
 				overlay.style.boxShadow = "inset 0 0 100px rgba(220, 38, 38, 0.3)";
 				overlay.style.border = "4px solid #dc2626";
-
 				icon.innerHTML = `
 					<div class="w-32 h-32 bg-red-600 rounded-full flex items-center justify-center shadow-[0_0_60px_#dc2626] animate-shake">
 						<i data-lucide="x" class="w-16 h-16 text-white"></i>
 					</div>`;
 				playVikingSound('error');
 			}
-			
-			// IMPORTANTE: Refrescar los iconos para que aparezcan
-			if(window.lucide) lucide.createIcons();
+
+			if (window.lucide) lucide.createIcons();
 		}
 
 		/**

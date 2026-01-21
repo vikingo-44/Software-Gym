@@ -530,16 +530,18 @@ def validar_acceso_qr(data: AccessCheck, db: Session = Depends(database.get_db))
         if user.fecha_vencimiento >= date.today():
             dias_rest = (user.fecha_vencimiento - date.today()).days
             final_response["status"] = "AUTHORIZED"
-            final_response["message"] = f"Pase Válido ({dias_rest} días rest.)"
-            if dias_rest <= 3: final_response["message"] = "¡Atención: Próximo a vencer!"
-            final_response["color"] = "green"
+            
+            # --- CAMBIO AQUÍ: Definimos el color según los días ---
+            if dias_rest <= 3:
+                final_response["message"] = "¡Atención: Próximo a vencer!"
+                final_response["color"] = "yellow" # <--- Ahora el server manda amarillo
+            else:
+                final_response["message"] = f"Pase Válido ({dias_rest} días rest.)"
+                final_response["color"] = "green"
         else:
             final_response["status"] = "DENIED"
             final_response["message"] = f"Plan Vencido el {user.fecha_vencimiento}"
             final_response["color"] = "red"
-    else:
-        final_response["status"] = "DENIED"
-        final_response["message"] = "Sin plan activo asignado"
 
     # --- REGISTRO EN HISTORIAL (SQL) ---
     # FIX: Se cambia 'estado' por 'accion' para coincidir con el modelo historial_accesos
