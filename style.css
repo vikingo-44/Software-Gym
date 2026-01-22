@@ -1,6 +1,7 @@
 /* =================================================================
    TIPOGRAFÍA PERSONALIZADA (BEBAS NEUE)
    ================================================================= */
+/* 1. Definición para texto NORMAL */
 @font-face {
     font-family: 'BebasNeue';
     /* Asegúrate de que este archivo exista exactamente en esa ruta en tu GitHub */
@@ -10,14 +11,25 @@
     font-display: swap;
 }
 
+/* 2. Definición para texto NEGRITA (Usamos el mismo archivo para que no falle) */
+@font-face {
+    font-family: 'BebasNeue';
+    src: url('https://cdn.jsdelivr.net/gh/vikingo-44/Software-Gym/fuentes/BebasNeue-Regular.ttf') format('truetype');
+    font-weight: bold; /* Engañamos al navegador para que use esta fuente en negritas */
+    font-style: normal;
+    font-display: swap;
+}
+
 /* =================================================================
    ESTILOS ORIGINALES (MANTENIDOS AL 100% - RESPETO TOTAL)
    ================================================================= */
+
+/* APLICACIÓN NUCLEAR: FORZAR FUENTE EN TODO EL UNIVERSO */
+* {
+    font-family: 'BebasNeue', sans-serif !important;
+}
+
 body {
-    /* AQUI APLICAMOS TU FUENTE CON FUERZA BRUTA (!important) */
-    /* Esto sobreescribe la clase font-['Inter'] que tienes en el HTML */
-    font-family: 'BebasNeue', 'Inter', sans-serif !important;
-    
     background-color: #000000;
     background-image: linear-gradient(rgba(0, 0, 0, 0.94), rgba(0, 0, 0, 0.94)), url('https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=2070&auto=format&fit=crop');
     background-size: cover;
@@ -34,7 +46,7 @@ body {
 
 /* Aseguramos que los elementos de formulario también usen la fuente */
 input, button, select, textarea, .viking-input {
-    font-family: 'BebasNeue', 'Inter', sans-serif !important;
+    font-family: 'BebasNeue', sans-serif !important;
 }
 
 .viking-red { color: #FF0000; }
