@@ -22,7 +22,8 @@
         background-attachment: fixed;
         color: #ffffff;
         overflow: hidden; /* Se sobreescribe en móvil más abajo */
-        touch-action: manipulation; /* Evita zoom accidental al tocar botones rápido */
+        touch-action: pan-x pan-y; /* Permite scroll pero ayuda a mitigar zoom accidental */
+        -webkit-text-size-adjust: 100%; /* Evita que iOS cambie el tamaño de letra al rotar */
     }
     
     .viking-red { color: #FF0000; }
@@ -118,10 +119,7 @@
     .sidebar-collapsed .user-details, 
     .sidebar-collapsed .nav-text, 
     .sidebar-collapsed .nav-section-title,
-    .sidebar-collapsed .chevron-icon,
-    .sidebar-collapsed #side-user-name,
-    .sidebar-collapsed #side-user-role { display: none !important; }
-    
+    .sidebar-collapsed .chevron-icon { display: none; }
     .sidebar-collapsed .nav-item { justify-content: center !important; padding-left: 0; padding-right: 0; gap: 0 !important; }
     
     .sidebar-collapsed #user-avatar-container {
@@ -288,7 +286,7 @@
     .animate-scan-line { animation: scan-line 2.5s linear infinite; }
 
     /* =================================================================
-    PARCHE DE ADAPTABILIDAD MOBILE (PRIORIDAD 2)
+    PARCHE DE ADAPTABILIDAD MOBILE (PRIORIDAD 2 - APP-STYLE)
     ================================================================= */
     @media (max-width: 1024px) {
         body {
@@ -336,15 +334,16 @@
         .view-content {
             width: 100% !important;
             padding: 0.75rem !important;
+            overflow-x: hidden !important;
         }
 
-        /* Header Mobile: Corregimos padding y visibilidad del botón */
+        /* Header Mobile: Corregimos padding y altura para look app */
         header {
             padding-left: 1rem !important; 
             padding-right: 1rem !important;
             height: 70px !important;
             justify-content: flex-start !important;
-            gap: 10px;
+            gap: 12px;
         }
 
         /* Grillas: Una sola columna para que nada desborde */
@@ -388,29 +387,35 @@
             margin: 6px;
         }
 
-        /* Tablas: Tipo tarjeta con bordes limpios */
+        /* Tablas: Tipo tarjeta refinada con bordes limpios */
         .viking-table-row {
             display: flex;
             flex-direction: column;
-            padding: 1rem;
-            margin-bottom: 0.5rem;
+            padding: 1.25rem;
+            margin-bottom: 0.75rem;
+            border: 1px solid rgba(255,255,255,0.06);
             border-radius: 1.25rem;
+            background: rgba(255,255,255,0.02);
+            width: 100% !important;
+            box-sizing: border-box;
         }
 
         /* Modales: Ajuste estético para móvil */
         .viking-modal > div {
-            width: 92% !important;
-            max-width: 92% !important;
-            padding: 1.25rem !important;
-            border-radius: 1.75rem !important;
+            width: 95% !important;
+            max-width: 95% !important;
+            margin: 10px;
+            border-radius: 2rem !important;
+            padding: 1.5rem !important;
         }
 
         /* AJUSTE SOLICITADO: BOTONES MÁS PEQUEÑOS Y PROPORCIONADOS */
         button, .nav-item, .filter-btn, .payment-method-btn {
-            min-height: 42px !important; /* Más elegante para pantallas móviles */
-            padding-top: 0.5rem !important;
-            padding-bottom: 0.5rem !important;
+            min-height: 40px !important; /* Más elegante para pantallas móviles */
+            padding-top: 0.4rem !important;
+            padding-bottom: 0.4rem !important;
             font-size: 0.85rem !important;
+            border-radius: 0.85rem !important;
         }
 
         /* Iconos de navegación ligeramente más pequeños */
@@ -433,6 +438,7 @@
             color: #FF0000;
             z-index: 50;
         }
+        .mobile-menu-trigger i { width: 22px; height: 22px; }
     }
 
     /* Ocultar disparador en resoluciones de computadora */
@@ -1751,6 +1757,23 @@
 					}
 				});
 			});
+
+			// Bloqueo de zoom por gestos de dedos (Multi-touch)
+			document.addEventListener('touchstart', (e) => {
+				if (e.touches.length > 1) {
+					e.preventDefault();
+				}
+			}, { passive: false });
+
+			// Bloqueo de zoom por doble tap
+			let lastTouchEnd = 0;
+			document.addEventListener('touchend', (e) => {
+				const now = (new Date()).getTime();
+				if (now - lastTouchEnd <= 300) {
+					e.preventDefault();
+				}
+				lastTouchEnd = now;
+			}, false);
 		});
 
         let state = { 
