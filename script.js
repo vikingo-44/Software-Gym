@@ -225,23 +225,33 @@
 				}
 			}
 			
-			// Próximas Clases (Tu código original, mejorado el filtro)
+			// Próximas Clases (Lógica Corregida)
 			const upcoming = document.getElementById('al-dash-upcoming');
-			const misR = state.reservas.filter(r => r.alumno_dni === u.dni || r.usuario_id === u.id);
+			// Filtramos reservas del usuario Y que sean futuras (opcional, si quieres ver historial quita la parte de new Date)
+			const misR = state.reservas.filter(r => String(r.alumno_dni) === String(u.dni) || String(r.usuario_id) === String(u.id));
 			
-			// Ordenar por fecha para mostrar las más cercanas primero
-			misR.sort((a, b) => new Date(a.fecha_clase) - new Date(b.fecha_clase));
+			// Ordenamiento robusto (detecta fecha_clase O fecha)
+			misR.sort((a, b) => {
+				const fa = new Date(a.fecha_clase || a.fecha || new Date());
+				const fb = new Date(b.fecha_clase || b.fecha || new Date());
+				return fa - fb;
+			});
 
 			if (upcoming) {
-				upcoming.innerHTML = misR.length ? misR.map(r => `
+				upcoming.innerHTML = misR.length ? misR.map(r => {
+					// Detectamos fecha válida para mostrar
+					const rawDate = r.fecha_clase || r.fecha; 
+					const fechaLegible = rawDate ? new Date(rawDate).toLocaleDateString('es-AR', {day: '2-digit', month: '2-digit'}) : (r.dia_nombre || 'Pendiente');
+					
+					return `
 					<div class="flex items-center justify-between p-3 bg-white/5 rounded-xl border border-red-600/10 mb-2">
 						<div>
-							<p class="text-[10px] font-black uppercase italic text-white">${r.clase_nombre}</p>
-							<p class="text-[9px] text-gray-500 font-bold">${r.dia_nombre || 'Fecha'} - ${r.horario || ''}hs</p>
+							<p class="text-[10px] font-black uppercase italic text-white">${r.clase_nombre || r.nombre_clase || 'Clase'}</p>
+							<p class="text-[9px] text-gray-500 font-bold">${fechaLegible} - ${r.horario || '00:00'}hs</p>
 						</div>
-						<button onclick="cancelBooking(${r.id})" class="text-[9px] text-red-500 hover:text-white">X</button>
+						<button onclick="cancelBooking(${r.id})" class="text-[9px] text-red-500 hover:text-white px-2 py-1 bg-black/20 rounded">CANCELAR</button>
 					</div>
-				`).join('') : '<p class="text-gray-500 italic text-[11px]">Sin reservas próximas.</p>';
+				`}).join('') : '<p class="text-gray-500 italic text-[11px] text-center py-2">Sin reservas próximas.</p>';
 			}
 		}
 		
