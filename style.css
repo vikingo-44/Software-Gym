@@ -3,6 +3,7 @@
    ================================================================= */
 @font-face {
     font-family: 'BebasNeue';
+    /* Asegúrate de que este archivo exista exactamente en esa ruta en tu GitHub */
     src: url('https://cdn.jsdelivr.net/gh/vikingo-44/Software-Gym/fuentes/BebasNeue-Regular.ttf') format('truetype');
     font-weight: normal;
     font-style: normal;
@@ -13,8 +14,9 @@
    ESTILOS ORIGINALES (MANTENIDOS AL 100% - RESPETO TOTAL)
    ================================================================= */
 body {
-    /* AQUI APLICAMOS TU FUENTE */
-    font-family: 'BebasNeue', 'Inter', sans-serif;
+    /* AQUI APLICAMOS TU FUENTE CON FUERZA BRUTA (!important) */
+    /* Esto sobreescribe la clase font-['Inter'] que tienes en el HTML */
+    font-family: 'BebasNeue', 'Inter', sans-serif !important;
     
     background-color: #000000;
     background-image: linear-gradient(rgba(0, 0, 0, 0.94), rgba(0, 0, 0, 0.94)), url('https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=2070&auto=format&fit=crop');
@@ -28,6 +30,11 @@ body {
     /* Mejoras para renderizado de fuentes */
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+}
+
+/* Aseguramos que los elementos de formulario también usen la fuente */
+input, button, select, textarea, .viking-input {
+    font-family: 'BebasNeue', 'Inter', sans-serif !important;
 }
 
 .viking-red { color: #FF0000; }
