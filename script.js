@@ -139,121 +139,151 @@
 		}
 
 		async function renderStudentDashboard() {
-			const u = state.user; if (!u) return;
-			
-			// 1. Cargar Datos básicos (Tu código original intacto)
-			document.getElementById('al-dash-name').innerText = u.nombre_completo;
-			document.getElementById('al-dash-dni').innerText = u.dni;
-			document.getElementById('al-dash-plan').innerText = u.plan?.nombre || 'SIN PLAN';
-			document.getElementById('al-dash-vencimiento').innerText = u.fecha_vencimiento || '-';
-			document.getElementById('al-dash-renovacion').innerText = u.fecha_ultima_renovacion || '-';
-			document.getElementById('al-dash-email').innerText = u.email || '-';
-			
-			const initials = u.nombre_completo ? u.nombre_completo.split(' ').filter(n=>n).map(n=>n[0]).join('').toUpperCase() : "??";
-			document.getElementById('al-dash-initials').innerText = initials;
-			
-			// Mantenemos Peso, Altura e IMC (Como pediste)
-			document.getElementById('al-dash-peso').innerText = u.peso || '0';
-			document.getElementById('al-dash-altura').innerText = u.altura || '0';
-			document.getElementById('al-dash-imc').innerText = u.imc || '0';
+            const u = state.user; if (!u) return;
 
-			// Lógica de vigencia del certificado (365 días)
-			if (u.fecha_certificado) {
-				const fCert = new Date(u.fecha_certificado);
-				const hoy = new Date();
-				const diff = (hoy - fCert) / (1000 * 60 * 60 * 24);
-				const vencido = diff > 365;
-				
-				// Podrías mostrar un aviso en el dashboard
-				const statusCert = document.getElementById('al-dash-plan'); // O cualquier otro label
-				if (vencido) statusCert.innerHTML += ` <span class="text-[8px] bg-red-600 text-black px-1 rounded ml-2">CERTIF. VENCIDO</span>`;
-			}
+            // HELPER DE SEGURIDAD: Evita el crash si el ID no existe en el HTML
+            const safeText = (id, val) => { const el = document.getElementById(id); if(el) el.innerText = val; };
+            const safeHtml = (id, val) => { const el = document.getElementById(id); if(el) el.innerHTML = val; };
 
-			// --- NUEVA LÓGICA: CRÉDITOS MENSUALES ---
-			const limite = u.plan?.clases_mensuales || 0;
-			const esFull = limite > 100; // Si es más de 100, asumimos ilimitado (Plan Full)
+            // --- 1. CARGA DE DATOS BÁSICOS ---
+            safeText('al-dash-name', u.nombre_completo);
+            safeText('al-dash-dni', u.dni);
+            safeText('al-dash-plan', u.plan?.nombre || 'SIN PLAN');
+            safeText('al-dash-vencimiento', u.fecha_vencimiento || '-');
+            safeText('al-dash-renovacion', u.fecha_ultima_renovacion || '-');
+            safeText('al-dash-email', u.email || '-');
 
-			// Recargamos reservas para asegurar el conteo exacto al momento
-			const allReservas = await apiFetch('/reservas');
-			if (!allReservas.error && Array.isArray(allReservas)) {
-				state.reservas = allReservas; 
-			}
-			
-			// Filtramos reservas de ESTE ALUMNO en ESTE MES
-			const hoy = new Date();
-			const reservasMes = state.reservas.filter(r => {
-				// Aseguramos compatibilidad de fechas
-				const fecha = new Date(r.fecha_clase || r.fecha_reserva || r.fecha); 
-				return (r.alumno_dni === u.dni || r.usuario_id === u.id) && 
-					   fecha.getMonth() === hoy.getMonth() &&
-					   fecha.getFullYear() === hoy.getFullYear();
-			});
+            const initials = u.nombre_completo ? u.nombre_completo.split(' ').filter(n=>n).map(n=>n[0]).join('').toUpperCase() : "??";
+            safeText('al-dash-initials', initials);
 
-			const usadas = reservasMes.length;
-			const restantes = esFull ? "∞" : Math.max(0, limite - usadas);
+            // --- 2. DATOS FÍSICOS (Corrección para que se vean) ---
+            // Usamos || '0' para que si viene vacío ponga un 0 y no quede en blanco
+            safeText('al-dash-peso', u.peso || '0');
+            safeText('al-dash-altura', u.altura || '0');
+            safeText('al-dash-imc', u.imc || '0');
 
-			// Actualizamos los elementos de Créditos (Solo si agregaste el HTML nuevo, si no, no rompe nada)
-			const elUsadas = document.getElementById('al-dash-usadas');
-			if(elUsadas) elUsadas.innerText = usadas;
-			
-			const elCreditos = document.getElementById('al-dash-creditos');
-			if(elCreditos) {
-				elCreditos.innerHTML = esFull ? 
-				`<span class="text-2xl">∞</span>` : 
-				`<span class="${restantes <= 2 ? 'text-red-500' : 'text-white'}">${restantes}</span>`;
-			}
-			// ----------------------------------------
+            // --- 3. LÓGICA CERTIFICADO ---
+            if (u.fecha_certificado) {
+                const fCert = new Date(u.fecha_certificado);
+                const hoy = new Date();
+                const diff = (hoy - fCert) / (1000 * 60 * 60 * 24);
+                if (diff > 365) {
+                    const statusCert = document.getElementById('al-dash-plan');
+                    if (statusCert) statusCert.innerHTML += ` <span class="text-[8px] bg-red-600 text-black px-1 rounded ml-2 font-bold">CERTIF. VENCIDO</span>`;
+                }
+            }
 
-			// Resumen de Rutina (Tu código original)
-			let res = await apiFetch(`/rutinas/usuario/${u.id}`);
-			let rutina = null;
-			if (Array.isArray(res) && res.length > 0) rutina = res[0]; 
-			else if (res && !res.error && res.id) rutina = res;
+            // --- 4. CRÉDITOS MENSUALES (Lógica corregida para barra de progreso) ---
+            const limite = u.plan?.clases_mensuales || 0;
+            const esFull = limite > 100;
 
-			const summaryContainer = document.getElementById('al-dash-rutina-summary'); 
-			const contentContainer = document.getElementById('al-dash-rutina-content');
+            // Recarga segura de reservas
+            const allReservas = await apiFetch('/reservas');
+            if (!allReservas.error && Array.isArray(allReservas)) {
+                state.reservas = allReservas; 
+            }
+            
+            const hoy = new Date();
+            const reservasMes = state.reservas.filter(r => {
+                const fecha = new Date(r.fecha_clase || r.fecha_reserva || r.fecha || new Date()); 
+                // Comparamos IDs como Strings para evitar error numero vs texto
+                return (String(r.alumno_dni) === String(u.dni) || String(r.usuario_id) === String(u.id)) && 
+                    fecha.getMonth() === hoy.getMonth() &&
+                    fecha.getFullYear() === hoy.getFullYear();
+            });
 
-			if (summaryContainer && contentContainer) {
-				if (rutina) {
-					summaryContainer.classList.remove('hidden');
-					contentContainer.innerHTML = `
-						<p class="text-[12px] font-black italic text-white mb-1">${rutina.objetivo || 'Rutina Personalizada'}</p>
-						<p class="text-[10px] text-gray-500 uppercase font-bold">${(rutina.dias||[]).length} Días de Entrenamiento</p>
-					`;
-				} else {
-					summaryContainer.classList.add('hidden');
-				}
-			}
-			
-			// Próximas Clases (Lógica Corregida)
-			const upcoming = document.getElementById('al-dash-upcoming');
-			// Filtramos reservas del usuario Y que sean futuras (opcional, si quieres ver historial quita la parte de new Date)
-			const misR = state.reservas.filter(r => String(r.alumno_dni) === String(u.dni) || String(r.usuario_id) === String(u.id));
-			
-			// Ordenamiento robusto (detecta fecha_clase O fecha)
-			misR.sort((a, b) => {
-				const fa = new Date(a.fecha_clase || a.fecha || new Date());
-				const fb = new Date(b.fecha_clase || b.fecha || new Date());
-				return fa - fb;
-			});
+            const usadas = reservasMes.length;
+            const restantes = esFull ? "∞" : Math.max(0, limite - usadas);
 
-			if (upcoming) {
-				upcoming.innerHTML = misR.length ? misR.map(r => {
-					// Detectamos fecha válida para mostrar
-					const rawDate = r.fecha_clase || r.fecha; 
-					const fechaLegible = rawDate ? new Date(rawDate).toLocaleDateString('es-AR', {day: '2-digit', month: '2-digit'}) : (r.dia_nombre || 'Pendiente');
-					
-					return `
-					<div class="flex items-center justify-between p-3 bg-white/5 rounded-xl border border-red-600/10 mb-2">
-						<div>
-							<p class="text-[10px] font-black uppercase italic text-white">${r.clase_nombre || r.nombre_clase || 'Clase'}</p>
-							<p class="text-[9px] text-gray-500 font-bold">${fechaLegible} - ${r.horario || '00:00'}hs</p>
-						</div>
-						<button onclick="cancelBooking(${r.id})" class="text-[9px] text-red-500 hover:text-white px-2 py-1 bg-black/20 rounded">CANCELAR</button>
-					</div>
-				`}).join('') : '<p class="text-gray-500 italic text-[11px] text-center py-2">Sin reservas próximas.</p>';
-			}
-		}
+            // Actualizamos USADAS
+            safeText('al-dash-usadas', usadas);
+            
+            // Actualizamos la estructura NUEVA (Restantes / Total / Barra)
+            const elRestantes = document.getElementById('al-dash-creditos-restantes');
+            const elTotal = document.getElementById('al-dash-creditos-total');
+            const elBarra = document.getElementById('al-dash-progress-bar');
+
+            if (elRestantes) elRestantes.innerText = esFull ? "∞" : restantes;
+            if (elTotal) elTotal.innerText = esFull ? "∞" : limite;
+            
+            if (elBarra) {
+                if (esFull) {
+                    elBarra.style.width = '100%';
+                    elBarra.className = 'h-full bg-yellow-500 rounded-full transition-all duration-1000'; // Dorado para Ilimitado
+                } else {
+                    const porcentaje = limite > 0 ? (usadas / limite) * 100 : 0;
+                    elBarra.style.width = `${Math.min(100, porcentaje)}%`;
+                    // Cambia a rojo si supera el 90% de uso
+                    elBarra.className = `h-full rounded-full transition-all duration-1000 ${porcentaje > 90 ? 'bg-red-600' : 'bg-green-500'}`;
+                }
+            }
+
+            // Soporte retrocompatibilidad (por si usas el diseño viejo en algún lado)
+            const elCreditosSimple = document.getElementById('al-dash-creditos');
+            if(elCreditosSimple) {
+                elCreditosSimple.innerHTML = esFull ? 
+                `<span class="text-2xl">∞</span>` : 
+                `<span class="${restantes <= 2 ? 'text-red-500' : 'text-white'}">${restantes}</span>`;
+            }
+
+            // --- 5. RUTINA ---
+            let res = await apiFetch(`/rutinas/usuario/${u.id}`);
+            let rutina = null;
+            if (Array.isArray(res) && res.length > 0) rutina = res[0]; 
+            else if (res && !res.error && res.id) rutina = res;
+
+            const summaryContainer = document.getElementById('al-dash-rutina-summary'); 
+            const contentContainer = document.getElementById('al-dash-rutina-content');
+
+            if (summaryContainer && contentContainer) {
+                if (rutina) {
+                    summaryContainer.classList.remove('hidden');
+                    contentContainer.innerHTML = `
+                        <p class="text-[12px] font-black italic text-white mb-1">${rutina.objetivo || 'Rutina Personalizada'}</p>
+                        <p class="text-[10px] text-gray-500 uppercase font-bold">${(rutina.dias||[]).length} Días de Entrenamiento</p>
+                    `;
+                } else {
+                    summaryContainer.classList.add('hidden');
+                }
+            }
+            
+            // --- 6. PRÓXIMAS CLASES ---
+            const upcoming = document.getElementById('al-dash-upcoming');
+            if (upcoming) {
+                // Filtramos reservas del usuario
+                const misR = state.reservas.filter(r => String(r.alumno_dni) === String(u.dni) || String(r.usuario_id) === String(u.id));
+                
+                // Filtramos solo futuras
+                const ahora = new Date();
+                ahora.setHours(0,0,0,0);
+                
+                const futuras = misR.filter(r => {
+                    const f = new Date(r.fecha_clase || r.fecha || new Date());
+                    return f >= ahora;
+                });
+
+                // Ordenamiento por fecha
+                futuras.sort((a, b) => {
+                    const fa = new Date(a.fecha_clase || a.fecha || new Date());
+                    const fb = new Date(b.fecha_clase || b.fecha || new Date());
+                    return fa - fb;
+                });
+
+                upcoming.innerHTML = futuras.length ? futuras.map(r => {
+                    const rawDate = r.fecha_clase || r.fecha; 
+                    const fechaLegible = rawDate ? new Date(rawDate).toLocaleDateString('es-AR', {day: '2-digit', month: '2-digit'}) : (r.dia_nombre || 'Pendiente');
+                    
+                    return `
+                    <div class="flex items-center justify-between p-3 bg-white/5 rounded-xl border border-red-600/10 mb-2">
+                        <div>
+                            <p class="text-[10px] font-black uppercase italic text-white">${r.clase_nombre || r.nombre_clase || 'Clase'}</p>
+                            <p class="text-[9px] text-gray-500 font-bold">${fechaLegible} - ${r.horario || '00:00'}hs</p>
+                        </div>
+                        <button onclick="cancelBooking(${r.id})" class="text-[9px] text-red-500 hover:text-white px-2 py-1 bg-black/20 rounded">CANCELAR</button>
+                    </div>
+                `}).join('') : '<p class="text-gray-500 italic text-[11px] text-center py-2">Sin reservas próximas.</p>';
+            }
+        }
 		
 		// 1. Dibuja una fila de horario (Día + Hora + Coach)
 			function addNewScheduleSlot(data = { dia: 1, horario: 7, coach: "" }) {
@@ -406,193 +436,200 @@
 		 * Incluye: Drag & Drop funcional, Contador de Cupos Real y Estética de 1 Hora.
 		 */
 		async function renderCalendar() {
-			const cal = document.getElementById('calendar-grid'); 
-			if (!cal) return;
+            const cal = document.getElementById('calendar-grid'); 
+            if (!cal) return;
 
-			// Configuración del Grid
-			cal.className = "calendar-container h-[700px] overflow-y-auto custom-scrollbar grid grid-cols-[50px_repeat(6,1fr)] auto-rows-max gap-[1px] bg-white/5 p-1 rounded-3xl";
+            // --- MEJORA MOBILE: Grid con scroll horizontal y ancho mínimo por columna ---
+            // Usamos 'minmax(130px, 1fr)' para evitar que los días se aplasten en pantallas chicas.
+            // Usamos 'overflow-auto' para permitir scroll en ambas direcciones.
+            cal.className = "calendar-container h-[700px] overflow-auto custom-scrollbar grid grid-cols-[50px_repeat(6,minmax(130px,1fr))] auto-rows-max gap-[1px] bg-white/5 p-1 rounded-3xl";
 
-			if (!state.clases || state.clases.length === 0) {
-				state.clases = await apiFetch('/clases');
-			}
+            if (!state.clases || state.clases.length === 0) {
+                state.clases = await apiFetch('/clases');
+            }
 
-			// RESTRICCIÓN: Solo Admin y Supervisor tienen permisos de edición (Drag & Drop)
-			const isAdmin = (state.user?.rol_nombre === "Administrador" || state.user?.rol_nombre === "Supervisor");
-			const esAlumno = (state.user?.rol_nombre === "Alumno");
+            // RESTRICCIÓN: Solo Admin y Supervisor tienen permisos de edición (Drag & Drop)
+            const isAdmin = (state.user?.rol_nombre === "Administrador" || state.user?.rol_nombre === "Supervisor");
+            const esAlumno = (state.user?.rol_nombre === "Alumno");
 
-			// --- 1. CÁLCULO DE FECHAS ---
-			const hoy = new Date();
-			const diaSemanaActual = hoy.getDay(); 
-			const diffParaLunes = diaSemanaActual === 0 ? 6 : diaSemanaActual - 1;
-			const fechaLunes = new Date(hoy);
-			fechaLunes.setDate(hoy.getDate() - diffParaLunes);
+            // --- 1. CÁLCULO DE FECHAS ---
+            const hoy = new Date();
+            const diaSemanaActual = hoy.getDay(); 
+            const diffParaLunes = diaSemanaActual === 0 ? 6 : diaSemanaActual - 1;
+            const fechaLunes = new Date(hoy);
+            fechaLunes.setDate(hoy.getDate() - diffParaLunes);
 
-			// --- 2. CABECERAS ---
-			const diasNombres = ["LUNES", "MARTES", "MIÉRCOLES", "JUEVES", "VIERNES", "SÁBADO"];
-			
-			let headersHTML = `
-				<div class="cal-header sticky top-0 z-20 bg-[#1a1a1a] flex items-center justify-center font-black italic text-[9px] text-white/30 p-2 border-b border-white/10 rounded-tl-2xl">
-					HORA
-				</div>
-			`;
+            // --- 2. CABECERAS ---
+            const diasNombres = ["LUNES", "MARTES", "MIÉRCOLES", "JUEVES", "VIERNES", "SÁBADO"];
+            
+            // --- MEJORA MOBILE: Header "HORA" fijo a la izquierda ---
+            // Agregamos 'sticky left-0 z-30' para que no se mueva al scrollear horizontalmente
+            let headersHTML = `
+                <div class="cal-header sticky top-0 left-0 z-30 bg-[#1a1a1a] flex items-center justify-center font-black italic text-[9px] text-white/30 p-2 border-b border-white/10 rounded-tl-2xl shadow-[2px_0_10px_rgba(0,0,0,0.5)]">
+                    HORA
+                </div>
+            `;
 
-			diasNombres.forEach((nombreDia, index) => {
-				const fecha = new Date(fechaLunes);
-				fecha.setDate(fechaLunes.getDate() + index);
-				const numeroDia = fecha.getDate();
-				const mesNombre = fecha.toLocaleString('es-ES', { month: 'short' }).toUpperCase().replace('.', '');
-				const esHoy = fecha.getDate() === hoy.getDate() && fecha.getMonth() === hoy.getMonth();
+            diasNombres.forEach((nombreDia, index) => {
+                const fecha = new Date(fechaLunes);
+                fecha.setDate(fechaLunes.getDate() + index);
+                const numeroDia = fecha.getDate();
+                const mesNombre = fecha.toLocaleString('es-ES', { month: 'short' }).toUpperCase().replace('.', '');
+                const esHoy = fecha.getDate() === hoy.getDate() && fecha.getMonth() === hoy.getMonth();
 
-				const bgClass = esHoy ? "bg-red-600 text-black shadow-lg shadow-red-600/20" : "bg-[#1a1a1a] text-gray-400";
-				const textClass = esHoy ? "text-black" : "text-white";
-				const subTextClass = esHoy ? "text-black/70" : "text-gray-500";
-				const roundedClass = index === 5 ? "rounded-tr-2xl" : ""; 
+                const bgClass = esHoy ? "bg-red-600 text-black shadow-lg shadow-red-600/20" : "bg-[#1a1a1a] text-gray-400";
+                const textClass = esHoy ? "text-black" : "text-white";
+                const subTextClass = esHoy ? "text-black/70" : "text-gray-500";
+                const roundedClass = index === 5 ? "rounded-tr-2xl" : ""; 
 
-				headersHTML += `
-					<div class="cal-header sticky top-0 z-20 ${bgClass} ${roundedClass} p-2 flex flex-col items-center justify-center border-b border-white/10 transition-colors">
-						<span class="text-[8px] font-black uppercase tracking-widest leading-none mb-0.5 ${subTextClass}">${mesNombre}</span>
-						<h4 class="text-xl font-black italic leading-none mb-0.5 ${textClass}">${numeroDia}</h4>
-						<span class="text-[9px] font-bold uppercase ${subTextClass}">${nombreDia}</span>
-					</div>
-				`;
-			});
+                headersHTML += `
+                    <div class="cal-header sticky top-0 z-20 ${bgClass} ${roundedClass} p-2 flex flex-col items-center justify-center border-b border-white/10 transition-colors">
+                        <span class="text-[8px] font-black uppercase tracking-widest leading-none mb-0.5 ${subTextClass}">${mesNombre}</span>
+                        <h4 class="text-xl font-black italic leading-none mb-0.5 ${textClass}">${numeroDia}</h4>
+                        <span class="text-[9px] font-bold uppercase ${subTextClass}">${nombreDia}</span>
+                    </div>
+                `;
+            });
 
-			cal.innerHTML = headersHTML;
+            cal.innerHTML = headersHTML;
 
-			// --- 3. GRILLA ---
-			for(let h=7; h<=21.5; h+=0.5) {
-				const label = h % 1 === 0 ? `${h}:00` : `${Math.floor(h)}:30`;
-				const hourLabel = document.createElement('div');
-				hourLabel.className = "cal-cell flex items-center justify-center font-black text-[9px] text-white/40 bg-white/5 border-r border-white/20 min-h-[50px]";
-				hourLabel.innerText = label;
-				cal.appendChild(hourLabel);
-				
-				for(let d=1; d<=6; d++) {
-					const isSat = d === 6; 
-					const isClosed = isSat && (h < 10 || h > 13);
-					const cellId = `cell-${d}-${h.toString().replace('.','_')}`;
-					
-					const cell = document.createElement('div');
-					cell.id = cellId;
-					cell.className = `cal-cell relative min-h-[50px] border-b border-r border-white/5 hover:bg-white/5 transition-colors ${isClosed ? 'bg-stripes-gray opacity-30 pointer-events-none' : ''}`;
-					
-					if (isAdmin && !isClosed) {
-						cell.ondragover = (e) => {
-							e.preventDefault(); 
-							e.dataTransfer.dropEffect = "move";
-							cell.classList.add('bg-red-600/10');
-						};
-						cell.ondragleave = () => cell.classList.remove('bg-red-600/10');
-						cell.ondrop = async (e) => {
-							e.preventDefault();
-							cell.classList.remove('bg-red-600/10');
-							const claseId = e.dataTransfer.getData("claseId");
-							const oldDia = e.dataTransfer.getData("oldDia");
-							const oldHorario = e.dataTransfer.getData("oldHorario");
-							if (!claseId) return;
-							const parts = cell.id.split('-');
-							const newDia = parseInt(parts[1]);
-							const newHorario = parseFloat(parts[2].replace('_', '.'));
-							if (oldDia == newDia && oldHorario == newHorario) return;
+            // --- 3. GRILLA ---
+            for(let h=7; h<=21.5; h+=0.5) {
+                const label = h % 1 === 0 ? `${h}:00` : `${Math.floor(h)}:30`;
+                
+                // --- MEJORA MOBILE: Columna de horas fija a la izquierda ---
+                // Agregamos 'sticky left-0 z-10 bg-[#121212]' para que flote sobre el contenido al scrollear
+                const hourLabel = document.createElement('div');
+                hourLabel.className = "cal-cell sticky left-0 z-10 bg-[#121212] flex items-center justify-center font-black text-[9px] text-white/40 border-r border-white/20 min-h-[50px] shadow-[2px_0_10px_rgba(0,0,0,0.5)]";
+                hourLabel.innerText = label;
+                cal.appendChild(hourLabel);
+                
+                for(let d=1; d<=6; d++) {
+                    const isSat = d === 6; 
+                    const isClosed = isSat && (h < 10 || h > 13);
+                    const cellId = `cell-${d}-${h.toString().replace('.','_')}`;
+                    
+                    const cell = document.createElement('div');
+                    cell.id = cellId;
+                    cell.className = `cal-cell relative min-h-[50px] border-b border-r border-white/5 hover:bg-white/5 transition-colors ${isClosed ? 'bg-stripes-gray opacity-30 pointer-events-none' : ''}`;
+                    
+                    if (isAdmin && !isClosed) {
+                        cell.ondragover = (e) => {
+                            e.preventDefault(); 
+                            e.dataTransfer.dropEffect = "move";
+                            cell.classList.add('bg-red-600/10');
+                        };
+                        cell.ondragleave = () => cell.classList.remove('bg-red-600/10');
+                        cell.ondrop = async (e) => {
+                            e.preventDefault();
+                            cell.classList.remove('bg-red-600/10');
+                            const claseId = e.dataTransfer.getData("claseId");
+                            const oldDia = e.dataTransfer.getData("oldDia");
+                            const oldHorario = e.dataTransfer.getData("oldHorario");
+                            if (!claseId) return;
+                            const parts = cell.id.split('-');
+                            const newDia = parseInt(parts[1]);
+                            const newHorario = parseFloat(parts[2].replace('_', '.'));
+                            if (oldDia == newDia && oldHorario == newHorario) return;
 
-							const res = await apiFetch(`/clases/${claseId}/move`, 'PUT', {
-								old_dia: parseInt(oldDia),
-								old_horario: parseFloat(oldHorario),
-								new_dia: newDia,
-								new_horario: newHorario
-							});
-							if (!res.error) {
-								showVikingToast("¡Turno Reubicado!");
-								state.clases = await apiFetch('/clases');
-								renderCalendar(); 
-							} else {
-								showVikingToast("Error al mover: " + res.error, true);
-							}
-						};
-					}
-					cal.appendChild(cell);
-				}
-			}
+                            const res = await apiFetch(`/clases/${claseId}/move`, 'PUT', {
+                                old_dia: parseInt(oldDia),
+                                old_horario: parseFloat(oldHorario),
+                                new_dia: newDia,
+                                new_horario: newHorario
+                            });
+                            if (!res.error) {
+                                showVikingToast("¡Turno Reubicado!");
+                                state.clases = await apiFetch('/clases');
+                                renderCalendar(); 
+                            } else {
+                                showVikingToast("Error al mover: " + res.error, true);
+                            }
+                        };
+                    }
+                    cal.appendChild(cell);
+                }
+            }
 
-			// --- 4. RENDERIZADO DE CLASES CON CONTRASTE ---
-			if(state.clases && Array.isArray(state.clases)){
-				state.clases.forEach(c => {
-					const horarios = Array.isArray(c.horarios_detalle) ? c.horarios_detalle : [];
-					
-					const getTextColorClass = (hexColor) => {
-						if (!hexColor) return { text: 'text-white', sub: 'text-white/70', bg: 'bg-white/20' };
-						const r = parseInt(hexColor.substr(1, 2), 16);
-						const g = parseInt(hexColor.substr(3, 2), 16);
-						const b = parseInt(hexColor.substr(5, 2), 16);
-						const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
-						return (yiq >= 128) 
-							? { text: 'text-black', sub: 'text-black/60', bg: 'bg-black/10' } 
-							: { text: 'text-white', sub: 'text-white/80', bg: 'bg-white/20' };
-					};
+            // --- 4. RENDERIZADO DE CLASES CON CONTRASTE ---
+            if(state.clases && Array.isArray(state.clases)){
+                state.clases.forEach(c => {
+                    const horarios = Array.isArray(c.horarios_detalle) ? c.horarios_detalle : [];
+                    
+                    const getTextColorClass = (hexColor) => {
+                        if (!hexColor) return { text: 'text-white', sub: 'text-white/70', bg: 'bg-white/20' };
+                        const r = parseInt(hexColor.substr(1, 2), 16);
+                        const g = parseInt(hexColor.substr(3, 2), 16);
+                        const b = parseInt(hexColor.substr(5, 2), 16);
+                        const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
+                        return (yiq >= 128) 
+                            ? { text: 'text-black', sub: 'text-black/60', bg: 'bg-black/10' } 
+                            : { text: 'text-white', sub: 'text-white/80', bg: 'bg-white/20' };
+                    };
 
-					const colores = getTextColorClass(c.color || '#FF0000');
+                    const colores = getTextColorClass(c.color || '#FF0000');
 
-					horarios.forEach(slot => {
-						const hKey = slot.horario.toString().replace('.', '_');
-						const cell = document.getElementById(`cell-${slot.dia}-${hKey}`);
-						
-						if (cell) {
-							const reservasArray = Array.isArray(state.reservas) ? state.reservas : [];
-							const cupoMax = c.capacidad_max || 40;
-							const cupoActual = reservasArray.filter(r => 
-								String(r.clase_id) === String(c.id) && 
-								Number(r.dia_semana) === Number(slot.dia) && 
-								Number(r.horario) === Number(slot.horario)
-							).length;
-							const estaLleno = cupoActual >= cupoMax;
+                    horarios.forEach(slot => {
+                        const hKey = slot.horario.toString().replace('.', '_');
+                        const cell = document.getElementById(`cell-${slot.dia}-${hKey}`);
+                        
+                        if (cell) {
+                            const reservasArray = Array.isArray(state.reservas) ? state.reservas : [];
+                            const cupoMax = c.capacidad_max || 40;
+                            const cupoActual = reservasArray.filter(r => 
+                                String(r.clase_id) === String(c.id) && 
+                                Number(r.dia_semana) === Number(slot.dia) && 
+                                Number(r.horario) === Number(slot.horario)
+                            ).length;
+                            const estaLleno = cupoActual >= cupoMax;
 
-							const badge = document.createElement('div');
-							badge.className = "absolute inset-1 rounded-xl shadow-lg transition-all hover:scale-[1.02] active:scale-95 cursor-pointer flex flex-col items-center justify-center p-1 group z-10 class-badge border border-black/5"; 
-							badge.style.backgroundColor = c.color || '#FF0000';
-							
-							if (isAdmin) {
-								badge.draggable = true; 
-								badge.ondragstart = (e) => {
-									e.dataTransfer.setData("claseId", c.id);
-									e.dataTransfer.setData("oldDia", slot.dia);
-									e.dataTransfer.setData("oldHorario", slot.horario);
-									badge.classList.add('opacity-40');
-								};
-								badge.ondragend = () => badge.classList.remove('opacity-40');
-							}
+                            const badge = document.createElement('div');
+                            badge.className = "absolute inset-1 rounded-xl shadow-lg transition-all hover:scale-[1.02] active:scale-95 cursor-pointer flex flex-col items-center justify-center p-1 group z-10 class-badge border border-black/5"; 
+                            badge.style.backgroundColor = c.color || '#FF0000';
+                            
+                            if (isAdmin) {
+                                badge.draggable = true; 
+                                badge.ondragstart = (e) => {
+                                    e.dataTransfer.setData("claseId", c.id);
+                                    e.dataTransfer.setData("oldDia", slot.dia);
+                                    e.dataTransfer.setData("oldHorario", slot.horario);
+                                    badge.classList.add('opacity-40');
+                                };
+                                badge.ondragend = () => badge.classList.remove('opacity-40');
+                            }
 
-							badge.innerHTML = `
-								<div class="flex flex-col items-center justify-center h-full w-full px-1">
-									<span class="text-[10px] leading-tight mb-0.5 font-black uppercase italic ${colores.text} text-center truncate w-full drop-shadow-sm">
-										${c.nombre}
-									</span>
-									<span class="text-[8px] font-extrabold ${colores.sub} mb-0.5 lowercase italic leading-none truncate w-full text-center">
-										${slot.coach || 'staff'}
-									</span>
-									<div class="${colores.bg} px-1.5 py-px rounded-full text-[8px] font-black leading-none ${estaLleno ? (colores.text === 'text-white' ? 'text-red-300 animate-pulse' : 'text-red-700 animate-pulse') : colores.text}">
-										${cupoActual}/${cupoMax}
-									</div>
-								</div>
-							`;
-							
-							badge.onclick = (e) => {
-								e.stopPropagation();
-								if (esAlumno) {
-									if (estaLleno) showVikingToast("Cupo lleno para este turno", true);
-									else if(typeof confirmarReservaVikinga === 'function') confirmarReservaVikinga(c, slot.dia, slot.horario);
-								} else {
-									if (typeof openInscriptos === 'function') openInscriptos(c.id, slot.dia, slot.horario);
-								}
-							};
+                            badge.innerHTML = `
+                                <div class="flex flex-col items-center justify-center h-full w-full px-1">
+                                    <span class="text-[10px] leading-tight mb-0.5 font-black uppercase italic ${colores.text} text-center truncate w-full drop-shadow-sm">
+                                        ${c.nombre}
+                                    </span>
+                                    <span class="text-[8px] font-extrabold ${colores.sub} mb-0.5 lowercase italic leading-none truncate w-full text-center">
+                                        ${slot.coach || 'staff'}
+                                    </span>
+                                    <div class="${colores.bg} px-1.5 py-px rounded-full text-[8px] font-black leading-none ${estaLleno ? (colores.text === 'text-white' ? 'text-red-300 animate-pulse' : 'text-red-700 animate-pulse') : colores.text}">
+                                        ${cupoActual}/${cupoMax}
+                                    </div>
+                                </div>
+                            `;
+                            
+                            badge.onclick = (e) => {
+                                e.stopPropagation();
+                                if (esAlumno) {
+                                    if (estaLleno) showVikingToast("Cupo lleno para este turno", true);
+                                    else if(typeof confirmarReservaVikinga === 'function') confirmarReservaVikinga(c, slot.dia, slot.horario);
+                                } else {
+                                    if (typeof openInscriptos === 'function') openInscriptos(c.id, slot.dia, slot.horario);
+                                }
+                            };
 
-							cell.appendChild(badge);
-						}
-					});
-				});
-			}
+                            cell.appendChild(badge);
+                        }
+                    });
+                });
+            }
 
-			if (window.lucide) lucide.createIcons();
-		}
+            if (window.lucide) lucide.createIcons();
+        }
 		
 		/**
 		 * FUNCIÓN DE RESERVA CORREGIDA
