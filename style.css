@@ -1,6 +1,6 @@
 /* =================================================================
-ESTILOS ORIGINALES (MANTENIDOS AL 100% - RESPETO TOTAL)
-================================================================= */
+   ESTILOS ORIGINALES (DESKTOP / BASE)
+   ================================================================= */
 body {
     font-family: 'Inter', sans-serif;
     background-color: #000000;
@@ -10,8 +10,8 @@ body {
     background-attachment: fixed;
     color: #ffffff;
     overflow: hidden; /* Se sobreescribe en móvil más abajo */
-    touch-action: pan-x pan-y; /* Permite scroll pero ayuda a mitigar zoom accidental */
-    -webkit-text-size-adjust: 100%; /* Evita que iOS cambie el tamaño de letra al rotar */
+    touch-action: pan-x pan-y;
+    -webkit-text-size-adjust: 100%;
 }
 
 .viking-red { color: #FF0000; }
@@ -101,7 +101,7 @@ body {
     opacity: 0.5; 
 }
 
-/* Lógica Sidebar Colapsada PC (Sagrado) */
+/* Sidebar Colapsada PC */
 .sidebar-collapsed { width: 80px !important; }
 .sidebar-collapsed .brand-text,
 .sidebar-collapsed .user-details,
@@ -273,163 +273,207 @@ select.viking-input option { background: #0a0a0a; color: white; }
 }
 .animate-scan-line { animation: scan-line 2.5s linear infinite; }
 
+
 /* =================================================================
-PARCHE DE ADAPTABILIDAD MOBILE (PRIORIDAD 2 - APP-STYLE)
-================================================================= */
+   EXPERIENCIA APP NATIVA (MOBILE ONLY)
+   ================================================================= */
 @media (max-width: 1024px) {
-    body {
-        overflow-y: auto !important; /* Habilitar scroll en móvil */
-        overflow-x: hidden !important; /* BLOQUEO DE DESFASE LATERAL */
+    /* 1. RESET GLOBAL MÓVIL */
+    * {
+        -webkit-tap-highlight-color: transparent; /* Adiós al flash gris al tocar */
+        touch-action: manipulation; /* Mejora la respuesta al click */
     }
 
-    /* Sidebar: De lateral fijo a Menú Desplegable (Drawer) */
+    body {
+        overflow-y: auto !important;
+        overflow-x: hidden !important;
+        /* Scroll suave tipo iOS */
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior-y: none; /* Evita que la página "rebote" entera */
+    }
+
+    /* 2. HEADER CON SAFE AREAS (NOTCH) */
+    header {
+        position: sticky;
+        top: 0;
+        z-index: 50;
+        height: auto !important;
+        min-height: 70px;
+        padding-top: env(safe-area-inset-top) !important;
+        padding-left: 16px !important;
+        padding-right: 16px !important;
+        background: rgba(0,0,0,0.95) !important;
+        backdrop-filter: blur(20px);
+        border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+
+    /* 3. MENÚ LATERAL (DRAWER) */
     #sidebar {
         position: fixed;
         left: -100%; 
         top: 0;
         bottom: 0;
-        z-index: 100;
-        width: 280px !important;
+        z-index: 200;
+        width: 85% !important;
+        max-width: 320px;
         display: flex !important;
-        transition: left 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        flex-direction: column;
+        background: #0a0a0a; /* Fondo sólido para rendimiento */
+        padding-top: env(safe-area-inset-top);
+        padding-bottom: env(safe-area-inset-bottom);
+        transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+        transform: translateX(0); /* Estado inicial controlado por left */
+        border-right: 1px solid rgba(255,255,255,0.1);
     }
 
     #sidebar.mobile-open {
         left: 0;
-        box-shadow: 20px 0 50px rgba(0,0,0,0.9);
+        box-shadow: 100vw 0 0 rgba(0,0,0,0.8); /* Overlay hack con sombra */
     }
-
-    /* Overlay oscuro para cerrar el menú */
+    
     .sidebar-overlay {
-        display: none;
-        position: fixed;
-        inset: 0;
-        background: rgba(0,0,0,0.85);
-        backdrop-filter: blur(4px);
-        z-index: 90;
+        display: none; /* Usamos la sombra del sidebar para el overlay visual */
     }
-    .sidebar-overlay.active { display: block; }
 
-    /* Contenido Principal: Ocupa todo el ancho sin márgenes */
+    /* 4. CONTENIDO PRINCIPAL */
     main {
         margin-left: 0 !important;
         width: 100% !important;
-        padding-bottom: 100px;
-        overflow-x: hidden !important;
+        padding-bottom: calc(100px + env(safe-area-inset-bottom));
+        padding-top: 0 !important;
     }
 
-    /* Ajuste de contenedores para evitar defasajes */
     .view-content {
+        padding: 16px !important;
+    }
+
+    /* 5. INPUTS: REGLA DE ORO ANTI-ZOOM */
+    /* Fuente 16px evita que iOS haga zoom al input */
+    .viking-input, input, select, textarea {
+        font-size: 16px !important; 
+        max-width: 100% !important;
+        min-height: 48px; /* Altura cómoda para dedo */
+        padding: 12px 16px;
+        border-radius: 12px;
+        appearance: none; /* Elimina estilos nativos feos */
+        -webkit-appearance: none;
+        background-color: #111 !important;
+    }
+    
+    /* 6. MODALES: ESTILO BOTTOM SHEET (NATIVO) */
+    .viking-modal {
+        align-items: flex-end; /* Alineado abajo */
+        padding: 0;
+        background: rgba(0,0,0,0.8);
+        backdrop-filter: blur(5px);
+    }
+
+    .viking-modal > div {
         width: 100% !important;
-        padding: 0.75rem !important;
-        overflow-x: hidden !important;
+        max-width: 100% !important;
+        margin: 0;
+        border-bottom-left-radius: 0 !important;
+        border-bottom-right-radius: 0 !important;
+        border-top-left-radius: 24px !important;
+        border-top-right-radius: 24px !important;
+        padding: 24px !important;
+        padding-bottom: calc(24px + env(safe-area-inset-bottom)) !important;
+        max-height: 90vh;
+        border: none;
+        border-top: 1px solid rgba(255,255,255,0.2);
+        background: #111; /* Fondo sólido */
+        animation: slide-up 0.3s cubic-bezier(0.16, 1, 0.3, 1);
     }
 
-    /* Header Mobile: Corregimos padding y altura para look app */
-    header {
-        padding-left: 1rem !important; 
-        padding-right: 1rem !important;
-        height: 70px !important;
-        justify-content: flex-start !important;
-        gap: 12px;
+    @keyframes slide-up {
+        from { transform: translateY(100%); }
+        to { transform: translateY(0); }
     }
 
-    /* Grillas: Una sola columna para que nada desborde */
+    /* 7. FEEDBACK TÁCTIL (BOTONES Y CARDS) */
+    button:active, .glass-card:active, .nav-item:active {
+        transform: scale(0.97);
+        opacity: 0.9;
+        transition: transform 0.1s;
+    }
+
+    /* 8. TABLAS COMO TARJETAS (CARD VIEW) */
+    thead { display: none; } /* Ocultar encabezados tabla */
+    
+    tr {
+        display: flex;
+        flex-direction: column;
+        background: rgba(255,255,255,0.03);
+        border: 1px solid rgba(255,255,255,0.08);
+        margin-bottom: 12px;
+        padding: 16px;
+        border-radius: 16px;
+    }
+    
+    td {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px 0 !important;
+        border-bottom: 1px solid rgba(255,255,255,0.05);
+        text-align: right;
+        font-size: 14px;
+    }
+    td:last-child { border-bottom: none; }
+
+    /* 9. GRILLAS Y LAYOUTS */
     .grid-cols-2, .grid-cols-3, .grid-cols-4, .exercise-grid {
         grid-template-columns: 1fr !important;
-        gap: 0.75rem !important;
+        gap: 12px !important;
     }
-
-    /* Inputs: Forzamos que nunca superen el ancho del padre */
-    .viking-input, input, select, textarea {
-        max-width: 100% !important;
-        box-sizing: border-box !important;
-    }
-
-    /* El calendario en móvil */
+    
+    /* El calendario requiere scroll horizontal o layout especial */
     .calendar-container {
         grid-template-columns: 1fr !important;
         height: auto !important;
     }
-
     .cal-header {
         position: sticky;
-        top: 69px;
-        z-index: 30;
-        border-right: none !important;
-        font-size: 11px !important;
+        top: 69px; 
+        z-index: 25;
+        background: #1a1a1a;
+        border-bottom: 1px solid #333;
     }
+    .cal-cell { min-height: 80px; }
 
-    .cal-cell {
-        height: auto !important;
-        min-height: 70px;
-        border-right: none !important;
-    }
-
-    /* Badge de clase en móvil */
-    .class-badge {
-        position: relative;
-        height: auto !important;
-        min-height: 55px;
-        width: calc(100% - 12px);
-        margin: 6px;
-    }
-
-    /* Tablas: Tipo tarjeta refinada con bordes limpios */
-    .viking-table-row {
-        display: flex;
-        flex-direction: column;
-        padding: 1.25rem;
-        margin-bottom: 0.75rem;
-        border: 1px solid rgba(255,255,255,0.06);
-        border-radius: 1.25rem;
-        background: rgba(255,255,255,0.02);
-        width: 100% !important;
-        box-sizing: border-box;
-    }
-
-    /* Modales: Ajuste estético para móvil */
-    .viking-modal > div {
-        width: 95% !important;
-        max-width: 95% !important;
-        margin: 10px;
-        border-radius: 2rem !important;
-        padding: 1.5rem !important;
-    }
-
-    /* AJUSTE SOLICITADO: BOTONES MÁS PEQUEÑOS Y PROPORCIONADOS */
-    button, .nav-item, .filter-btn, .payment-method-btn {
-        min-height: 40px !important; /* Más elegante para pantallas móviles */
-        padding-top: 0.4rem !important;
-        padding-bottom: 0.4rem !important;
-        font-size: 0.85rem !important;
-        border-radius: 0.85rem !important;
-    }
-
-    /* Iconos de navegación ligeramente más pequeños */
-    .nav-item i {
-        width: 18px !important;
-        height: 18px !important;
-    }
-
-    /* Esconder sidebar si se intenta colapsar en móvil */
-    .sidebar-collapsed { width: 0 !important; overflow: hidden; }
-
-    /* Botón Disparador del Menú */
+    /* 10. BOTÓN HAMBURGUESA */
     .mobile-menu-trigger {
         display: flex !important;
         width: 44px;
         height: 44px;
+        align-items: center;
+        justify-content: center;
         background: rgba(255, 0, 0, 0.1);
-        border: 1px solid rgba(255, 0, 0, 0.25);
+        border: 1px solid rgba(255, 0, 0, 0.2);
         border-radius: 12px;
         color: #FF0000;
-        z-index: 50;
     }
-    .mobile-menu-trigger i { width: 22px; height: 22px; }
+
+    /* 11. AJUSTES VARIOS */
+    .sidebar-collapsed { width: 0 !important; overflow: hidden; }
+    
+    /* Badges de clases mas grandes */
+    .class-badge {
+        position: relative;
+        height: auto !important;
+        min-height: 60px;
+        width: 100%;
+        margin: 4px 0;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    }
+
+    /* Botones de acción más grandes */
+    button {
+        min-height: 48px;
+    }
 }
 
-/* Ocultar disparador en resoluciones de computadora */
+/* ESCONDER BOTÓN MENU EN PC */
 @media (min-width: 1025px) {
     .mobile-menu-trigger { display: none !important; }
 }
