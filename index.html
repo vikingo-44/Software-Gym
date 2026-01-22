@@ -2,584 +2,552 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <!-- Meta tags ajustados para App Nativa (iOS/Android) -->
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <meta name="theme-color" content="#000000">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="GF Strength">
-    <meta name="format-detection" content="telephone=no">
-
-    <!-- ICONOS DE LA APP Y PESTAÑA -->
-    <link rel="icon" type="image/png" href="https://github.com/vikingo-44/Software-Gym/blob/main/logo.png?raw=true">
-    <link rel="apple-touch-icon" href="https://github.com/vikingo-44/Software-Gym/blob/main/logo.png?raw=true">
-
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
-    
-    <!-- Librerías de QR e Iconos -->
-    <script src="https://unpkg.com/jsqr@1.4.0/dist/jsQR.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+	<script src="https://unpkg.com/jsqr@1.4.0/dist/jsQR.js"></script>
+	<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
-    
     <title>GF Strength Hub</title>
-    
-    <!-- Tu hoja de estilos -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/vikingo-44/Software-Gym/style.css">
-
-    <!-- Estilos Adicionales para Mejoras Visuales (Scroll Snap y Tarjetas) -->
-    <style>
-        /* Scroll Snap para el calendario en móvil */
-        @media (max-width: 768px) {
-            .snap-x-mandatory {
-                scroll-snap-type: x mandatory;
-            }
-            .snap-center {
-                scroll-snap-align: center;
-            }
-            /* Ocultar barra de scroll pero permitir scroll */
-            .hide-scroll::-webkit-scrollbar {
-                display: none;
-            }
-            .hide-scroll {
-                -ms-overflow-style: none;
-                scrollbar-width: none;
-            }
-        }
-        
-        /* Efecto Glass más premium */
-        .glass-premium {
-            background: rgba(20, 20, 20, 0.6);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
-        }
-
-        /* Gradiente Vikingo sutil */
-        .bg-gradient-viking {
-            background: linear-gradient(135deg, rgba(220, 38, 38, 0.1) 0%, rgba(0, 0, 0, 0) 100%);
-        }
-    </style>
+	<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/tu-usuario/tu-repo@main/style.css">
+	<script src="https://cdn.jsdelivr.net/gh/tu-usuario/tu-repo@main/script.js"></script>
 </head>
-<body class="flex h-screen w-screen overflow-hidden text-left bg-black selection:bg-red-600 selection:text-white font-['Inter']">
+<body class="flex h-screen w-screen overflow-hidden text-left">
 
     <div id="viking-toast" class="notification-toast">¡Acción Completada!</div>
 
     <div id="login-overlay">
         <div class="glass-card p-12 rounded-[3rem] w-full max-w-md border-red-600/20 text-center mx-4 relative overflow-hidden">
-            <div class="w-32 h-32 mx-auto mb-8 logo-viking-glow bg-black rounded-full flex items-center justify-center overflow-hidden border-2 border-red-600/30">
+            <div class="w-32 h-32 mx-auto mb-8 logo-viking-glow bg-black rounded-full flex items-center justify-center overflow-hidden">
                 <img src="https://github.com/vikingo-44/Software-Gym/blob/main/logo.png?raw=true" alt="Vikingo Logo" class="w-full h-full object-cover" onerror="this.src='https://via.placeholder.com/150/FF0000/000000?text=VIKINGO'">
             </div>
 
             <!-- FORMULARIO DE LOGIN -->
             <div id="login-form-container">
-                <h1 class="text-4xl font-black italic uppercase mb-2 tracking-tighter text-white">GF <span class="text-red-600 drop-shadow-[0_0_10px_rgba(220,38,38,0.8)]">Hub</span></h1>
-                <p class="text-[10px] tracking-[0.6em] text-gray-400 uppercase mb-10 font-bold">Acceso al Sistema</p>
+                <h1 class="text-4xl font-black italic uppercase mb-2">GF <span class="viking-red">Hub</span></h1>
+                <p class="text-[11px] tracking-[0.5em] text-gray-500 uppercase mb-10">Acceso al Sistema</p>
                 
-                <form onsubmit="handleLogin(event)" class="space-y-4" autocomplete="off">
-                    <div class="relative group">
-                        <i data-lucide="user" class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 group-focus-within:text-red-600 transition-colors"></i>
-                        <input type="text" id="login-dni" placeholder="DNI / Usuario" required class="viking-input pl-12 bg-white/5 border-white/10 focus:border-red-600 rounded-2xl py-4 text-xs font-bold text-white transition-all">
-                    </div>
-                    <div class="relative group">
-                        <i data-lucide="lock" class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 group-focus-within:text-red-600 transition-colors"></i>
-                        <input type="password" id="login-pass" placeholder="Contraseña" required class="viking-input pl-12 bg-white/5 border-white/10 focus:border-red-600 rounded-2xl py-4 text-xs font-bold text-white transition-all">
-                    </div>
-                    <button type="submit" id="login-button" class="w-full bg-red-600 text-black py-5 rounded-2xl font-black uppercase italic tracking-widest hover:scale-[1.02] active:scale-95 transition-all shadow-[0_0_30px_rgba(220,38,38,0.4)] hover:bg-red-500 mt-4">
-                        Entrar al Valhalla
-                    </button>
+                <form onsubmit="handleLogin(event)" class="space-y-4">
+                    <input type="text" id="login-dni" placeholder="DNI" required class="viking-input">
+                    <input type="password" id="login-pass" placeholder="Contraseña" required class="viking-input">
+                    <button type="submit" id="login-button" class="w-full viking-bg-red text-black py-5 rounded-2xl font-black uppercase italic tracking-widest hover:scale-[1.02] active:scale-95 transition-all shadow-[0_0_20px_rgba(255,0,0,0.3)]">Entrar al Valhalla</button>
                 </form>
-                <button onclick="toggleResetPass(true)" class="mt-8 text-[10px] font-black uppercase italic text-gray-500 hover:text-red-600 transition-colors tracking-widest p-2">¿Olvidaste tu contraseña?</button>
+                <button onclick="toggleResetPass(true)" class="mt-6 text-[10px] font-black uppercase italic text-gray-500 hover:text-red-600 transition-colors tracking-widest">¿Olvidaste tu contraseña?</button>
             </div>
 
-            <!-- FORMULARIO DE RESET -->
+            <!-- FORMULARIO DE RESET (OCULTO POR DEFECTO) -->
             <div id="reset-form-container" class="hidden">
                 <h1 class="text-2xl font-black italic uppercase mb-2">Reset <span class="viking-red">Pass</span></h1>
                 <p class="text-[10px] tracking-[0.2em] text-gray-500 uppercase mb-8">Recupera tu acceso</p>
                 
-                <form onsubmit="handleResetPassword(event)" class="space-y-4" autocomplete="off">
+                <form onsubmit="handleResetPassword(event)" class="space-y-4">
                     <input type="text" id="reset-dni" placeholder="INGRESA TU DNI" required class="viking-input">
                     <input type="password" id="reset-pass-new" placeholder="NUEVA CONTRASEÑA" required class="viking-input">
                     <input type="password" id="reset-pass-confirm" placeholder="REPETIR CONTRASEÑA" required class="viking-input">
                     <button type="submit" id="reset-button" class="w-full bg-white text-black py-4 rounded-2xl font-black uppercase italic tracking-widest hover:scale-[1.02] active:scale-95 transition-all">Cambiar Contraseña</button>
                 </form>
-                <button onclick="toggleResetPass(false)" class="mt-6 text-[10px] font-black uppercase italic text-gray-500 hover:text-white transition-colors p-2">Volver al Login</button>
+                <button onclick="toggleResetPass(false)" class="mt-6 text-[10px] font-black uppercase italic text-gray-500 hover:text-white transition-colors">Volver al Login</button>
             </div>
 
-            <div id="login-error" class="mt-4 text-[10px] bg-red-900/50 border border-red-500/50 p-2 rounded-lg text-red-200 font-bold uppercase hidden animate-pulse">Error en credenciales</div>
+            <div id="login-error" class="mt-4 text-[12px] text-red-600 font-bold uppercase hidden">Error en credenciales</div>
         </div>
     </div>
 
-    <!-- SIDEBAR -->
-    <aside id="sidebar" class="w-72 h-full glass-sidebar flex-col hidden z-50 bg-[#0a0a0a]">
-        <div class="p-8 flex items-center gap-4 relative">
+    <aside id="sidebar" class="w-72 h-full glass-sidebar flex flex-col hidden z-50">
+        <div class="p-8 flex items-center gap-4">
             <img src="https://github.com/vikingo-44/Software-Gym/blob/main/logo.png?raw=true" alt="Vikingo Hub" class="w-10 h-10 object-contain logo-viking-glow brand-text" onerror="this.style.display='none'">
-            <h1 class="brand-text text-xl font-black italic uppercase leading-none text-white">
-                GF<br><span class="text-red-600 text-xs tracking-[0.4em] font-bold">STRENGTH HUB</span>
+            <h1 class="brand-text text-xl font-black italic uppercase leading-none">
+                GF<br><span class="viking-red text-xs tracking-[0.4em] font-bold">STRENGTH HUB</span>
             </h1>
-            <!-- Botón cerrar menú mobile interno -->
-            <button class="md:hidden absolute right-4 top-8 text-white p-2 hover:bg-white/10 rounded-full transition-colors" onclick="toggleMobileMenu()">
-                <i data-lucide="x" class="w-5 h-5"></i>
-            </button>
+            <!-- <button onclick="toggleSidebar()" class="p-2 hover:bg-white/5 rounded-lg transition-colors ml-auto">
+                <i data-lucide="menu" class="w-5 h-5 viking-red"></i>
+            </button> -->
         </div>
 
         <div class="px-6 mb-8">
-            <div class="bg-gradient-to-br from-white/10 to-transparent p-4 rounded-3xl flex items-center gap-4 border border-white/5">
-                <div class="w-12 h-12 rounded-2xl bg-red-600 flex items-center justify-center font-black text-black text-xl italic shadow-[0_0_15px_rgba(220,38,38,0.5)] shrink-0" id="user-initials">??</div>
+            <div class="glass-card p-4 rounded-3xl flex items-center gap-4">
+                <div class="w-12 h-12 rounded-2xl viking-bg-red flex items-center justify-center font-black text-black text-xl italic shadow-lg shrink-0" id="user-initials">??</div>
                 <div class="user-details text-left overflow-hidden">
-                    <p class="text-[12px] font-black uppercase truncate text-white" id="side-user-name">Usuario Vikingo</p>
-                    <p class="text-[9px] text-red-500 font-bold uppercase tracking-widest" id="side-user-role">Cargando...</p>
+                    <p class="text-[12px] font-black uppercase truncate" id="side-user-name">Usuario Vikingo</p>
+                    <p class="text-[9px] text-red-600 font-bold uppercase tracking-widest" id="side-user-role">Cargando...</p>
                 </div>
             </div>
         </div>
 
-        <nav class="flex-1 px-4 space-y-1 overflow-y-auto custom-scrollbar pb-24 md:pb-10">
-            <!-- SECCIÓN ADMINISTRACIÓN -->
-            <div id="nav-section-admin">
-                <p class="nav-section-title text-[9px] font-black text-gray-500 uppercase tracking-widest px-6 mb-3 mt-4 opacity-60">
-                    <span class="nav-text">Administración</span>
-                </p>
-                <button onclick="switchView('dashboard')" id="nav-dashboard" class="nav-btn w-full nav-item active px-6 py-4 rounded-2xl font-black uppercase text-[11px] italic flex items-center gap-3 text-gray-400 hover:text-white hover:bg-white/5 transition-all">
-                    <i data-lucide="layout-grid" class="w-4 h-4"></i> <span class="nav-text">Dashboard</span>
-                </button>
-                <button onclick="switchView('perfil')" id="nav-perfil" class="nav-btn w-full nav-item px-6 py-4 rounded-2xl font-black uppercase text-[11px] italic flex items-center gap-3 text-gray-400 hover:text-white hover:bg-white/5 transition-all">
-                    <i data-lucide="user-cog" class="w-4 h-4"></i> <span class="nav-text">Mi Perfil</span>
-                </button>
-                <button onclick="switchView('alumnos')" id="nav-alumnos" class="nav-btn w-full nav-item px-6 py-4 rounded-2xl font-black uppercase text-[11px] italic flex items-center gap-3 text-gray-400 hover:text-white hover:bg-white/5 transition-all">
-                    <i data-lucide="users" class="w-4 h-4"></i> <span class="nav-text">Alumnos</span>
-                </button>
+        <nav class="flex-1 px-4 space-y-1 overflow-y-auto custom-scrollbar pb-10">
+		<!-- SECCIÓN ADMINISTRACIÓN -->
+		<div id="nav-section-admin">
+			<p class="nav-section-title text-[10px] font-black text-gray-600 uppercase tracking-widest px-6 mb-2 mt-4">
+				<span class="nav-text">Administración</span>
+			</p>
+			
+			<button onclick="switchView('dashboard')" id="nav-dashboard" class="nav-btn w-full nav-item active px-6 py-4 rounded-2xl font-black uppercase text-[11px] italic flex items-center gap-3">
+				<i data-lucide="layout-grid" class="w-4 h-4"></i> 
+				<span class="nav-text">Dashboard</span>
+			</button>
+			
+			<button onclick="switchView('perfil')" id="nav-perfil" class="nav-btn w-full nav-item px-6 py-4 rounded-2xl font-black uppercase text-[11px] italic flex items-center gap-3">
+				<i data-lucide="user-cog" class="w-4 h-4"></i> 
+				<span class="nav-text">Mi Perfil</span>
+			</button>
+			
+			<button onclick="switchView('alumnos')" id="nav-alumnos" class="nav-btn w-full nav-item px-6 py-4 rounded-2xl font-black uppercase text-[11px] italic flex items-center gap-3">
+				<i data-lucide="users" class="w-4 h-4"></i> 
+				<span class="nav-text">Alumnos</span>
+			</button>
 
-                <!-- STAFF -->
-                <div id="nav-section-staff" class="relative">
-                    <button onclick="toggleSub('sub-staff')" class="nav-btn w-full flex items-center justify-between px-6 py-4 rounded-2xl font-black uppercase text-[11px] italic group text-gray-400 hover:text-white hover:bg-white/5 transition-all">
-                        <div class="flex items-center gap-3">
-                            <i data-lucide="shield-check" class="w-4 h-4"></i> <span class="nav-text">Staff</span>
-                        </div>
-                        <span class="nav-text"><i data-lucide="chevron-down" class="w-3 h-3 chevron-icon opacity-50"></i></span>
-                    </button>
-                    <div id="sub-staff" class="hidden pl-12 space-y-2 pb-4 mt-1 border-l border-white/5 ml-6">
-                        <button onclick="switchView('profesores')" id="nav-profesores" class="block w-full text-left text-[10px] font-black uppercase text-gray-500 hover:text-red-500 transition-colors tracking-widest p-2">• Profesores</button>
-                        <button onclick="switchView('administrativos')" id="nav-administrativos" class="block w-full text-left text-[10px] font-black uppercase text-gray-500 hover:text-red-500 transition-colors tracking-widest p-2">• Administrativos</button>
-                    </div>
-                </div>
-            </div>
+			<!-- STAFF -->
+			<div id="nav-section-staff" class="relative">
+				<button onclick="toggleSub('sub-staff')" class="nav-btn w-full flex items-center justify-between px-6 py-4 rounded-2xl font-black uppercase text-[11px] italic group">
+					<div class="flex items-center gap-3">
+						<i data-lucide="shield-check" class="w-4 h-4"></i> 
+						<span class="nav-text">Staff</span>
+					</div>
+					<span class="nav-text">
+						<i data-lucide="chevron-down" class="w-3 h-3 chevron-icon opacity-50"></i>
+					</span>
+				</button>
+				<div id="sub-staff" class="hidden pl-12 space-y-3 pb-4 mt-1">
+					<button onclick="switchView('profesores')" id="nav-profesores" class="block w-full text-left text-[10px] font-black uppercase text-gray-500 hover:text-red-600 transition-colors tracking-widest">• Profesores</button>
+					<button onclick="switchView('administrativos')" id="nav-administrativos" class="block w-full text-left text-[10px] font-black uppercase text-gray-500 hover:text-red-600 transition-colors tracking-widest">• Administrativos</button>
+				</div>
+			</div>
+		</div>
 
-            <!-- SECCIÓN OPERATIVA -->
-            <div id="nav-section-operativa">
-                <p class="nav-section-title text-[9px] font-black text-gray-500 uppercase tracking-widest px-6 mb-3 mt-6 opacity-60">
-                    <span class="nav-text">Operativa</span>
-                </p>
-                <div class="relative">
-                    <button id="btn-facturacion" onclick="toggleSub('sub-facturacion')" class="nav-btn w-full flex items-center justify-between px-6 py-4 rounded-2xl font-black uppercase text-[11px] italic group text-gray-400 hover:text-white hover:bg-white/5 transition-all">
-                        <div class="flex items-center gap-3">
-                            <i data-lucide="wallet" class="w-4 h-4"></i> <span class="nav-text">Facturación</span>
-                        </div>
-                        <span class="nav-text"><i data-lucide="chevron-down" class="w-3 h-3 chevron-icon opacity-50"></i></span>
-                    </button>
-                    <div id="sub-facturacion" class="hidden pl-12 space-y-2 pb-4 mt-1 border-l border-white/5 ml-6">
-                        <button onclick="switchView('cobrar')" id="nav-cobrar" class="block w-full text-left text-[10px] font-black uppercase text-gray-500 hover:text-red-500 transition-colors tracking-widest p-2">• Cobrar</button>
-                        <button onclick="switchView('caja')" id="nav-caja" class="block w-full text-left text-[10px] font-black uppercase text-gray-500 hover:text-red-500 transition-colors tracking-widest p-2">• Caja</button>
-                        <button onclick="switchView('stock')" id="nav-stock" class="block w-full text-left text-[10px] font-black uppercase text-gray-500 hover:text-red-500 transition-colors tracking-widest p-2">• Stock</button>
-                    </div>
-                </div>
-            </div>
+		<!-- SECCIÓN OPERATIVA -->
+		<div id="nav-section-operativa">
+			<p class="nav-section-title text-[10px] font-black text-gray-600 uppercase tracking-widest px-6 mb-2 mt-8">
+				<span class="nav-text">Operativa</span>
+			</p>
+			
+			<div class="relative">
+				<button id="btn-facturacion" onclick="toggleSub('sub-facturacion')" class="nav-btn w-full flex items-center justify-between px-6 py-4 rounded-2xl font-black uppercase text-[11px] italic group">
+					<div class="flex items-center gap-3">
+						<i data-lucide="wallet" class="w-4 h-4"></i> 
+						<span class="nav-text">Facturación</span>
+					</div>
+					<span class="nav-text">
+						<i data-lucide="chevron-down" class="w-3 h-3 chevron-icon opacity-50"></i>
+					</span>
+				</button>
+				<div id="sub-facturacion" class="hidden pl-12 space-y-3 pb-4 mt-1">
+					<button onclick="switchView('cobrar')" id="nav-cobrar" class="block w-full text-left text-[10px] font-black uppercase text-gray-500 hover:text-red-600 transition-colors tracking-widest">• Cobrar</button>
+					<button onclick="switchView('caja')" id="nav-caja" class="block w-full text-left text-[10px] font-black uppercase text-gray-500 hover:text-red-600 transition-colors tracking-widest">• Caja</button>
+					<button onclick="switchView('stock')" id="nav-stock" class="block w-full text-left text-[10px] font-black uppercase text-gray-500 hover:text-red-600 transition-colors tracking-widest">• Stock</button>
+				</div>
+			</div>
+		</div>
 
-            <!-- SECCIÓN GESTIÓN -->
-            <div id="nav-section-gestion">
-                <p class="nav-section-title text-[9px] font-black text-gray-500 uppercase tracking-widest px-6 mb-3 mt-6 opacity-60">
-                    <span class="nav-text">Gestión</span>
-                </p>
-                <button onclick="switchView('planes')" id="nav-planes" class="nav-btn w-full nav-item px-6 py-4 rounded-2xl font-black uppercase text-[11px] italic flex items-center gap-3 text-gray-400 hover:text-white hover:bg-white/5 transition-all">
-                    <i data-lucide="clipboard-list" class="w-4 h-4"></i> <span class="nav-text">Planes</span>
-                </button>
-                <button onclick="switchView('clases')" id="nav-clases" class="nav-btn w-full nav-item px-6 py-4 rounded-2xl font-black uppercase text-[11px] italic flex items-center gap-3 text-gray-400 hover:text-white hover:bg-white/5 transition-all">
-                    <i data-lucide="presentation" class="w-4 h-4"></i> <span class="nav-text">Clases</span>
-                </button>
-                <button onclick="switchView('calendario')" id="nav-calendario" class="nav-btn w-full nav-item px-6 py-4 rounded-2xl font-black uppercase text-[11px] italic flex items-center gap-3 text-gray-400 hover:text-white hover:bg-white/5 transition-all">
-                    <i data-lucide="calendar" class="w-4 h-4"></i> <span class="nav-text">Calendario</span>
-                </button>
-                <button id="nav-rutinas" onclick="switchView('rutinas')" class="nav-btn w-full nav-item px-6 py-4 rounded-2xl font-black uppercase text-[11px] italic flex items-center gap-3 text-gray-400 hover:text-white hover:bg-white/5 transition-all">
-                    <i data-lucide="dumbbell" class="w-4 h-4"></i> <span class="nav-text">Rutinas Musc.</span>
-                </button>
-            </div>
+		<!-- SECCIÓN GESTIÓN -->
+		<div id="nav-section-gestion">
+			<p class="nav-section-title text-[10px] font-black text-gray-600 uppercase tracking-widest px-6 mb-2 mt-8">
+				<span class="nav-text">Gestión</span>
+			</p>
+			<button onclick="switchView('planes')" id="nav-planes" class="nav-btn w-full nav-item px-6 py-4 rounded-2xl font-black uppercase text-[11px] italic flex items-center gap-3">
+				<i data-lucide="clipboard-list" class="w-4 h-4"></i> <span class="nav-text">Planes</span>
+			</button>
+			<button onclick="switchView('clases')" id="nav-clases" class="nav-btn w-full nav-item px-6 py-4 rounded-2xl font-black uppercase text-[11px] italic flex items-center gap-3">
+				<i data-lucide="presentation" class="w-4 h-4"></i> <span class="nav-text">Clases</span>
+			</button>
+			<button onclick="switchView('calendario')" id="nav-calendario" class="nav-btn w-full nav-item px-6 py-4 rounded-2xl font-black uppercase text-[11px] italic flex items-center gap-3">
+				<i data-lucide="calendar" class="w-4 h-4"></i> <span class="nav-text">Calendario</span>
+			</button>
+			<button id="nav-rutinas" onclick="switchView('rutinas')" class="nav-btn w-full nav-item px-6 py-4 rounded-2xl font-black uppercase text-[11px] italic flex items-center gap-3">
+				<i data-lucide="dumbbell" class="w-4 h-4"></i> <span class="nav-text">Rutinas Musc.</span>
+			</button>
+		</div>
 
-            <!-- SECCIÓN SEGURIDAD -->
-            <div id="nav-section-virtual">
-                <p class="nav-section-title text-[9px] font-black text-gray-600 uppercase tracking-widest px-6 mb-3 mt-6 opacity-60">
-                    <span class="nav-text">Seguridad</span>
-                </p>
-                <button onclick="switchView('acceso-virtual')" id="nav-acceso-virtual" class="nav-btn w-full nav-item px-6 py-4 rounded-2xl font-black uppercase text-[11px] italic flex items-center gap-3 text-gray-400 hover:text-white hover:bg-white/5 transition-all">
-                    <i data-lucide="qr-code" class="w-4 h-4"></i> <span class="nav-text">Acceso Virtual</span>
-                </button>
-            </div>
-        </nav>
-        
-        <!-- (Botón anterior eliminado de aquí) -->
+		<!-- SECCIÓN SEGURIDAD -->
+		<div id="nav-section-virtual">
+			<p class="nav-section-title text-[10px] font-black text-gray-600 uppercase tracking-widest px-6 mb-2 mt-8">
+				<span class="nav-text">Seguridad</span>
+			</p>
+			<button onclick="switchView('acceso-virtual')" id="nav-acceso-virtual" class="nav-btn w-full nav-item px-6 py-4 rounded-2xl font-black uppercase text-[11px] italic flex items-center gap-3">
+				<i data-lucide="qr-code" class="w-4 h-4"></i> 
+				<span class="nav-text">Acceso Virtual</span>
+			</button>
+		</div>
+	</nav>
+
+        <div class="p-8">
+            <button onclick="location.reload()" class="w-full flex items-center justify-center gap-3 py-4 border border-white/5 rounded-2xl text-gray-600 hover:text-red-600 transition-all font-black uppercase text-[11px] italic">
+                <i data-lucide="log-out" class="w-4 h-4"></i> <span class="nav-text">Salir</span>
+            </button>
+        </div>
     </aside>
 
-    <main id="main-content" class="flex-1 h-full overflow-y-auto hidden relative w-full bg-[#050505]">
-        <header class="h-24 border-b border-white/5 px-4 md:px-12 flex items-center justify-between sticky top-0 bg-black/80 backdrop-blur-xl z-40">
-            <!-- Botón Hamburguesa Mobile -->
-            <button class="mobile-menu-trigger md:hidden text-white p-3 hover:bg-white/10 rounded-xl transition-colors" onclick="toggleMobileMenu()">
-                <i data-lucide="menu" class="w-6 h-6"></i>
-            </button>
-            
-            <div class="truncate flex-1 pl-4 md:pl-0">
-                <p id="breadcrumb" class="hidden md:block text-[9px] font-black text-red-600 uppercase tracking-[0.5em] italic mb-1">GF Strength Hub</p>
-                <h2 id="view-title" class="text-xl md:text-3xl font-black uppercase italic tracking-tighter truncate text-white drop-shadow-lg">Dashboard</h2>
+    <main id="main-content" class="flex-1 h-full overflow-y-auto hidden relative">
+        <header class="h-24 border-b border-white/5 px-12 flex items-center justify-between sticky top-0 bg-black/70 backdrop-blur-2xl z-40">
+			<button class="mobile-menu-trigger" onclick="toggleMobileMenu()">
+				<i data-lucide="menu"></i>
+			</button>
+            <div>
+                <p id="breadcrumb" class="text-[10px] font-black text-red-600 uppercase tracking-[0.4em] italic">GF Strength Hub</p>
+                <h2 id="view-title" class="text-2xl font-black uppercase italic tracking-tighter">Dashboard</h2>
             </div>
-            
-            <div class="flex items-center gap-3 md:gap-6 shrink-0">
-                <div id="sync-status" class="flex items-center gap-2 bg-green-500/10 px-3 py-1.5 md:px-4 md:py-2 rounded-full border border-green-500/20 text-green-400">
-                    <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-                    <span class="text-[9px] font-black uppercase tracking-widest italic hidden md:inline">Sistema Online</span>
-                    <span class="text-[8px] font-black uppercase italic md:hidden">ON</span>
+            <div class="flex items-center gap-6">
+                <div id="sync-status" class="flex items-center gap-3 bg-red-600/10 px-4 py-2 rounded-xl border border-red-600/20 text-white">
+                    <span class="w-2 h-2 rounded-full bg-red-600 animate-pulse"></span>
+                    <span class="text-[10px] font-black uppercase tracking-widest italic">Hub Sincronizado</span>
                 </div>
-                
-                <!-- NUEVO BOTÓN CERRAR SESIÓN -->
-                <button onclick="location.reload()" class="flex items-center gap-2 bg-red-600/10 hover:bg-red-600 text-red-500 hover:text-white px-3 py-2 md:px-4 md:py-2 rounded-xl border border-red-600/20 transition-all group" title="Cerrar Sesión">
-                    <i data-lucide="log-out" class="w-4 h-4 group-hover:scale-110 transition-transform"></i>
-                    <span class="text-[9px] font-black uppercase tracking-widest italic hidden md:inline">Salir</span>
-                </button>
             </div>
         </header>
 
-        <div id="views-container" class="p-4 md:p-10 pb-24 md:pb-10">
+        <div id="views-container" class="p-10">
             <!-- DASHBOARD -->
             <div id="view-dashboard" class="view-content active">
-                <div id="admin-dashboard-layout">
-                <div class="flex flex-col md:flex-row justify-between md:items-end mb-8 gap-6">
-                    <div>
-                        <h2 class="text-3xl md:text-5xl font-black italic text-white uppercase tracking-tighter">Panel de Control</h2>
-                        <p class="text-[10px] md:text-xs text-gray-500 font-bold uppercase tracking-[0.2em] mt-2">Resumen Operativo del Día</p>
-                    </div>
-                    <!-- BOTÓN NUEVO: VER MI QR -->
-                    <button onclick="showMyQR()" class="w-full md:w-auto bg-gradient-to-r from-white/10 to-white/5 hover:from-white/20 hover:to-white/10 border border-white/10 text-white px-6 py-4 rounded-2xl flex items-center justify-center gap-4 transition-all hover:scale-105 group shadow-lg">
-                        <div class="bg-white text-black p-2 rounded-xl group-hover:bg-red-600 group-hover:text-white transition-colors">
-                            <i data-lucide="qr-code" class="w-6 h-6"></i>
-                        </div>
-                        <div class="text-left hidden sm:block">
-                            <p class="text-[9px] text-gray-400 font-bold uppercase tracking-wider">Mi Acceso</p>
-                            <p class="text-xs font-black italic uppercase text-white">Ver Mi QR</p>
-                        </div>
-                        <span class="md:hidden text-xs font-black italic uppercase">Ver Mi Pase</span>
-                    </button>
-                </div>
+				<div id="admin-dashboard-layout">
+				<!-- HEADER DEL DASHBOARD CON BOTÓN QR -->
+				<div class="flex justify-between items-end mb-8">
+					<div>
+					<h2 class="text-4xl font-black italic text-white uppercase tracking-tighter">Panel de Control</h2>
+					<p class="text-xs text-gray-500 font-bold uppercase tracking-widest mt-1">Resumen Operativo</p>
+					</div>
+					<!-- BOTÓN NUEVO: VER MI QR -->
+					<button onclick="showMyQR()" class="bg-white/5 hover:bg-white/10 border border-white/10 text-white px-5 py-3 rounded-2xl flex items-center gap-3 transition-all hover:scale-105 group">
+						<div class="bg-white text-black p-1.5 rounded-lg group-hover:bg-red-600 group-hover:text-white transition-colors">
+							<i data-lucide="qr-code" class="w-5 h-5"></i>
+						</div>
+						<div class="text-left hidden sm:block">
+							<p class="text-[9px] text-gray-400 font-bold uppercase">Mi Acceso</p>
+							<p class="text-[11px] font-black italic uppercase">Ver Mi QR</p>
+						</div>
+					</button>
+				</div>
 
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8 mb-8">
- 
-                <!-- PANEL 1 -->
-                <div class="glass-premium p-6 md:p-8 rounded-[2.5rem] border-l-4 border-l-blue-500 flex flex-col h-[400px] hover:bg-white/[0.02] transition-colors">
-                    <div class="flex justify-between items-center mb-6 border-b border-white/5 pb-4">
-                        <div>
-                            <h4 class="text-sm font-black uppercase italic text-blue-400 tracking-widest flex items-center gap-2">
-                                <i data-lucide="history" class="w-4 h-4"></i> Accesos
-                            </h4>
-                        </div>
-                        <button onclick="startScanner()" class="text-[9px] bg-blue-500 text-black px-4 py-2 rounded-full font-black uppercase italic hover:scale-105 transition-transform shadow-[0_0_15px_rgba(59,130,246,0.5)]">
-                            <i data-lucide="camera" class="w-3 h-3 inline mr-1"></i> Scan
-                        </button>
-                    </div>
-                    <div id="dash-last-access" class="flex-1 overflow-y-auto custom-scrollbar space-y-3 pr-2">
-                        <p class="text-center text-gray-600 italic text-[10px] py-10">Esperando lecturas de QR...</p>
-                    </div>
-                </div>
+				<!-- FILA SUPERIOR: ACCESOS Y ALERTAS -->
+				<div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
+    
+				<!-- PANEL 1: ACCESOS RECIENTES (ALUMNOS / GENERAL) -->
+				<div class="glass-card p-8 rounded-[2.5rem] border-blue-500/10 flex flex-col h-[450px]">
+					<div class="flex justify-between items-center mb-6 border-b border-white/5 pb-4">
+						<div>
+							<h4 class="text-sm font-black uppercase italic text-blue-500 tracking-widest">
+								<i data-lucide="history" class="w-4 h-4 inline mr-2"></i>Accesos Recientes
+							</h4>
+							<p class="text-[9px] text-gray-500 font-bold uppercase mt-1">Historial de Alumnos</p>
+						</div>
+						<button onclick="startScanner()" class="text-[9px] bg-blue-500/10 text-blue-400 hover:bg-blue-500 hover:text-black px-3 py-1 rounded-lg transition-colors font-black uppercase italic border border-blue-500/20">
+							<i data-lucide="camera" class="w-3 h-3 inline mr-1"></i> Abrir Scanner
+						</button>
+					</div>
+					<div id="dash-last-access" class="flex-1 overflow-y-auto custom-scrollbar space-y-3 pr-2">
+						<p class="text-center text-gray-600 italic text-[10px] py-10">Esperando lecturas de QR...</p>
+					</div>
+				</div>
 
-                <!-- PANEL 2 -->
-                <div class="glass-premium p-6 md:p-8 rounded-[2.5rem] border-l-4 border-l-red-600 flex flex-col h-[400px] hover:bg-white/[0.02] transition-colors">
-                    <div class="flex justify-between items-center mb-6 border-b border-white/5 pb-4">
-                        <div>
-                            <h4 class="text-sm font-black uppercase italic text-red-500 tracking-widest flex items-center gap-2">
-                                <i data-lucide="shield-check" class="w-4 h-4"></i> Staff
-                            </h4>
-                        </div>
-                        <span class="text-[9px] bg-red-600/10 text-red-500 px-3 py-1 rounded-full font-bold uppercase tracking-wider border border-red-600/20">Presencia</span>
-                    </div>
-                    <div id="dash-staff-access" class="flex-1 overflow-y-auto custom-scrollbar space-y-3 pr-2">
-                        <p class="text-center text-gray-600 italic text-[10px] py-10">Buscando registros...</p>
-                    </div>
-                </div>
+				<!-- PANEL 2: CONTROL DE INGRESO (SOLO STAFF) -->
+				<div class="glass-card p-8 rounded-[2.5rem] border-red-600/20 bg-red-600/[0.02] flex flex-col h-[450px]">
+					<div class="flex justify-between items-center mb-6 border-b border-white/5 pb-4">
+						<div>
+							<h4 class="text-sm font-black uppercase italic text-red-600 tracking-widest">
+								<i data-lucide="shield-check" class="w-4 h-4 inline mr-2"></i>Control Staff
+							</h4>
+							<p class="text-[9px] text-gray-500 font-bold uppercase mt-1">Profesores y Administrativos</p>
+						</div>
+						<span class="text-[9px] bg-red-600/20 text-red-500 px-2 py-1 rounded-full font-bold uppercase tracking-tighter">Presencia</span>
+					</div>
+					<div id="dash-staff-access" class="flex-1 overflow-y-auto custom-scrollbar space-y-3 pr-2">
+						<p class="text-center text-gray-600 italic text-[10px] py-10">Buscando registros de personal...</p>
+					</div>
+				</div>
 
-                <!-- PANEL 3 -->
-                <div class="glass-premium p-6 md:p-8 rounded-[2.5rem] border-l-4 border-l-orange-500 flex flex-col h-[400px] hover:bg-white/[0.02] transition-colors">
-                    <div class="flex justify-between items-center mb-6 border-b border-white/5 pb-4">
-                        <div>
-                            <h4 class="text-sm font-black uppercase italic text-orange-400 tracking-widest flex items-center gap-2">
-                                <i data-lucide="alert-triangle" class="w-4 h-4"></i> Stock
-                            </h4>
-                        </div>
-                        <button onclick="switchView('stock')" class="text-[9px] bg-white/5 hover:bg-white/10 px-3 py-1 rounded-lg transition-colors font-black uppercase italic border border-white/10">Reponer</button>
-                    </div>
-                    <div id="dash-low-stock" class="flex-1 overflow-y-auto custom-scrollbar space-y-3 pr-2">
-                        <p class="text-center text-gray-600 italic text-[10px] py-10">Analizando inventario...</p>
-                    </div>
-                </div>
+				<!-- PANEL 3: ALERTAS DE STOCK -->
+				<div class="glass-card p-8 rounded-[2.5rem] border-orange-500/10 flex flex-col h-[450px]">
+					<div class="flex justify-between items-center mb-6 border-b border-white/5 pb-4">
+						<div>
+							<h4 class="text-sm font-black uppercase italic text-orange-500 tracking-widest">
+								<i data-lucide="alert-triangle" class="w-4 h-4 inline mr-2"></i>Alertas Stock
+							</h4>
+							<p class="text-[9px] text-gray-500 font-bold uppercase mt-1">Provisiones bajas</p>
+						</div>
+						<!-- Corregido: Restablecida la lógica original de switchView('stock') -->
+						<button onclick="switchView('stock')" class="text-[9px] bg-white/5 hover:bg-white/10 px-3 py-1 rounded-lg transition-colors font-black uppercase italic border border-white/10">Reponer</button>
+					</div>
+					<div id="dash-low-stock" class="flex-1 overflow-y-auto custom-scrollbar space-y-3 pr-2">
+						<p class="text-center text-gray-600 italic text-[10px] py-10">Analizando inventario...</p>
+					</div>
+				</div>
+			</div>
+
+			<!-- FILA INFERIOR: ESTADÍSTICAS -->
+			<div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-10">
+				<!-- FRECUENCIA HORARIA -->
+				<div class="glass-card p-8 rounded-[2.5rem] lg:col-span-2 flex flex-col">
+					<h4 class="text-sm font-black uppercase italic text-white mb-2 tracking-widest border-l-4 border-red-600 pl-4">Frecuencia Horaria</h4>
+					<p class="text-[9px] text-gray-500 font-bold uppercase mb-6 pl-5">Reservas activas por hora</p>
+					
+					<div class="flex-1 min-h-[250px] relative pt-4 pl-8 border-l border-white/10 border-b flex items-end justify-between pr-4 gap-2" id="dash-chart-container">
+						<!-- Gráfico se llena con JS -->
+					</div>
+					<div id="dash-chart-labels" class="flex justify-between pl-8 pr-4 mt-2 text-[8px] text-gray-500 font-black uppercase"></div>
+				</div>
+
+				<!-- TOP 5 CLASES -->
+				<div class="glass-card p-8 rounded-[2.5rem] flex flex-col">
+					<h4 class="text-sm font-black uppercase italic text-white mb-6 tracking-widest border-l-4 border-red-600 pl-4">Top 5 Clases</h4>
+					<div id="dash-top-clases" class="space-y-4 flex-1"></div>
+				</div>
+			</div>
+			</div>
+
+			<div id="alumno-dashboard-layout" class="hidden">
+					<!-- SECCIÓN SUPERIOR: DATOS Y MÉTRICAS -->
+					<div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
+						
+						<!-- TARJETA PRINCIPAL: DATOS PERSONALES -->
+						<div class="glass-card p-8 rounded-[3rem] lg:col-span-2">
+							<div class="flex items-center gap-6 mb-8">
+								<div class="w-20 h-20 rounded-[1.5rem] viking-bg-red flex items-center justify-center font-black text-black text-3xl italic shadow-2xl" id="al-dash-initials">??</div>
+								<div>
+									<h3 class="text-3xl font-black uppercase italic leading-none" id="al-dash-name">-</h3>
+									<p class="text-red-600 text-[11px] font-black uppercase tracking-widest mt-1">Guerrero Vikingo en Formación</p>
+								</div>
+								<div class="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 mb-8">
+									<!-- BOTÓN MyQR ESTILO PREMIUM -->
+									<button onclick="showMyQR()" class="w-full md:w-auto bg-white/5 hover:bg-white/10 border border-white/10 text-white px-5 py-3 rounded-2xl flex items-center justify-center gap-3 transition-all hover:scale-105 group">
+										<div class="bg-white text-black p-1.5 rounded-lg group-hover:bg-red-600 group-hover:text-white transition-colors">
+											<i data-lucide="qr-code" class="w-5 h-5"></i>
+										</div>
+										<div class="text-left">
+											<p class="text-[9px] text-gray-400 font-bold uppercase">Entrada</p>
+											<p class="text-[11px] font-black italic uppercase">Ver Mi QR</p>
+										</div>
+									</button>
+								</div>
+														</div>
+							<div class="grid grid-cols-2 md:grid-cols-4 gap-6">
+								<div class="bg-white/5 p-4 rounded-2xl border border-white/5">
+									<p class="text-[9px] text-gray-500 font-black uppercase italic mb-1">DNI / Usuario</p>
+									<p class="text-xs font-black italic" id="al-dash-dni">-</p>
+								</div>
+								<div class="bg-white/5 p-4 rounded-2xl border border-white/5">
+									<p class="text-[9px] text-gray-500 font-black uppercase italic mb-1">Email</p>
+									<p class="text-xs font-black italic truncate" id="al-dash-email">-</p>
+								</div>
+								<div class="bg-white/5 p-4 rounded-2xl border border-white/5">
+									<p class="text-[9px] text-gray-500 font-black uppercase italic mb-1">Plan Actual</p>
+									<p class="text-xs font-black italic viking-red uppercase" id="al-dash-plan">-</p>
+								</div>
+								<div class="bg-white/5 p-4 rounded-2xl border border-white/5">
+									<p class="text-[9px] text-gray-500 font-black uppercase italic mb-1">Vencimiento</p>
+									<p class="text-xs font-black italic" id="al-dash-vencimiento">-</p>
+								</div>
+								<!-- Agregamos Renovación que estaba en tu código original -->
+								<div class="bg-white/5 p-4 rounded-2xl border border-white/5 md:col-span-4 lg:col-span-4 xl:col-span-4">
+									<p class="text-[9px] text-gray-500 font-black uppercase italic mb-1">Última Renovación</p>
+									<p class="text-xs font-black italic" id="al-dash-renovacion">-</p>
+								</div>
+							</div>
+						</div>
+
+						<!-- TARJETA LATERAL: ESTADÍSTICAS FÍSICAS Y MEMBRESÍA -->
+						<div class="glass-card p-8 rounded-[3rem] flex flex-col justify-center">
+							<!-- Físico -->
+							<h4 class="text-[11px] font-black uppercase italic text-red-600 mb-6 tracking-widest border-b border-white/5 pb-4">Métricas Físicas</h4>
+							<div class="grid grid-cols-3 gap-2 text-center mb-6">
+								<div>
+									<p class="text-2xl font-black italic mb-1" id="al-dash-peso">0</p>
+									<p class="text-[9px] text-gray-500 font-black uppercase">Peso (kg)</p>
+								</div>
+								<div>
+									<p class="text-2xl font-black italic mb-1" id="al-dash-altura">0</p>
+									<p class="text-[9px] text-gray-500 font-black uppercase">Altura (m)</p>
+								</div>
+								<div>
+									<p class="text-2xl font-black italic mb-1 viking-red" id="al-dash-imc">0</p>
+									<p class="text-[9px] text-gray-500 font-black uppercase">IMC</p>
+								</div>
+							</div>
+
+							<!-- Membresía (AGREGADO PARA QUE FUNCIONE EL JS DE CRÉDITOS) -->
+							<h4 class="text-[11px] font-black uppercase italic text-red-600 mb-6 tracking-widest border-b border-white/5 pb-4 pt-2">Estado Membresía</h4>
+							<div class="grid grid-cols-2 gap-4 text-center">
+								<div>
+									<p class="text-2xl font-black italic mb-1" id="al-dash-usadas">-</p>
+									<p class="text-[9px] text-gray-500 font-black uppercase">Usadas</p>
+								</div>
+								<div>
+									<p class="text-2xl font-black italic mb-1 text-white" id="al-dash-creditos">-</p>
+									<p class="text-[9px] text-gray-500 font-black uppercase">Créditos</p>
+								</div>
+							</div>
+						</div>
+					</div>
+					
+					<!-- SECCIÓN INTERMEDIA: RUTINA (AGREGADO PARA QUE FUNCIONE EL RESUMEN DE RUTINA) -->
+					<div id="al-dash-rutina-summary" class="glass-card p-6 rounded-[2rem] mb-8 hidden border-l-4 border-red-600 flex items-center justify-between">
+						<div class="flex items-center gap-6">
+							<div class="p-4 bg-red-600/20 rounded-2xl text-red-500"><i data-lucide="notebook-pen" class="w-6 h-6"></i></div>
+							<div id="al-dash-rutina-content"></div>
+						</div>
+						<button onclick="switchView('rutinas')" class="px-6 py-3 bg-white/5 rounded-xl text-[10px] font-black uppercase hover:bg-white/10 transition italic">Ver Rutina</button>
+					</div>
+
+					<!-- SECCIÓN INFERIOR: CLASES E HISTORIAL -->
+					<div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+						<div class="glass-card p-10 rounded-[3rem]">
+							<h3 class="text-sm font-black uppercase italic border-l-4 border-red-600 pl-4 tracking-widest mb-8">Mis Próximas Clases</h3>
+							<div id="al-dash-upcoming" class="space-y-4">
+								<p class="text-gray-500 italic text-[11px]">No tienes reservas próximas. ¡Ve al calendario!</p>
+							</div>
+						</div>
+						<div class="glass-card p-10 rounded-[3rem]">
+							<h3 class="text-sm font-black uppercase italic border-l-4 border-gray-600 pl-4 tracking-widest mb-8 text-gray-500">Historial</h3>
+							<div id="al-dash-history" class="space-y-4 opacity-60">
+								<p class="text-gray-500 italic text-[11px]">Sin historial registrado.</p>
+							</div>
+						</div>
+					</div>
+				</div>
             </div>
 
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8 mb-10">
-                <div class="glass-premium p-6 md:p-8 rounded-[2.5rem] lg:col-span-2 flex flex-col relative overflow-hidden">
-                    <!-- Background accent -->
-                    <div class="absolute top-0 right-0 w-64 h-64 bg-red-600/5 rounded-full blur-3xl -z-10"></div>
-                    
-                    <h4 class="text-sm font-black uppercase italic text-white mb-2 tracking-widest border-l-4 border-red-600 pl-4">Frecuencia Horaria</h4>
-                    <p class="text-[9px] text-gray-500 font-bold uppercase mb-6 pl-5">Reservas activas por hora</p>
-                    
-                    <div class="flex-1 min-h-[250px] relative pt-4 pl-8 border-l border-white/10 border-b flex items-end justify-between pr-4 gap-2" id="dash-chart-container"></div>
-                    <div id="dash-chart-labels" class="flex justify-between pl-8 pr-4 mt-2 text-[8px] text-gray-500 font-black uppercase"></div>
-                </div>
+			<!-- DASHBOARD PROFESOR CORREGIDO -->
+			<div id="view-professor-dashboard" class="view-content hidden p-10">
+				<div class="flex justify-between items-end mb-8">
+					<div>
+						<h2 class="text-4xl font-black italic text-white uppercase tracking-tighter">Mi Desempeño</h2>
+						<p class="text-xs text-gray-500 font-bold uppercase tracking-widest mt-1">Análisis de Clases y Convocatoria</p>
+					</div>
+					<button onclick="showMyQR()" class="bg-white/5 hover:bg-white/10 border border-white/10 text-white px-5 py-3 rounded-2xl flex items-center gap-3 transition-all hover:scale-105 group">
+						<div class="bg-white text-black p-1.5 rounded-lg group-hover:bg-red-600 group-hover:text-white transition-colors"><i data-lucide="qr-code" class="w-5 h-5"></i></div>
+						<div class="text-left">
+							<p class="text-[9px] text-gray-400 font-bold uppercase">Mi Acceso</p>
+							<p class="text-[11px] font-black italic uppercase">Ver Mi QR</p>
+						</div>
+					</button>
+				</div>
 
-                <div class="glass-premium p-6 md:p-8 rounded-[2.5rem] flex flex-col">
-                    <h4 class="text-sm font-black uppercase italic text-white mb-6 tracking-widest border-l-4 border-red-600 pl-4">Top 5 Clases</h4>
-                    <div id="dash-top-clases" class="space-y-4 flex-1"></div>
-                </div>
-            </div>
-            </div>
+				<div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+					<!-- CONVOCATORIA (ID corregido) -->
+					<div class="glass-card p-8 rounded-[2.5rem] border-red-600/10 flex flex-col h-[400px]">
+						<h4 class="text-sm font-black uppercase italic text-red-600 mb-6 tracking-widest border-b border-white/5 pb-4">Convocatoria Total</h4>
+						<div class="flex-1 flex flex-col items-center justify-center">
+							<span class="text-6xl font-black italic text-white" id="prof-dash-total-students">0</span>
+							<p class="text-[10px] text-gray-500 font-black uppercase mt-2 tracking-widest">Alumnos totales</p>
+						</div>
+					</div>
 
-            <div id="alumno-dashboard-layout" class="hidden">
-                    <!-- HEADER DEL PERFIL DEL ALUMNO (Rediseñado) -->
-                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8 mb-8">
-                        
-                        <!-- TARJETA PRINCIPAL: DATOS PERSONALES (Estilo Pasaporte) -->
-                        <div class="glass-premium p-8 rounded-[3rem] lg:col-span-2 relative overflow-hidden">
-                            <!-- Fondo decorativo -->
-                            <div class="absolute top-0 right-0 w-full h-32 bg-gradient-to-b from-red-600/10 to-transparent"></div>
-                            
-                            <div class="relative z-10 flex flex-col md:flex-row items-center md:items-start gap-8 text-center md:text-left">
-                                <div class="relative group">
-                                    <div class="w-24 h-24 md:w-28 md:h-28 rounded-3xl bg-[#0F0F0F] border border-white/10 flex items-center justify-center font-black text-white text-3xl italic shadow-2xl group-hover:border-red-600/50 transition-colors" id="al-dash-initials">
-                                        ??
-                                    </div>
-                                    <div class="absolute -bottom-3 -right-3 bg-red-600 text-black p-2 rounded-xl shadow-lg">
-                                        <i data-lucide="check-circle" class="w-4 h-4"></i>
-                                    </div>
-                                </div>
-                                
-                                <div class="flex-1 pt-2">
-                                    <h3 class="text-3xl md:text-4xl font-black uppercase italic leading-none text-white tracking-tight" id="al-dash-name">-</h3>
-                                    <div class="flex flex-wrap items-center justify-center md:justify-start gap-3 mt-3">
-                                        <span class="bg-red-600/20 text-red-500 text-[10px] font-black uppercase px-3 py-1 rounded-lg border border-red-600/20 tracking-wider">Guerrero Activo</span>
-                                        <span class="text-gray-500 text-[10px] font-bold uppercase tracking-widest" id="al-dash-dni">DNI: -</span>
-                                    </div>
-                                    
-                                    <!-- Grid de Datos -->
-                                    <div class="grid grid-cols-2 md:grid-cols-3 gap-4 mt-8">
-                                        <div class="bg-white/5 p-3 rounded-2xl border border-white/5 hover:bg-white/10 transition-colors">
-                                            <p class="text-[9px] text-gray-500 font-black uppercase mb-1 flex items-center gap-1"><i data-lucide="mail" class="w-3 h-3"></i> Email</p>
-                                            <p class="text-[10px] font-bold text-white truncate" id="al-dash-email">-</p>
-                                        </div>
-                                        <div class="bg-white/5 p-3 rounded-2xl border border-white/5 hover:bg-white/10 transition-colors">
-                                            <p class="text-[9px] text-gray-500 font-black uppercase mb-1 flex items-center gap-1"><i data-lucide="crown" class="w-3 h-3 text-yellow-500"></i> Plan</p>
-                                            <p class="text-[10px] font-bold text-white uppercase" id="al-dash-plan">-</p>
-                                        </div>
-                                        <div class="bg-white/5 p-3 rounded-2xl border border-white/5 hover:bg-white/10 transition-colors col-span-2 md:col-span-1">
-                                            <p class="text-[9px] text-gray-500 font-black uppercase mb-1 flex items-center gap-1"><i data-lucide="calendar-clock" class="w-3 h-3"></i> Vencimiento</p>
-                                            <p class="text-[10px] font-bold text-red-400" id="al-dash-vencimiento">-</p>
-                                        </div>
-                                    </div>
-                                </div>
+					<!-- CLASES HOY (ID corregido para que coincida con JS) -->
+					<div class="glass-card p-8 rounded-[2.5rem] border-white/5 flex flex-col h-[400px]">
+						<h4 class="text-sm font-black uppercase italic text-white mb-6 tracking-widest border-b border-white/5 pb-4">Mis Clases</h4>
+						<div id="prof-dash-today-classes" class="space-y-4 overflow-y-auto custom-scrollbar flex-1 pr-2">
+							<p class="text-center text-gray-600 italic text-[10px] py-10">Cargando clases...</p>
+						</div>
+					</div>
 
-                                <div class="w-full md:w-auto mt-4 md:mt-0">
-                                    <button onclick="showMyQR()" class="w-full md:w-auto bg-white text-black hover:bg-red-600 hover:text-white px-6 py-4 rounded-2xl flex items-center justify-center gap-3 transition-all hover:scale-105 shadow-[0_0_20px_rgba(255,255,255,0.2)]">
-                                        <i data-lucide="qr-code" class="w-5 h-5"></i>
-                                        <div class="text-left leading-none">
-                                            <p class="text-[8px] font-black uppercase opacity-60 mb-0.5">Acceso</p>
-                                            <p class="text-xs font-black italic uppercase">Mi Pase</p>
-                                        </div>
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- TARJETA LATERAL: ESTADÍSTICAS FÍSICAS (Rediseñada) -->
-                        <div class="glass-premium p-8 rounded-[3rem] flex flex-col justify-between h-full bg-gradient-viking relative">
-                            <!-- Métricas -->
-                            <div>
-                                <h4 class="text-[10px] font-black uppercase italic text-gray-400 mb-6 tracking-[0.2em] flex items-center gap-2">
-                                    <i data-lucide="activity" class="w-4 h-4 text-red-600"></i> Métricas Físicas
-                                </h4>
-                                <div class="grid grid-cols-3 gap-3 mb-8">
-                                    <div class="text-center p-3 bg-black/40 rounded-2xl border border-white/5">
-                                        <p class="text-2xl font-black italic text-white" id="al-dash-peso">-</p>
-                                        <p class="text-[8px] text-gray-500 font-black uppercase mt-1">Kg</p>
-                                    </div>
-                                    <div class="text-center p-3 bg-black/40 rounded-2xl border border-white/5">
-                                        <p class="text-2xl font-black italic text-white" id="al-dash-altura">-</p>
-                                        <p class="text-[8px] text-gray-500 font-black uppercase mt-1">Mts</p>
-                                    </div>
-                                    <div class="text-center p-3 bg-red-600/10 rounded-2xl border border-red-600/20">
-                                        <p class="text-2xl font-black italic text-red-500" id="al-dash-imc">-</p>
-                                        <p class="text-[8px] text-red-400 font-black uppercase mt-1">IMC</p>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Membresía (Visualización de Créditos) -->
-                            <div class="bg-black/40 p-5 rounded-3xl border border-white/5">
-                                <div class="flex justify-between items-end mb-2">
-                                    <p class="text-[9px] font-black uppercase text-gray-500 tracking-wider">Créditos Disponibles</p>
-                                    <p class="text-xl font-black text-white italic"><span id="al-dash-creditos-restantes" class="text-red-500">-</span> <span class="text-xs text-gray-600">/ <span id="al-dash-creditos-total">-</span></span></p>
-                                </div>
-                                <!-- Barra de progreso visual -->
-                                <div class="w-full h-2 bg-white/10 rounded-full overflow-hidden">
-                                    <div id="al-dash-progress-bar" class="h-full bg-red-600 rounded-full transition-all duration-1000" style="width: 0%"></div>
-                                </div>
-                                <div class="flex justify-between mt-2 text-[8px] font-bold text-gray-600 uppercase">
-                                    <span>Usadas: <span id="al-dash-usadas" class="text-white">-</span></span>
-                                    <span>Estado: Activo</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- SECCIÓN INTERMEDIA: RUTINA -->
-                    <div id="al-dash-rutina-summary" class="glass-premium p-6 rounded-[2rem] mb-8 hidden border-l-4 border-red-600 flex flex-col md:flex-row items-center justify-between gap-4 hover:bg-white/[0.02] transition-colors cursor-pointer" onclick="switchView('rutinas')">
-                        <div class="flex items-center gap-6 w-full">
-                            <div class="p-4 bg-red-600/20 rounded-2xl text-red-500 shrink-0"><i data-lucide="dumbbell" class="w-6 h-6"></i></div>
-                            <div>
-                                <h4 class="text-sm font-black uppercase italic text-white mb-1">Tu Rutina Actual</h4>
-                                <div id="al-dash-rutina-content" class="text-xs text-gray-400 font-medium"></div>
-                            </div>
-                        </div>
-                        <i data-lucide="chevron-right" class="w-5 h-5 text-gray-600 hidden md:block"></i>
-                    </div>
-
-                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                        <div class="glass-premium p-8 rounded-[3rem]">
-                            <h3 class="text-sm font-black uppercase italic border-l-4 border-red-600 pl-4 tracking-widest mb-8 text-white">Próximas Clases</h3>
-                            <div id="al-dash-upcoming" class="space-y-3">
-                                <p class="text-gray-500 italic text-[11px] text-center py-6">No tienes reservas próximas.</p>
-                            </div>
-                        </div>
-                        <div class="glass-premium p-8 rounded-[3rem]">
-                            <h3 class="text-sm font-black uppercase italic border-l-4 border-gray-600 pl-4 tracking-widest mb-8 text-gray-400">Historial Reciente</h3>
-                            <div id="al-dash-history" class="space-y-3 opacity-80">
-                                <p class="text-gray-500 italic text-[11px] text-center py-6">Sin historial registrado.</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div id="view-professor-dashboard" class="view-content hidden p-4 md:p-10">
-                <div class="flex flex-col md:flex-row justify-between md:items-end mb-8 gap-4">
-                    <div>
-                        <h2 class="text-3xl md:text-4xl font-black italic text-white uppercase tracking-tighter">Mi Desempeño</h2>
-                        <p class="text-xs text-gray-500 font-bold uppercase tracking-widest mt-1">Análisis de Clases y Convocatoria</p>
-                    </div>
-                    <button onclick="showMyQR()" class="w-full md:w-auto bg-white/5 hover:bg-white/10 border border-white/10 text-white px-5 py-3 rounded-2xl flex items-center justify-center gap-3 transition-all hover:scale-105 group">
-                        <div class="bg-white text-black p-1.5 rounded-lg group-hover:bg-red-600 group-hover:text-white transition-colors"><i data-lucide="qr-code" class="w-5 h-5"></i></div>
-                        <div class="text-left">
-                            <p class="text-[9px] text-gray-400 font-bold uppercase">Mi Acceso</p>
-                            <p class="text-[11px] font-black italic uppercase">Ver Mi QR</p>
-                        </div>
-                    </button>
-                </div>
-
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
-                    <div class="glass-card p-6 md:p-8 rounded-[2.5rem] border-red-600/10 flex flex-col h-[300px] md:h-[400px]">
-                        <h4 class="text-sm font-black uppercase italic text-red-600 mb-6 tracking-widest border-b border-white/5 pb-4">Convocatoria Total</h4>
-                        <div class="flex-1 flex flex-col items-center justify-center">
-                            <span class="text-6xl font-black italic text-white" id="prof-dash-total-students">0</span>
-                            <p class="text-[10px] text-gray-500 font-black uppercase mt-2 tracking-widest">Alumnos totales</p>
-                        </div>
-                    </div>
-
-                    <div class="glass-card p-6 md:p-8 rounded-[2.5rem] border-white/5 flex flex-col h-[400px]">
-                        <h4 class="text-sm font-black uppercase italic text-white mb-6 tracking-widest border-b border-white/5 pb-4">Mis Clases</h4>
-                        <div id="prof-dash-today-classes" class="space-y-4 overflow-y-auto custom-scrollbar flex-1 pr-2">
-                            <p class="text-center text-gray-600 italic text-[10px] py-10">Cargando clases...</p>
-                        </div>
-                    </div>
-
-                    <div class="glass-card p-6 md:p-8 rounded-[2.5rem] border-white/5 flex flex-col h-[400px]">
-                        <h4 class="text-sm font-black uppercase italic text-gray-400 mb-6 tracking-widest border-b border-white/5 pb-4">Top 5 Alumnos</h4>
-                        <div id="prof-dash-top-students" class="space-y-3 overflow-y-auto custom-scrollbar flex-1 pr-2">
-                        </div>
-                    </div>
-                </div>
-            </div>
+					<!-- RANKING -->
+					<div class="glass-card p-8 rounded-[2.5rem] border-white/5 flex flex-col h-[400px]">
+						<h4 class="text-sm font-black uppercase italic text-gray-400 mb-6 tracking-widest border-b border-white/5 pb-4">Top 5 Alumnos</h4>
+						<div id="prof-dash-top-students" class="space-y-3 overflow-y-auto custom-scrollbar flex-1 pr-2">
+							<!-- Inyectado por JS -->
+						</div>
+					</div>
+				</div>
+			</div>
 
             <div id="view-cobrar" class="view-content hidden">
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-10 h-full">
-                <div class="lg:col-span-2 space-y-4 md:space-y-6">
-                    <div class="flex flex-col md:flex-row justify-between md:items-center mb-4 gap-4">
-                        <div class="flex border-b border-white/5 w-full md:w-auto">
-                            <button onclick="setCobrarTab('mercaderia')" id="tab-mercaderia" class="flex-1 md:flex-none cobrar-tab active px-6 py-4 text-sm font-bold uppercase transition-colors hover:text-red-500 border-b-2 border-transparent">Mercadería</button>
-                            <button onclick="setCobrarTab('planes')" id="tab-planes" class="flex-1 md:flex-none cobrar-tab px-6 py-4 text-sm font-bold uppercase transition-colors hover:text-red-500 border-b-2 border-transparent">Planes</button>
-                        </div>
-                        <div class="relative w-full md:w-64">
-                            <i data-lucide="search" class="absolute left-4 top-1/2 md:top-3.5 -translate-y-1/2 md:translate-y-0 w-4 h-4 text-gray-500"></i>
-                            <input type="text" 
-                                   placeholder="Buscar..." 
-                                   class="viking-input pl-12 py-3 w-full bg-white/5 border border-white/10 rounded-xl text-xs text-white placeholder-gray-500 focus:outline-none focus:border-red-600 transition-colors" 
-                                   id="cobrar-search"
-                                   oninput="filterCobroItems(this.value)">
-                        </div>
-                    </div>
-                    
-                    <div id="cobrar-display-area">
-                        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 overflow-y-auto max-h-[50vh] md:max-h-[600px] pr-2 custom-scrollbar" id="cobrar-catalogo">
-                        </div>
-                    </div>
-                </div>
+			<div class="grid grid-cols-1 lg:grid-cols-3 gap-10 h-full">
+				<!-- COLUMNA IZQUIERDA: BUSCADOR Y LISTA -->
+				<div class="lg:col-span-2 space-y-6">
+					<div class="flex justify-between items-center mb-4">
+						<div class="flex border-b border-white/5">
+							<button onclick="setCobrarTab('mercaderia')" id="tab-mercaderia" class="cobrar-tab active px-6 py-2 text-sm font-bold uppercase transition-colors hover:text-red-500 border-b-2 border-transparent">Mercadería</button>
+							<button onclick="setCobrarTab('planes')" id="tab-planes" class="cobrar-tab px-6 py-2 text-sm font-bold uppercase transition-colors hover:text-red-500 border-b-2 border-transparent">Planes</button>
+						</div>
+						<div class="relative w-64">
+							<i data-lucide="search" class="absolute left-4 top-3.5 w-4 h-4 text-gray-500"></i>
+							<!-- Agregado oninput para filtrar -->
+							<input type="text" 
+								   placeholder="Buscar..." 
+								   class="viking-input pl-12 py-3 w-full bg-white/5 border border-white/10 rounded-xl text-xs text-white placeholder-gray-500 focus:outline-none focus:border-red-600 transition-colors" 
+								   id="cobrar-search"
+								   oninput="filterCobroItems(this.value)">
+						</div>
+					</div>
+					
+					<div id="cobrar-display-area">
+						<div class="grid grid-cols-2 md:grid-cols-4 gap-4 overflow-y-auto max-h-[600px] pr-2 custom-scrollbar" id="cobrar-catalogo">
+							<!-- Aquí se inyectan los productos/planes vía JS -->
+						</div>
+					</div>
+				</div>
 
-                <div class="glass-card p-6 md:p-10 rounded-[3rem] border border-red-600/10 flex flex-col h-fit bg-black/40 backdrop-blur-md">
-                    <h4 class="text-xs font-black uppercase italic text-red-600 mb-6 tracking-widest border-b border-white/5 pb-4">Carrito de Cobro</h4>
-                    
-                    <div class="flex-1 space-y-4 mb-8 overflow-y-auto max-h-48 md:max-h-64 custom-scrollbar" id="cobrar-lista-carrito">
-                        <p class="text-center text-gray-500 text-[11px] italic py-10">Sin ítems seleccionados</p>
-                    </div>
+				<!-- COLUMNA DERECHA: CARRITO Y PAGO -->
+				<div class="glass-card p-10 rounded-[3rem] border border-red-600/10 flex flex-col h-fit bg-black/40 backdrop-blur-md">
+					<h4 class="text-xs font-black uppercase italic text-red-600 mb-6 tracking-widest border-b border-white/5 pb-4">Carrito de Cobro</h4>
+					
+					<div class="flex-1 space-y-4 mb-8 overflow-y-auto max-h-64 custom-scrollbar" id="cobrar-lista-carrito">
+						<p class="text-center text-gray-500 text-[11px] italic py-10">Sin ítems seleccionados</p>
+					</div>
 
-                    <div class="space-y-4 border-t border-white/5 pt-6 mb-8">
-                        <div class="flex justify-between text-[11px] font-black italic">
-                            <span class="text-gray-500">SUBTOTAL</span>
-                            <span id="cobrar-subtotal">$ 0</span>
-                        </div>
-                        <div class="flex justify-between text-xl font-black italic">
-                            <span>TOTAL</span>
-                            <span class="viking-red" id="cobrar-total">$ 0</span>
-                        </div>
-                    </div>
+					<div class="space-y-4 border-t border-white/5 pt-6 mb-8">
+						<div class="flex justify-between text-[11px] font-black italic">
+							<span class="text-gray-500">SUBTOTAL</span>
+							<span id="cobrar-subtotal">$ 0</span>
+						</div>
+						<div class="flex justify-between text-xl font-black italic">
+							<span>TOTAL</span>
+							<span class="viking-red" id="cobrar-total">$ 0</span>
+						</div>
+					</div>
 
-                    <div class="space-y-4">
-                        <p class="text-[10px] font-black uppercase text-gray-500 italic mb-2 tracking-widest">Método de Pago</p>
-                        
-                        <select class="md:hidden viking-input w-full" onchange="setPaymentMethod(this.value)">
-                            <option value="Efectivo" selected>Efectivo</option>
-                            <option value="MercadoPago">MercadoPago</option>
-                            <option value="Transferencia">Transferencia</option>
-                            <option value="Tarjeta">Tarjeta</option>
-                        </select>
-
-                        <div class="hidden md:grid grid-cols-2 gap-3">
-                            <button onclick="setPaymentMethod('MercadoPago')" data-method="MercadoPago" class="btn-pago w-full py-3 rounded-xl text-[10px] font-black uppercase italic transition-all bg-white/5 text-gray-400 hover:text-white border border-transparent hover:border-red-600/30">MercadoPago</button>
-                            <button onclick="setPaymentMethod('Transferencia')" data-method="Transferencia" class="btn-pago w-full py-3 rounded-xl text-[10px] font-black uppercase italic transition-all bg-white/5 text-gray-400 hover:text-white border border-transparent hover:border-red-600/30">Transf.</button>
-                            <button onclick="setPaymentMethod('Efectivo')" data-method="Efectivo" class="btn-pago w-full py-3 rounded-xl text-[10px] font-black uppercase italic transition-all bg-red-600 text-black shadow-lg shadow-red-600/20 transform scale-105">Efectivo</button>
-                            <button onclick="setPaymentMethod('Tarjeta')" data-method="Tarjeta" class="btn-pago w-full py-3 rounded-xl text-[10px] font-black uppercase italic transition-all bg-white/5 text-gray-400 hover:text-white border border-transparent hover:border-red-600/30">Tarjeta</button>
-                        </div>
-                        
-                        <select id="metodo-pago" class="hidden">
-                            <option value="MercadoPago">MercadoPago</option>
-                            <option value="Transferencia">Transferencia</option>
-                            <option value="Efectivo" selected>Efectivo</option>
-                            <option value="Tarjeta">Tarjeta</option>
-                        </select>
-                    </div>
-                    <button id="btn-finalizar-pago" onclick="finalizarVentaMercaderia()" class="w-full mt-8 viking-bg-red text-black py-5 rounded-2xl font-black uppercase italic tracking-widest hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-red-900/20">
-                        Procesar Pago
-                    </button>
-                </div>
-            </div>
-        </div>
+					<!-- SECCIÓN DE MÉTODOS DE PAGO CORREGIDA -->
+					<div class="space-y-4">
+						<p class="text-[10px] font-black uppercase text-gray-500 italic mb-2 tracking-widest">Método de Pago</p>
+						<div class="grid grid-cols-2 gap-3">
+							<!-- MercadoPago -->
+							<button onclick="setPaymentMethod('MercadoPago')" 
+									data-method="MercadoPago"
+									class="btn-pago w-full py-3 rounded-xl text-[10px] font-black uppercase italic transition-all bg-white/5 text-gray-400 hover:text-white border border-transparent hover:border-red-600/30">
+								MercadoPago
+							</button>
+							
+							<!-- Transferencia -->
+							<button onclick="setPaymentMethod('Transferencia')" 
+									data-method="Transferencia"
+									class="btn-pago w-full py-3 rounded-xl text-[10px] font-black uppercase italic transition-all bg-white/5 text-gray-400 hover:text-white border border-transparent hover:border-red-600/30">
+								Transf.
+							</button>
+							
+							<!-- Efectivo (Seleccionado por defecto visualmente) -->
+							<button onclick="setPaymentMethod('Efectivo')" 
+									data-method="Efectivo"
+									class="btn-pago w-full py-3 rounded-xl text-[10px] font-black uppercase italic transition-all bg-red-600 text-black shadow-lg shadow-red-600/20 transform scale-105">
+								Efectivo
+							</button>
+							
+							<!-- Tarjeta -->
+							<button onclick="setPaymentMethod('Tarjeta')" 
+									data-method="Tarjeta"
+									class="btn-pago w-full py-3 rounded-xl text-[10px] font-black uppercase italic transition-all bg-white/5 text-gray-400 hover:text-white border border-transparent hover:border-red-600/30">
+								Tarjeta
+							</button>
+						</div>
+						
+						<!-- SELECT OCULTO IMPORTANTE PARA LA LÓGICA -->
+						<select id="metodo-pago" class="hidden">
+							<option value="MercadoPago">MercadoPago</option>
+							<option value="Transferencia">Transferencia</option>
+							<option value="Efectivo" selected>Efectivo</option>
+							<option value="Tarjeta">Tarjeta</option>
+						</select>
+					</div>
+					<button id="btn-finalizar-pago" onclick="finalizarVentaMercaderia()" class="w-full mt-8 viking-bg-red text-black py-5 rounded-2xl font-black uppercase italic tracking-widest hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-red-900/20">
+						Procesar Pago
+					</button>
+				</div>
+			</div>
+		</div>
 
             <div id="view-perfil" class="view-content">
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-10">
-                    <div class="glass-card p-6 md:p-10 rounded-[3rem] flex flex-col items-center">
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-10">
+                    <div class="glass-card p-10 rounded-[3rem] flex flex-col items-center">
                         <div class="w-32 h-32 rounded-[2.5rem] viking-bg-red flex items-center justify-center font-black text-black text-4xl italic shadow-2xl mb-6" id="prof-initials-view">??</div>
                         <h3 class="text-xl font-black uppercase italic text-center" id="prof-name">Cargando...</h3>
                         <p class="text-red-600 text-xs font-black uppercase tracking-widest mb-8" id="prof-role">Rol</p>
-                        <p id="prof-display-email" class="text-gray-500 font-medium text-[10px] mt-1 italic">email@ejemplo.com</p>
+						<p id="prof-display-email" class="text-gray-500 font-medium text-[10px] mt-1 italic">email@ejemplo.com</p>
                         <div id="plan-alumno-info" class="w-full space-y-2 mt-4 hidden">
                             <p class="text-[10px] font-black uppercase text-gray-500 italic text-center">Plan Actual</p>
                             <div class="bg-white/5 p-4 rounded-2xl border border-white/5 text-center">
@@ -588,9 +556,9 @@
                             </div>
                         </div>
                     </div>
-                    <div class="lg:col-span-2 glass-card p-6 md:p-10 rounded-[3rem]">
+                    <div class="lg:col-span-2 glass-card p-10 rounded-[3rem]">
                         <h3 class="text-sm font-black uppercase italic border-l-4 border-red-600 pl-4 tracking-widest mb-10">Mis Datos</h3>
-                        <form id="form-perfil" onsubmit="handleProfileUpdate(event)" class="grid grid-cols-1 md:grid-cols-2 gap-6" autocomplete="off">
+                        <form id="form-perfil" onsubmit="handleProfileUpdate(event)" class="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div class="space-y-2">
                                 <label class="text-[10px] font-black uppercase text-gray-500 italic">Nombre Completo</label>
                                 <input type="text" id="prof-input-name" class="viking-input" required>
@@ -607,11 +575,11 @@
                             <div id="perfil-datos-fisicos" class="md:col-span-2 grid grid-cols-3 gap-4 border-t border-white/5 pt-6 mt-4 hidden">
                                 <div class="space-y-2">
                                     <label class="text-[10px] font-black uppercase text-gray-500 italic">Peso (kg)</label>
-                                    <input type="number" step="0.1" id="prof-input-peso" class="viking-input" inputmode="decimal" oninput="calculateIMCProfile()">
+                                    <input type="number" step="0.1" id="prof-input-peso" class="viking-input" oninput="calculateIMCProfile()">
                                 </div>
                                 <div class="space-y-2">
                                     <label class="text-[10px] font-black uppercase text-gray-500 italic">Altura (cm)</label>
-                                    <input type="number" step="0.1" id="prof-input-altura" class="viking-input" inputmode="decimal" oninput="calculateIMCProfile()">
+                                    <input type="number" step="0.1" id="prof-input-altura" class="viking-input" oninput="calculateIMCProfile()">
                                 </div>
                                 <div class="space-y-2">
                                     <label class="text-[10px] font-black uppercase text-red-600 italic">IMC</label>
@@ -624,55 +592,62 @@
                                 <input type="password" id="prof-input-pass" placeholder="Dejar vacío para no cambiar" class="viking-input">
                             </div>
                             <div class="md:col-span-2 pt-6 text-left">
-                                <button type="submit" id="btn-save-profile" class="w-full md:w-auto px-10 py-4 viking-bg-red text-black rounded-2xl font-black uppercase italic tracking-widest hover:scale-105 transition-transform shadow-lg shadow-red-600/20">Guardar Cambios</button>
+                                <button type="submit" id="btn-save-profile" class="px-10 py-4 viking-bg-red text-black rounded-2xl font-black uppercase italic tracking-widest hover:scale-105 transition-transform shadow-lg shadow-red-600/20">Guardar Cambios</button>
                             </div>
                         </form>
                     </div>
                 </div>
             </div>
 
-            <div id="view-alumnos" class="view-content">
-            <div class="flex flex-col md:flex-row justify-between md:items-center mb-8 gap-4">
-                <div>
-                    <h3 class="text-3xl font-black italic uppercase">Gestión de Alumnos</h3>
-                    <p class="text-[10px] text-gray-500 font-bold uppercase tracking-[0.2em] mt-1 italic">Control de accesos y membresías del Valhalla</p>
-                </div>
-                <button id="btn-nuevo-alumno" onclick="openModalAlumno()" class="w-full md:w-auto viking-bg-red text-black px-8 py-4 rounded-2xl font-black uppercase italic text-[12px] shadow-xl flex items-center justify-center gap-3 hover:scale-105 transition-all">
-                    <i data-lucide="user-plus" class="w-4 h-4"></i> Nuevo Alumno
-                </button>
-            </div>
+			<div id="view-alumnos" class="view-content">
+			<!-- CABECERA PRINCIPAL -->
+			<div class="flex justify-between items-center mb-8">
+				<div>
+					<h3 class="text-3xl font-black italic uppercase">Gestión de Alumnos</h3>
+					<p class="text-[10px] text-gray-500 font-bold uppercase tracking-[0.2em] mt-1 italic">Control de accesos y membresías del Valhalla</p>
+				</div>
+				<button id="btn-nuevo-alumno" onclick="openModalAlumno()" class="viking-bg-red text-black px-8 py-4 rounded-2xl font-black uppercase italic text-[12px] shadow-xl flex items-center gap-3 hover:scale-105 transition-all">
+					<i data-lucide="user-plus" class="w-4 h-4"></i> Nuevo Alumno
+				</button>
+			</div>
 
-            <div class="flex flex-col md:flex-row gap-4 mb-4">
-                    <div class="flex-1 relative">
-                        <i data-lucide="search" class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500"></i>
-                        <input type="text" 
-                            placeholder="Buscar Guerrero por nombre o DNI..." 
-                            oninput="searchAlumno(this.value)"
-                            class="viking-input pl-12 bg-white/5 border-white/10 text-white rounded-2xl focus:border-red-600 transition-all">
-                    </div>
+			<!-- BARRA DE HERRAMIENTAS (BUSCADOR Y FILTROS) -->
+			<div class="flex flex-col md:flex-row gap-4 mb-4">
+					<!-- BUSCADOR -->
+					<div class="flex-1 relative">
+						<i data-lucide="search" class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500"></i>
+						<input type="text" 
+							placeholder="Buscar Guerrero por nombre o DNI..." 
+							oninput="searchAlumno(this.value)"
+							class="viking-input pl-12 bg-white/5 border-white/10 text-white rounded-2xl focus:border-red-600 transition-all">
+					</div>
 
-                    <div class="flex bg-white/5 p-1 rounded-2xl border border-white/5 h-[52px]">
-                        <button onclick="filterAlumnos('todos')" id="filter-todos" class="filter-btn px-6 rounded-xl text-[10px] font-black uppercase italic transition-all bg-red-600 text-black">Todos</button>
-                        <button onclick="filterAlumnos('activos')" id="filter-activos" class="filter-btn px-6 rounded-xl text-[10px] font-black uppercase italic transition-all text-gray-500 hover:text-white">Activos</button>
-                        <button onclick="filterAlumnos('inactivos')" id="filter-inactivos" class="filter-btn px-6 rounded-xl text-[10px] font-black uppercase italic transition-all text-gray-500 hover:text-white">Vencidos</button>
-                    </div>
-                </div>
+					<!-- FILTRO DE ESTADO VIKINGO -->
+					<div class="flex bg-white/5 p-1 rounded-2xl border border-white/5 h-[52px]">
+						<button onclick="filterAlumnos('todos')" id="filter-todos" class="filter-btn px-6 rounded-xl text-[10px] font-black uppercase italic transition-all bg-red-600 text-black">Todos</button>
+						<button onclick="filterAlumnos('activos')" id="filter-activos" class="filter-btn px-6 rounded-xl text-[10px] font-black uppercase italic transition-all text-gray-500 hover:text-white">Activos</button>
+						<button onclick="filterAlumnos('inactivos')" id="filter-inactivos" class="filter-btn px-6 rounded-xl text-[10px] font-black uppercase italic transition-all text-gray-500 hover:text-white">Vencidos</button>
+					</div>
+				</div>
 
-                <div id="lista-alumnos-container" class="space-y-3 min-h-[400px] overflow-y-auto custom-scrollbar flex-1 pr-2 pb-10">
-                </div>
-            </div>
+				<!-- LISTADO DE ALUMNOS (CONTENEDOR DONDE EL JS INYECTARÁ LOS DATOS) -->
+				<!-- Nota: Le puse space-y-3 para separar las tarjetas igual que en Staff -->
+				<div id="lista-alumnos-container" class="space-y-3 min-h-[400px] overflow-y-auto custom-scrollbar flex-1 pr-2 pb-10">
+					<!-- El JS llenará esto -->
+				</div>
+			</div>
 
             <div id="view-profesores" class="view-content">
                 <div class="flex justify-between items-center mb-8">
                     <h3 class="text-3xl font-black italic uppercase">Personal de Profesores</h3>
-                    <button id="btn-nuevo-prof" onclick="openModalStaff('Profesor')" class="viking-bg-red text-black px-4 md:px-8 py-3 md:py-4 rounded-2xl font-black uppercase italic text-[12px] shadow-xl flex items-center gap-3">
-                        <i data-lucide="user-plus" class="w-4 h-4"></i> <span class="hidden md:inline">Alta Profesor</span><span class="md:hidden">Alta</span>
+                    <button id="btn-nuevo-prof" onclick="openModalStaff('Profesor')" class="viking-bg-red text-black px-8 py-4 rounded-2xl font-black uppercase italic text-[12px] shadow-xl flex items-center gap-3">
+                        <i data-lucide="user-plus" class="w-4 h-4"></i> Alta Profesor
                     </button>
                 </div>
-                <div class="glass-card p-4 md:p-10 rounded-[3rem]">
+                <div class="glass-card p-10 rounded-[3rem]">
                     <div class="overflow-x-auto">
                         <table class="w-full text-left">
-                            <thead class="hidden md:table-header-group">
+                            <thead>
                                 <tr class="text-[10px] font-black uppercase text-gray-500 italic border-b border-white/5">
                                     <th class="pb-5">Nombre</th>
                                     <th class="pb-5">DNI (Usuario)</th>
@@ -689,14 +664,14 @@
             <div id="view-administrativos" class="view-content">
                 <div class="flex justify-between items-center mb-8">
                     <h3 class="text-3xl font-black italic uppercase">Personal Administrativo</h3>
-                    <button id="btn-nuevo-adm" onclick="openModalStaff('Administracion')" class="viking-bg-red text-black px-4 md:px-8 py-3 md:py-4 rounded-2xl font-black uppercase italic text-[12px] shadow-xl flex items-center gap-3">
-                        <i data-lucide="shield-plus" class="w-4 h-4"></i> <span class="hidden md:inline">Alta Admin</span><span class="md:hidden">Alta</span>
+                    <button id="btn-nuevo-adm" onclick="openModalStaff('Administracion')" class="viking-bg-red text-black px-8 py-4 rounded-2xl font-black uppercase italic text-[12px] shadow-xl flex items-center gap-3">
+                        <i data-lucide="shield-plus" class="w-4 h-4"></i> Alta Administrativo
                     </button>
                 </div>
-                <div class="glass-card p-4 md:p-10 rounded-[3rem]">
+                <div class="glass-card p-10 rounded-[3rem]">
                     <div class="overflow-x-auto">
                         <table class="w-full text-left">
-                            <thead class="hidden md:table-header-group">
+                            <thead>
                                 <tr class="text-[10px] font-black uppercase text-gray-500 italic border-b border-white/5">
                                     <th class="pb-5">Nombre</th>
                                     <th class="pb-5">DNI (Usuario)</th>
@@ -711,30 +686,30 @@
             </div>
 
             <div id="view-caja" class="view-content">
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8 mb-10">
-                    <div class="glass-card p-6 md:p-8 rounded-[2.5rem] border-green-500/20">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-10">
+                    <div class="glass-card p-8 rounded-[2.5rem] border-green-500/20">
                         <p class="text-[11px] font-black text-gray-500 uppercase italic mb-2">Total Ingresos</p>
                         <h4 class="text-3xl font-black italic text-green-500" id="caja-ingresos">$ 0,00</h4>
                     </div>
-                    <div class="glass-card p-6 md:p-8 rounded-[2.5rem] border-red-500/20">
+                    <div class="glass-card p-8 rounded-[2.5rem] border-red-500/20">
                         <p class="text-[11px] font-black text-gray-500 uppercase italic mb-2">Total Gastos</p>
                         <h4 class="text-3xl font-black italic text-red-500" id="caja-gastos">$ 0,00</h4>
                     </div>
-                    <div class="glass-card p-6 md:p-8 rounded-[2.5rem] border-viking-red/20">
+                    <div class="glass-card p-8 rounded-[2.5rem] border-viking-red/20">
                         <p class="text-[11px] font-black text-red-600 uppercase italic mb-2">Balance Neto</p>
                         <h4 class="text-3xl font-black italic" id="caja-balance">$ 0,00</h4>
                     </div>
                 </div>
-                <div class="glass-card p-4 md:p-10 rounded-[3rem]">
+                <div class="glass-card p-10 rounded-[3rem]">
                     <div class="flex justify-between items-center mb-8">
                         <h3 class="text-sm font-black uppercase italic border-l-4 border-red-600 pl-4 tracking-widest">Flujo Diario de Caja</h3>
                         <button onclick="document.getElementById('modal-gasto').classList.remove('hidden')" 
-                                class="px-3 py-1.5 bg-red-600 hover:bg-red-700 rounded text-[10px] font-bold uppercase transition-colors text-white">
-                            + Nuevo Movimiento
-                        </button>
+								class="px-3 py-1.5 bg-red-600 hover:bg-red-700 rounded text-[10px] font-bold uppercase transition-colors text-white">
+							+ Nuevo Movimiento
+						</button>
                     </div>
                     <table class="w-full text-left">
-                        <thead class="hidden md:table-header-group">
+                        <thead>
                             <tr class="text-[10px] font-black uppercase text-gray-500 italic border-b border-white/5">
                                 <th class="pb-5">Tipo</th>
                                 <th class="pb-5">Descripción</th>
@@ -749,122 +724,121 @@
             <div id="view-stock" class="view-content">
                 <div class="flex justify-between items-center mb-8">
                     <h3 class="text-3xl font-black italic uppercase">Control de Stock</h3>
-                    <button id="btn-nuevo-stock" onclick="openModalStock()" class="viking-bg-red text-black px-4 md:px-8 py-3 md:py-4 rounded-2xl font-black uppercase italic text-[12px] shadow-xl flex items-center gap-3">
-                        <i data-lucide="package-plus" class="w-4 h-4"></i> <span class="hidden md:inline">Crear Mercadería</span><span class="md:hidden">Crear</span>
+                    <button id="btn-nuevo-stock" onclick="openModalStock()" class="viking-bg-red text-black px-8 py-4 rounded-2xl font-black uppercase italic text-[12px] shadow-xl flex items-center gap-3">
+                        <i data-lucide="package-plus" class="w-4 h-4"></i> Crear Mercadería
                     </button>
                 </div>
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 md:gap-8 pb-20" id="stock-container"></div>
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-8" id="stock-container"></div>
             </div>
 
             <div id="view-planes" class="view-content">
                 <div class="flex justify-between items-center mb-8">
                     <h3 class="text-3xl font-black italic uppercase">Planes de Entrenamiento</h3>
-                    <button id="btn-nuevo-plan" onclick="openModalPlan()" class="viking-bg-red text-black px-4 md:px-8 py-3 md:py-4 rounded-2xl font-black uppercase italic text-[12px] shadow-xl flex items-center gap-3">
-                        <i data-lucide="plus" class="w-4 h-4"></i> <span class="hidden md:inline">Alta de Plan</span><span class="md:hidden">Alta</span>
+                    <button id="btn-nuevo-plan" onclick="openModalPlan()" class="viking-bg-red text-black px-8 py-4 rounded-2xl font-black uppercase italic text-[12px] shadow-xl flex items-center gap-3">
+                        <i data-lucide="plus" class="w-4 h-4"></i> Alta de Plan
                     </button>
                 </div>
                 <div class="flex gap-2 mb-10 overflow-x-auto pb-2 custom-scrollbar" id="planes-filter-container"></div>
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 md:gap-8 pb-20" id="planes-container"></div>
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-8" id="planes-container"></div>
             </div>
 
             <div id="view-clases" class="view-content">
                 <div class="flex justify-between items-center mb-8">
                     <h3 class="text-3xl font-black italic uppercase">Gestión de Clases</h3>
-                    <button id="btn-nueva-clase" onclick="openModalClase()" class="viking-bg-red text-black px-4 md:px-8 py-3 md:py-4 rounded-2xl font-black uppercase italic text-[12px] shadow-xl flex items-center gap-3">
-                        <i data-lucide="presentation" class="w-4 h-4"></i> <span class="hidden md:inline">Alta de Clase</span><span class="md:hidden">Alta</span>
+                    <button id="btn-nueva-clase" onclick="openModalClase()" class="viking-bg-red text-black px-8 py-4 rounded-2xl font-black uppercase italic text-[12px] shadow-xl flex items-center gap-3">
+                        <i data-lucide="presentation" class="w-4 h-4"></i> Alta de Clase
                     </button>
                 </div>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-8 pb-20" id="clases-container"></div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-8" id="clases-container"></div>
             </div>
 
             <div id="view-calendario" class="view-content">
-                <div class="flex justify-between items-center mb-10">
-                    <h3 class="text-3xl font-black italic uppercase text-left">Agenda Vikinga</h3>
-                    <div class="flex gap-4">
-                        <div class="flex bg-white/5 p-1 rounded-2xl border border-white/5">
-                            <button onclick="renderCalendar()" class="px-6 py-2 bg-red-600 text-black rounded-xl text-[11px] font-black uppercase italic hover:scale-105 transition-transform">Semana Actual</button>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- GRILLA DEL CALENDARIO: SCROLL SNAP EN MOVIL PARA VER DÍA POR DÍA -->
-                <div class="calendar-container h-[70vh] md:h-[700px] overflow-y-auto hide-scroll md:custom-scrollbar grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 pb-20 snap-x-mandatory" id="calendar-grid">
-                    <!-- El JS inyectará las columnas con fechas aquí. El CSS snap-align: center en cada tarjeta (inyectada por JS o el contenedor) hará el efecto. 
-                          Como el script inyecta divs directos, la clase snap-x-mandatory en el padre funciona si los hijos ocupan el ancho. -->
-                </div>
-                <p class="md:hidden text-center text-[10px] text-gray-500 uppercase tracking-widest animate-pulse">Desliza horizontalmente</p>
-            </div>
+				<div class="flex justify-between items-center mb-10">
+					<h3 class="text-3xl font-black italic uppercase text-left">Agenda Vikinga</h3>
+					<div class="flex gap-4">
+						<div class="flex bg-white/5 p-1 rounded-2xl border border-white/5">
+							<button onclick="renderCalendar()" class="px-6 py-2 bg-red-600 text-black rounded-xl text-[11px] font-black uppercase italic hover:scale-105 transition-transform">Semana Actual</button>
+						</div>
+					</div>
+				</div>
+				
+				<!-- GRILLA DEL CALENDARIO (Agregadas clases grid para columnas) -->
+				<div class="calendar-container h-[700px] overflow-y-auto custom-scrollbar grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 pb-10" id="calendar-grid">
+					<!-- El JS inyectará las columnas con fechas aquí -->
+				</div>
+			</div>
 
             <div id="view-rutinas" class="view-content">
-            <!-- HEADER -->
-            <div class="flex justify-between items-center mb-8">
-                <div>
-                    <h3 class="text-3xl font-black italic uppercase" id="rutina-title">Rutinas de Alumnos</h3>
-                    <p class="text-[10px] text-gray-500 font-bold uppercase tracking-[0.2em] mt-1 italic">Diseño y Seguimiento de Entrenamientos</p>
-                </div>
-            </div>
+			<!-- HEADER -->
+			<div class="flex justify-between items-center mb-8">
+				<div>
+					<h3 class="text-3xl font-black italic uppercase" id="rutina-title">Rutinas de Alumnos</h3>
+					<p class="text-[10px] text-gray-500 font-bold uppercase tracking-[0.2em] mt-1 italic">Diseño y Seguimiento de Entrenamientos</p>
+				</div>
+				<!-- Aquí podrías poner un buscador futuro si quisieras -->
+			</div>
 
-            <!-- VISTA ALUMNO -->
-            <div id="musculacion-student-view" class="hidden glass-card p-6 md:p-10 rounded-[3rem] border-red-600/10 mb-6 space-y-8">
-                <div class="bg-red-600/10 p-6 rounded-3xl border border-red-600/20" id="student-plan-header">
-                    <h4 class="text-xl font-black italic uppercase mb-2">MI RUTINA DEL VALHALLA</h4>
-                    <p class="text-[11px] text-gray-400 font-bold uppercase tracking-widest" id="al-rutina-objetivo">Cargando objetivo...</p>
-                </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6" id="student-routine-exercises">
-                </div>
-            </div>
+			<!-- VISTA ALUMNO (Se mantiene igual, dentro de una tarjeta para que destaque) -->
+			<div id="musculacion-student-view" class="hidden glass-card p-10 rounded-[3rem] border-red-600/10 mb-6 space-y-8">
+				<div class="bg-red-600/10 p-6 rounded-3xl border border-red-600/20" id="student-plan-header">
+					<h4 class="text-xl font-black italic uppercase mb-2">MI RUTINA DEL VALHALLA</h4>
+					<p class="text-[11px] text-gray-400 font-bold uppercase tracking-widest" id="al-rutina-objetivo">Cargando objetivo...</p>
+				</div>
+				<div class="grid grid-cols-1 md:grid-cols-2 gap-6" id="student-routine-exercises">
+				</div>
+			</div>
 
-            <!-- VISTA PROFESOR: LISTA -->
-            <div id="rutinas-lista" class="space-y-3 min-h-[400px] overflow-y-auto custom-scrollbar flex-1 pr-2 pb-20 hidden">
-                <!-- El JS inyectará las tarjetas aquí -->
-            </div>
-        </div>
+			<!-- VISTA PROFESOR: LISTA (Estilo idéntico a Alumnos) -->
+			<div id="rutinas-lista" class="space-y-3 min-h-[400px] overflow-y-auto custom-scrollbar flex-1 pr-2 pb-10 hidden">
+				<!-- El JS inyectará las tarjetas aquí -->
+			</div>
+		</div>
 
-            <!-- Vista de Acceso Virtual -->
-            <div id="view-acceso-virtual" class="view-content">
-                <div class="flex justify-between items-center mb-8">
-                    <div>
-                        <h3 class="text-3xl font-black italic uppercase">Accesos al Valhalla</h3>
-                        <p class="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-1 italic">Control de Molinetes y QR en Tiempo Real</p>
-                    </div>
-                    <button onclick="startScanner()" class="viking-bg-red text-black px-6 py-3 rounded-xl font-black uppercase italic text-[11px] shadow-lg hover:scale-105 transition-transform flex items-center gap-2">
-                        <i data-lucide="camera" class="w-4 h-4"></i> <span class="hidden md:inline">Abrir Ojos de Odín</span><span class="md:hidden">Scan</span>
-                    </button>
-                </div>
+			<!-- Vista de Acceso Virtual -->
+			<div id="view-acceso-virtual" class="view-content">
+				<div class="flex justify-between items-center mb-8">
+					<div>
+						<h3 class="text-3xl font-black italic uppercase">Accesos al Valhalla</h3>
+						<p class="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-1 italic">Control de Molinetes y QR en Tiempo Real</p>
+					</div>
+					<button onclick="startScanner()" class="viking-bg-red text-black px-6 py-3 rounded-xl font-black uppercase italic text-[11px] shadow-lg hover:scale-105 transition-transform flex items-center gap-2">
+						<i data-lucide="camera" class="w-4 h-4"></i> Abrir Ojos de Odín
+					</button>
+				</div>
 
-                <div class="glass-card p-6 md:p-6 rounded-[2.5rem] border-white/5">
-                    <!-- Cabecera de columnas -->
-                    <div class="grid grid-cols-5 gap-4 px-6 mb-4 opacity-50 text-[10px] font-black uppercase italic tracking-widest hidden md:grid">
-                        <span>Guerrero / Alumno</span>
-                        <span>DNI / Usuario</span>
-                        <span>Fecha y Hora</span>
-                        <span>Método</span>
-                        <span class="text-right">Estado</span>
-                    </div>
-                    <!-- Lista dinámica de ingresos -->
-                    <div id="acceso-list-view" class="flex flex-col gap-2 max-h-[60vh] md:max-h-[600px] overflow-y-auto custom-scrollbar pr-2">
-                        <p class="text-center text-gray-600 italic py-10">Esperando registros de entrada...</p>
-                    </div>
-                </div>
-            </div>
+				<div class="glass-card p-6 rounded-[2.5rem] border-white/5">
+					<!-- Cabecera de columnas -->
+					<div class="grid grid-cols-5 gap-4 px-6 mb-4 opacity-50 text-[10px] font-black uppercase italic tracking-widest">
+						<span>Guerrero / Alumno</span>
+						<span>DNI / Usuario</span>
+						<span>Fecha y Hora</span>
+						<span>Método</span>
+						<span class="text-right">Estado</span>
+					</div>
+					<!-- Lista dinámica de ingresos -->
+					<div id="acceso-list-view" class="flex flex-col gap-2 max-h-[600px] overflow-y-auto custom-scrollbar pr-2">
+						<p class="text-center text-gray-600 italic py-10">Esperando registros de entrada...</p>
+					</div>
+				</div>
+			</div>
         </div>
     </main>
 
-    <!-- MODAL EDITAR RUTINA -->
+    <!-- MODAL EDITAR RUTINA (OPTIMIZADO CON BUSCADOR Y ALINEACIÓN) -->
     <div id="modal-rutina-editor" class="viking-modal">
-        <div class="glass-card p-6 md:p-10 rounded-[2rem] md:rounded-[3rem] w-full max-w-5xl text-left overflow-y-auto max-h-[90vh] custom-scrollbar">
+        <div class="glass-card p-10 rounded-[3rem] w-full max-w-5xl text-left overflow-y-auto max-h-[95vh] custom-scrollbar">
             <div class="flex justify-between items-start mb-6">
                 <div>
-                    <h3 class="text-2xl font-black uppercase italic mb-1">Gestionar Rutina</h3>
+                    <h3 class="text-2xl font-black uppercase italic mb-1">Gestionar Rutina de Musculación</h3>
                     <p id="rutina-editor-alumno" class="text-red-600 font-black uppercase italic text-sm"></p>
                 </div>
                 <button onclick="openModalNewExercise()" class="viking-bg-red text-black px-4 py-2 rounded-xl font-black uppercase italic text-[10px] shadow-lg">+ Crear Nuevo Ejercicio</button>
             </div>
             
-            <form id="form-rutina-editor" class="space-y-6" autocomplete="off">
+            <form id="form-rutina-editor" class="space-y-6">
                 <input type="hidden" id="rutina-editor-alumno-id">
                 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                <div class="grid grid-cols-2 gap-6 mb-8">
                     <div class="space-y-1">
                         <label class="text-[10px] font-black uppercase text-gray-500 italic">Objetivo del Plan</label>
                         <input type="text" id="rutina-objetivo" placeholder="Ej: Hipertrofia, Fuerza, Definición" class="viking-input" required>
@@ -891,11 +865,11 @@
         </div>
     </div>
 
-    <!-- MODAL PARA CREAR NUEVO EJERCICIO -->
+    <!-- MODAL PARA CREAR NUEVO EJERCICIO EN LIBRERÍA -->
     <div id="modal-nuevo-ejercicio" class="viking-modal">
-        <div class="glass-card p-6 md:p-10 rounded-[2rem] md:rounded-[3rem] w-full max-w-md text-left">
-            <h3 class="text-xl font-black uppercase italic mb-6">Nuevo Ejercicio</h3>
-            <form id="form-nuevo-ejercicio-lib" class="space-y-4" autocomplete="off">
+        <div class="glass-card p-10 rounded-[3rem] w-full max-w-md text-left">
+            <h3 class="text-xl font-black uppercase italic mb-6">Nuevo Ejercicio en Librería</h3>
+            <form id="form-nuevo-ejercicio-lib" class="space-y-4">
                 <input type="text" id="lib-ex-nombre" placeholder="Nombre del Ejercicio (ej: Sentadilla)" required class="viking-input">
                 <select id="lib-ex-grupo" required class="viking-input">
                     <option value="">Seleccionar Grupo Muscular</option>
@@ -909,44 +883,47 @@
     </div>
 
     <!-- MODAL CLASE -->
-    <div id="modal-clase" class="viking-modal">
-        <div class="glass-card p-6 md:p-10 rounded-[2rem] md:rounded-[3rem] w-full max-w-lg border-red-600/30">
-            <h3 id="modal-clase-title" class="text-2xl font-black italic uppercase mb-6">Configurar Clase</h3>
-            <form id="form-clase" class="space-y-4" autocomplete="off">
-                <input type="hidden" id="cl-id">
-                <div class="w-full">
-                    <input type="text" id="cl-nombre" placeholder="Nombre de Clase" class="viking-input" required>
-                    <input type="hidden" id="cl-coach-select" value="Staff"> 
-                </div>
-                <div class="grid grid-cols-2 gap-4">
-                    <input type="number" id="cl-cupo" placeholder="Cupo Máximo" class="viking-input" required inputmode="numeric">
-                    <input type="color" id="cl-color" value="#FF0000" class="viking-input h-[52px] cursor-pointer p-1">
-                </div>
+	<div id="modal-clase" class="viking-modal">
+		<div class="glass-card p-10 rounded-[3rem] w-full max-w-lg border-red-600/30">
+			<h3 id="modal-clase-title" class="text-2xl font-black italic uppercase mb-6">Configurar Clase</h3>
+			<form id="form-clase" class="space-y-4">
+				<input type="hidden" id="cl-id">
+				<div class="w-full">
+					<input type="text" id="cl-nombre" placeholder="Nombre de Clase" class="viking-input" required>
+					<!-- El selector de coach global se elimina visualmente porque elegiremos coach por turno -->
+					<input type="hidden" id="cl-coach-select" value="Staff"> 
+				</div>
+				<div class="grid grid-cols-2 gap-4">
+					<input type="number" id="cl-cupo" placeholder="Cupo Máximo" class="viking-input" required>
+					<input type="color" id="cl-color" value="#FF0000" class="viking-input h-[52px] cursor-pointer p-1">
+				</div>
 
-                <div class="mt-6">
-                    <div class="flex items-center justify-between mb-2">
-                        <p class="text-[10px] font-black text-gray-500 uppercase tracking-widest italic">Configuración de Turnos</p>
-                        <button type="button" onclick="addNewScheduleSlot()" class="text-[9px] font-black text-red-500 uppercase border border-red-500/30 px-3 py-1 rounded-full hover:bg-red-500 hover:text-black transition-all">
-                            + Añadir Turno
-                        </button>
-                    </div>
-                    <div id="cl-schedule-slots" class="max-h-60 overflow-y-auto custom-scrollbar space-y-2 pr-2 border-t border-white/5 pt-4">
-                        <p class="text-[9px] text-gray-600 italic py-4 text-center">No hay horarios definidos</p>
-                    </div>
-                </div>
+				<div class="mt-6">
+					<div class="flex items-center justify-between mb-2">
+						<p class="text-[10px] font-black text-gray-500 uppercase tracking-widest italic">Configuración de Turnos</p>
+						<button type="button" onclick="addNewScheduleSlot()" class="text-[9px] font-black text-red-500 uppercase border border-red-500/30 px-3 py-1 rounded-full hover:bg-red-500 hover:text-black transition-all">
+							+ Añadir Turno
+						</button>
+					</div>
+					<!-- Contenedor dinámico donde se inyectarán los días y horas -->
+					<div id="cl-schedule-slots" class="max-h-60 overflow-y-auto custom-scrollbar space-y-2 pr-2 border-t border-white/5 pt-4">
+						<p class="text-[9px] text-gray-600 italic py-4 text-center">No hay horarios definidos</p>
+					</div>
+				</div>
 
-                <div class="flex gap-4 pt-6">
-                    <button type="button" onclick="closeModal('modal-clase')" class="flex-1 py-4 border border-white/10 rounded-2xl font-black uppercase italic text-[11px] hover:bg-white/5 transition-all">Cancelar</button>
-                    <button type="submit" class="flex-1 py-4 viking-bg-red text-black rounded-2xl font-black uppercase italic text-[11px] shadow-lg">Guardar Configuración</button>
-                </div>
-                <button type="button" id="btn-delete-clase" class="w-full text-[10px] text-red-600 font-bold uppercase mt-4 hidden">Eliminar Clase Permanentemente</button>
-            </form>
-        </div>
-    </div>
+				<div class="flex gap-4 pt-6">
+					<button type="button" onclick="closeModal('modal-clase')" class="flex-1 py-4 border border-white/10 rounded-2xl font-black uppercase italic text-[11px] hover:bg-white/5 transition-all">Cancelar</button>
+					<button type="submit" class="flex-1 py-4 viking-bg-red text-black rounded-2xl font-black uppercase italic text-[11px] shadow-lg">Guardar Configuración</button>
+				</div>
+				<button type="button" id="btn-delete-clase" class="w-full text-[10px] text-red-600 font-bold uppercase mt-4 hidden">Eliminar Clase Permanentemente</button>
+			</form>
+		</div>
+	</div>
 
+    <!-- Otros Modales -->
     <!-- MODAL: FICHA TÉCNICA -->
     <div id="modal-ficha-tecnica" class="viking-modal hidden fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-        <div class="glass-card p-6 md:p-10 rounded-[2rem] md:rounded-[3rem] w-full max-w-2xl text-left overflow-y-auto max-h-[90vh] custom-scrollbar bg-zinc-950 border border-white/5 shadow-2xl">
+        <div class="glass-card p-10 rounded-[3rem] w-full max-w-2xl text-left overflow-y-auto max-h-[90vh] custom-scrollbar bg-zinc-950 border border-white/5 shadow-2xl">
             <!-- Encabezado y Datos de Membresía -->
             <div class="flex justify-between items-start mb-8">
                 <div>
@@ -954,7 +931,8 @@
                     <p class="text-[11px] viking-red font-black uppercase" id="ficha-dni">DNI: -</p>
                 </div>
                 <div class="text-right">
-                    <button onclick="closeModal('modal-ficha-tecnica')"><i data-lucide="x"></i></button>
+                    <p class="text-[10px] text-gray-500 font-black uppercase italic" id="ficha-plan">Plan: -</p>
+                    <p class="text-[10px] text-gray-500 font-black uppercase italic" id="ficha-cuenta">Estado: -</p>
                 </div>
             </div>
             
@@ -980,6 +958,7 @@
                     <h4 class="text-sm font-black uppercase italic tracking-widest">Plan de Entrenamiento</h4>
                 </div>
                 
+                <!-- Este es el contenedor donde se inyecta la rutina agrupada y los días desplegables -->
                 <div id="ficha-rutina-container" class="flex flex-col gap-2">
                     <p class="text-[10px] text-gray-600 italic text-center py-4">Cargando rutina...</p>
                 </div>
@@ -995,30 +974,30 @@
     </div>
 
     <div id="modal-alumno" class="viking-modal">
-        <div class="glass-card p-6 md:p-10 rounded-[2rem] md:rounded-[3rem] w-full max-w-lg text-left overflow-y-auto max-h-[90vh]">
+        <div class="glass-card p-10 rounded-[3rem] w-full max-w-lg text-left">
             <h3 class="text-2xl font-black uppercase italic mb-8" id="modal-alumno-title">Alumno</h3>
-            <form id="form-alumno" class="space-y-4" autocomplete="off">
+            <form id="form-alumno" class="space-y-4">
                 <input type="hidden" id="al-id">
                 <input type="text" id="al-nombre" placeholder="Nombre Completo" required class="viking-input">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <input type="number" id="al-dni" placeholder="DNI / Usuario" required class="viking-input" inputmode="numeric">
+                <div class="grid grid-cols-2 gap-4">
+                    <input type="text" id="al-dni" placeholder="DNI / Usuario" required class="viking-input">
                     <input type="email" id="al-email" placeholder="Email" required class="viking-input">
                 </div>
                 <div class="grid grid-cols-3 gap-4">
                     <div class="space-y-1">
                         <label class="text-[9px] font-black text-gray-500 uppercase italic">Peso (kg)</label>
-                        <input type="number" step="0.01" id="al-peso" placeholder="0.00" class="viking-input" inputmode="decimal" oninput="calculateIMC()">
+                        <input type="number" step="0.01" id="al-peso" placeholder="0.00" class="viking-input" oninput="calculateIMC()">
                     </div>
                     <div class="space-y-1">
                         <label class="text-[9px] font-black text-gray-500 uppercase italic">Altura (cm)</label>
-                        <input type="number" step="0.01" id="al-altura" placeholder="0.00" class="viking-input" inputmode="decimal" oninput="calculateIMC()">
+                        <input type="number" step="0.01" id="al-altura" placeholder="0.00" class="viking-input" oninput="calculateIMC()">
                     </div>
                     <div class="space-y-1">
                         <label class="text-[9px] font-black text-red-600 uppercase italic">IMC</label>
                         <input type="text" id="al-imc" placeholder="-" readonly class="viking-input opacity-60">
                     </div>
                 </div>
-                
+				
                 <div class="grid grid-cols-2 gap-4">
                     <div class="space-y-1">
                         <label class="text-[9px] font-black text-gray-500 uppercase italic">Fecha Renovación</label>
@@ -1029,22 +1008,22 @@
                         <input type="date" id="al-fecha-vencimiento" class="viking-input">
                     </div>
                 </div>
-                <!-- NUEVA SECCIÓN: SALUD Y EDAD -->
-                <div class="grid grid-cols-2 gap-4 border-t border-white/5 pt-4 mt-2">
-                    <div class="space-y-1">
-                        <label class="text-[9px] font-black text-red-600 uppercase italic">Fecha de Nacimiento</label>
-                        <input type="date" id="al-fecha-nacimiento" class="viking-input">
-                    </div>
-                    <div class="space-y-1">
-                        <label class="text-[9px] font-black text-gray-500 uppercase italic">Certificado Médico</label>
-                        <input type="date" id="al-fecha-certificado" class="viking-input">
-                    </div>
-                </div>
-                <div class="flex items-center gap-3 bg-white/5 p-3 rounded-xl border border-white/5 mt-2">
-                    <input type="checkbox" id="al-certificado-entregado" class="w-4 h-4 accent-red-600">
-                    <label for="al-certificado-entregado" class="text-[10px] font-black uppercase italic text-gray-300">¿Certificado Físico Entregado?</label>
-                </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+				<!-- NUEVA SECCIÓN: SALUD Y EDAD -->
+				<div class="grid grid-cols-2 gap-4 border-t border-white/5 pt-4 mt-2">
+					<div class="space-y-1">
+						<label class="text-[9px] font-black text-red-600 uppercase italic">Fecha de Nacimiento</label>
+						<input type="date" id="al-fecha-nacimiento" class="viking-input">
+					</div>
+					<div class="space-y-1">
+						<label class="text-[9px] font-black text-gray-500 uppercase italic">Certificado Médico (Fecha)</label>
+						<input type="date" id="al-fecha-certificado" class="viking-input">
+					</div>
+				</div>
+				<div class="flex items-center gap-3 bg-white/5 p-3 rounded-xl border border-white/5 mt-2">
+					<input type="checkbox" id="al-certificado-entregado" class="w-4 h-4 accent-red-600">
+					<label for="al-certificado-entregado" class="text-[10px] font-black uppercase italic text-gray-300">¿Certificado Físico Entregado?</label>
+				</div>
+                <div class="grid grid-cols-2 gap-4">
                     <select id="al-plan" class="viking-input" required onchange="autoCalculateExpiry()"></select>
                     <input type="password" id="al-pass" placeholder="Contraseña de Acceso" class="viking-input">
                 </div>
@@ -1057,61 +1036,68 @@
         </div>
     </div>
 
-    <!-- EL MODAL DE GASTO NUEVO -->
-    <div id="modal-gasto" class="fixed inset-0 bg-black/80 hidden flex items-center justify-center z-50 backdrop-blur-sm animate-fade-in">
-        <div class="glass-panel p-6 rounded-xl w-full max-w-sm mx-4 relative border border-white/10 shadow-2xl">
-            
-            <button type="button" onclick="document.getElementById('modal-gasto').classList.add('hidden')" 
-                    class="absolute top-4 right-4 text-gray-500 hover:text-white transition-colors">
-                <i data-lucide="x" class="w-5 h-5"></i>
-            </button>
+    <!-- 2. EL MODAL NUEVO (Reemplaza al viejo 'modal-movimiento') -->
+		<div id="modal-gasto" class="fixed inset-0 bg-black/80 hidden flex items-center justify-center z-50 backdrop-blur-sm animate-fade-in">
+		<div class="glass-panel p-6 rounded-xl w-full max-w-sm mx-4 relative border border-white/10 shadow-2xl">
+			
+			<!-- Botón Cerrar (X) -->
+			<button type="button" onclick="document.getElementById('modal-gasto').classList.add('hidden')" 
+					class="absolute top-4 right-4 text-gray-500 hover:text-white transition-colors">
+				<i data-lucide="x" class="w-5 h-5"></i>
+			</button>
 
-            <h3 class="text-xl font-black italic text-white mb-6 tracking-tight">
-                NUEVO <span class="text-red-600">MOVIMIENTO</span>
-            </h3>
-            
-            <form onsubmit="guardarMovimiento(event)" autocomplete="off">
-                <div class="space-y-4">
-                    <div>
-                        <label class="block text-[10px] font-bold uppercase text-gray-400 mb-1">Tipo de Movimiento</label>
-                        <select id="input-tipo-movimiento" class="viking-input w-full p-3 rounded text-xs font-bold text-white bg-black/50 border border-white/10 focus:border-red-600 transition-colors">
-                            <option value="Ingreso" selected>INGRESO (Venta, Cuota, etc.)</option>
-                            <option value="Gasto">EGRESO (Pago, Gasto, Compra)</option>
-                        </select>
-                    </div>
+			<h3 class="text-xl font-black italic text-white mb-6 tracking-tight">
+				NUEVO <span class="text-red-600">MOVIMIENTO</span>
+			</h3>
+			
+			<!-- FORMULARIO -->
+			<form onsubmit="guardarMovimiento(event)">
+				<div class="space-y-4">
+					
+					<!-- Selector Tipo (AHORA INGRESO ES EL PRIMERO Y DEFAULT) -->
+					<div>
+						<label class="block text-[10px] font-bold uppercase text-gray-400 mb-1">Tipo de Movimiento</label>
+						<select id="input-tipo-movimiento" class="viking-input w-full p-3 rounded text-xs font-bold text-white bg-black/50 border border-white/10 focus:border-red-600 transition-colors">
+							<option value="Ingreso" selected>INGRESO (Venta, Cuota, etc.)</option>
+							<option value="Gasto">EGRESO (Pago, Gasto, Compra)</option>
+						</select>
+					</div>
 
-                    <div>
-                        <label class="block text-[10px] font-bold uppercase text-gray-400 mb-1">Descripción</label>
-                        <input type="text" id="input-desc-gasto" 
-                               class="viking-input w-full p-3 rounded text-xs font-bold text-white bg-black/50 border border-white/10 focus:border-red-600 transition-colors" 
-                               placeholder="Ej: Gatorade, Cuota Mensual..." required>
-                    </div>
+					<!-- Input Descripción -->
+					<div>
+						<label class="block text-[10px] font-bold uppercase text-gray-400 mb-1">Descripción</label>
+						<input type="text" id="input-desc-gasto" 
+							   class="viking-input w-full p-3 rounded text-xs font-bold text-white bg-black/50 border border-white/10 focus:border-red-600 transition-colors" 
+							   placeholder="Ej: Gatorade, Cuota Mensual..." required>
+					</div>
 
-                    <div>
-                        <label class="block text-[10px] font-bold uppercase text-gray-400 mb-1">Monto ($)</label>
-                        <input type="number" id="input-monto-gasto" 
-                               class="viking-input w-full p-3 rounded text-xs font-bold text-white bg-black/50 border border-white/10 focus:border-red-600 transition-colors" 
-                               placeholder="0.00" required step="0.01" inputmode="decimal">
-                    </div>
+					<!-- Input Monto -->
+					<div>
+						<label class="block text-[10px] font-bold uppercase text-gray-400 mb-1">Monto ($)</label>
+						<input type="number" id="input-monto-gasto" 
+							   class="viking-input w-full p-3 rounded text-xs font-bold text-white bg-black/50 border border-white/10 focus:border-red-600 transition-colors" 
+							   placeholder="0.00" required step="0.01">
+					</div>
 
-                    <button type="submit" 
-                            class="w-full bg-red-600 hover:bg-red-700 text-white font-black uppercase py-4 md:py-3 rounded text-xs tracking-widest mt-4 border border-red-500 shadow-lg shadow-red-900/20 transition-all hover:scale-[1.02]">
-                        Confirmar Movimiento
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
+					<!-- Botón Guardar -->
+					<button type="submit" 
+							class="w-full bg-red-600 hover:bg-red-700 text-white font-black uppercase py-3 rounded text-xs tracking-widest mt-4 border border-red-500 shadow-lg shadow-red-900/20 transition-all hover:scale-[1.02]">
+						Confirmar Movimiento
+					</button>
+				</div>
+			</form>
+		</div>
+	</div>
 
     <div id="modal-staff" class="viking-modal">
-        <div class="glass-card p-6 md:p-10 rounded-[2rem] md:rounded-[3rem] w-full max-w-lg text-left">
+        <div class="glass-card p-10 rounded-[3rem] w-full max-w-lg text-left">
             <h3 class="text-2xl font-black uppercase italic mb-4" id="modal-staff-title">Personal</h3>
-            <form id="form-staff" class="space-y-4" autocomplete="off">
+            <form id="form-staff" class="space-y-4">
                 <input type="hidden" id="stf-id">
                 <input type="hidden" id="stf-rol">
                 <input type="text" id="stf-nombre" placeholder="Nombre Completo" required class="viking-input">
                 <div class="grid grid-cols-2 gap-4">
-                    <input type="number" id="stf-dni" placeholder="DNI / Usuario" required class="viking-input" inputmode="numeric">
+                    <input type="text" id="stf-dni" placeholder="DNI / Usuario" required class="viking-input">
                     <input type="text" id="stf-esp" placeholder="Especialidad / Cargo" class="viking-input">
                 </div>
                 <div class="space-y-4">
@@ -1127,68 +1113,72 @@
         </div>
     </div>
 
-    <div id="modal-stock" class="viking-modal">
-        <div class="glass-card p-6 md:p-10 rounded-[2rem] md:rounded-[3rem] w-full max-w-lg text-left border border-white/5">
-            <h3 class="text-2xl font-black uppercase italic mb-8" id="modal-stock-title">Mercadería</h3>
-            
-            <form id="form-stock" class="space-y-4" autocomplete="off">
-                <input type="hidden" id="stock-id">
+		<div id="modal-stock" class="viking-modal">
+			<div class="glass-card p-10 rounded-[3rem] w-full max-w-lg text-left border border-white/5">
+				<h3 class="text-2xl font-black uppercase italic mb-8" id="modal-stock-title">Mercadería</h3>
+				
+				<form id="form-stock" class="space-y-4">
+					<input type="hidden" id="stock-id">
 
-                <div class="space-y-1">
-                    <p class="text-[9px] font-black text-gray-500 uppercase px-2">Nombre del Producto</p>
-                    <input type="text" id="stock-nombre" placeholder="Ej: Agua Mineral 500ml" required class="viking-input">
-                </div>
+					<div class="space-y-1">
+						<p class="text-[9px] font-black text-gray-500 uppercase px-2">Nombre del Producto</p>
+						<input type="text" id="stock-nombre" placeholder="Ej: Agua Mineral 500ml" required class="viking-input">
+					</div>
 
-                <div class="grid grid-cols-2 gap-4">
-                    <div class="space-y-1">
-                        <p class="text-[9px] font-black text-gray-500 uppercase px-2">Stock</p>
-                        <input type="number" id="stock-cant" placeholder="0" required class="viking-input" inputmode="numeric">
-                    </div>
-                    <div class="space-y-1">
-                        <p class="text-[9px] font-black text-gray-500 uppercase px-2">Precio ($)</p>
-                        <input type="number" id="stock-precio" placeholder="0" required class="viking-input" inputmode="decimal">
-                    </div>
-                </div>
+					<div class="grid grid-cols-2 gap-4">
+						<div class="space-y-1">
+							<p class="text-[9px] font-black text-gray-500 uppercase px-2">Stock</p>
+							<input type="number" id="stock-cant" placeholder="0" required class="viking-input">
+						</div>
+						<div class="space-y-1">
+							<p class="text-[9px] font-black text-gray-500 uppercase px-2">Precio ($)</p>
+							<input type="number" id="stock-precio" placeholder="0" required class="viking-input">
+						</div>
+					</div>
 
-                <div class="space-y-1">
-                    <p class="text-[9px] font-black text-red-600 uppercase px-2 italic">Imagen del Producto</p>
-                    <div class="flex flex-col gap-3">
-                        <div id="stock-img-preview-container" class="w-full h-32 rounded-2xl bg-white/5 border border-dashed border-white/10 flex items-center justify-center overflow-hidden">
-                            <img id="stock-img-preview" src="" class="hidden w-full h-full object-cover">
-                            <div id="stock-img-placeholder" class="text-gray-600 flex flex-col items-center">
-                                <i data-lucide="image-plus" class="w-8 h-8 mb-1"></i>
-                                <span class="text-[8px] font-black uppercase">Sin Imagen</span>
-                            </div>
-                        </div>
-                        
-                        <label for="stock-file-input" class="w-full py-3 bg-white/5 border border-white/10 rounded-xl text-[10px] font-black uppercase italic text-center cursor-pointer hover:bg-white/10 transition-all flex items-center justify-center gap-2">
-                            <i data-lucide="upload-cloud" class="w-4 h-4"></i>
-                            Seleccionar desde ordenador
-                        </label>
-                        <input type="file" id="stock-file-input" accept="image/*" class="hidden" onchange="previewStockImage(event)">
-                        
-                        <input type="hidden" id="stock-imagen-base64">
-                    </div>
-                </div>
+					<!-- CARGA DE IMAGEN DESDE ORDENADOR -->
+					<div class="space-y-1">
+						<p class="text-[9px] font-black text-red-600 uppercase px-2 italic">Imagen del Producto</p>
+						<div class="flex flex-col gap-3">
+							<!-- Vista previa -->
+							<div id="stock-img-preview-container" class="w-full h-32 rounded-2xl bg-white/5 border border-dashed border-white/10 flex items-center justify-center overflow-hidden">
+								<img id="stock-img-preview" src="" class="hidden w-full h-full object-cover">
+								<div id="stock-img-placeholder" class="text-gray-600 flex flex-col items-center">
+									<i data-lucide="image-plus" class="w-8 h-8 mb-1"></i>
+									<span class="text-[8px] font-black uppercase">Sin Imagen</span>
+								</div>
+							</div>
+							
+							<!-- Botón oculto y label estético -->
+							<label for="stock-file-input" class="w-full py-3 bg-white/5 border border-white/10 rounded-xl text-[10px] font-black uppercase italic text-center cursor-pointer hover:bg-white/10 transition-all flex items-center justify-center gap-2">
+								<i data-lucide="upload-cloud" class="w-4 h-4"></i>
+								Seleccionar desde ordenador
+							</label>
+							<input type="file" id="stock-file-input" accept="image/*" class="hidden" onchange="previewStockImage(event)">
+							
+							<!-- Campo oculto para guardar el Base64 -->
+							<input type="hidden" id="stock-imagen-base64">
+						</div>
+					</div>
 
-                <div class="flex gap-4 pt-6">
-                    <button type="button" onclick="closeModal('modal-stock')" class="flex-1 py-4 bg-white/5 rounded-2xl font-black uppercase italic text-[11px]">Cancelar</button>
-                    <button type="button" id="btn-delete-stock" class="hidden py-4 px-4 bg-red-900/40 rounded-2xl font-black uppercase italic text-[11px] text-red-500">Eliminar</button>
-                    <button type="submit" class="flex-1 py-4 viking-bg-red text-black rounded-2xl font-black uppercase italic text-[11px] shadow-xl">Guardar</button>
-                </div>
-            </form>
-        </div>
-    </div>
+					<div class="flex gap-4 pt-6">
+						<button type="button" onclick="closeModal('modal-stock')" class="flex-1 py-4 bg-white/5 rounded-2xl font-black uppercase italic text-[11px]">Cancelar</button>
+						<button type="button" id="btn-delete-stock" class="hidden py-4 px-4 bg-red-900/40 rounded-2xl font-black uppercase italic text-[11px] text-red-500">Eliminar</button>
+						<button type="submit" class="flex-1 py-4 viking-bg-red text-black rounded-2xl font-black uppercase italic text-[11px] shadow-xl">Guardar</button>
+					</div>
+				</form>
+			</div>
+		</div>
 
     <div id="modal-plan" class="viking-modal">
-        <div class="glass-card p-6 md:p-10 rounded-[2rem] md:rounded-[3rem] w-full max-w-lg text-left">
+        <div class="glass-card p-10 rounded-[3rem] w-full max-w-lg text-left">
             <h3 class="text-2xl font-black uppercase italic mb-8" id="modal-plan-title">Plan</h3>
-            <form id="form-plan" class="space-y-4" autocomplete="off">
+            <form id="form-plan" class="space-y-4">
                 <input type="hidden" id="plan-id">
                 <input type="text" id="plan-nombre" placeholder="Nombre del Plan" required class="viking-input">
                 <div class="grid grid-cols-2 gap-4">
                     <select id="plan-tipo" class="viking-input" required></select>
-                    <input type="number" id="plan-precio" placeholder="Precio ($)" required class="viking-input" inputmode="decimal">
+                    <input type="number" id="plan-precio" placeholder="Precio ($)" required class="viking-input">
                 </div>
                 <div class="flex gap-4 pt-4">
                     <button type="button" onclick="closeModal('modal-plan')" class="flex-1 py-4 bg-white/5 rounded-2xl font-black uppercase italic text-[11px]">Cancelar</button>
@@ -1200,123 +1190,100 @@
     </div>
 
     <div id="modal-inscriptos" class="viking-modal">
-        <div class="glass-card p-6 md:p-10 rounded-[2rem] md:rounded-[3rem] w-full max-w-lg text-left">
+        <div class="glass-card p-10 rounded-[3rem] w-full max-w-lg text-left">
             <h3 class="text-2xl font-black uppercase italic mb-6">Alumnos Inscriptos</h3>
             <div id="inscriptos-lista" class="space-y-3 max-h-96 overflow-y-auto custom-scrollbar mb-8"></div>
             <button onclick="closeModal('modal-inscriptos')" class="w-full py-4 viking-bg-red text-black rounded-2xl font-black uppercase italic text-[11px]">Cerrar</button>
         </div>
     </div>
 
-    <!-- MÓDULO SCANNER QR (Fullscreen en móvil) -->
-    <div id="modal-scanner-live" class="fixed inset-0 z-[2000] hidden bg-black flex-col items-center justify-center overflow-hidden">
-        
-        <!-- Header con notch safe-area -->
-        <div class="absolute top-0 left-0 w-full p-6 pt-12 flex justify-between items-center bg-gradient-to-b from-black/90 to-transparent z-50">
-            <div>
-                <h3 class="text-xl font-black italic uppercase text-white tracking-widest flex items-center">
-                    <i data-lucide="scan" class="w-5 h-5 mr-2 text-red-600 animate-pulse"></i>Acceso
-                </h3>
-                <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Scanner</p>
-            </div>
-            <button onclick="stopScanner()" class="w-10 h-10 rounded-full bg-white/10 hover:bg-red-600 text-white flex items-center justify-center transition-all backdrop-blur-md border border-white/10">
-                <i data-lucide="x" class="w-5 h-5"></i>
-            </button>
-        </div>
+		<!-- ========================================== -->
+		<!-- MÓDULO: LOS OJOS DE ODÍN (SCANNER QR)      -->
+		<!-- Versión Conectada a API de Validación      -->
+		<!-- ========================================== -->
 
-        <div class="relative w-full h-full flex items-center justify-center bg-black">
-            <video id="scanner-video" class="absolute inset-0 w-full h-full object-cover" autoplay playsinline muted></video>
-
-            <div id="scanner-hud" class="relative z-10 w-64 h-64 md:w-80 md:h-80 border-2 border-red-600/30 rounded-3xl scanner-mask flex items-center justify-center pointer-events-none">
-                <div class="absolute -top-1 -left-1 w-10 h-10 border-t-4 border-l-4 border-red-600 rounded-tl-3xl"></div>
-                <div class="absolute -top-1 -right-1 w-10 h-10 border-t-4 border-r-4 border-red-600 rounded-tr-3xl"></div>
-                <div class="absolute -bottom-1 -left-1 w-10 h-10 border-b-4 border-l-4 border-red-600 rounded-bl-3xl"></div>
-                <div class="absolute -bottom-1 -right-1 w-10 h-10 border-b-4 border-r-4 border-red-600 rounded-br-3xl"></div>
-                <div class="absolute left-4 right-4 h-1 bg-red-600 shadow-[0_0_15px_rgba(255,0,0,0.8)] animate-scan-line z-20"></div>
-                
-                <div class="absolute -bottom-16 left-0 right-0 text-center">
-                    <p class="text-white text-[10px] font-black uppercase tracking-[0.3em] bg-black/60 py-2 px-6 rounded-full inline-block animate-pulse border border-white/10">
-                        Apuntar Código
-                    </p>
-                </div>
-            </div>
-
-            <div id="scanner-error-msg" class="absolute inset-0 z-40 hidden flex-col items-center justify-center bg-black/95 p-10 text-center backdrop-blur-sm">
-                <i data-lucide="video-off" class="w-16 h-16 text-gray-600 mb-4"></i>
-                <h3 class="text-xl font-black text-white mb-2 uppercase italic">Cámara no disponible</h3>
-                <p id="scanner-error-text" class="text-sm text-gray-400 max-w-md">Verificá los permisos.</p>
-                <button onclick="stopScanner()" class="mt-6 px-8 py-3 bg-white/10 hover:bg-red-600 rounded-xl text-[10px] font-black uppercase italic transition-all border border-white/10">Cerrar</button>
-            </div>
-
-            <div id="scanner-feedback-overlay" class="absolute inset-0 z-[60] hidden flex-col items-center justify-center bg-black/95 backdrop-blur-xl transition-all duration-300">
-                <div id="scanner-icon-container" class="mb-6 transform scale-150 transition-transform"></div>
-                <h2 id="scanner-status-text" class="text-4xl font-black uppercase italic text-white mb-2 tracking-wide text-center"></h2>
-                <p id="scanner-user-name" class="text-2xl font-bold text-white uppercase tracking-widest mb-1"></p>
-                <p id="scanner-msg" class="text-sm font-medium text-gray-400 italic"></p>
-                <div class="mt-10 w-48 h-1 bg-white/10 rounded-full overflow-hidden">
-                    <div class="h-full bg-red-600 animate-[width_4s_linear]"></div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div id="modal-mi-qr" class="fixed inset-0 z-[1500] bg-black/90 hidden flex-col items-center justify-center backdrop-blur-sm" onclick="closeMyQR()">
-        <div class="glass-card p-10 rounded-[3rem] border-white/10 flex flex-col items-center text-center max-w-sm mx-4 transform transition-all scale-95 animate-in fade-in zoom-in duration-300" onclick="event.stopPropagation()">
-            <h3 class="text-2xl font-black italic uppercase text-white mb-2">Mi Pase Vikingo</h3>
-            <p class="text-[10px] text-red-600 font-bold uppercase mb-8 tracking-widest">Escanea en la entrada</p>
-            
-            <div class="p-4 bg-white rounded-3xl shadow-[0_0_50px_rgba(255,0,0,0.2)] mb-6">
-                <img id="img-mi-qr" src="" alt="QR" class="w-48 h-48 object-contain">
-            </div>
-            
-            <p id="qr-user-dni" class="text-xl font-black text-white tracking-widest mb-1">------</p>
-            <p id="qr-user-name" class="text-xs text-gray-500 font-bold uppercase italic">------</p>
-            
-            <button onclick="closeMyQR()" class="mt-8 px-8 py-3 bg-white/5 hover:bg-white/10 rounded-xl text-[10px] font-black uppercase text-gray-400 hover:text-white transition-colors">Cerrar Pase</button>
-        </div>
-    </div>
+		<div id="modal-scanner-live" class="fixed inset-0 z-[2000] hidden bg-black flex-col items-center justify-center overflow-hidden">
     
-    <!-- Fondo oscuro para cerrar el menú al tocar afuera en móvil -->
-    <div id="mobile-overlay" class="sidebar-overlay" onclick="toggleMobileMenu()"></div>
+			<!-- 1. Header: Información del Sistema (Se mantiene tu diseño original) -->
+			<div class="absolute top-0 left-0 w-full p-6 flex justify-between items-center bg-gradient-to-b from-black/90 to-transparent z-50">
+				<div>
+					<h3 class="text-xl font-black italic uppercase text-white tracking-widest flex items-center">
+						<i data-lucide="scan" class="w-5 h-5 mr-2 text-red-600 animate-pulse"></i>Acceso Vikingo
+					</h3>
+					<p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Sistema de Reconocimiento Visual</p>
+				</div>
+				<button onclick="stopScanner()" class="w-10 h-10 rounded-full bg-white/10 hover:bg-red-600 text-white flex items-center justify-center transition-all backdrop-blur-md border border-white/10">
+					<i data-lucide="x" class="w-5 h-5"></i>
+				</button>
+			</div>
 
-    <!-- SCRIPT DE LÓGICA MOVÍL Y MENÚ (PARA QUE FUNCIONE EL CSS MÓVIL) -->
-    <script>
-        function toggleMobileMenu() {
-            const sidebar = document.getElementById('sidebar');
-            const overlay = document.getElementById('mobile-overlay');
-            
-            if (sidebar.classList.contains('hidden')) {
-                // ABRIR
-                sidebar.classList.remove('hidden');
-                sidebar.classList.add('flex'); // Forzamos flex
-                // Pequeño delay para la animación CSS
-                setTimeout(() => {
-                    sidebar.classList.add('mobile-open'); // Esta clase activa el left: 0 en CSS
-                }, 10);
-                overlay.classList.add('active');
-            } else {
-                // CERRAR
-                sidebar.classList.remove('mobile-open');
-                overlay.classList.remove('active');
-                // Esperar a que termine la animación para ocultar
-                setTimeout(() => {
-                    sidebar.classList.add('hidden');
-                    sidebar.classList.remove('flex');
-                }, 300); // 300ms coincide con transition del CSS
-            }
-        }
+			<!-- 2. Contenedor Principal de Video y HUD -->
+			<div class="relative w-full h-full flex items-center justify-center">
+				<!-- Video de fondo: Ahora ocupa todo el espacio -->
+				<video id="scanner-video" class="absolute inset-0 w-full h-full object-cover pointer-events-none opacity-60" autoplay playsinline muted></video>
 
-        // Inicializar iconos si Lucide no cargó por CDN
-        window.addEventListener('load', function() {
-            if(typeof lucide !== 'undefined') {
-                lucide.createIcons();
-            }
-            // Hack para iOS height bug
-            setTimeout(() => window.scrollTo(0, 1), 100);
-        });
-    </script>
+				<!-- RECUADRO DE ENFOQUE (Agrandado y con máscara negra) -->
+				<div id="scanner-hud" class="relative z-10 w-80 h-80 sm:w-96 sm:h-96 border-2 border-red-600/30 rounded-3xl scanner-mask flex items-center justify-center pointer-events-none">
+					
+					<!-- Esquinas Reforzadas Vikingas -->
+					<div class="absolute -top-1 -left-1 w-10 h-10 border-t-4 border-l-4 border-red-600 rounded-tl-3xl"></div>
+					<div class="absolute -top-1 -right-1 w-10 h-10 border-t-4 border-r-4 border-red-600 rounded-tr-3xl"></div>
+					<div class="absolute -bottom-1 -left-1 w-10 h-10 border-b-4 border-l-4 border-red-600 rounded-bl-3xl"></div>
+					<div class="absolute -bottom-1 -right-1 w-10 h-10 border-b-4 border-r-4 border-red-600 rounded-br-3xl"></div>
 
-    <!-- SCRIPT PRINCIPAL MOVIDO AL FINAL PARA QUE FUNCIONE LA LISTA DE ALUMNOS -->
-    <script src="https://cdn.jsdelivr.net/gh/vikingo-44/Software-Gym/script.js"></script>
+					<!-- Línea Láser Animada -->
+					<div class="absolute left-4 right-4 h-1 bg-red-600 shadow-[0_0_15px_rgba(255,0,0,0.8)] animate-scan-line z-20"></div>
+					
+					<!-- Texto de Guía (Debajo del cuadro) -->
+					<div class="absolute -bottom-16 left-0 right-0 text-center">
+						<p class="text-white text-[10px] font-black uppercase tracking-[0.3em] bg-black/60 py-2 px-6 rounded-full inline-block animate-pulse border border-white/10">
+							Encuadre el Código QR
+						</p>
+					</div>
+				</div>
+
+				<!-- 3. Mensaje de Error (Se mantiene tu lógica) -->
+				<div id="scanner-error-msg" class="absolute inset-0 z-40 hidden flex-col items-center justify-center bg-black/95 p-10 text-center backdrop-blur-sm">
+					<i data-lucide="video-off" class="w-16 h-16 text-gray-600 mb-4"></i>
+					<h3 class="text-xl font-black text-white mb-2 uppercase italic">Cámara no disponible</h3>
+					<p id="scanner-error-text" class="text-sm text-gray-400 max-w-md">Verificá los permisos de tu navegador o la conexión HTTPS.</p>
+					<button onclick="stopScanner()" class="mt-6 px-8 py-3 bg-white/10 hover:bg-red-600 rounded-xl text-[10px] font-black uppercase italic transition-all border border-white/10">Cerrar</button>
+				</div>
+
+				<!-- 4. FEEDBACK OVERLAY (Resultados de escaneo: Check/X) -->
+				<div id="scanner-feedback-overlay" class="absolute inset-0 z-[60] hidden flex-col items-center justify-center bg-black/95 backdrop-blur-xl transition-all duration-300">
+					<div id="scanner-icon-container" class="mb-6 transform scale-150 transition-transform">
+						<!-- Icono inyectado por JS -->
+					</div>
+					<h2 id="scanner-status-text" class="text-4xl font-black uppercase italic text-white mb-2 tracking-wide text-center"></h2>
+					<p id="scanner-user-name" class="text-2xl font-bold text-white uppercase tracking-widest mb-1"></p>
+					<p id="scanner-msg" class="text-sm font-medium text-gray-400 italic"></p>
+					
+					<!-- Barra de progreso de reinicio -->
+					<div class="mt-10 w-48 h-1 bg-white/10 rounded-full overflow-hidden">
+						<div class="h-full bg-red-600 animate-[width_4s_linear]"></div>
+					</div>
+				</div>
+			</div>
+		</div>
+
+				<div id="modal-mi-qr" class="fixed inset-0 z-[1500] bg-black/90 hidden flex-col items-center justify-center backdrop-blur-sm" onclick="closeMyQR()">
+					<div class="glass-card p-10 rounded-[3rem] border-white/10 flex flex-col items-center text-center max-w-sm mx-4 transform transition-all scale-95 animate-in fade-in zoom-in duration-300" onclick="event.stopPropagation()">
+						<h3 class="text-2xl font-black italic uppercase text-white mb-2">Mi Pase Vikingo</h3>
+						<p class="text-[10px] text-red-600 font-bold uppercase mb-8 tracking-widest">Escanea en la entrada</p>
+						
+						<div class="p-4 bg-white rounded-3xl shadow-[0_0_50px_rgba(255,0,0,0.2)] mb-6">
+							<img id="img-mi-qr" src="" alt="QR" class="w-48 h-48 object-contain">
+						</div>
+						
+						<p id="qr-user-dni" class="text-xl font-black text-white tracking-widest mb-1">------</p>
+						<p id="qr-user-name" class="text-xs text-gray-500 font-bold uppercase italic">------</p>
+						
+						<button onclick="closeMyQR()" class="mt-8 px-8 py-3 bg-white/5 hover:bg-white/10 rounded-xl text-[10px] font-black uppercase text-gray-400 hover:text-white transition-colors">Cerrar Pase</button>
+					</div>
+				</div>
+	<!-- Fondo oscuro para cerrar el menú al tocar afuera -->
+		<div id="mobile-overlay" class="sidebar-overlay" onclick="toggleMobileMenu()"></div>
 
 </body>
 </html>
