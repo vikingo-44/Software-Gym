@@ -7,7 +7,12 @@
     <meta name="theme-color" content="#000000">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="GF Strength">
     <meta name="format-detection" content="telephone=no">
+
+    <!-- ICONOS DE LA APP Y PESTAÑA -->
+    <link rel="icon" type="image/png" href="https://github.com/vikingo-44/Software-Gym/blob/main/logo.png?raw=true">
+    <link rel="apple-touch-icon" href="https://github.com/vikingo-44/Software-Gym/blob/main/logo.png?raw=true">
 
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
@@ -785,7 +790,7 @@
                 <!-- GRILLA DEL CALENDARIO: SCROLL SNAP EN MOVIL PARA VER DÍA POR DÍA -->
                 <div class="calendar-container h-[70vh] md:h-[700px] overflow-y-auto hide-scroll md:custom-scrollbar grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 pb-20 snap-x-mandatory" id="calendar-grid">
                     <!-- El JS inyectará las columnas con fechas aquí. El CSS snap-align: center en cada tarjeta (inyectada por JS o el contenedor) hará el efecto. 
-                         Como el script inyecta divs directos, la clase snap-x-mandatory en el padre funciona si los hijos ocupan el ancho. -->
+                          Como el script inyecta divs directos, la clase snap-x-mandatory en el padre funciona si los hijos ocupan el ancho. -->
                 </div>
                 <p class="md:hidden text-center text-[10px] text-gray-500 uppercase tracking-widest animate-pulse">Desliza horizontalmente</p>
             </div>
