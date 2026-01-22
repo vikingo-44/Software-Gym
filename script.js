@@ -1,4 +1,3 @@
-<script>
         // ==========================================
 		// 1. CONFIGURACIÓN MAESTRA (PEGAR AL INICIO DE TU SCRIPT)
 		// ==========================================
@@ -4406,4 +4405,3 @@ async function loadProfesores() {
 			}
 			if(window.lucide) lucide.createIcons();
 		};				
-    </script>
