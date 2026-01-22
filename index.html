@@ -172,12 +172,6 @@
 			</button>
 		</div>
 	</nav>
-
-        <div class="p-8">
-            <button onclick="location.reload()" class="w-full flex items-center justify-center gap-3 py-4 border border-white/5 rounded-2xl text-gray-600 hover:text-red-600 transition-all font-black uppercase text-[11px] italic">
-                <i data-lucide="log-out" class="w-4 h-4"></i> <span class="nav-text">Salir</span>
-            </button>
-        </div>
     </aside>
 
     <main id="main-content" class="flex-1 h-full overflow-y-auto hidden relative">
@@ -194,6 +188,11 @@
                     <span class="w-2 h-2 rounded-full bg-red-600 animate-pulse"></span>
                     <span class="text-[10px] font-black uppercase tracking-widest italic">Hub Sincronizado</span>
                 </div>
+				<!-- BOTÓN SALIR NUEVO -->
+				<button onclick="location.reload()" class="flex items-center gap-2 bg-red-600/10 hover:bg-red-600 text-red-500 hover:text-white px-3 py-2 md:px-4 md:py-2 rounded-xl border border-red-600/20 transition-all group" title="Cerrar Sesión">
+					<i data-lucide="log-out" class="w-4 h-4 group-hover:scale-110 transition-transform"></i>
+					<span class="text-[9px] font-black uppercase tracking-widest italic hidden md:inline">Salir</span>
+				</button>
             </div>
         </header>
 
