@@ -363,29 +363,46 @@
             }
         }
 
-        function openInscriptos(claseId) {
-            const inscriptos = state.reservas.filter(r => r.clase_id === claseId);
+        function openInscriptos(claseId, dia, horario) {
+            // CORRECCIÓN: Ahora filtramos por Clase ID, Día y Horario exacto.
+            const inscriptos = state.reservas.filter(r => 
+                String(r.clase_id) === String(claseId) &&
+                Number(r.dia_semana) === Number(dia) &&
+                Number(r.horario) === Number(horario)
+            );
+
             const listaDiv = document.getElementById('inscriptos-lista');
+            
+            // Agregamos un título informativo (opcional, pero útil)
+            const diasMap = {1: 'Lunes', 2: 'Martes', 3: 'Miércoles', 4: 'Jueves', 5: 'Viernes', 6: 'Sábado'};
+            const labelHora = horario % 1 === 0 ? `${horario}:00` : `${Math.floor(horario)}:30`;
+            // Si tienes un elemento para título en el modal, podrías actualizarlo aquí, si no, solo mostramos la lista.
+
             listaDiv.innerHTML = inscriptos.length ? inscriptos.map(r => {
                 return `
                 <div class="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5">
                     <div>
-                        <p class="text-[12px] font-black uppercase italic text-left">${r.alumno_dni}</p>
-                        <p class="text-[9px] text-gray-500 font-bold">Reserva #${r.id}</p>
+                        <p class="text-[12px] font-black uppercase italic text-left text-white">${r.alumno_nombre || r.alumno_dni}</p>
+                        <p class="text-[9px] text-gray-500 font-bold">DNI: ${r.alumno_dni}</p>
                     </div>
-                    <button onclick="deleteBookingAdmin(${r.id}, ${claseId})" class="text-red-600 hover:text-white"><i data-lucide="user-minus" class="w-4 h-4"></i></button>
+                    <!-- CORRECCIÓN: Pasamos dia y horario al borrar para refrescar la misma vista -->
+                    <button onclick="deleteBookingAdmin(${r.id}, ${claseId}, ${dia}, ${horario})" class="text-red-600 hover:text-white transition-colors">
+                        <i data-lucide="user-minus" class="w-4 h-4"></i>
+                    </button>
                 </div>`;
-            }).join('') : '<p class="text-center text-gray-500 italic py-10">No hay alumnos anotados aún.</p>';
-            lucide.createIcons();
+            }).join('') : `<p class="text-center text-gray-500 italic py-10">No hay alumnos en el turno del ${diasMap[dia]} ${labelHora}hs.</p>`;
+            
+            if(window.lucide) lucide.createIcons();
             openModal('modal-inscriptos');
         }
 
-        async function deleteBookingAdmin(reservaId, claseId) {
+        async function deleteBookingAdmin(reservaId, claseId, dia, horario) {
             if(!confirm("¿Quitar alumno de la clase?")) return;
             const res = await apiFetch(`/reservas/${reservaId}`, 'DELETE');
             if(!res.error) {
                 await fetchReservas();
-                openInscriptos(claseId);
+                // CORRECCIÓN: Volvemos a cargar la lista filtrada con los parámetros correctos
+                openInscriptos(claseId, dia, horario);
                 renderCalendar();
                 showVikingToast("Alumno removido del cupo.");
             }
