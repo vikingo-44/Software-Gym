@@ -1331,13 +1331,16 @@
 				containerDesc.classList.add('opacity-40');
 				descInput.required = false;
 				
-				// Llenar el desplegable con lo que hay cargado en el sistema (state.stock)
-				if (window.state && window.state.stock && window.state.stock.length > 0) {
-					productoSelect.innerHTML = window.state.stock.map(p => 
-						`<option value="${p.id}">${p.nombre_producto} (Stock Actual: ${p.stock_actual})</option>`
+				// Intentar obtener el stock del estado global (probando varias referencias comunes)
+				const currentStock = (window.state && window.state.stock) || (typeof state !== 'undefined' && state.stock);
+
+				if (currentStock && Array.isArray(currentStock) && currentStock.length > 0) {
+					productoSelect.innerHTML = currentStock.map(p => 
+						`<option value="${p.id}">${p.nombre_producto.toUpperCase()} (Stock: ${p.stock_actual})</option>`
 					).join('');
 				} else {
-					productoSelect.innerHTML = '<option value="">No hay productos cargados</option>';
+					productoSelect.innerHTML = '<option value="">No hay productos cargados en Stock</option>';
+					console.warn("Viking Check: No se detectó stock en la variable global 'state'.");
 				}
 			} else {
 				// Volver al modo normal
