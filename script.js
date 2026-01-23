@@ -2807,7 +2807,7 @@
 							<div class="w-full h-40 rounded-[1.8rem] overflow-hidden bg-black/40 relative">
 								<img src="${imgUrl}" 
 									class="w-full h-full object-cover opacity-70 group-hover:opacity-100 transition-all duration-700"
-									onerror="this.src='https://via.placeholder.com/400x300/111/333?text=${palabraClave}'">
+									onerror="this.parentElement.innerHTML = '<div class=\'w-full h-full flex items-center justify-center bg-zinc-900 text-zinc-700 text-[10px] font-black uppercase italic\'>${palabraClave}.png no encontrada</div>'">
 								<div class="absolute top-3 right-3 bg-black/70 backdrop-blur-xl px-3 py-1.5 rounded-xl border border-white/10 text-[11px] font-black text-white italic">
 									$${s.precio_venta}
 								</div>

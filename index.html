@@ -1125,8 +1125,8 @@
 
 					<div class="space-y-1">
 						<p class="text-[9px] font-black text-gray-500 uppercase px-2">Nombre del Producto</p>
-						<input type="text" id="stock-nombre" placeholder="Ej: Agua Mineral 500ml" required class="viking-input"
-						oninput="const p = this.value.trim().split(' '); const img = p[p.length-1].toLowerCase() + '.png'; document.getElementById('stock-img-preview').src = `https://github.com/vikingo-44/Software-Gym/blob/main/imagenes/${img}?raw=true` ">>
+						<<input type="text" id="stock-nombre" placeholder="Ej: Powerade Rojo" required class="viking-input" 
+       					oninput="if(this.value.trim()){ const p = this.value.trim().split(' '); const img = p[p.length-1].toLowerCase() + '.png'; const preview = document.getElementById('stock-img-preview'); preview.src = `https://github.com/vikingo-44/Software-Gym/blob/main/imagenes/${img}?raw=true`; preview.onerror = function(){ this.src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII='; }; }">
 					</div>
 
 					<div class="grid grid-cols-2 gap-4">
