@@ -416,29 +416,34 @@
 			const cal = document.getElementById('calendar-grid'); 
 			if (!cal) return;
 
-			// Configuración del Grid
-			cal.className = "calendar-container h-[700px] overflow-y-auto custom-scrollbar grid grid-cols-[50px_repeat(6,1fr)] auto-rows-max gap-[1px] bg-white/5 p-1 rounded-3xl";
+			// --- CONFIGURACIÓN VISUAL (FIX MOBILE & PC) ---
+			// 1. 'grid-cols-[50px_repeat(6,minmax(140px,1fr))]': 
+			//    Define la primera columna (Hora) de 50px fijos.
+			//    Define las 6 columnas de días con un MÍNIMO de 140px (para que no se aplasten en celular).
+			// 2. 'overflow-auto': Habilita el scroll tanto horizontal como vertical si es necesario.
+			cal.className = "calendar-container h-[700px] overflow-auto custom-scrollbar grid grid-cols-[50px_repeat(6,minmax(140px,1fr))] auto-rows-max gap-[1px] bg-white/5 p-1 rounded-3xl snap-none"; 
 
+			// Cargar clases si no existen en el estado
 			if (!state.clases || state.clases.length === 0) {
 				state.clases = await apiFetch('/clases');
 			}
 
-			// RESTRICCIÓN: Solo Admin y Supervisor tienen permisos de edición (Drag & Drop)
+			// Definir permisos
 			const isAdmin = (state.user?.rol_nombre === "Administrador" || state.user?.rol_nombre === "Supervisor");
 			const esAlumno = (state.user?.rol_nombre === "Alumno");
 
-			// --- 1. CÁLCULO DE FECHAS ---
+			// --- 1. CÁLCULO DE FECHAS (Semana Actual) ---
 			const hoy = new Date();
 			const diaSemanaActual = hoy.getDay(); 
 			const diffParaLunes = diaSemanaActual === 0 ? 6 : diaSemanaActual - 1;
 			const fechaLunes = new Date(hoy);
 			fechaLunes.setDate(hoy.getDate() - diffParaLunes);
 
-			// --- 2. CABECERAS ---
+			// --- 2. GENERACIÓN DE CABECERAS (DÍAS) ---
 			const diasNombres = ["LUNES", "MARTES", "MIÉRCOLES", "JUEVES", "VIERNES", "SÁBADO"];
 			
 			let headersHTML = `
-				<div class="cal-header sticky top-0 z-20 bg-[#1a1a1a] flex items-center justify-center font-black italic text-[9px] text-white/30 p-2 border-b border-white/10 rounded-tl-2xl">
+				<div class="cal-header sticky top-0 left-0 z-50 bg-[#1a1a1a] flex items-center justify-center font-black italic text-[9px] text-white/30 p-2 border-b border-white/10 rounded-tl-2xl shadow-[2px_2px_10px_rgba(0,0,0,0.5)]">
 					HORA
 				</div>
 			`;
@@ -456,7 +461,7 @@
 				const roundedClass = index === 5 ? "rounded-tr-2xl" : ""; 
 
 				headersHTML += `
-					<div class="cal-header sticky top-0 z-20 ${bgClass} ${roundedClass} p-2 flex flex-col items-center justify-center border-b border-white/10 transition-colors">
+					<div class="cal-header sticky top-0 z-40 ${bgClass} ${roundedClass} p-2 flex flex-col items-center justify-center border-b border-white/10 transition-colors">
 						<span class="text-[8px] font-black uppercase tracking-widest leading-none mb-0.5 ${subTextClass}">${mesNombre}</span>
 						<h4 class="text-xl font-black italic leading-none mb-0.5 ${textClass}">${numeroDia}</h4>
 						<span class="text-[9px] font-bold uppercase ${subTextClass}">${nombreDia}</span>
@@ -466,11 +471,12 @@
 
 			cal.innerHTML = headersHTML;
 
-			// --- 3. GRILLA ---
+			// --- 3. GENERACIÓN DE LA GRILLA (HORARIOS) ---
 			for(let h=7; h<=21.5; h+=0.5) {
 				const label = h % 1 === 0 ? `${h}:00` : `${Math.floor(h)}:30`;
+				
 				const hourLabel = document.createElement('div');
-				hourLabel.className = "cal-cell flex items-center justify-center font-black text-[9px] text-white/40 bg-white/5 border-r border-white/20 min-h-[50px]";
+				hourLabel.className = "cal-cell sticky left-0 z-30 bg-[#121212] flex items-center justify-center font-black text-[9px] text-white/40 border-r border-white/20 min-h-[50px] shadow-[2px_0_10px_rgba(0,0,0,0.5)]";
 				hourLabel.innerText = label;
 				cal.appendChild(hourLabel);
 				
@@ -484,11 +490,7 @@
 					cell.className = `cal-cell relative min-h-[50px] border-b border-r border-white/5 hover:bg-white/5 transition-colors ${isClosed ? 'bg-stripes-gray opacity-30 pointer-events-none' : ''}`;
 					
 					if (isAdmin && !isClosed) {
-						cell.ondragover = (e) => {
-							e.preventDefault(); 
-							e.dataTransfer.dropEffect = "move";
-							cell.classList.add('bg-red-600/10');
-						};
+						cell.ondragover = (e) => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; cell.classList.add('bg-red-600/10'); };
 						cell.ondragleave = () => cell.classList.remove('bg-red-600/10');
 						cell.ondrop = async (e) => {
 							e.preventDefault();
@@ -502,18 +504,19 @@
 							const newHorario = parseFloat(parts[2].replace('_', '.'));
 							if (oldDia == newDia && oldHorario == newHorario) return;
 
-							const res = await apiFetch(`/clases/${claseId}/move`, 'PUT', {
-								old_dia: parseInt(oldDia),
-								old_horario: parseFloat(oldHorario),
-								new_dia: newDia,
-								new_horario: newHorario
+							const res = await apiFetch(`/clases/${claseId}/move`, 'PUT', { 
+								old_dia: parseInt(oldDia), 
+								old_horario: parseFloat(oldHorario), 
+								new_dia: newDia, 
+								new_horario: newHorario 
 							});
-							if (!res.error) {
-								showVikingToast("¡Turno Reubicado!");
-								state.clases = await apiFetch('/clases');
+
+							if (!res.error) { 
+								showVikingToast("¡Turno Reubicado!"); 
+								state.clases = await apiFetch('/clases'); 
 								renderCalendar(); 
-							} else {
-								showVikingToast("Error al mover: " + res.error, true);
+							} else { 
+								showVikingToast("Error al mover: " + res.error, true); 
 							}
 						};
 					}
@@ -521,7 +524,7 @@
 				}
 			}
 
-			// --- 4. RENDERIZADO DE CLASES CON CONTRASTE ---
+			// --- 4. RENDERIZADO DE CLASES (TARJETAS PREMIUM) ---
 			if(state.clases && Array.isArray(state.clases)){
 				state.clases.forEach(c => {
 					const horarios = Array.isArray(c.horarios_detalle) ? c.horarios_detalle : [];
@@ -531,8 +534,7 @@
 						const r = parseInt(hexColor.substr(1, 2), 16);
 						const g = parseInt(hexColor.substr(3, 2), 16);
 						const b = parseInt(hexColor.substr(5, 2), 16);
-						const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
-						return (yiq >= 128) 
+						return (((r * 299) + (g * 587) + (b * 114)) / 1000) >= 128 
 							? { text: 'text-black', sub: 'text-black/60', bg: 'bg-black/10' } 
 							: { text: 'text-white', sub: 'text-white/80', bg: 'bg-white/20' };
 					};
@@ -551,6 +553,7 @@
 								Number(r.dia_semana) === Number(slot.dia) && 
 								Number(r.horario) === Number(slot.horario)
 							).length;
+							
 							const estaLleno = cupoActual >= cupoMax;
 
 							const badge = document.createElement('div');
@@ -559,15 +562,16 @@
 							
 							if (isAdmin) {
 								badge.draggable = true; 
-								badge.ondragstart = (e) => {
-									e.dataTransfer.setData("claseId", c.id);
-									e.dataTransfer.setData("oldDia", slot.dia);
-									e.dataTransfer.setData("oldHorario", slot.horario);
-									badge.classList.add('opacity-40');
+								badge.ondragstart = (e) => { 
+									e.dataTransfer.setData("claseId", c.id); 
+									e.dataTransfer.setData("oldDia", slot.dia); 
+									e.dataTransfer.setData("oldHorario", slot.horario); 
+									badge.classList.add('opacity-40'); 
 								};
 								badge.ondragend = () => badge.classList.remove('opacity-40');
 							}
 
+							// --- DISEÑO DE TARJETA MEJORADO ---
 							badge.innerHTML = `
 								<div class="flex flex-col items-center justify-center h-full w-full px-2 gap-1">
 									<!-- Nombre de la Clase -->
@@ -580,7 +584,7 @@
 										${slot.coach || 'STAFF'}
 									</span>
 									
-									<!-- Cupos (Más vistoso, estilo pastilla) -->
+									<!-- Cupos (Estilo Pastilla con Alerta) -->
 									<div class="mt-1 ${colores.bg} px-3 py-1 rounded-lg text-[10px] font-black leading-none border border-black/5 ${estaLleno ? 'bg-red-600 text-white animate-pulse shadow-[0_0_10px_rgba(255,0,0,0.5)]' : colores.text}">
 										${cupoActual} / ${cupoMax}
 									</div>
@@ -596,7 +600,6 @@
 									if (typeof openInscriptos === 'function') openInscriptos(c.id, slot.dia, slot.horario);
 								}
 							};
-
 							cell.appendChild(badge);
 						}
 					});
