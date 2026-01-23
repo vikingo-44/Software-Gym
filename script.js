@@ -1994,143 +1994,146 @@
 			}
 		}
 
-	async function loadCaja() {
-        const movs = await apiFetch('/caja/movimientos');
-        
-        let calcIngresos = 0;
-        let calcGastos = 0;
+		async function loadCaja() {
+			const movs = await apiFetch('/caja/movimientos');
+			
+			let calcIngresos = 0;
+			let calcGastos = 0;
 
-        // 1. Encabezados Forzados (Flujo | Tipo | Descripcion | Monto)
-        const thead = document.querySelector('#view-caja table thead tr');
-        if(thead) {
-            thead.innerHTML = `
-                <th class="pb-5 pl-2 text-left">Flujo</th>
-                <th class="pb-5 text-left">Tipo</th>
-                <th class="pb-5 text-left">Descripción</th>
-                <th class="pb-5 text-right pr-2">Monto</th>
-            `;
-        }
+			// 1. Encabezados Forzados (Flujo | Tipo | Descripcion | Monto)
+			const thead = document.querySelector('#view-caja table thead tr');
+			if(thead) {
+				thead.innerHTML = `
+					<th class="pb-5 pl-2 text-left">Flujo</th>
+					<th class="pb-5 text-left">Tipo</th>
+					<th class="pb-5 text-left">Descripción</th>
+					<th class="pb-5 text-right pr-2">Monto</th>
+				`;
+			}
 
-        if (Array.isArray(movs)) {
-            movs.forEach(m => {
-                const tipo = (m.tipo || '').toLowerCase();
-                const desc = (m.descripcion || '').toLowerCase();
-                const monto = Math.abs(parseFloat(m.monto)); // Leemos siempre positivo para calcular
+			if (Array.isArray(movs)) {
+				movs.forEach(m => {
+					const tipo = (m.tipo || '').toLowerCase();
+					const desc = (m.descripcion || '').toLowerCase();
+					const monto = Math.abs(parseFloat(m.monto)); // Leemos siempre positivo para calcular
 
-                // LÓGICA BLINDADA ACTUALIZADA: 
-                // Si dice mercaderia, plan, venta o cobro -> ES INGRESO (Verde)
-                // Solo es Gasto si es 'gasto', 'egreso', 'salida' o nuestra nueva 'compra' (Inversión de stock)
-                const esPositivo = (tipo.includes('mercaderia') || tipo.includes('mercadería') || tipo.includes('plan') || tipo.includes('venta') || tipo.includes('cobro') || tipo.includes('ingreso')) && !tipo.includes('compra');
-                const esEgreso = !esPositivo && (tipo === 'gasto' || tipo === 'egreso' || tipo === 'salida' || tipo === 'compra');
+					// LÓGICA BLINDADA ACTUALIZADA: 
+					// Si dice mercaderia, plan, venta o cobro -> ES INGRESO (Verde)
+					// Solo es Gasto si es 'gasto', 'egreso', 'salida' o nuestra nueva 'compra' (Inversión de stock)
+					const esPositivo = (tipo.includes('mercaderia') || tipo.includes('mercadería') || tipo.includes('plan') || tipo.includes('venta') || tipo.includes('cobro') || tipo.includes('ingreso')) && !tipo.includes('compra');
+					const esEgreso = !esPositivo && (tipo === 'gasto' || tipo === 'egreso' || tipo === 'salida' || tipo === 'compra');
 
-                if (esEgreso) {
-                    calcGastos += monto;
-                } else {
-                    calcIngresos += monto;
-                }
-            });
-        }
+					if (esEgreso) {
+						calcGastos += monto;
+					} else {
+						calcIngresos += monto;
+					}
+				});
+			}
 
-        const calcBalance = calcIngresos - calcGastos;
+			const calcBalance = calcIngresos - calcGastos;
 
-        // Actualizar tarjetas
-        if(document.getElementById('caja-ingresos')) 
-            document.getElementById('caja-ingresos').innerText = `$ ${calcIngresos.toLocaleString()}`;
-        
-        if(document.getElementById('caja-gastos')) 
-            document.getElementById('caja-gastos').innerText = `$ ${calcGastos.toLocaleString()}`;
-        
-        if(document.getElementById('caja-balance')) {
-            const elBalance = document.getElementById('caja-balance');
-            elBalance.innerText = `$ ${calcBalance.toLocaleString()}`;
-            elBalance.className = `text-3xl font-black ${calcBalance >= 0 ? 'text-white' : 'text-red-500'}`;
-        }
+			// Actualizar tarjetas
+			if(document.getElementById('caja-ingresos')) 
+				document.getElementById('caja-ingresos').innerText = `$ ${calcIngresos.toLocaleString()}`;
+			
+			if(document.getElementById('caja-gastos')) 
+				document.getElementById('caja-gastos').innerText = `$ ${calcGastos.toLocaleString()}`;
+			
+			if(document.getElementById('caja-balance')) {
+				const elBalance = document.getElementById('caja-balance');
+				elBalance.innerText = `$ ${calcBalance.toLocaleString()}`;
+				elBalance.className = `text-3xl font-black ${calcBalance >= 0 ? 'text-white' : 'text-red-500'}`;
+			}
 
-        // Renderizar Tabla
-        const table = document.getElementById('table-caja');
-        if(table) {
-            if(Array.isArray(movs) && movs.length > 0) {
-                table.innerHTML = movs.map(m => {
-                    const tipoRaw = (m.tipo || '').toLowerCase();
-                    const monto = Math.abs(parseFloat(m.monto));
+			// Renderizar Tabla
+			const table = document.getElementById('table-caja');
+			if(table) {
+				if(Array.isArray(movs) && movs.length > 0) {
+					table.innerHTML = movs.map(m => {
+						const tipoRaw = (m.tipo || '').toLowerCase();
+						const monto = Math.abs(parseFloat(m.monto));
 
-                    // Misma lógica de detección visual
-                    const esPositivo = (tipoRaw.includes('mercaderia') || tipoRaw.includes('mercadería') || tipoRaw.includes('plan') || tipoRaw.includes('venta') || tipoRaw.includes('cobro') || tipoRaw.includes('ingreso')) && !tipoRaw.includes('compra');
-                    const esEgreso = !esPositivo && (tipoRaw === 'gasto' || tipoRaw === 'egreso' || tipoRaw === 'salida' || tipoRaw === 'compra');
-                    
-                    const flujoTexto = esEgreso ? 'EGRESO' : 'INGRESO';
-                    const flujoColor = esEgreso 
-                        ? 'bg-red-500/10 text-red-500 border-red-500/20' 
-                        : 'bg-green-500/10 text-green-500 border-green-500/20';
+						// Misma lógica de detección visual
+						const esPositivo = (tipoRaw.includes('mercaderia') || tipoRaw.includes('mercadería') || tipoRaw.includes('plan') || tipoRaw.includes('venta') || tipoRaw.includes('cobro') || tipoRaw.includes('ingreso')) && !tipoRaw.includes('compra');
+						const esEgreso = !esPositivo && (tipoRaw === 'gasto' || tipoRaw === 'egreso' || tipoRaw === 'salida' || tipoRaw === 'compra');
+						
+						const flujoTexto = esEgreso ? 'EGRESO' : 'INGRESO';
+						const flujoColor = esEgreso 
+							? 'bg-red-500/10 text-red-500 border-red-500/20' 
+							: 'bg-green-500/10 text-green-500 border-green-500/20';
 
-                    // Icono según tipo real
-                    let icono = 'tag';
-                    if(tipoRaw.includes('plan')) icono = 'users';
-                    if(tipoRaw.includes('mercaderia') || tipoRaw.includes('compra')) icono = 'shopping-bag';
-                    if(esEgreso && !tipoRaw.includes('compra')) icono = 'arrow-down-circle';
-                    if(tipoRaw.includes('compra')) icono = 'package-plus'; // Icono específico para ingreso de mercadería
+						// Icono según tipo real
+						let icono = 'tag';
+						if(tipoRaw.includes('plan')) icono = 'users';
+						if(tipoRaw.includes('mercaderia') || tipoRaw.includes('compra')) icono = 'shopping-bag';
+						if(esEgreso && !tipoRaw.includes('compra')) icono = 'arrow-down-circle';
+						if(tipoRaw.includes('compra')) icono = 'package-plus'; // Icono específico para ingreso de mercadería
 
-                    return `
-                    <tr class="viking-table-row border-b border-white/5 hover:bg-white/5 transition-colors">
-                        <!-- COL 1: FLUJO -->
-                        <td class="py-4 px-2">
-                            <span class="px-3 py-1 rounded border text-[9px] font-black uppercase tracking-wider ${flujoColor}">
-                                ${flujoTexto}
-                            </span>
-                        </td>
+						return `
+						<tr class="viking-table-row border-b border-white/5 hover:bg-white/5 transition-colors">
+							<!-- COL 1: FLUJO -->
+							<td class="py-4 px-2">
+								<span class="px-3 py-1 rounded border text-[9px] font-black uppercase tracking-wider ${flujoColor}">
+									${flujoTexto}
+								</span>
+							</td>
 
-                        <!-- COL 2: TIPO -->
-                        <td class="py-4 px-2">
-                            <span class="text-white text-[10px] font-black uppercase italic opacity-70">
-                                <i data-lucide="${icono}" class="w-3 h-3 inline mr-1 opacity-50"></i>${m.tipo}
-                            </span>
-                        </td>
+							<!-- COL 2: TIPO -->
+							<td class="py-4 px-2">
+								<span class="text-white text-[10px] font-black uppercase italic opacity-70">
+									<i data-lucide="${icono}" class="w-3 h-3 inline mr-1 opacity-50"></i>${m.tipo}
+								</span>
+							</td>
 
-                        <!-- COL 3: DESCRIPCIÓN -->
-                        <td class="py-4 px-2">
-                            <p class="text-[11px] font-bold text-white uppercase">${m.descripcion}</p>
-                            <p class="text-[9px] text-gray-500">${new Date(m.fecha).toLocaleDateString()} - ${m.metodo_pago || 'Efectivo'}</p>
-                        </td>
+							<!-- COL 3: DESCRIPCIÓN -->
+							<td class="py-4 px-2">
+								<p class="text-[11px] font-bold text-white uppercase">${m.descripcion}</p>
+								<p class="text-[9px] text-gray-500">${new Date(m.fecha).toLocaleDateString()} - ${m.metodo_pago || 'Efectivo'}</p>
+							</td>
 
-                        <!-- COL 4: MONTO -->
-                        <td class="py-4 px-2 text-right font-black italic text-white tracking-wide pr-2">
-                            $ ${monto.toLocaleString()}
-                        </td>
-                    </tr>
-                `;
-                }).join('');
-                
-                if(window.lucide) lucide.createIcons();
-                
-            } else {
-                table.innerHTML = '<tr><td colspan="4" class="text-center py-6 text-gray-500 italic text-[10px]">Sin movimientos registrados</td></tr>';
-            }
-        }
-    }
+							<!-- COL 4: MONTO -->
+							<td class="py-4 px-2 text-right font-black italic text-white tracking-wide pr-2">
+								$ ${monto.toLocaleString()}
+							</td>
+						</tr>`;
+					}).join('');
+					
+					if(window.lucide) lucide.createIcons();
+					
+				} else {
+					table.innerHTML = '<tr><td colspan="4" class="text-center py-6 text-gray-500 italic text-[10px]">Sin movimientos registrados</td></tr>';
+				}
+			}
+		}
+
+		window.loadCaja = loadCaja;
 
 		function toggleCamposCompra(tipo) {
 			const camposCompra = document.getElementById('campos-compra-mercaderia');
+			const containerDesc = document.getElementById('container-desc-gasto');
 			const descInput = document.getElementById('input-desc-gasto');
 			const productoSelect = document.getElementById('input-producto-stock');
 
 			if (tipo === 'Compra') {
 				camposCompra.classList.remove('hidden');
-				descInput.required = false;
-				document.getElementById('container-desc-gasto').classList.add('opacity-40');
+				containerDesc.classList.add('opacity-40');
+				if (descInput) descInput.required = false;
 				
-				// Llenar el selector con el stock actual
+				// Obtenemos el stock del estado global
 				if (state.stock && state.stock.length > 0) {
 					productoSelect.innerHTML = state.stock.map(p => 
-						`<option value="${p.id}">${p.nombre_producto} (S: ${p.stock_actual})</option>`
+						`<option value="${p.id}">${p.nombre_producto.toUpperCase()} (Stock: ${p.stock_actual})</option>`
 					).join('');
+				} else {
+					productoSelect.innerHTML = '<option value="">No hay productos cargados en Stock</option>';
 				}
 			} else {
-				camposCompra.classList.add('hidden');
-				descInput.required = true;
-				document.getElementById('container-desc-gasto').classList.remove('opacity-40');
+				if (camposCompra) camposCompra.classList.add('hidden');
+				if (containerDesc) containerDesc.classList.remove('opacity-40');
+				if (descInput) descInput.required = true;
 			}
 		}
-
 		async function guardarMovimiento(event) {
 			if (event && event.preventDefault) event.preventDefault();
 
@@ -2159,17 +2162,19 @@
 				const producto = state.stock.find(p => String(p.id) === String(productoId));
 				if (!producto) return alert("Producto no identificado.");
 
-				// 1. Forzamos que sea un GASTO para que reste en caja
+				// Forzamos que sea un GASTO para que reste en caja sin ambigüedades
 				tipoParaCaja = 'Gasto';
 				descripcionFinal = `COMPRA: ${producto.nombre_producto.toUpperCase()} (x${cantidadComprada} UNID)`;
 
-				// 2. Ejecutar actualización de Stock en DB
+				// 1. Ejecutar actualización de Stock en DB antes que la caja
 				try {
 					const nuevoStock = parseInt(producto.stock_actual) + cantidadComprada;
-					await apiFetch(`/stock/${productoId}`, 'PUT', {
+					const resStock = await apiFetch(`/stock/${productoId}`, 'PUT', {
 						...producto,
 						stock_actual: nuevoStock
 					});
+					
+					if (resStock.error) throw new Error(resStock.error);
 				} catch (err) {
 					console.error("Falla crítica al actualizar stock:", err);
 					return alert("Error al conectar con el inventario. El movimiento no se guardó.");
@@ -2191,13 +2196,18 @@
 					if (montoInput) montoInput.value = "";
 					if (cantInput) cantInput.value = "";
 					
-					document.getElementById('modal-gasto').classList.add('hidden');
-					document.getElementById('campos-compra-mercaderia').classList.add('hidden');
-					document.getElementById('container-desc-gasto').classList.remove('opacity-40');
+					const modal = document.getElementById('modal-gasto');
+					if (modal) modal.classList.add('hidden');
 					
-					// Recargar datos
-					if (typeof loadCaja === 'function') await loadCaja(); 
-					await loadStock(); // Refrescar stock visualmente
+					const camposCompra = document.getElementById('campos-compra-mercaderia');
+					if (camposCompra) camposCompra.classList.add('hidden');
+					
+					const containerDesc = document.getElementById('container-desc-gasto');
+					if (containerDesc) containerDesc.classList.remove('opacity-40');
+					
+					// Recargar datos sincronizados
+					await loadCaja(); 
+					await loadStock(); 
 					
 					showVikingToast('Movimiento y Stock sincronizados');
 				} else {
@@ -2208,7 +2218,10 @@
 				alert("Error de conexión al guardar movimiento.");
 			}
 		}
-
+		
+		// Exponer a global
+		window.guardarMovimiento = guardarMovimiento;
+		
         async function initApp() {
             await Promise.all([fetchAlumnos(), loadStaff(), loadPlanes(), loadStock(), loadClases(), fetchReservas(), loadDashboard(), loadMusculacionMetadata(), loadCaja()]);
         }
@@ -2874,8 +2887,12 @@
 					const stockBajo = s.stock_actual <= 5;
 					let finalImgUrl;
 
-					if (s.url_images && s.url_images.startsWith('http')) {
-						finalImgUrl = s.url_images;
+					const imgData = s.url_imagen || s.url_images || s.imagen || "";
+
+					if (imgData && imgData.startsWith('http')) {
+						finalImgUrl = imgData;
+					} else if (imgData && imgData.length > 100) {
+						finalImgUrl = imgData; 
 					} else {
 						const n = (s.nombre_producto || "").trim().split(' ');
 						const clave = n[n.length - 1].toLowerCase();
@@ -2912,6 +2929,8 @@
 			}
 			if (window.lucide) lucide.createIcons();
 		}
+
+		window.loadStock = loadStock;
 		
 		// FUNCIÓN PARA PREVISUALIZAR Y CONVERTIR A BASE64
 		function previewStockImage(event) {
@@ -3104,6 +3123,8 @@
 
 			openModal('modal-stock');
 		}
+
+		window.openEditStock = openEditStock;
 				
 		// 4. GUARDAR CAMBIOS (Vincular al onsubmit del form)
 		async function saveStockVikingo(e) {
@@ -3117,7 +3138,6 @@
 				url_imagen: document.getElementById('stock-imagen-base64').value 
 			};
 
-			// Validaciones básicas
 			if(!payload.nombre_producto) return showVikingToast("Falta el nombre", true);
 
 			const method = id ? 'PUT' : 'POST';
@@ -3129,11 +3149,13 @@
 			if(!res.error) {
 				showVikingToast(id ? "Producto Actualizado" : "Producto Registrado");
 				closeModal('modal-stock');
-				setTimeout(loadStock, 300); // Pequeño delay para asegurar que la DB escribió el Base64
+				setTimeout(loadStock, 300); 
 			} else {
 				showVikingToast("Error: " + res.error, true);
 			}
 		}
+
+		window.saveStockVikingo = saveStockVikingo;
 
         document.getElementById('form-stock').onsubmit = async (e) => {
             e.preventDefault(); const id = document.getElementById('stock-id').value;
