@@ -1120,13 +1120,12 @@
 			<div class="glass-card p-10 rounded-[3rem] w-full max-w-lg text-left border border-white/5">
 				<h3 class="text-2xl font-black uppercase italic mb-8" id="modal-stock-title">Mercadería</h3>
 				
-				<form id="form-stock" onsubmit="saveStock(event)" class="space-y-4">
+				<form id="form-stock" class="space-y-4">
 					<input type="hidden" id="stock-id">
 
 					<div class="space-y-1">
 						<p class="text-[9px] font-black text-gray-500 uppercase px-2">Nombre del Producto</p>
-						<input type="text" id="stock-nombre" placeholder="Ej: Powerade Azul" required class="viking-input"
-							oninput="const p = this.value.trim().split(' '); if(p.length > 0) { const img = p[p.length-1].toLowerCase() + '.png'; document.getElementById('stock-img-preview').src = `https://github.com/vikingo-44/Software-Gym/blob/main/imagenes/${img}?raw=true`; }">
+						<input type="text" id="stock-nombre" placeholder="Ej: Agua Mineral 500ml" required class="viking-input">
 					</div>
 
 					<div class="grid grid-cols-2 gap-4">
@@ -1139,20 +1138,6 @@
 							<input type="number" id="stock-precio" placeholder="0" required class="viking-input">
 						</div>
 					</div>
-
-					<!-- CAMPO PARA URL MANUAL (Sincronizado con NeonDB) -->
-					<div class="space-y-1">
-						<p class="text-[9px] font-black text-red-600 uppercase px-2 italic">URL de Imagen (Opcional - Prioridad 1)</p>
-						<input type="text" id="stock-url-images" placeholder="https://github.com/..." class="viking-input text-[10px]"
-							oninput="document.getElementById('stock-img-preview').src = this.value">
-					</div>
-
-					<!-- VISTA PREVIA -->
-					<div class="w-full h-32 rounded-2xl bg-zinc-950 border border-white/10 flex items-center justify-center overflow-hidden">
-						<img id="stock-img-preview" src="" class="w-full h-full object-cover" 
-							onerror="this.style.display='none'">
-					</div>
-
 					<div class="flex gap-4 pt-6">
 						<button type="button" onclick="closeModal('modal-stock')" class="flex-1 py-4 bg-white/5 rounded-2xl font-black uppercase italic text-[11px]">Cancelar</button>
 						<button type="button" id="btn-delete-stock" class="hidden py-4 px-4 bg-red-900/40 rounded-2xl font-black uppercase italic text-[11px] text-red-500">Eliminar</button>
