@@ -1994,13 +1994,13 @@
 			}
 		}
 
-		async function loadCaja() {
+		window.loadCaja = async function() {
 			const movs = await apiFetch('/caja/movimientos');
 			
 			let calcIngresos = 0;
 			let calcGastos = 0;
 
-			// 1. Encabezados Forzados (Flujo | Tipo | Descripcion | Monto)
+			// 1. Encabezados Forzados
 			const thead = document.querySelector('#view-caja table thead tr');
 			if(thead) {
 				thead.innerHTML = `
@@ -2015,11 +2015,9 @@
 				movs.forEach(m => {
 					const tipo = (m.tipo || '').toLowerCase();
 					const desc = (m.descripcion || '').toLowerCase();
-					const monto = Math.abs(parseFloat(m.monto)); // Leemos siempre positivo para calcular
+					const monto = Math.abs(parseFloat(m.monto));
 
-					// LÓGICA BLINDADA ACTUALIZADA: 
-					// Si dice mercaderia, plan, venta o cobro -> ES INGRESO (Verde)
-					// Solo es Gasto si es 'gasto', 'egreso', 'salida' o nuestra nueva 'compra' (Inversión de stock)
+					// LÓGICA DE FLUJO: 
 					const esPositivo = (tipo.includes('mercaderia') || tipo.includes('mercadería') || tipo.includes('plan') || tipo.includes('venta') || tipo.includes('cobro') || tipo.includes('ingreso')) && !tipo.includes('compra');
 					const esEgreso = !esPositivo && (tipo === 'gasto' || tipo === 'egreso' || tipo === 'salida' || tipo === 'compra');
 
@@ -2033,7 +2031,7 @@
 
 			const calcBalance = calcIngresos - calcGastos;
 
-			// Actualizar tarjetas
+			// Actualizar tarjetas de resumen
 			if(document.getElementById('caja-ingresos')) 
 				document.getElementById('caja-ingresos').innerText = `$ ${calcIngresos.toLocaleString()}`;
 			
@@ -2046,7 +2044,7 @@
 				elBalance.className = `text-3xl font-black ${calcBalance >= 0 ? 'text-white' : 'text-red-500'}`;
 			}
 
-			// Renderizar Tabla
+			// Renderizar Tabla con Iconos Completos
 			const table = document.getElementById('table-caja');
 			if(table) {
 				if(Array.isArray(movs) && movs.length > 0) {
@@ -2054,7 +2052,6 @@
 						const tipoRaw = (m.tipo || '').toLowerCase();
 						const monto = Math.abs(parseFloat(m.monto));
 
-						// Misma lógica de detección visual
 						const esPositivo = (tipoRaw.includes('mercaderia') || tipoRaw.includes('mercadería') || tipoRaw.includes('plan') || tipoRaw.includes('venta') || tipoRaw.includes('cobro') || tipoRaw.includes('ingreso')) && !tipoRaw.includes('compra');
 						const esEgreso = !esPositivo && (tipoRaw === 'gasto' || tipoRaw === 'egreso' || tipoRaw === 'salida' || tipoRaw === 'compra');
 						
@@ -2063,36 +2060,29 @@
 							? 'bg-red-500/10 text-red-500 border-red-500/20' 
 							: 'bg-green-500/10 text-green-500 border-green-500/20';
 
-						// Icono según tipo real
+						// Lógica de Iconos completa
 						let icono = 'tag';
 						if(tipoRaw.includes('plan')) icono = 'users';
 						if(tipoRaw.includes('mercaderia') || tipoRaw.includes('compra')) icono = 'shopping-bag';
 						if(esEgreso && !tipoRaw.includes('compra')) icono = 'arrow-down-circle';
-						if(tipoRaw.includes('compra')) icono = 'package-plus'; // Icono específico para ingreso de mercadería
+						if(tipoRaw.includes('compra')) icono = 'package-plus';
 
 						return `
 						<tr class="viking-table-row border-b border-white/5 hover:bg-white/5 transition-colors">
-							<!-- COL 1: FLUJO -->
 							<td class="py-4 px-2">
 								<span class="px-3 py-1 rounded border text-[9px] font-black uppercase tracking-wider ${flujoColor}">
 									${flujoTexto}
 								</span>
 							</td>
-
-							<!-- COL 2: TIPO -->
 							<td class="py-4 px-2">
 								<span class="text-white text-[10px] font-black uppercase italic opacity-70">
 									<i data-lucide="${icono}" class="w-3 h-3 inline mr-1 opacity-50"></i>${m.tipo}
 								</span>
 							</td>
-
-							<!-- COL 3: DESCRIPCIÓN -->
 							<td class="py-4 px-2">
 								<p class="text-[11px] font-bold text-white uppercase">${m.descripcion}</p>
 								<p class="text-[9px] text-gray-500">${new Date(m.fecha).toLocaleDateString()} - ${m.metodo_pago || 'Efectivo'}</p>
 							</td>
-
-							<!-- COL 4: MONTO -->
 							<td class="py-4 px-2 text-right font-black italic text-white tracking-wide pr-2">
 								$ ${monto.toLocaleString()}
 							</td>
@@ -2105,10 +2095,9 @@
 					table.innerHTML = '<tr><td colspan="4" class="text-center py-6 text-gray-500 italic text-[10px]">Sin movimientos registrados</td></tr>';
 				}
 			}
-		}
-		window.loadCaja = loadCaja;
+		};
 
-		function toggleCamposCompra(tipo) {
+		window.toggleCamposCompra = function(tipo) {
 			const camposCompra = document.getElementById('campos-compra-mercaderia');
 			const containerDesc = document.getElementById('container-desc-gasto');
 			const descInput = document.getElementById('input-desc-gasto');
@@ -2119,9 +2108,11 @@
 				if (containerDesc) containerDesc.classList.add('opacity-40');
 				if (descInput) descInput.required = false;
 				
-				// Cargamos los productos desde el estado global
-				if (state.stock && state.stock.length > 0) {
-					productoSelect.innerHTML = state.stock.map(p => 
+				// Obtenemos el stock del estado global
+				const currentStock = (window.state && window.state.stock) || (typeof state !== 'undefined' ? state.stock : []);
+
+				if (currentStock && Array.isArray(currentStock) && currentStock.length > 0) {
+					productoSelect.innerHTML = currentStock.map(p => 
 						`<option value="${p.id}">${p.nombre_producto.toUpperCase()} (Stock: ${p.stock_actual})</option>`
 					).join('');
 				} else {
@@ -2132,10 +2123,9 @@
 				if (containerDesc) containerDesc.classList.remove('opacity-40');
 				if (descInput) descInput.required = true;
 			}
-		}
-		window.toggleCamposCompra = toggleCamposCompra;
+		};
 
-		async function guardarMovimiento(event) {
+		window.guardarMovimiento = async function(event) {
 			if (event && event.preventDefault) event.preventDefault();
 
 			const descInput = document.getElementById('input-desc-gasto');
@@ -2159,16 +2149,16 @@
 					return alert("Selecciona un producto y cantidad válida.");
 				}
 
-				const producto = state.stock.find(p => String(p.id) === String(productoId));
+				const currentStock = (window.state && window.state.stock) || (typeof state !== 'undefined' ? state.stock : []);
+				const producto = currentStock.find(p => String(p.id) === String(productoId));
+				
 				if (!producto) return alert("Producto no identificado.");
 
-				// La descripción se genera automática para el registro
 				descripcionFinal = `COMPRA: ${producto.nombre_producto.toUpperCase()} (x${cantidadAñadir} UNID)`;
 
-				// 1. ACTUALIZAR STOCK EN EL SERVIDOR (SUMA)
+				// 1. ACTUALIZAR STOCK EN EL SERVIDOR
 				try {
 					const nuevoStock = parseInt(producto.stock_actual) + cantidadAñadir;
-					// IMPORTANTE: Respetamos los campos de tu DB (url_images)
 					const resStock = await apiFetch(`/stock/${productoId}`, 'PUT', {
 						...producto,
 						stock_actual: nuevoStock
@@ -2183,8 +2173,6 @@
 
 			// --- 2. REGISTRO EN CAJA ---
 			try {
-				// Enviamos tipoSeleccionado tal cual ('Compra', 'Ingreso' o 'Gasto')
-				// Tu loadCaja se encarga de restar si es 'Compra'
 				const res = await apiFetch('/caja/movimientos', 'POST', {
 					tipo: tipoSeleccionado, 
 					descripcion: descripcionFinal,
@@ -2193,7 +2181,6 @@
 				});
 
 				if (!res.error) {
-					// Limpiar campos
 					if (descInput) descInput.value = "";
 					if (montoInput) montoInput.value = "";
 					if (cantInput) cantInput.value = "";
@@ -2201,9 +2188,9 @@
 					const modal = document.getElementById('modal-gasto');
 					if (modal) modal.classList.add('hidden');
 					
-					// Recargar datos para ver los cambios reflejados
-					await loadCaja(); 
-					await loadStock(); 
+					// Recargar datos
+					await window.loadCaja(); 
+					if (typeof loadStock === 'function') await loadStock(); 
 					
 					if (typeof showVikingToast === 'function') showVikingToast('Caja y Stock actualizados');
 				} else {
@@ -2213,8 +2200,7 @@
 				console.error(e);
 				alert("Error de conexión al guardar.");
 			}
-		}
-		window.guardarMovimiento = guardarMovimiento;
+		};
 		
         async function initApp() {
             await Promise.all([fetchAlumnos(), loadStaff(), loadPlanes(), loadStock(), loadClases(), fetchReservas(), loadDashboard(), loadMusculacionMetadata(), loadCaja()]);

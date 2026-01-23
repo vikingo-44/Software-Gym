@@ -1045,9 +1045,9 @@
         </div>
     </div>
 
-    <!-- 2. EL MODAL NUEVO (Reemplaza al viejo 'modal-movimiento') -->
+    <!-- REEMPLAZA TU DIV "modal-gasto" POR ESTE COMPLETO Y FUNCIONAL -->
 		<div id="modal-gasto" class="fixed inset-0 bg-black/80 hidden flex items-center justify-center z-50 backdrop-blur-sm animate-fade-in">
-			<div class="glass-panel p-6 rounded-xl w-full max-w-sm mx-4 relative border border-white/10 shadow-2xl">
+			<div class="glass-panel p-6 rounded-xl w-full max-w-sm mx-4 relative border border-white/10 shadow-2xl bg-zinc-950">
 				
 				<!-- Botón Cerrar (X) -->
 				<button type="button" onclick="document.getElementById('modal-gasto').classList.add('hidden')" 
@@ -1059,7 +1059,6 @@
 					NUEVO <span class="text-red-600">MOVIMIENTO</span>
 				</h3>
 				
-				<!-- FORMULARIO - Llamamos a la función global -->
 				<form onsubmit="window.guardarMovimiento(event)">
 					<div class="space-y-4">
 						
@@ -1075,16 +1074,16 @@
 							</select>
 						</div>
 
-						<!-- SECCIÓN COMPRA DE MERCADERÍA (Visible solo si se elige 'Compra') -->
+						<!-- SECCIÓN COMPRA DE MERCADERÍA -->
 						<div id="campos-compra-mercaderia" class="hidden space-y-4 p-3 bg-red-600/5 rounded-xl border border-red-600/10">
 							<div>
 								<label class="block text-[10px] font-bold uppercase text-red-500 mb-1">Seleccionar Producto</label>
 								<select id="input-producto-stock" class="viking-input w-full p-3 rounded text-xs font-bold text-white bg-black/50 border border-white/10">
-									<!-- Se llena dinámicamente mediante JS -->
+									<!-- Se llena vía JS -->
 								</select>
 							</div>
 							<div>
-								<label class="block text-[10px] font-bold uppercase text-red-500 mb-1">Cantidad comprada</label>
+								<label class="block text-[10px] font-bold uppercase text-red-500 mb-1">Cantidad a sumar al Stock</label>
 								<input type="number" id="input-cantidad-compra" class="viking-input w-full p-3 rounded text-xs font-bold text-white bg-black/50 border border-white/10" placeholder="0">
 							</div>
 						</div>
@@ -1313,38 +1312,6 @@
 
 	<!-- Script fuera para que tome la lista de alumnos -->
 	<script src="https://cdn.jsdelivr.net/gh/vikingo-44/Software-Gym/script.js"></script>
-
-	<script>
-		/**
-		 * Lógica interna del Modal de Caja
-		 */
-		function toggleCamposCompra(tipo) {
-			const camposCompra = document.getElementById('campos-compra-mercaderia');
-			const containerDesc = document.getElementById('container-desc-gasto');
-			const descInput = document.getElementById('input-desc-gasto');
-			const productoSelect = document.getElementById('input-producto-stock');
-
-			if (tipo === 'Compra') {
-				camposCompra.classList.remove('hidden');
-				containerDesc.classList.add('opacity-40');
-				descInput.required = false;
-				
-				const currentStock = (window.state && window.state.stock) || (typeof state !== 'undefined' && state.stock);
-
-				if (currentStock && Array.isArray(currentStock) && currentStock.length > 0) {
-					productoSelect.innerHTML = currentStock.map(p => 
-						`<option value="${p.id}">${p.nombre_producto.toUpperCase()} (Stock: ${p.stock_actual})</option>`
-					).join('');
-				} else {
-					productoSelect.innerHTML = '<option value="">No hay productos cargados en Stock</option>';
-				}
-			} else {
-				camposCompra.classList.add('hidden');
-				containerDesc.classList.remove('opacity-40');
-				descInput.required = true;
-			}
-		}
-	</script>
 
 </body>
 </html>
