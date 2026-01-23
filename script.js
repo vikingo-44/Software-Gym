@@ -2106,7 +2106,6 @@
 				}
 			}
 		}
-
 		window.loadCaja = loadCaja;
 
 		function toggleCamposCompra(tipo) {
@@ -2116,11 +2115,11 @@
 			const productoSelect = document.getElementById('input-producto-stock');
 
 			if (tipo === 'Compra') {
-				camposCompra.classList.remove('hidden');
-				containerDesc.classList.add('opacity-40');
+				if (camposCompra) camposCompra.classList.remove('hidden');
+				if (containerDesc) containerDesc.classList.add('opacity-40');
 				if (descInput) descInput.required = false;
 				
-				// Cargamos los productos desde state.stock
+				// Cargamos los productos desde el estado global
 				if (state.stock && state.stock.length > 0) {
 					productoSelect.innerHTML = state.stock.map(p => 
 						`<option value="${p.id}">${p.nombre_producto.toUpperCase()} (Stock: ${p.stock_actual})</option>`
@@ -2134,8 +2133,6 @@
 				if (descInput) descInput.required = true;
 			}
 		}
-
-		// ESTO ES LO QUE HACE QUE EL HTML VEA LA FUNCIÓN
 		window.toggleCamposCompra = toggleCamposCompra;
 
 		async function guardarMovimiento(event) {
@@ -2150,11 +2147,10 @@
 			const monto = parseFloat(montoInput?.value) || 0;
 			const tipoSeleccionado = tipoInput ? tipoInput.value : 'Ingreso';
 			let descripcionFinal = descInput?.value || 'Varios';
-			let tipoParaCaja = tipoSeleccionado;
 
 			if (monto <= 0) return alert("El monto debe ser mayor a 0");
 
-			// --- SI ES COMPRA: ACTUALIZAMOS STOCK Y FORZAMOS GASTO ---
+			// --- LÓGICA DE COMPRA: ACTUALIZAMOS STOCK ---
 			if (tipoSeleccionado === 'Compra') {
 				const productoId = prodSelect.value;
 				const cantidadAñadir = parseInt(cantInput.value) || 0;
@@ -2166,13 +2162,13 @@
 				const producto = state.stock.find(p => String(p.id) === String(productoId));
 				if (!producto) return alert("Producto no identificado.");
 
-				// Forzamos que para la caja sea 'Gasto' (para que reste)
-				tipoParaCaja = 'Gasto';
+				// La descripción se genera automática para el registro
 				descripcionFinal = `COMPRA: ${producto.nombre_producto.toUpperCase()} (x${cantidadAñadir} UNID)`;
 
-				// 1. ACTUALIZAR STOCK EN EL SERVIDOR
+				// 1. ACTUALIZAR STOCK EN EL SERVIDOR (SUMA)
 				try {
 					const nuevoStock = parseInt(producto.stock_actual) + cantidadAñadir;
+					// IMPORTANTE: Respetamos los campos de tu DB (url_images)
 					const resStock = await apiFetch(`/stock/${productoId}`, 'PUT', {
 						...producto,
 						stock_actual: nuevoStock
@@ -2187,38 +2183,37 @@
 
 			// --- 2. REGISTRO EN CAJA ---
 			try {
+				// Enviamos tipoSeleccionado tal cual ('Compra', 'Ingreso' o 'Gasto')
+				// Tu loadCaja se encarga de restar si es 'Compra'
 				const res = await apiFetch('/caja/movimientos', 'POST', {
-					tipo: tipoParaCaja, 
+					tipo: tipoSeleccionado, 
 					descripcion: descripcionFinal,
 					monto: monto,
 					metodo_pago: 'Efectivo' 
 				});
 
 				if (!res.error) {
-					// Limpiar todo
+					// Limpiar campos
 					if (descInput) descInput.value = "";
 					if (montoInput) montoInput.value = "";
 					if (cantInput) cantInput.value = "";
-					document.getElementById('modal-gasto').classList.add('hidden');
 					
-					// Recargar datos
+					const modal = document.getElementById('modal-gasto');
+					if (modal) modal.classList.add('hidden');
+					
+					// Recargar datos para ver los cambios reflejados
 					await loadCaja(); 
 					await loadStock(); 
 					
-					showVikingToast('Caja y Stock actualizados correctamente');
+					if (typeof showVikingToast === 'function') showVikingToast('Caja y Stock actualizados');
 				} else {
 					alert("Error: " + res.error);
 				}
 			} catch (e) {
 				console.error(e);
-				alert("Error de conexión.");
+				alert("Error de conexión al guardar.");
 			}
 		}
-
-		// OBLIGATORIO PARA QUE EL FORMULARIO FUNCIONE
-		window.guardarMovimiento = guardarMovimiento;
-		
-		// Exponer a global
 		window.guardarMovimiento = guardarMovimiento;
 		
         async function initApp() {
