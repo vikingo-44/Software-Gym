@@ -1994,6 +1994,37 @@
 			}
 		}
 
+		/**
+		 * Lógica interna del Modal de Caja
+		 * Maneja la visualización de campos de compra y la carga de stock
+		 */
+		function toggleCamposCompra(tipo) {
+			const camposCompra = document.getElementById('campos-compra-mercaderia');
+			const containerDesc = document.getElementById('container-desc-gasto');
+			const descInput = document.getElementById('input-desc-gasto');
+			const productoSelect = document.getElementById('input-producto-stock');
+
+			if (tipo === 'Compra') {
+				// Mostrar campos de stock y atenuar descripción manual
+				camposCompra.classList.remove('hidden');
+				containerDesc.classList.add('opacity-40');
+				descInput.required = false;
+				
+				// Llenar el desplegable con lo que hay cargado en el sistema (state.stock)
+				if (window.state && window.state.stock && window.state.stock.length > 0) {
+					productoSelect.innerHTML = window.state.stock.map(p => 
+						`<option value="${p.id}">${p.nombre_producto} (Stock Actual: ${p.stock_actual})</option>`
+					).join('');
+				} else {
+					productoSelect.innerHTML = '<option value="">No hay productos cargados</option>';
+				}
+			} else {
+				// Volver al modo normal
+				camposCompra.classList.add('hidden');
+				containerDesc.classList.remove('opacity-40');
+				descInput.required = true;
+			}
+		}
 
 	async function loadCaja() {
         const movs = await apiFetch('/caja/movimientos');

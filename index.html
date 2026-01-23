@@ -1063,24 +1063,24 @@
 				<form onsubmit="guardarMovimiento(event)">
 					<div class="space-y-4">
 						
-						<!-- Selector Tipo (AHORA INGRESO ES EL PRIMERO Y DEFAULT) -->
+						<!-- Selector Tipo -->
 						<div>
 							<label class="block text-[10px] font-bold uppercase text-gray-400 mb-1">Tipo de Movimiento</label>
 							<select id="input-tipo-movimiento" 
 									onchange="toggleCamposCompra(this.value)"
 									class="viking-input w-full p-3 rounded text-xs font-bold text-white bg-black/50 border border-white/10 focus:border-red-600 transition-colors">
 								<option value="Ingreso" selected>INGRESO (Venta, Cuota, etc.)</option>
-								<option value="Gasto">EGRESO (Pago, Gasto General)</option>
+								<option value="Gasto">EGRESO (Gasto General, Pago)</option>
 								<option value="Compra">COMPRA DE MERCADERÍA (Actualiza Stock)</option>
 							</select>
 						</div>
 
-						<!-- SECCIÓN ESPECIAL: COMPRA DE MERCADERÍA (Se activa con JS) -->
+						<!-- SECCIÓN COMPRA DE MERCADERÍA (Visible solo si se elige 'Compra') -->
 						<div id="campos-compra-mercaderia" class="hidden space-y-4 p-3 bg-red-600/5 rounded-xl border border-red-600/10">
 							<div>
 								<label class="block text-[10px] font-bold uppercase text-red-500 mb-1">Seleccionar Producto</label>
 								<select id="input-producto-stock" class="viking-input w-full p-3 rounded text-xs font-bold text-white bg-black/50 border border-white/10">
-									<!-- Se llena dinámicamente con state.stock -->
+									<!-- Se llena dinámicamente mediante JS -->
 								</select>
 							</div>
 							<div>
