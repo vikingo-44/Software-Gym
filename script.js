@@ -2186,7 +2186,9 @@
                     // Sincronizamos con el campo 'estado' que el main.py devuelve (que viene de 'accion' en la DB)
                     const isDenied = acc.estado === 'DENIED' || acc.estado === 'DENEGADO';
                     const colorClass = isDenied ? 'text-red-500 bg-red-500/10 border-red-500/20' : 'text-blue-500 bg-blue-500/10 border-blue-500/20';
-                    const hora = acc.fecha ? acc.fecha.split(' - ')[0] : 'Ahora';
+                    
+                    // AGREGADO: Se muestra la fecha completa (Hora • Fecha)
+                    const fechaCompleta = acc.fecha ? acc.fecha.replace(' - ', ' • ') : 'Ahora';
 
                     return `
                         <div class="flex justify-between items-center p-3 bg-white/5 rounded-2xl border border-white/5 hover:bg-white/10 transition-colors group">
@@ -2196,7 +2198,7 @@
                                 </div>
                                 <div>
                                     <p class="text-[10px] font-black uppercase italic text-white group-hover:text-blue-400 truncate max-w-[120px]">${acc.nombre}</p>
-                                    <p class="text-[8px] text-gray-500 font-bold">${hora} • ${acc.metodo || 'QR'}</p>
+                                    <p class="text-[8px] text-gray-500 font-bold">${fechaCompleta} • ${acc.metodo || 'QR'}</p>
                                 </div>
                             </div>
                             <span class="text-[9px] px-2 py-1 rounded-md font-black uppercase italic ${colorClass}">${isDenied ? 'DENEGADO' : 'PERMITIDO'}</span>
@@ -2215,7 +2217,11 @@
                 });
 
                 staffContainer.innerHTML = staffLog.length ? staffLog.slice(0, 10).map(acc => {
-                    const hora = acc.fecha ? acc.fecha.split(' - ')[0] : 'Ahora';
+                    // AGREGADO: Se muestra la fecha completa (Hora y Fecha debajo)
+                    const partesFecha = acc.fecha ? acc.fecha.split(' - ') : ['Ahora', ''];
+                    const hora = partesFecha[0];
+                    const fecha = partesFecha[1] || '';
+
                     return `
                         <div class="flex items-center justify-between p-3 bg-red-600/[0.05] rounded-2xl border border-red-600/10 hover:border-red-600/30 transition-all">
                             <div class="flex items-center gap-3">
@@ -2228,8 +2234,8 @@
                                 </div>
                             </div>
                             <div class="text-right">
-                                <p class="text-[9px] font-black text-white">${hora}</p>
-                                <p class="text-[8px] font-bold text-gray-500 uppercase tracking-tighter">PRESENTE</p>
+                                <p class="text-[9px] font-black text-white leading-none">${hora}hs</p>
+                                <p class="text-[7px] font-black text-red-500/50 uppercase mt-1">${fecha}</p>
                             </div>
                         </div>
                     `;
