@@ -2132,9 +2132,8 @@
 		}
 
 		async function guardarMovimiento(event) {
-			event.preventDefault(); // Evita recarga
+			event.preventDefault();
 
-			// 1. Capturar Inputs
 			const descInput = document.getElementById('input-desc-gasto');
 			const montoInput = document.getElementById('input-monto-gasto');
 			const tipoInput = document.getElementById('input-tipo-movimiento');
@@ -2145,69 +2144,70 @@
 			const tipo = tipoInput ? tipoInput.value : 'Ingreso';
 			let descripcion = descInput?.value || 'Varios';
 
-			if(monto <= 0) return alert("El monto debe ser mayor a 0");
+			if (monto <= 0) return alert("El monto debe ser mayor a 0");
 
-			// 2. Lógica Especial para Compra de Mercadería
+			// --- LÓGICA DE COMPRA (ACTUALIZACIÓN DE STOCK Y GASTO) ---
 			if (tipo === 'Compra') {
 				const productoId = prodSelect.value;
 				const cantidadAñadir = parseInt(cantInput.value) || 0;
 
-				if (cantidadAñadir <= 0) return alert("Debes ingresar una cantidad válida");
+				if (!productoId || cantidadAñadir <= 0) {
+					return alert("Selecciona un producto y una cantidad válida");
+				}
 
-				// Buscamos el producto en el estado para armar la descripción y calcular nuevo stock
-				const producto = state.stock.find(p => p.id == productoId);
-				if (!producto) return alert("Producto no encontrado");
+				// Buscar producto en el estado global
+				const listado = (window.state && window.state.stock) || (typeof state !== 'undefined' && state.stock);
+				const producto = listado.find(p => String(p.id) === String(productoId));
 
-				descripcion = `COMPRA: ${producto.nombre_producto} (x${cantidadAñadir} unidades)`;
+				if (!producto) return alert("Producto no encontrado en el sistema.");
 
+				// 1. Actualizar Stock primero (Aumento por compra)
 				try {
-					// Actualizamos el Stock en la DB
-					const nuevoStock = parseInt(producto.stock_actual) + cantidadAñadir;
+					const nuevoStockTotal = parseInt(producto.stock_actual) + cantidadAñadir;
 					await apiFetch(`/stock/${productoId}`, 'PUT', {
 						...producto,
-						stock_actual: nuevoStock
+						stock_actual: nuevoStockTotal
 					});
 					
-					if(typeof showVikingToast === 'function') showVikingToast(`Stock de ${producto.nombre_producto} actualizado (+${cantidadAñadir})`);
-				} catch (e) {
-					console.error("Error al actualizar stock:", e);
-					return alert("Error al actualizar el stock. El movimiento de caja no se guardó.");
+					// Generamos la descripción automática para que sepas qué compraste
+					descripcion = `COMPRA: ${producto.nombre_producto} (x${cantidadAñadir} unidades)`;
+				} catch (err) {
+					console.error("Error actualizando stock:", err);
+					return alert("Falla al actualizar el stock. No se registrará el gasto.");
 				}
 			}
 
-			// 3. Enviar al Backend (Movimiento de Caja)
+			// 2. Enviar a Caja
 			try {
-				// Si es "Compra", lo enviamos como un "Gasto" al backend para mantener consistencia contable
-				const tipoFinal = (tipo === 'Compra') ? 'Gasto' : tipo;
+				// IMPORTANTE: Si es "Compra", el tipo para el backend debe ser "Gasto" o "Egreso" para que reste.
+				const tipoContable = (tipo === 'Compra') ? 'Gasto' : tipo;
 
 				const res = await apiFetch('/caja/movimientos', 'POST', {
-					tipo: tipoFinal, 
+					tipo: tipoContable, 
 					descripcion: descripcion,
 					monto: monto,
 					metodo_pago: 'Efectivo' 
 				});
 
-				if(!res.error) {
-					// 4. LIMPIEZA BLINDADA
-					if(descInput) descInput.value = "";
-					if(montoInput) montoInput.value = "";
-					if(cantInput) cantInput.value = "";
+				if (!res.error) {
+					// Limpieza
+					if (descInput) descInput.value = "";
+					if (montoInput) montoInput.value = "";
+					if (cantInput) cantInput.value = "";
 					
-					// Cerrar modal y recargar todo
 					document.getElementById('modal-gasto').classList.add('hidden');
-					document.getElementById('campos-compra-mercaderia').classList.add('hidden');
-					document.getElementById('container-desc-gasto').classList.remove('opacity-40');
 					
-					await loadCaja(); 
-					if(typeof loadStock === 'function') await loadStock(); // Refrescar vista de stock
+					// Refrescar vistas
+					if (typeof loadCaja === 'function') await loadCaja(); 
+					if (typeof loadStock === 'function') await loadStock(); 
 					
-					if(typeof showVikingToast === 'function') showVikingToast('Movimiento registrado correctamente');
+					showVikingToast('Movimiento y Stock sincronizados');
 				} else {
-					alert("Error del servidor: " + (res.detail || res.error || "Revisa el servidor"));
+					alert("Error: " + (res.error || "No se pudo guardar"));
 				}
 			} catch (e) {
 				console.error(e);
-				alert("Error de conexión al guardar.");
+				alert("Error de conexión.");
 			}
 		}
 

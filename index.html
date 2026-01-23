@@ -1317,7 +1317,6 @@
 	<script>
 		/**
 		 * Lógica interna del Modal de Caja
-		 * Maneja la visualización de campos de compra y la carga de stock
 		 */
 		function toggleCamposCompra(tipo) {
 			const camposCompra = document.getElementById('campos-compra-mercaderia');
@@ -1326,12 +1325,10 @@
 			const productoSelect = document.getElementById('input-producto-stock');
 
 			if (tipo === 'Compra') {
-				// Mostrar campos de stock y atenuar descripción manual
 				camposCompra.classList.remove('hidden');
 				containerDesc.classList.add('opacity-40');
 				descInput.required = false;
 				
-				// Intentar obtener el stock del estado global (probando varias referencias comunes)
 				const currentStock = (window.state && window.state.stock) || (typeof state !== 'undefined' && state.stock);
 
 				if (currentStock && Array.isArray(currentStock) && currentStock.length > 0) {
@@ -1340,10 +1337,8 @@
 					).join('');
 				} else {
 					productoSelect.innerHTML = '<option value="">No hay productos cargados en Stock</option>';
-					console.warn("Viking Check: No se detectó stock en la variable global 'state'.");
 				}
 			} else {
-				// Volver al modo normal
 				camposCompra.classList.add('hidden');
 				containerDesc.classList.remove('opacity-40');
 				descInput.required = true;
