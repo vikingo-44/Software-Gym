@@ -2779,60 +2779,75 @@
 		 * RENDERIZADO DE STOCK CON IMÁGENES (PUNTO 5)
 		 */
 		async function loadStock() {
-			try {
-				const data = await apiFetch('/stock');
-				state.stock = Array.isArray(data) ? data : [];
+			const data = await apiFetch('/stock');
+			state.stock = Array.isArray(data) ? data : [];
 
-				const container = document.getElementById('stock-container');
-				if (!container) return;
+			const container = document.getElementById('stock-container');
+			if (!container) return;
 
-				if (state.stock.length === 0) {
-					container.innerHTML = `
-						<div class="col-span-full py-20 text-center opacity-20">
-							<i data-lucide="package-x" class="w-16 h-16 mx-auto mb-4"></i>
-							<p class="font-black uppercase italic tracking-widest">El Valhalla no tiene provisiones</p>
-						</div>`;
-				} else {
-					container.innerHTML = state.stock.map(s => {
-						const stockBajo = s.stock_actual <= 5;
-						
-						// LÓGICA AUTOMÁTICA SEGURA
-						const nombreSeguro = (s.nombre_producto || "item").trim();
-						const partes = nombreSeguro.split(' ');
-						const palabraClave = partes[partes.length - 1].toLowerCase();
-						const imgUrl = `https://github.com/vikingo-44/Software-Gym/blob/main/imagenes/${palabraClave}.png?raw=true`;
-
-						return `
-						<div class="glass-card p-4 rounded-[2.5rem] border-white/5 flex flex-col gap-4 hover:border-red-600/30 transition-all group relative overflow-hidden shadow-xl">
-							<div class="w-full h-40 rounded-[1.8rem] overflow-hidden bg-black/40 relative">
-								<img src="${imgUrl}" 
-									class="w-full h-full object-cover opacity-70 group-hover:opacity-100 transition-all duration-700"
-									onerror="this.parentElement.innerHTML = '<div class=\'w-full h-full flex items-center justify-center bg-zinc-900 text-zinc-700 text-[10px] font-black uppercase italic\'>${palabraClave}.png no encontrada</div>'">
-								<div class="absolute top-3 right-3 bg-black/70 backdrop-blur-xl px-3 py-1.5 rounded-xl border border-white/10 text-[11px] font-black text-white italic">
-									$${s.precio_venta}
-								</div>
+			if (state.stock.length === 0) {
+				container.innerHTML = `
+					<div class="col-span-full py-20 text-center opacity-20">
+						<i data-lucide="package-x" class="w-16 h-16 mx-auto mb-4"></i>
+						<p class="font-black uppercase italic tracking-widest">Il-Valhalla m'għandux provvisti</p>
+					</div>`;
+			} else {
+				container.innerHTML = state.stock.map(s => {
+					const stockBajo = s.stock_actual <= 5;
+					
+					// LOĠIKA TA' STAMPA:
+					// 1. Prijorità: URL f'NeonDB (s.url_images)
+					// 2. Backup: Ġenerazzjoni awtomatika minn GitHub bl-isem tal-prodott
+					// 3. Fallback: Placeholder jekk kollox ifalli
+					
+					let finalImgUrl;
+					
+					if (s.url_images && s.url_images.startsWith('http')) {
+						// Jekk hemm URL valida fid-database, nużawha
+						finalImgUrl = s.url_images;
+					} else {
+						// Jekk le, nużaw il-link ta' GitHub ibbażat fuq l-isem
+						const n = (item.nombre_producto || item.nombre_plan || "").trim().split(' ');
+						const clave = n[n.length - 1].toLowerCase();
+						const imgUrl = `https://github.com/vikingo-44/Software-Gym/blob/main/imagenes/${clave}.png?raw=true`;
+					}
+					
+					return `
+					<div class="glass-card p-4 rounded-[2.5rem] border-white/5 flex flex-col gap-4 hover:border-red-600/30 transition-all group relative overflow-hidden shadow-xl">
+						<!-- Ritratt tal-Prodott -->
+						<div class="w-full h-40 rounded-[1.8rem] overflow-hidden bg-black/40 relative">
+							<img src="${finalImgUrl}" 
+								class="w-full h-full object-cover opacity-70 group-hover:opacity-100 transition-all duration-700"
+								onerror="this.src='https://via.placeholder.com/400x300/111/333?text=${s.nombre_producto}'">
+							
+							<div class="absolute top-3 right-3 bg-black/70 backdrop-blur-xl px-3 py-1.5 rounded-xl border border-white/10 text-[11px] font-black text-white italic">
+								$${s.precio_venta}
 							</div>
-							<div class="px-2 pb-2">
-								<h4 class="text-[13px] font-black uppercase italic text-white truncate mb-3 tracking-tight">${s.nombre_producto}</h4>
-								<div class="flex items-center justify-between">
-									<div class="flex flex-col">
-										<span class="text-[8px] text-gray-500 font-black uppercase tracking-widest leading-none mb-1">Existencias</span>
-										<span class="text-sm font-black italic ${stockBajo ? 'text-red-500 animate-pulse' : 'text-white'}">
-											${s.stock_actual} <span class="text-[9px] opacity-40 uppercase">unid.</span>
-										</span>
-									</div>
-									<button onclick="openEditStock(${s.id})" class="w-10 h-10 grid place-items-center bg-white/5 rounded-xl border border-white/5 text-gray-400 hover:bg-red-600 hover:text-black transition-all p-0">
-										<i data-lucide="edit-3" class="w-5 h-5"></i>
-									</button>
+						</div>
+
+						<!-- Detalji u Buttuna ta' Editjar -->
+						<div class="px-2 pb-2">
+							<h4 class="text-[13px] font-black uppercase italic text-white truncate mb-3 tracking-tight">${s.nombre_producto}</h4>
+							<div class="flex items-center justify-between">
+								<div class="flex flex-col">
+									<span class="text-[8px] text-gray-500 font-black uppercase tracking-widest leading-none mb-1">Stokk disponibbli</span>
+									<span class="text-sm font-black italic ${stockBajo ? 'text-red-500 animate-pulse' : 'text-white'}">
+										${s.stock_actual} <span class="text-[9px] opacity-40 uppercase">unitajiet</span>
+									</span>
 								</div>
+								
+								<button onclick="openEditStock(${s.id})" 
+										title="Edittja l-Prodott"
+										class="w-10 h-10 grid place-items-center bg-white/5 rounded-xl border border-white/5 text-gray-400 hover:bg-red-600 hover:text-black hover:scale-110 transition-all action-col p-0">
+									<i data-lucide="edit-3" class="w-5 h-5"></i>
+								</button>
 							</div>
-						</div>`;
-					}).join('');
-				}
-				if (window.lucide) lucide.createIcons();
-			} catch (error) {
-				console.error("Error cargando stock:", error);
+						</div>
+					</div>`;
+				}).join('');
 			}
+			if (window.lucide) lucide.createIcons();
+			if (typeof applyPermissions === 'function') applyPermissions();
 		}
 		
 		// FUNCIÓN PARA PREVISUALIZAR Y CONVERTIR A BASE64
