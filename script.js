@@ -2120,7 +2120,7 @@
 				containerDesc.classList.add('opacity-40');
 				if (descInput) descInput.required = false;
 				
-				// Obtenemos el stock del estado global
+				// Cargamos los productos desde state.stock
 				if (state.stock && state.stock.length > 0) {
 					productoSelect.innerHTML = state.stock.map(p => 
 						`<option value="${p.id}">${p.nombre_producto.toUpperCase()} (Stock: ${p.stock_actual})</option>`
@@ -2134,6 +2134,10 @@
 				if (descInput) descInput.required = true;
 			}
 		}
+
+		// ESTO ES LO QUE HACE QUE EL HTML VEA LA FUNCIÓN
+		window.toggleCamposCompra = toggleCamposCompra;
+
 		async function guardarMovimiento(event) {
 			if (event && event.preventDefault) event.preventDefault();
 
@@ -2150,25 +2154,25 @@
 
 			if (monto <= 0) return alert("El monto debe ser mayor a 0");
 
-			// --- LÓGICA DE COMPRA (ACTUALIZACIÓN DE STOCK) ---
+			// --- SI ES COMPRA: ACTUALIZAMOS STOCK Y FORZAMOS GASTO ---
 			if (tipoSeleccionado === 'Compra') {
 				const productoId = prodSelect.value;
-				const cantidadComprada = parseInt(cantInput.value) || 0;
+				const cantidadAñadir = parseInt(cantInput.value) || 0;
 
-				if (!productoId || cantidadComprada <= 0) {
-					return alert("Selecciona un producto y cantidad válida para la compra.");
+				if (!productoId || cantidadAñadir <= 0) {
+					return alert("Selecciona un producto y cantidad válida.");
 				}
 
 				const producto = state.stock.find(p => String(p.id) === String(productoId));
 				if (!producto) return alert("Producto no identificado.");
 
-				// Forzamos que sea un GASTO para que reste en caja sin ambigüedades
+				// Forzamos que para la caja sea 'Gasto' (para que reste)
 				tipoParaCaja = 'Gasto';
-				descripcionFinal = `COMPRA: ${producto.nombre_producto.toUpperCase()} (x${cantidadComprada} UNID)`;
+				descripcionFinal = `COMPRA: ${producto.nombre_producto.toUpperCase()} (x${cantidadAñadir} UNID)`;
 
-				// 1. Ejecutar actualización de Stock en DB antes que la caja
+				// 1. ACTUALIZAR STOCK EN EL SERVIDOR
 				try {
-					const nuevoStock = parseInt(producto.stock_actual) + cantidadComprada;
+					const nuevoStock = parseInt(producto.stock_actual) + cantidadAñadir;
 					const resStock = await apiFetch(`/stock/${productoId}`, 'PUT', {
 						...producto,
 						stock_actual: nuevoStock
@@ -2176,12 +2180,12 @@
 					
 					if (resStock.error) throw new Error(resStock.error);
 				} catch (err) {
-					console.error("Falla crítica al actualizar stock:", err);
-					return alert("Error al conectar con el inventario. El movimiento no se guardó.");
+					console.error("Falla en Stock:", err);
+					return alert("No se pudo actualizar el stock. Movimiento cancelado.");
 				}
 			}
 
-			// --- REGISTRO EN CAJA ---
+			// --- 2. REGISTRO EN CAJA ---
 			try {
 				const res = await apiFetch('/caja/movimientos', 'POST', {
 					tipo: tipoParaCaja, 
@@ -2191,33 +2195,28 @@
 				});
 
 				if (!res.error) {
-					// Limpieza de campos
+					// Limpiar todo
 					if (descInput) descInput.value = "";
 					if (montoInput) montoInput.value = "";
 					if (cantInput) cantInput.value = "";
+					document.getElementById('modal-gasto').classList.add('hidden');
 					
-					const modal = document.getElementById('modal-gasto');
-					if (modal) modal.classList.add('hidden');
-					
-					const camposCompra = document.getElementById('campos-compra-mercaderia');
-					if (camposCompra) camposCompra.classList.add('hidden');
-					
-					const containerDesc = document.getElementById('container-desc-gasto');
-					if (containerDesc) containerDesc.classList.remove('opacity-40');
-					
-					// Recargar datos sincronizados
+					// Recargar datos
 					await loadCaja(); 
 					await loadStock(); 
 					
-					showVikingToast('Movimiento y Stock sincronizados');
+					showVikingToast('Caja y Stock actualizados correctamente');
 				} else {
-					alert("Error del servidor: " + (res.error || "No se pudo registrar"));
+					alert("Error: " + res.error);
 				}
 			} catch (e) {
 				console.error(e);
-				alert("Error de conexión al guardar movimiento.");
+				alert("Error de conexión.");
 			}
 		}
+
+		// OBLIGATORIO PARA QUE EL FORMULARIO FUNCIONE
+		window.guardarMovimiento = guardarMovimiento;
 		
 		// Exponer a global
 		window.guardarMovimiento = guardarMovimiento;
