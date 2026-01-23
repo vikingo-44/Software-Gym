@@ -2217,10 +2217,8 @@
                 });
 
                 staffContainer.innerHTML = staffLog.length ? staffLog.slice(0, 10).map(acc => {
-                    // AGREGADO: Se muestra la fecha completa (Hora y Fecha debajo)
-                    const partesFecha = acc.fecha ? acc.fecha.split(' - ') : ['Ahora', ''];
-                    const hora = partesFecha[0];
-                    const fecha = partesFecha[1] || '';
+                    // MODIFICADO: Aplicamos la misma lógica de "Acceso Virtual" para asegurar que traiga el día
+                    const fechaCompleta = acc.fecha ? acc.fecha.replace(' - ', ' • ') : 'Ahora';
 
                     return `
                         <div class="flex items-center justify-between p-3 bg-red-600/[0.05] rounded-2xl border border-red-600/10 hover:border-red-600/30 transition-all">
@@ -2234,8 +2232,8 @@
                                 </div>
                             </div>
                             <div class="text-right">
-                                <p class="text-[9px] font-black text-white leading-none">${hora}hs</p>
-                                <p class="text-[7px] font-black text-red-500/50 uppercase mt-1">${fecha}</p>
+                                <p class="text-[9px] font-black text-white leading-none">${fechaCompleta}hs</p>
+                                <p class="text-[8px] font-bold text-gray-500 uppercase tracking-tighter">PRESENTE</p>
                             </div>
                         </div>
                     `;
