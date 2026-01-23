@@ -2797,14 +2797,14 @@
 					// Buscamos la imagen en ambos campos posibles
 					const rawImg = s.url_imagen || s.imagen || "";
 					const hasImg = rawImg && rawImg.length > 100; // Un Base64 real es largo
-					const imgUrl = hasImg ? rawImg : 'https://images.unsplash.com/photo-1583417319070-4a69db38a482?q=80&w=400&auto=format&fit=crop';
+					//const imgUrl = hasImg ? rawImg : 'https://images.unsplash.com/photo-1583417319070-4a69db38a482?q=80&w=400&auto=format&fit=crop';
 					
 					return `
 					<div class="glass-card p-4 rounded-[2.5rem] border-white/5 flex flex-col gap-4 hover:border-red-600/30 transition-all group relative overflow-hidden shadow-xl">
 						<!-- Foto del Producto -->
 						<div class="w-full h-40 rounded-[1.8rem] overflow-hidden bg-black/40 relative">
-							<img src="${imgUrl}" class="w-full h-full object-cover opacity-70 group-hover:opacity-100 transition-all duration-700"
-								 onerror="this.src='https://images.unsplash.com/photo-1583417319070-4a69db38a482?q=80&w=400&auto=format&fit=crop'">
+							<!-- <img src="${imgUrl}" class="w-full h-full object-cover opacity-70 group-hover:opacity-100 transition-all duration-700"
+								 onerror="this.src='https://images.unsplash.com/photo-1583417319070-4a69db38a482?q=80&w=400&auto=format&fit=crop'"> -->
 							<div class="absolute top-3 right-3 bg-black/70 backdrop-blur-xl px-3 py-1.5 rounded-xl border border-white/10 text-[11px] font-black text-white italic">
 								$${s.precio_venta}
 							</div>
