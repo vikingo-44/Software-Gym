@@ -1047,56 +1047,73 @@
 
     <!-- 2. EL MODAL NUEVO (Reemplaza al viejo 'modal-movimiento') -->
 		<div id="modal-gasto" class="fixed inset-0 bg-black/80 hidden flex items-center justify-center z-50 backdrop-blur-sm animate-fade-in">
-		<div class="glass-panel p-6 rounded-xl w-full max-w-sm mx-4 relative border border-white/10 shadow-2xl">
-			
-			<!-- Botón Cerrar (X) -->
-			<button type="button" onclick="document.getElementById('modal-gasto').classList.add('hidden')" 
-					class="absolute top-4 right-4 text-gray-500 hover:text-white transition-colors">
-				<i data-lucide="x" class="w-5 h-5"></i>
-			</button>
+			<div class="glass-panel p-6 rounded-xl w-full max-w-sm mx-4 relative border border-white/10 shadow-2xl">
+				
+				<!-- Botón Cerrar (X) -->
+				<button type="button" onclick="document.getElementById('modal-gasto').classList.add('hidden')" 
+						class="absolute top-4 right-4 text-gray-500 hover:text-white transition-colors">
+					<i data-lucide="x" class="w-5 h-5"></i>
+				</button>
 
-			<h3 class="text-xl font-black italic text-white mb-6 tracking-tight">
-				NUEVO <span class="text-red-600">MOVIMIENTO</span>
-			</h3>
-			
-			<!-- FORMULARIO -->
-			<form onsubmit="guardarMovimiento(event)">
-				<div class="space-y-4">
-					
-					<!-- Selector Tipo (AHORA INGRESO ES EL PRIMERO Y DEFAULT) -->
-					<div>
-						<label class="block text-[10px] font-bold uppercase text-gray-400 mb-1">Tipo de Movimiento</label>
-						<select id="input-tipo-movimiento" class="viking-input w-full p-3 rounded text-xs font-bold text-white bg-black/50 border border-white/10 focus:border-red-600 transition-colors">
-							<option value="Ingreso" selected>INGRESO (Venta, Cuota, etc.)</option>
-							<option value="Gasto">EGRESO (Pago, Gasto, Compra)</option>
-						</select>
+				<h3 class="text-xl font-black italic text-white mb-6 tracking-tight">
+					NUEVO <span class="text-red-600">MOVIMIENTO</span>
+				</h3>
+				
+				<!-- FORMULARIO -->
+				<form onsubmit="guardarMovimiento(event)">
+					<div class="space-y-4">
+						
+						<!-- Selector Tipo (AHORA INGRESO ES EL PRIMERO Y DEFAULT) -->
+						<div>
+							<label class="block text-[10px] font-bold uppercase text-gray-400 mb-1">Tipo de Movimiento</label>
+							<select id="input-tipo-movimiento" 
+									onchange="toggleCamposCompra(this.value)"
+									class="viking-input w-full p-3 rounded text-xs font-bold text-white bg-black/50 border border-white/10 focus:border-red-600 transition-colors">
+								<option value="Ingreso" selected>INGRESO (Venta, Cuota, etc.)</option>
+								<option value="Gasto">EGRESO (Pago, Gasto General)</option>
+								<option value="Compra">COMPRA DE MERCADERÍA (Actualiza Stock)</option>
+							</select>
+						</div>
+
+						<!-- SECCIÓN ESPECIAL: COMPRA DE MERCADERÍA (Se activa con JS) -->
+						<div id="campos-compra-mercaderia" class="hidden space-y-4 p-3 bg-red-600/5 rounded-xl border border-red-600/10">
+							<div>
+								<label class="block text-[10px] font-bold uppercase text-red-500 mb-1">Seleccionar Producto</label>
+								<select id="input-producto-stock" class="viking-input w-full p-3 rounded text-xs font-bold text-white bg-black/50 border border-white/10">
+									<!-- Se llena dinámicamente con state.stock -->
+								</select>
+							</div>
+							<div>
+								<label class="block text-[10px] font-bold uppercase text-red-500 mb-1">Cantidad comprada</label>
+								<input type="number" id="input-cantidad-compra" class="viking-input w-full p-3 rounded text-xs font-bold text-white bg-black/50 border border-white/10" placeholder="0">
+							</div>
+						</div>
+
+						<!-- Input Descripción -->
+						<div id="container-desc-gasto">
+							<label class="block text-[10px] font-bold uppercase text-gray-400 mb-1">Descripción</label>
+							<input type="text" id="input-desc-gasto" 
+								class="viking-input w-full p-3 rounded text-xs font-bold text-white bg-black/50 border border-white/10 focus:border-red-600 transition-colors" 
+								placeholder="Ej: Gatorade, Cuota Mensual..." required>
+						</div>
+
+						<!-- Input Monto -->
+						<div>
+							<label class="block text-[10px] font-bold uppercase text-gray-400 mb-1">Monto Total ($)</label>
+							<input type="number" id="input-monto-gasto" 
+								class="viking-input w-full p-3 rounded text-xs font-bold text-white bg-black/50 border border-white/10 focus:border-red-600 transition-colors" 
+								placeholder="0.00" required step="0.01">
+						</div>
+
+						<!-- Botón Guardar -->
+						<button type="submit" 
+								class="w-full bg-red-600 hover:bg-red-700 text-white font-black uppercase py-3 rounded text-xs tracking-widest mt-4 border border-red-500 shadow-lg shadow-red-900/20 transition-all hover:scale-[1.02]">
+							Confirmar Movimiento
+						</button>
 					</div>
-
-					<!-- Input Descripción -->
-					<div>
-						<label class="block text-[10px] font-bold uppercase text-gray-400 mb-1">Descripción</label>
-						<input type="text" id="input-desc-gasto" 
-							   class="viking-input w-full p-3 rounded text-xs font-bold text-white bg-black/50 border border-white/10 focus:border-red-600 transition-colors" 
-							   placeholder="Ej: Gatorade, Cuota Mensual..." required>
-					</div>
-
-					<!-- Input Monto -->
-					<div>
-						<label class="block text-[10px] font-bold uppercase text-gray-400 mb-1">Monto ($)</label>
-						<input type="number" id="input-monto-gasto" 
-							   class="viking-input w-full p-3 rounded text-xs font-bold text-white bg-black/50 border border-white/10 focus:border-red-600 transition-colors" 
-							   placeholder="0.00" required step="0.01">
-					</div>
-
-					<!-- Botón Guardar -->
-					<button type="submit" 
-							class="w-full bg-red-600 hover:bg-red-700 text-white font-black uppercase py-3 rounded text-xs tracking-widest mt-4 border border-red-500 shadow-lg shadow-red-900/20 transition-all hover:scale-[1.02]">
-						Confirmar Movimiento
-					</button>
-				</div>
-			</form>
+				</form>
+			</div>
 		</div>
-	</div>
 
     <div id="modal-staff" class="viking-modal">
         <div class="glass-card p-10 rounded-[3rem] w-full max-w-lg text-left">
