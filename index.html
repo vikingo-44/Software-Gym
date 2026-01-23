@@ -1314,37 +1314,5 @@
 	<!-- Script fuera para que tome la lista de alumnos -->
 	<script src="https://cdn.jsdelivr.net/gh/vikingo-44/Software-Gym/script.js"></script>
 
-	<script>
-		/**
-		 * Lógica interna del Modal de Caja
-		 */
-		function toggleCamposCompra(tipo) {
-			const camposCompra = document.getElementById('campos-compra-mercaderia');
-			const containerDesc = document.getElementById('container-desc-gasto');
-			const descInput = document.getElementById('input-desc-gasto');
-			const productoSelect = document.getElementById('input-producto-stock');
-
-			if (tipo === 'Compra') {
-				camposCompra.classList.remove('hidden');
-				containerDesc.classList.add('opacity-40');
-				descInput.required = false;
-				
-				const currentStock = (window.state && window.state.stock) || (typeof state !== 'undefined' && state.stock);
-
-				if (currentStock && Array.isArray(currentStock) && currentStock.length > 0) {
-					productoSelect.innerHTML = currentStock.map(p => 
-						`<option value="${p.id}">${p.nombre_producto.toUpperCase()} (Stock: ${p.stock_actual})</option>`
-					).join('');
-				} else {
-					productoSelect.innerHTML = '<option value="">No hay productos cargados en Stock</option>';
-				}
-			} else {
-				camposCompra.classList.add('hidden');
-				containerDesc.classList.remove('opacity-40');
-				descInput.required = true;
-			}
-		}
-	</script>
-
 </body>
 </html>
