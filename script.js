@@ -524,7 +524,7 @@
 				}
 			}
 
-			// --- 4. RENDERIZADO DE CLASES (TARJETAS PREMIUM) ---
+			// --- 4. RENDERIZADO DE CLASES (TARJETAS PREMIUM IMPACTANTES) ---
 			if(state.clases && Array.isArray(state.clases)){
 				state.clases.forEach(c => {
 					const horarios = Array.isArray(c.horarios_detalle) ? c.horarios_detalle : [];
@@ -534,8 +534,9 @@
 						const r = parseInt(hexColor.substr(1, 2), 16);
 						const g = parseInt(hexColor.substr(3, 2), 16);
 						const b = parseInt(hexColor.substr(5, 2), 16);
-						return (((r * 299) + (g * 587) + (b * 114)) / 1000) >= 128 
-							? { text: 'text-black', sub: 'text-black/60', bg: 'bg-black/10' } 
+						const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
+						return (yiq >= 128) 
+							? { text: 'text-black', sub: 'text-black/70', bg: 'bg-black/10' } 
 							: { text: 'text-white', sub: 'text-white/80', bg: 'bg-white/20' };
 					};
 
@@ -571,21 +572,21 @@
 								badge.ondragend = () => badge.classList.remove('opacity-40');
 							}
 
-							// --- DISEÑO DE TARJETA MEJORADO ---
+							// --- DISEÑO DE TARJETA MEJORADO (VERSIÓN IMPACTANTE) ---
 							badge.innerHTML = `
-								<div class="flex flex-col items-center justify-center h-full w-full px-2 gap-1">
-									<!-- Nombre de la Clase -->
-									<span class="text-[11px] leading-none font-black uppercase italic ${colores.text} text-center truncate w-full drop-shadow-md">
+								<div class="flex flex-col items-center justify-center h-full w-full px-2 gap-1.5">
+									<!-- Nombre de la Clase (Agrandado) -->
+									<span class="text-[13px] leading-tight font-black uppercase italic ${colores.text} text-center truncate w-full drop-shadow-md">
 										${c.nombre}
 									</span>
 									
-									<!-- Nombre del Profesor (Más grande y en Mayúsculas) -->
-									<span class="text-[10px] font-black ${colores.sub} uppercase italic leading-none truncate w-full text-center tracking-tighter">
+									<!-- Nombre del Profesor (Agrandado y más Negrita) -->
+									<span class="text-[11px] font-black ${colores.sub} uppercase italic leading-none truncate w-full text-center tracking-tighter">
 										${slot.coach || 'STAFF'}
 									</span>
 									
-									<!-- Cupos (Estilo Pastilla con Alerta) -->
-									<div class="mt-1 ${colores.bg} px-3 py-1 rounded-lg text-[10px] font-black leading-none border border-black/5 ${estaLleno ? 'bg-red-600 text-white animate-pulse shadow-[0_0_10px_rgba(255,0,0,0.5)]' : colores.text}">
+									<!-- Cupos (Estilo Pastilla con Sombras) -->
+									<div class="mt-0.5 ${colores.bg} px-3.5 py-1.5 rounded-xl text-[11px] font-black leading-none border border-black/5 ${estaLleno ? 'bg-red-600 text-white animate-pulse shadow-[0_0_12px_rgba(255,0,0,0.6)]' : colores.text}">
 										${cupoActual} / ${cupoMax}
 									</div>
 								</div>
