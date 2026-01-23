@@ -569,15 +569,20 @@
 							}
 
 							badge.innerHTML = `
-								<div class="flex flex-col items-center justify-center h-full w-full px-1">
-									<span class="text-[10px] leading-tight mb-0.5 font-black uppercase italic ${colores.text} text-center truncate w-full drop-shadow-sm">
+								<div class="flex flex-col items-center justify-center h-full w-full px-2 gap-1">
+									<!-- Nombre de la Clase -->
+									<span class="text-[11px] leading-none font-black uppercase italic ${colores.text} text-center truncate w-full drop-shadow-md">
 										${c.nombre}
 									</span>
-									<span class="text-[8px] font-extrabold ${colores.sub} mb-0.5 lowercase italic leading-none truncate w-full text-center">
-										${slot.coach || 'staff'}
+									
+									<!-- Nombre del Profesor (Más grande y en Mayúsculas) -->
+									<span class="text-[10px] font-black ${colores.sub} uppercase italic leading-none truncate w-full text-center tracking-tighter">
+										${slot.coach || 'STAFF'}
 									</span>
-									<div class="${colores.bg} px-1.5 py-px rounded-full text-[8px] font-black leading-none ${estaLleno ? (colores.text === 'text-white' ? 'text-red-300 animate-pulse' : 'text-red-700 animate-pulse') : colores.text}">
-										${cupoActual}/${cupoMax}
+									
+									<!-- Cupos (Más vistoso, estilo pastilla) -->
+									<div class="mt-1 ${colores.bg} px-3 py-1 rounded-lg text-[10px] font-black leading-none border border-black/5 ${estaLleno ? 'bg-red-600 text-white animate-pulse shadow-[0_0_10px_rgba(255,0,0,0.5)]' : colores.text}">
+										${cupoActual} / ${cupoMax}
 									</div>
 								</div>
 							`;
@@ -4421,4 +4426,4 @@ async function loadProfesores() {
 				formClase.onsubmit = saveClaseVikinga;
 			}
 			if(window.lucide) lucide.createIcons();
-		};
+		};				
