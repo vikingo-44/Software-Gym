@@ -718,22 +718,47 @@
 		
 
         function renderCobrar() {
-            const displayArea = document.getElementById('cobrar-display-area');
-            const searchVal = document.getElementById('cobrar-search').value.toLowerCase();
-            if (state.cobrarTab === 'mercaderia') {
-                const filtered = state.stock.filter(s => s.nombre_producto.toLowerCase().includes(searchVal));
-                displayArea.innerHTML = `<div class="grid grid-cols-2 md:grid-cols-4 gap-4 overflow-y-auto max-h-[600px] pr-2 custom-scrollbar" id="cobrar-catalogo"></div>`;
-                const catalog = document.getElementById('cobrar-catalogo');
-                catalog.innerHTML = filtered.map(s => `
-                    <div class="glass-card p-4 rounded-3xl relative group cursor-pointer hover:border-red-600/50" onclick="addToCart(${s.id}, 'stock')">
-                        <div class="w-full h-20 viking-bg-red/10 rounded-2xl mb-3 flex items-center justify-center"><i data-lucide="package" class="w-6 h-6 opacity-20 text-white"></i></div>
-                        <h4 class="text-[10px] font-black uppercase italic mb-1 truncate">${s.nombre_producto}</h4>
-                        <div class="flex items-center justify-between"><p class="text-[12px] font-black italic">$ ${s.precio_venta.toLocaleString()}</p><span class="text-[9px] font-bold ${s.stock_actual < 5 ? 'text-red-500' : 'text-gray-500'}">S: ${s.stock_actual}</span></div>
-                    </div>`).join('');
-            } else {
+			const displayArea = document.getElementById('cobrar-display-area');
+			if (!displayArea) return;
+
+			const searchInput = document.getElementById('cobrar-search');
+			const searchVal = searchInput ? searchInput.value.toLowerCase() : "";
+
+			if (state.cobrarTab === 'mercaderia') {
+				const filtered = state.stock.filter(s => (s.nombre_producto || "").toLowerCase().includes(searchVal));
+				
+				displayArea.innerHTML = `<div class="grid grid-cols-2 md:grid-cols-4 gap-4 overflow-y-auto max-h-[600px] pr-2 custom-scrollbar" id="cobrar-catalogo"></div>`;
+				const catalog = document.getElementById('cobrar-catalogo');
+				
+				catalog.innerHTML = filtered.map(s => {
+					// LÓGICA DE IMAGEN AUTOMÁTICA
+					let imgUrl = s.url_images;
+					const partes = (s.nombre_producto || "item").trim().split(' ');
+					const clave = partes[partes.length - 1].toLowerCase();
+					
+					if (!imgUrl || !imgUrl.startsWith('http')) {
+						imgUrl = `https://github.com/vikingo-44/Software-Gym/blob/main/imagenes/${clave}.png?raw=true`;
+					}
+
+					return `
+						<div class="glass-card p-4 rounded-3xl relative group cursor-pointer hover:border-red-600/50 transition-all" onclick="addToCart(${s.id}, 'mercaderia')">
+							<div class="w-full h-24 rounded-2xl mb-3 overflow-hidden bg-zinc-900 flex items-center justify-center">
+								<img src="${imgUrl}" class="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity" 
+									onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+								<i data-lucide="package" class="hidden w-6 h-6 opacity-20 text-white"></i>
+							</div>
+							<h4 class="text-[10px] font-black uppercase italic mb-1 truncate text-white">${s.nombre_producto}</h4>
+							<div class="flex items-center justify-between">
+								<p class="text-[12px] font-black italic viking-red">$ ${s.precio_venta.toLocaleString()}</p>
+								<span class="text-[9px] font-bold ${s.stock_actual < 5 ? 'text-red-500 animate-pulse' : 'text-gray-500'}">S: ${s.stock_actual}</span>
+							</div>
+						</div>`;
+				}).join('');
+			} else {
+				// Lógica de Alumnos / Renovación de Planes
 				const hoy = new Date().toISOString().split('T')[0];
-				const filteredAl = state.alumnos.filter(a => 
-					a.nombre_completo.toLowerCase().includes(searchVal) || a.dni.includes(searchVal)
+				const filteredAl = (state.alumnos || []).filter(a => 
+					(a.nombre_completo || "").toLowerCase().includes(searchVal) || (a.dni || "").includes(searchVal)
 				);
 
 				displayArea.innerHTML = `
@@ -749,11 +774,11 @@
 								const statusText = isActive ? 'Al día' : 'Vencido';
 
 								return `
-								<div class="flex flex-col gap-3 p-5 bg-white/2 rounded-[2rem] border border-white/5 hover:border-red-600/30 transition-all text-left group">
+								<div class="flex flex-col gap-3 p-5 bg-white/[0.02] rounded-[2rem] border border-white/5 hover:border-red-600/30 transition-all text-left group">
 									<div class="flex justify-between items-center">
 										<div class="flex items-center gap-3">
 											<div class="w-10 h-10 rounded-xl viking-bg-red flex items-center justify-center font-black text-black text-xs italic shadow-lg">
-												${a.nombre_completo[0].toUpperCase()}
+												${(a.nombre_completo || "U")[0].toUpperCase()}
 											</div>
 											<div>
 												<p class="text-[13px] font-black italic uppercase leading-tight text-white group-hover:text-red-500 transition-colors">${a.nombre_completo}</p>
@@ -769,7 +794,7 @@
 										<div class="flex-1">
 											<p class="text-[8px] text-gray-600 font-black uppercase italic mb-1 px-2">Seleccionar Plan</p>
 											<select id="plan-select-${a.id}" class="viking-input !py-2 !text-[10px] h-10 bg-black/60 border-white/10">
-												${state.planes.map(p => `
+												${(state.planes || []).map(p => `
 													<option value="${p.id}" ${p.id === a.plan_id ? 'selected' : ''}>
 														${p.nombre} — $${p.precio.toLocaleString()}
 													</option>
@@ -785,9 +810,9 @@
 						</div>
 					</div>`;
 			}
-            lucide.createIcons();
-            updateCartUI();
-        }
+			if (window.lucide) lucide.createIcons();
+			if (typeof updateCartUI === 'function') updateCartUI();
+		}
 
         document.getElementById('cobrar-search').oninput = renderCobrar;
 
@@ -2779,75 +2804,73 @@
 		 * RENDERIZADO DE STOCK CON IMÁGENES (PUNTO 5)
 		 */
 		async function loadStock() {
-			const data = await apiFetch('/stock');
-			state.stock = Array.isArray(data) ? data : [];
+			try {
+				const data = await apiFetch('/stock');
+				state.stock = Array.isArray(data) ? data : [];
 
-			const container = document.getElementById('stock-container');
-			if (!container) return;
+				const container = document.getElementById('stock-container');
+				if (!container) return;
 
-			if (state.stock.length === 0) {
-				container.innerHTML = `
-					<div class="col-span-full py-20 text-center opacity-20">
-						<i data-lucide="package-x" class="w-16 h-16 mx-auto mb-4"></i>
-						<p class="font-black uppercase italic tracking-widest">Il-Valhalla m'għandux provvisti</p>
-					</div>`;
-			} else {
-				container.innerHTML = state.stock.map(s => {
-					const stockBajo = s.stock_actual <= 5;
-					
-					// LOĠIKA TA' STAMPA:
-					// 1. Prijorità: URL f'NeonDB (s.url_images)
-					// 2. Backup: Ġenerazzjoni awtomatika minn GitHub bl-isem tal-prodott
-					// 3. Fallback: Placeholder jekk kollox ifalli
-					
-					let finalImgUrl;
-					
-					if (s.url_images && s.url_images.startsWith('http')) {
-						// Jekk hemm URL valida fid-database, nużawha
-						finalImgUrl = s.url_images;
-					} else {
-						// Jekk le, nużaw il-link ta' GitHub ibbażat fuq l-isem
-						const n = (item.nombre_producto || item.nombre_plan || "").trim().split(' ');
-						const clave = n[n.length - 1].toLowerCase();
-						const imgUrl = `https://github.com/vikingo-44/Software-Gym/blob/main/imagenes/${clave}.png?raw=true`;
-					}
-					
-					return `
-					<div class="glass-card p-4 rounded-[2.5rem] border-white/5 flex flex-col gap-4 hover:border-red-600/30 transition-all group relative overflow-hidden shadow-xl">
-						<!-- Ritratt tal-Prodott -->
-						<div class="w-full h-40 rounded-[1.8rem] overflow-hidden bg-black/40 relative">
-							<img src="${finalImgUrl}" 
-								class="w-full h-full object-cover opacity-70 group-hover:opacity-100 transition-all duration-700"
-								onerror="this.src='https://via.placeholder.com/400x300/111/333?text=${s.nombre_producto}'">
-							
-							<div class="absolute top-3 right-3 bg-black/70 backdrop-blur-xl px-3 py-1.5 rounded-xl border border-white/10 text-[11px] font-black text-white italic">
-								$${s.precio_venta}
-							</div>
-						</div>
+				if (state.stock.length === 0) {
+					container.innerHTML = `
+						<div class="col-span-full py-20 text-center opacity-20">
+							<i data-lucide="package-x" class="w-16 h-16 mx-auto mb-4"></i>
+							<p class="font-black uppercase italic tracking-widest">El Valhalla no tiene provisiones</p>
+						</div>`;
+				} else {
+					container.innerHTML = state.stock.map(s => {
+						const stockBajo = s.stock_actual <= 5;
+						let finalImgUrl = s.url_images;
 
-						<!-- Detalji u Buttuna ta' Editjar -->
-						<div class="px-2 pb-2">
-							<h4 class="text-[13px] font-black uppercase italic text-white truncate mb-3 tracking-tight">${s.nombre_producto}</h4>
-							<div class="flex items-center justify-between">
-								<div class="flex flex-col">
-									<span class="text-[8px] text-gray-500 font-black uppercase tracking-widest leading-none mb-1">Stokk disponibbli</span>
-									<span class="text-sm font-black italic ${stockBajo ? 'text-red-500 animate-pulse' : 'text-white'}">
-										${s.stock_actual} <span class="text-[9px] opacity-40 uppercase">unitajiet</span>
-									</span>
-								</div>
+						// Lógica automática: toma la última palabra
+						const nombreSeguro = (s.nombre_producto || "item").trim();
+						const partes = nombreSeguro.split(' ');
+						const palabraClave = partes[partes.length - 1].toLowerCase();
+
+						// Si no hay link en la DB, construye el de GitHub
+						if (!finalImgUrl || !finalImgUrl.startsWith('http')) {
+							finalImgUrl = `https://github.com/vikingo-44/Software-Gym/blob/main/imagenes/${palabraClave}.png?raw=true`;
+						}
+
+						return `
+						<div class="glass-card p-4 rounded-[2.5rem] border-white/5 flex flex-col gap-4 hover:border-red-600/30 transition-all group relative overflow-hidden shadow-xl">
+							<div class="w-full h-40 rounded-[1.8rem] overflow-hidden bg-black/40 relative">
+								<img src="${finalImgUrl}" 
+									class="w-full h-full object-cover opacity-70 group-hover:opacity-100 transition-all duration-700"
+									onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
 								
-								<button onclick="openEditStock(${s.id})" 
-										title="Edittja l-Prodott"
-										class="w-10 h-10 grid place-items-center bg-white/5 rounded-xl border border-white/5 text-gray-400 hover:bg-red-600 hover:text-black hover:scale-110 transition-all action-col p-0">
-									<i data-lucide="edit-3" class="w-5 h-5"></i>
-								</button>
+								<div class="hidden absolute inset-0 flex items-center justify-center bg-zinc-900 text-[10px] font-black uppercase italic text-zinc-600 text-center px-4">
+									Sin imagen:<br>${palabraClave}.png
+								</div>
+
+								<div class="absolute top-3 right-3 bg-black/70 backdrop-blur-xl px-3 py-1.5 rounded-xl border border-white/10 text-[11px] font-black text-white italic">
+									$${s.precio_venta}
+								</div>
 							</div>
-						</div>
-					</div>`;
-				}).join('');
+
+							<div class="px-2 pb-2">
+								<h4 class="text-[13px] font-black uppercase italic text-white truncate mb-3 tracking-tight">${s.nombre_producto}</h4>
+								<div class="flex items-center justify-between">
+									<div class="flex flex-col">
+										<span class="text-[8px] text-gray-500 font-black uppercase tracking-widest leading-none mb-1">Existencias</span>
+										<span class="text-sm font-black italic ${stockBajo ? 'text-red-500 animate-pulse' : 'text-white'}">
+											${s.stock_actual} <span class="text-[9px] opacity-40 uppercase">unid.</span>
+										</span>
+									</div>
+									
+									<button onclick="openEditStock(${s.id})" 
+											class="w-10 h-10 grid place-items-center bg-white/5 rounded-xl border border-white/5 text-gray-400 hover:bg-red-600 hover:text-black hover:scale-110 transition-all p-0">
+										<i data-lucide="edit-3" class="w-5 h-5"></i>
+									</button>
+								</div>
+							</div>
+						</div>`;
+					}).join('');
+				}
+				if (window.lucide) lucide.createIcons();
+			} catch (error) {
+				console.error("Error en loadStock:", error);
 			}
-			if (window.lucide) lucide.createIcons();
-			if (typeof applyPermissions === 'function') applyPermissions();
 		}
 		
 		// FUNCIÓN PARA PREVISUALIZAR Y CONVERTIR A BASE64
@@ -2996,20 +3019,15 @@
         // ABRIR MODAL PARA NUEVO PRODUCTO
 		function openModalStock() {
 			const form = document.getElementById('form-stock');
-			if(form) form.reset();
-			
-			document.getElementById('stock-id').value = "";
-			document.getElementById('stock-imagen-base64').value = "";
-			document.getElementById('stock-img-preview').classList.add('hidden');
-			document.getElementById('stock-img-placeholder').classList.remove('hidden');
-			document.getElementById('modal-stock-title').innerText = "Alta de Mercadería";
-			
-			const delBtn = document.getElementById('btn-delete-stock');
-			if(delBtn) delBtn.classList.add('hidden');
-
+			if (form) form.reset();
+			document.getElementById('modal-stock-title').innerText = 'Nueva Mercadería';
+			document.getElementById('stock-id').value = '';
+			const urlInput = document.getElementById('stock-url-images');
+			if(urlInput) urlInput.value = '';
+			document.getElementById('stock-img-preview').src = '';
+			document.getElementById('btn-delete-stock').classList.add('hidden');
 			openModal('modal-stock');
 		}
-		
 		function openEditStock(id) {
 			const s = state.stock.find(x => x.id == id);
 			if (!s) return;
