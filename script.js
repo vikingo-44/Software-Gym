@@ -2132,7 +2132,7 @@
 		}
 
 		async function guardarMovimiento(event) {
-			event.preventDefault();
+			if (event && event.preventDefault) event.preventDefault();
 
 			const descInput = document.getElementById('input-desc-gasto');
 			const montoInput = document.getElementById('input-monto-gasto');
@@ -2141,73 +2141,71 @@
 			const cantInput = document.getElementById('input-cantidad-compra');
 
 			const monto = parseFloat(montoInput?.value) || 0;
-			const tipo = tipoInput ? tipoInput.value : 'Ingreso';
-			let descripcion = descInput?.value || 'Varios';
+			const tipoSeleccionado = tipoInput ? tipoInput.value : 'Ingreso';
+			let descripcionFinal = descInput?.value || 'Varios';
+			let tipoParaCaja = tipoSeleccionado;
 
 			if (monto <= 0) return alert("El monto debe ser mayor a 0");
 
-			// --- LÓGICA DE COMPRA (ACTUALIZACIÓN DE STOCK Y GASTO) ---
-			if (tipo === 'Compra') {
+			// --- LÓGICA DE COMPRA (ACTUALIZACIÓN DE STOCK) ---
+			if (tipoSeleccionado === 'Compra') {
 				const productoId = prodSelect.value;
-				const cantidadAñadir = parseInt(cantInput.value) || 0;
+				const cantidadComprada = parseInt(cantInput.value) || 0;
 
-				if (!productoId || cantidadAñadir <= 0) {
-					return alert("Selecciona un producto y una cantidad válida");
+				if (!productoId || cantidadComprada <= 0) {
+					return alert("Selecciona un producto y cantidad válida para la compra.");
 				}
 
-				// Buscar producto en el estado global
-				const listado = (window.state && window.state.stock) || (typeof state !== 'undefined' && state.stock);
-				const producto = listado.find(p => String(p.id) === String(productoId));
+				const producto = state.stock.find(p => String(p.id) === String(productoId));
+				if (!producto) return alert("Producto no identificado.");
 
-				if (!producto) return alert("Producto no encontrado en el sistema.");
+				// 1. Forzamos que sea un GASTO para que reste en caja
+				tipoParaCaja = 'Gasto';
+				descripcionFinal = `COMPRA: ${producto.nombre_producto.toUpperCase()} (x${cantidadComprada} UNID)`;
 
-				// 1. Actualizar Stock primero (Aumento por compra)
+				// 2. Ejecutar actualización de Stock en DB
 				try {
-					const nuevoStockTotal = parseInt(producto.stock_actual) + cantidadAñadir;
+					const nuevoStock = parseInt(producto.stock_actual) + cantidadComprada;
 					await apiFetch(`/stock/${productoId}`, 'PUT', {
 						...producto,
-						stock_actual: nuevoStockTotal
+						stock_actual: nuevoStock
 					});
-					
-					// Generamos la descripción automática para que sepas qué compraste
-					descripcion = `COMPRA: ${producto.nombre_producto} (x${cantidadAñadir} unidades)`;
 				} catch (err) {
-					console.error("Error actualizando stock:", err);
-					return alert("Falla al actualizar el stock. No se registrará el gasto.");
+					console.error("Falla crítica al actualizar stock:", err);
+					return alert("Error al conectar con el inventario. El movimiento no se guardó.");
 				}
 			}
 
-			// 2. Enviar a Caja
+			// --- REGISTRO EN CAJA ---
 			try {
-				// IMPORTANTE: Si es "Compra", el tipo para el backend debe ser "Gasto" o "Egreso" para que reste.
-				const tipoContable = (tipo === 'Compra') ? 'Gasto' : tipo;
-
 				const res = await apiFetch('/caja/movimientos', 'POST', {
-					tipo: tipoContable, 
-					descripcion: descripcion,
+					tipo: tipoParaCaja, 
+					descripcion: descripcionFinal,
 					monto: monto,
 					metodo_pago: 'Efectivo' 
 				});
 
 				if (!res.error) {
-					// Limpieza
+					// Limpieza de campos
 					if (descInput) descInput.value = "";
 					if (montoInput) montoInput.value = "";
 					if (cantInput) cantInput.value = "";
 					
 					document.getElementById('modal-gasto').classList.add('hidden');
+					document.getElementById('campos-compra-mercaderia').classList.add('hidden');
+					document.getElementById('container-desc-gasto').classList.remove('opacity-40');
 					
-					// Refrescar vistas
+					// Recargar datos
 					if (typeof loadCaja === 'function') await loadCaja(); 
-					if (typeof loadStock === 'function') await loadStock(); 
+					await loadStock(); // Refrescar stock visualmente
 					
 					showVikingToast('Movimiento y Stock sincronizados');
 				} else {
-					alert("Error: " + (res.error || "No se pudo guardar"));
+					alert("Error del servidor: " + (res.error || "No se pudo registrar"));
 				}
 			} catch (e) {
 				console.error(e);
-				alert("Error de conexión.");
+				alert("Error de conexión al guardar movimiento.");
 			}
 		}
 
@@ -2874,36 +2872,37 @@
 			} else {
 				container.innerHTML = state.stock.map(s => {
 					const stockBajo = s.stock_actual <= 5;
-					// Buscamos la imagen en ambos campos posibles
-					const rawImg = s.url_imagen || s.imagen || "";
-					const hasImg = rawImg && rawImg.length > 100; // Un Base64 real es largo
-					const imgUrl = hasImg ? rawImg : 'https://images.unsplash.com/photo-1583417319070-4a69db38a482?q=80&w=400&auto=format&fit=crop';
-					
+					let finalImgUrl;
+
+					if (s.url_images && s.url_images.startsWith('http')) {
+						finalImgUrl = s.url_images;
+					} else {
+						const n = (s.nombre_producto || "").trim().split(' ');
+						const clave = n[n.length - 1].toLowerCase();
+						finalImgUrl = `https://github.com/vikingo-44/Software-Gym/blob/main/imagenes/${clave}.png?raw=true`;
+					}
+
 					return `
 					<div class="glass-card p-4 rounded-[2.5rem] border-white/5 flex flex-col gap-4 hover:border-red-600/30 transition-all group relative overflow-hidden shadow-xl">
-						<!-- Foto del Producto -->
 						<div class="w-full h-40 rounded-[1.8rem] overflow-hidden bg-black/40 relative">
-							<img src="${imgUrl}" class="w-full h-full object-cover opacity-70 group-hover:opacity-100 transition-all duration-700"
-								 onerror="this.src='https://images.unsplash.com/photo-1583417319070-4a69db38a482?q=80&w=400&auto=format&fit=crop'">
+							<img src="${finalImgUrl}" 
+								class="w-full h-full object-cover opacity-70 group-hover:opacity-100 transition-all duration-700"
+								onerror="this.src='https://via.placeholder.com/400x300/111/333?text=Sin+Imagen'">
 							<div class="absolute top-3 right-3 bg-black/70 backdrop-blur-xl px-3 py-1.5 rounded-xl border border-white/10 text-[11px] font-black text-white italic">
 								$${s.precio_venta}
 							</div>
 						</div>
-
-						<!-- Datos y Botón Editar -->
 						<div class="px-2 pb-2">
 							<h4 class="text-[13px] font-black uppercase italic text-white truncate mb-3 tracking-tight">${s.nombre_producto}</h4>
 							<div class="flex items-center justify-between">
 								<div class="flex flex-col">
-									<span class="text-[8px] text-gray-500 font-black uppercase tracking-widest leading-none mb-1">Existencias</span>
+									<span class="text-[8px] text-gray-500 font-black uppercase tracking-widest leading-none mb-1">Stokk disponibbli</span>
 									<span class="text-sm font-black italic ${stockBajo ? 'text-red-500 animate-pulse' : 'text-white'}">
-										${s.stock_actual} <span class="text-[9px] opacity-40 uppercase">unid.</span>
+										${s.stock_actual} <span class="text-[9px] opacity-40 uppercase">unitajiet</span>
 									</span>
 								</div>
-								
-								<!-- LÁPIZ CENTRADO (GRID + P-0) -->
 								<button onclick="openEditStock(${s.id})" 
-										class="w-10 h-10 grid place-items-center bg-white/5 rounded-xl border border-white/5 text-gray-400 hover:bg-red-600 hover:text-black hover:scale-110 transition-all action-col p-0">
+										class="w-10 h-10 grid place-items-center bg-white/5 rounded-xl border border-white/5 text-gray-400 hover:bg-red-600 hover:text-black hover:scale-110 transition-all p-0">
 									<i data-lucide="edit-3" class="w-5 h-5"></i>
 								</button>
 							</div>
@@ -2912,7 +2911,6 @@
 				}).join('');
 			}
 			if (window.lucide) lucide.createIcons();
-			if (typeof applyPermissions === 'function') applyPermissions();
 		}
 		
 		// FUNCIÓN PARA PREVISUALIZAR Y CONVERTIR A BASE64
@@ -3106,7 +3104,7 @@
 
 			openModal('modal-stock');
 		}
-		
+				
 		// 4. GUARDAR CAMBIOS (Vincular al onsubmit del form)
 		async function saveStockVikingo(e) {
 			if(e && e.preventDefault) e.preventDefault();
