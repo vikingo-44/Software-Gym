@@ -1996,118 +1996,142 @@
 
 
 	async function loadCaja() {
-		const movs = await apiFetch('/caja/movimientos');
-		
-		let calcIngresos = 0;
-		let calcGastos = 0;
+        const movs = await apiFetch('/caja/movimientos');
+        
+        let calcIngresos = 0;
+        let calcGastos = 0;
 
-		// 1. Encabezados Forzados (Flujo | Tipo | Descripcion | Monto)
-		const thead = document.querySelector('#view-caja table thead tr');
-		if(thead) {
-			thead.innerHTML = `
-				<th class="pb-5 pl-2 text-left">Flujo</th>
-				<th class="pb-5 text-left">Tipo</th>
-				<th class="pb-5 text-left">Descripción</th>
-				<th class="pb-5 text-right pr-2">Monto</th>
-			`;
-		}
+        // 1. Encabezados Forzados (Flujo | Tipo | Descripcion | Monto)
+        const thead = document.querySelector('#view-caja table thead tr');
+        if(thead) {
+            thead.innerHTML = `
+                <th class="pb-5 pl-2 text-left">Flujo</th>
+                <th class="pb-5 text-left">Tipo</th>
+                <th class="pb-5 text-left">Descripción</th>
+                <th class="pb-5 text-right pr-2">Monto</th>
+            `;
+        }
 
-		if (Array.isArray(movs)) {
-			movs.forEach(m => {
-				const tipo = (m.tipo || '').toLowerCase();
-				const desc = (m.descripcion || '').toLowerCase();
-				const monto = Math.abs(parseFloat(m.monto)); // Leemos siempre positivo para calcular
+        if (Array.isArray(movs)) {
+            movs.forEach(m => {
+                const tipo = (m.tipo || '').toLowerCase();
+                const desc = (m.descripcion || '').toLowerCase();
+                const monto = Math.abs(parseFloat(m.monto)); // Leemos siempre positivo para calcular
 
-				// LÓGICA BLINDADA: 
-				// Si dice mercaderia, plan, venta o cobro -> ES INGRESO (Verde)
-				// Solo es Gasto si NO es lo anterior y explícitamente dice gasto/egreso
-				const esPositivo = tipo.includes('mercaderia') || tipo.includes('mercadería') || tipo.includes('plan') || tipo.includes('venta') || tipo.includes('cobro') || tipo.includes('ingreso');
-				const esEgreso = !esPositivo && (tipo === 'gasto' || tipo === 'egreso' || tipo === 'salida');
+                // LÓGICA BLINDADA ACTUALIZADA: 
+                // Si dice mercaderia, plan, venta o cobro -> ES INGRESO (Verde)
+                // Solo es Gasto si es 'gasto', 'egreso', 'salida' o nuestra nueva 'compra' (Inversión de stock)
+                const esPositivo = (tipo.includes('mercaderia') || tipo.includes('mercadería') || tipo.includes('plan') || tipo.includes('venta') || tipo.includes('cobro') || tipo.includes('ingreso')) && !tipo.includes('compra');
+                const esEgreso = !esPositivo && (tipo === 'gasto' || tipo === 'egreso' || tipo === 'salida' || tipo === 'compra');
 
-				if (esEgreso) {
-					calcGastos += monto;
-				} else {
-					calcIngresos += monto;
+                if (esEgreso) {
+                    calcGastos += monto;
+                } else {
+                    calcIngresos += monto;
+                }
+            });
+        }
+
+        const calcBalance = calcIngresos - calcGastos;
+
+        // Actualizar tarjetas
+        if(document.getElementById('caja-ingresos')) 
+            document.getElementById('caja-ingresos').innerText = `$ ${calcIngresos.toLocaleString()}`;
+        
+        if(document.getElementById('caja-gastos')) 
+            document.getElementById('caja-gastos').innerText = `$ ${calcGastos.toLocaleString()}`;
+        
+        if(document.getElementById('caja-balance')) {
+            const elBalance = document.getElementById('caja-balance');
+            elBalance.innerText = `$ ${calcBalance.toLocaleString()}`;
+            elBalance.className = `text-3xl font-black ${calcBalance >= 0 ? 'text-white' : 'text-red-500'}`;
+        }
+
+        // Renderizar Tabla
+        const table = document.getElementById('table-caja');
+        if(table) {
+            if(Array.isArray(movs) && movs.length > 0) {
+                table.innerHTML = movs.map(m => {
+                    const tipoRaw = (m.tipo || '').toLowerCase();
+                    const monto = Math.abs(parseFloat(m.monto));
+
+                    // Misma lógica de detección visual
+                    const esPositivo = (tipoRaw.includes('mercaderia') || tipoRaw.includes('mercadería') || tipoRaw.includes('plan') || tipoRaw.includes('venta') || tipoRaw.includes('cobro') || tipoRaw.includes('ingreso')) && !tipoRaw.includes('compra');
+                    const esEgreso = !esPositivo && (tipoRaw === 'gasto' || tipoRaw === 'egreso' || tipoRaw === 'salida' || tipoRaw === 'compra');
+                    
+                    const flujoTexto = esEgreso ? 'EGRESO' : 'INGRESO';
+                    const flujoColor = esEgreso 
+                        ? 'bg-red-500/10 text-red-500 border-red-500/20' 
+                        : 'bg-green-500/10 text-green-500 border-green-500/20';
+
+                    // Icono según tipo real
+                    let icono = 'tag';
+                    if(tipoRaw.includes('plan')) icono = 'users';
+                    if(tipoRaw.includes('mercaderia') || tipoRaw.includes('compra')) icono = 'shopping-bag';
+                    if(esEgreso && !tipoRaw.includes('compra')) icono = 'arrow-down-circle';
+                    if(tipoRaw.includes('compra')) icono = 'package-plus'; // Icono específico para ingreso de mercadería
+
+                    return `
+                    <tr class="viking-table-row border-b border-white/5 hover:bg-white/5 transition-colors">
+                        <!-- COL 1: FLUJO -->
+                        <td class="py-4 px-2">
+                            <span class="px-3 py-1 rounded border text-[9px] font-black uppercase tracking-wider ${flujoColor}">
+                                ${flujoTexto}
+                            </span>
+                        </td>
+
+                        <!-- COL 2: TIPO -->
+                        <td class="py-4 px-2">
+                            <span class="text-white text-[10px] font-black uppercase italic opacity-70">
+                                <i data-lucide="${icono}" class="w-3 h-3 inline mr-1 opacity-50"></i>${m.tipo}
+                            </span>
+                        </td>
+
+                        <!-- COL 3: DESCRIPCIÓN -->
+                        <td class="py-4 px-2">
+                            <p class="text-[11px] font-bold text-white uppercase">${m.descripcion}</p>
+                            <p class="text-[9px] text-gray-500">${new Date(m.fecha).toLocaleDateString()} - ${m.metodo_pago || 'Efectivo'}</p>
+                        </td>
+
+                        <!-- COL 4: MONTO -->
+                        <td class="py-4 px-2 text-right font-black italic text-white tracking-wide pr-2">
+                            $ ${monto.toLocaleString()}
+                        </td>
+                    </tr>
+                `;
+                }).join('');
+                
+                if(window.lucide) lucide.createIcons();
+                
+            } else {
+                table.innerHTML = '<tr><td colspan="4" class="text-center py-6 text-gray-500 italic text-[10px]">Sin movimientos registrados</td></tr>';
+            }
+        }
+    }
+
+		function toggleCamposCompra(tipo) {
+			const camposCompra = document.getElementById('campos-compra-mercaderia');
+			const descInput = document.getElementById('input-desc-gasto');
+			const productoSelect = document.getElementById('input-producto-stock');
+
+			if (tipo === 'Compra') {
+				camposCompra.classList.remove('hidden');
+				descInput.required = false;
+				document.getElementById('container-desc-gasto').classList.add('opacity-40');
+				
+				// Llenar el selector con el stock actual
+				if (state.stock && state.stock.length > 0) {
+					productoSelect.innerHTML = state.stock.map(p => 
+						`<option value="${p.id}">${p.nombre_producto} (S: ${p.stock_actual})</option>`
+					).join('');
 				}
-			});
-		}
-
-		const calcBalance = calcIngresos - calcGastos;
-
-		// Actualizar tarjetas
-		if(document.getElementById('caja-ingresos')) 
-			document.getElementById('caja-ingresos').innerText = `$ ${calcIngresos.toLocaleString()}`;
-		
-		if(document.getElementById('caja-gastos')) 
-			document.getElementById('caja-gastos').innerText = `$ ${calcGastos.toLocaleString()}`;
-		
-		if(document.getElementById('caja-balance')) {
-			const elBalance = document.getElementById('caja-balance');
-			elBalance.innerText = `$ ${calcBalance.toLocaleString()}`;
-			elBalance.className = `text-3xl font-black ${calcBalance >= 0 ? 'text-white' : 'text-red-500'}`;
-		}
-
-		// Renderizar Tabla
-		const table = document.getElementById('table-caja');
-		if(table) {
-			if(Array.isArray(movs) && movs.length > 0) {
-				table.innerHTML = movs.map(m => {
-					const tipoRaw = (m.tipo || '').toLowerCase();
-					const monto = Math.abs(parseFloat(m.monto));
-
-					// Misma lógica de detección visual
-					const esPositivo = tipoRaw.includes('mercaderia') || tipoRaw.includes('mercadería') || tipoRaw.includes('plan') || tipoRaw.includes('venta') || tipoRaw.includes('cobro') || tipoRaw.includes('ingreso');
-					const esEgreso = !esPositivo && (tipoRaw === 'gasto' || tipoRaw === 'egreso' || tipoRaw === 'salida');
-					
-					const flujoTexto = esEgreso ? 'EGRESO' : 'INGRESO';
-					const flujoColor = esEgreso 
-						? 'bg-red-500/10 text-red-500 border-red-500/20' 
-						: 'bg-green-500/10 text-green-500 border-green-500/20';
-
-					// Icono según tipo real
-					let icono = 'tag';
-					if(tipoRaw.includes('plan')) icono = 'users';
-					if(tipoRaw.includes('mercaderia')) icono = 'shopping-bag';
-					if(esEgreso) icono = 'arrow-down-circle';
-
-					return `
-					<tr class="viking-table-row border-b border-white/5 hover:bg-white/5 transition-colors">
-						<!-- COL 1: FLUJO -->
-						<td class="py-4 px-2">
-							<span class="px-3 py-1 rounded border text-[9px] font-black uppercase tracking-wider ${flujoColor}">
-								${flujoTexto}
-							</span>
-						</td>
-
-						<!-- COL 2: TIPO -->
-						<td class="py-4 px-2">
-							<span class="text-white text-[10px] font-black uppercase italic opacity-70">
-								<i data-lucide="${icono}" class="w-3 h-3 inline mr-1 opacity-50"></i>${m.tipo}
-							</span>
-						</td>
-
-						<!-- COL 3: DESCRIPCIÓN -->
-						<td class="py-4 px-2">
-							<p class="text-[11px] font-bold text-white uppercase">${m.descripcion}</p>
-							<p class="text-[9px] text-gray-500">${new Date(m.fecha).toLocaleDateString()} - ${m.metodo_pago || 'Efectivo'}</p>
-						</td>
-
-						<!-- COL 4: MONTO -->
-						<td class="py-4 px-2 text-right font-black italic text-white tracking-wide pr-2">
-							$ ${monto.toLocaleString()}
-						</td>
-					</tr>
-				`}).join('');
-				
-				if(window.lucide) lucide.createIcons();
-				
 			} else {
-				table.innerHTML = '<tr><td colspan="4" class="text-center py-6 text-gray-500 italic text-[10px]">Sin movimientos registrados</td></tr>';
+				camposCompra.classList.add('hidden');
+				descInput.required = true;
+				document.getElementById('container-desc-gasto').classList.remove('opacity-40');
 			}
 		}
-	}
 
-		// REEMPLAZA TU FUNCIÓN guardarMovimiento POR ESTA:
 		async function guardarMovimiento(event) {
 			event.preventDefault(); // Evita recarga
 
@@ -2115,35 +2139,72 @@
 			const descInput = document.getElementById('input-desc-gasto');
 			const montoInput = document.getElementById('input-monto-gasto');
 			const tipoInput = document.getElementById('input-tipo-movimiento');
+			const prodSelect = document.getElementById('input-producto-stock');
+			const cantInput = document.getElementById('input-cantidad-compra');
 
-			const descripcion = descInput?.value || 'Varios';
 			const monto = parseFloat(montoInput?.value) || 0;
 			const tipo = tipoInput ? tipoInput.value : 'Ingreso';
+			let descripcion = descInput?.value || 'Varios';
 
 			if(monto <= 0) return alert("El monto debe ser mayor a 0");
 
-			// 2. Enviar al Backend
+			// 2. Lógica Especial para Compra de Mercadería
+			if (tipo === 'Compra') {
+				const productoId = prodSelect.value;
+				const cantidadAñadir = parseInt(cantInput.value) || 0;
+
+				if (cantidadAñadir <= 0) return alert("Debes ingresar una cantidad válida");
+
+				// Buscamos el producto en el estado para armar la descripción y calcular nuevo stock
+				const producto = state.stock.find(p => p.id == productoId);
+				if (!producto) return alert("Producto no encontrado");
+
+				descripcion = `COMPRA: ${producto.nombre_producto} (x${cantidadAñadir} unidades)`;
+
+				try {
+					// Actualizamos el Stock en la DB
+					const nuevoStock = parseInt(producto.stock_actual) + cantidadAñadir;
+					await apiFetch(`/stock/${productoId}`, 'PUT', {
+						...producto,
+						stock_actual: nuevoStock
+					});
+					
+					if(typeof showVikingToast === 'function') showVikingToast(`Stock de ${producto.nombre_producto} actualizado (+${cantidadAñadir})`);
+				} catch (e) {
+					console.error("Error al actualizar stock:", e);
+					return alert("Error al actualizar el stock. El movimiento de caja no se guardó.");
+				}
+			}
+
+			// 3. Enviar al Backend (Movimiento de Caja)
 			try {
+				// Si es "Compra", lo enviamos como un "Gasto" al backend para mantener consistencia contable
+				const tipoFinal = (tipo === 'Compra') ? 'Gasto' : tipo;
+
 				const res = await apiFetch('/caja/movimientos', 'POST', {
-					tipo: tipo, 
+					tipo: tipoFinal, 
 					descripcion: descripcion,
 					monto: monto,
 					metodo_pago: 'Efectivo' 
 				});
 
 				if(!res.error) {
-					// 3. LIMPIEZA BLINDADA (Aquí borramos lo escrito)
+					// 4. LIMPIEZA BLINDADA
 					if(descInput) descInput.value = "";
 					if(montoInput) montoInput.value = "";
+					if(cantInput) cantInput.value = "";
 					
-					// Cerrar modal y recargar
+					// Cerrar modal y recargar todo
 					document.getElementById('modal-gasto').classList.add('hidden');
+					document.getElementById('campos-compra-mercaderia').classList.add('hidden');
+					document.getElementById('container-desc-gasto').classList.remove('opacity-40');
+					
 					await loadCaja(); 
+					if(typeof loadStock === 'function') await loadStock(); // Refrescar vista de stock
 					
 					if(typeof showVikingToast === 'function') showVikingToast('Movimiento registrado correctamente');
 				} else {
-					// Si el error persiste (ej: backend no actualizado), avisa
-					alert("Error del servidor: " + (res.detail || res.error || "Revisa el main.py"));
+					alert("Error del servidor: " + (res.detail || res.error || "Revisa el servidor"));
 				}
 			} catch (e) {
 				console.error(e);
