@@ -3277,9 +3277,9 @@
 				const coachEl = row.querySelector('.slot-coach'); 
 				
 				if(diaEl && horaEl) {
+					// Capturamos el NOMBRE del profesor como texto
 					let nombreCoach = "Staff";
 					if (coachEl) {
-						// Capturamos el TEXTO (Nicolas Hermosid)
 						nombreCoach = coachEl.tagName === 'SELECT' 
 							? coachEl.options[coachEl.selectedIndex].text 
 							: coachEl.value;
@@ -3297,11 +3297,12 @@
 				return showVikingToast("Añade al menos un horario", true);
 			}
 
+			// Usamos el coach del primer turno como referencia principal
 			const mainCoach = horarios_detalle[0].coach || "Staff";
 
 			const payload = {
 				nombre: document.getElementById('cl-nombre').value,
-				coach: String(mainCoach), // Mandamos el nombre como TEXTO
+				coach: String(mainCoach), // Enviamos el STRING al backend
 				color: document.getElementById('cl-color').value,
 				capacidad_max: parseInt(document.getElementById('cl-cupo').value) || 20,
 				horarios_detalle: horarios_detalle
@@ -3313,14 +3314,14 @@
 			try {
 				const res = await apiFetch(endpoint, method, payload);
 				if(!res.error) {
-					showVikingToast(id ? "Clase Actualizada" : "Clase Creada");
+					showVikingToast(id ? "¡Clase Actualizada!" : "¡Clase Creada!");
 					closeModal('modal-clase');
 					loadClases();
 				} else {
 					showVikingToast("Error: " + JSON.stringify(res.detail || res.error), true);
 				}
 			} catch (err) {
-				showVikingToast("Error de conexión", true);
+				showVikingToast("Fallo en la conexión", true);
 			}
 		}
 

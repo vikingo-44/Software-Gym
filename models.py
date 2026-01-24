@@ -62,13 +62,11 @@ class Usuario(Base):
 class Clase(Base):
     __tablename__ = "clases"
     id = Column(Integer, primary_key=True)
-    nombre = Column(String)  
-    profesor_id = Column(Integer, ForeignKey("usuarios.id"), nullable=True) # Mantener para el futuro
-    coach_nombre = Column(String, nullable=True) # <--- AGREGAR ESTA LÍNEA
+    nombre = Column(String)
+    coach = Column(String) # <--- Volvemos a tu columna original
     capacidad_max = Column(Integer, default=20)
     horarios_detalle = Column(JSON, nullable=True) 
     color = Column(String, default="#FF0000")
-    profesor = relationship("Usuario") 
     reservas = relationship("Reserva", back_populates="clase", cascade="all, delete-orphan")
 
 class Reserva(Base):
