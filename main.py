@@ -243,7 +243,7 @@ class PlanUpdate(BaseModel):
 
 class ClaseUpdate(BaseModel):
     nombre: str
-    coach: int
+    coach: str
     color: Optional[str] = "#FF0000"
     capacidad_max: Optional[int] = 40
     horarios_detalle: Optional[List[dict]] = None
@@ -908,7 +908,7 @@ def get_clases(db: Session = Depends(database.get_db)):
 def create_clase(data: ClaseUpdate, db: Session = Depends(database.get_db)):
     new_c = models.Clase(
         nombre=data.nombre,
-        profesor_id=data.coach, # <--- Mapeamos el 'coach' del frontend al 'profesor_id' del modelo
+        coach=data.coach, # <--- Usamos tu columna original 'coach'
         color=data.color,
         capacidad_max=data.capacidad_max,
         horarios_detalle=data.horarios_detalle 
