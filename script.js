@@ -2002,7 +2002,6 @@
 			let calcIngresos = 0;
 			let calcGastos = 0;
 
-			// 1. Encabezados Forzados (Tu Lógica)
 			const thead = document.querySelector('#view-caja table thead tr');
 			if(thead) {
 				thead.innerHTML = `
@@ -2018,38 +2017,29 @@
 					const tipo = (m.tipo || '').toLowerCase();
 					const monto = Math.abs(parseFloat(m.monto));
 
-					// TU LÓGICA DE FLUJO EXACTA
 					const esPositivo = (tipo.includes('mercaderia') || tipo.includes('mercadería') || tipo.includes('plan') || tipo.includes('venta') || tipo.includes('cobro') || tipo.includes('ingreso')) && !tipo.includes('compra');
 					const esEgreso = !esPositivo && (tipo === 'gasto' || tipo === 'egreso' || tipo === 'salida' || tipo === 'compra');
 
-					if (esEgreso) {
-						calcGastos += monto;
-					} else {
-						calcIngresos += monto;
-					}
+					if (esEgreso) calcGastos += monto;
+					else calcIngresos += monto;
 				});
 			}
 
 			const calcBalance = calcIngresos - calcGastos;
 
-			// Actualizar tarjetas de resumen
 			if(document.getElementById('caja-ingresos')) 
 				document.getElementById('caja-ingresos').innerText = `$ ${calcIngresos.toLocaleString()}`;
-			
 			if(document.getElementById('caja-gastos')) 
 				document.getElementById('caja-gastos').innerText = `$ ${calcGastos.toLocaleString()}`;
-			
 			if(document.getElementById('caja-balance')) {
 				const elBalance = document.getElementById('caja-balance');
 				elBalance.innerText = `$ ${calcBalance.toLocaleString()}`;
 				elBalance.className = `text-3xl font-black ${calcBalance >= 0 ? 'text-white' : 'text-red-500'}`;
 			}
 
-			// Renderizar Tabla con Iconos Completos
 			const table = document.getElementById('table-caja');
 			if(table) {
 				if(Array.isArray(movs) && movs.length > 0) {
-					// Invertimos para ver lo último arriba
 					table.innerHTML = movs.reverse().map(m => {
 						const tipoRaw = (m.tipo || '').toLowerCase();
 						const monto = Math.abs(parseFloat(m.monto));
@@ -2058,11 +2048,8 @@
 						const esEgreso = !esPositivo && (tipoRaw === 'gasto' || tipoRaw === 'egreso' || tipoRaw === 'salida' || tipoRaw === 'compra');
 						
 						const flujoTexto = esEgreso ? 'EGRESO' : 'INGRESO';
-						const flujoColor = esEgreso 
-							? 'bg-red-500/10 text-red-500 border-red-500/20' 
-							: 'bg-green-500/10 text-green-500 border-green-500/20';
+						const flujoColor = esEgreso ? 'bg-red-500/10 text-red-500 border-red-500/20' : 'bg-green-500/10 text-green-500 border-green-500/20';
 
-						// Tu Lógica de Iconos completa
 						let icono = 'tag';
 						if(tipoRaw.includes('plan')) icono = 'users';
 						if(tipoRaw.includes('mercaderia') || tipoRaw.includes('compra')) icono = 'shopping-bag';
@@ -2072,9 +2059,7 @@
 						return `
 						<tr class="viking-table-row border-b border-white/5 hover:bg-white/5 transition-colors">
 							<td class="py-4 px-2">
-								<span class="px-3 py-1 rounded border text-[9px] font-black uppercase tracking-wider ${flujoColor}">
-									${flujoTexto}
-								</span>
+								<span class="px-3 py-1 rounded border text-[9px] font-black uppercase tracking-wider ${flujoColor}">${flujoTexto}</span>
 							</td>
 							<td class="py-4 px-2">
 								<span class="text-white text-[10px] font-black uppercase italic opacity-70">
@@ -2085,14 +2070,10 @@
 								<p class="text-[11px] font-bold text-white uppercase">${m.descripcion}</p>
 								<p class="text-[9px] text-gray-500 font-bold uppercase">${new Date(m.fecha).toLocaleDateString()} - ${m.metodo_pago || 'Efectivo'}</p>
 							</td>
-							<td class="py-4 px-2 text-right font-black italic text-white tracking-wide pr-2">
-								$ ${monto.toLocaleString()}
-							</td>
+							<td class="py-4 px-2 text-right font-black italic text-white pr-2">$ ${monto.toLocaleString()}</td>
 						</tr>`;
 					}).join('');
-					
 					if(window.lucide) lucide.createIcons();
-					
 				} else {
 					table.innerHTML = '<tr><td colspan="4" class="text-center py-10 text-gray-500 italic text-[10px] uppercase font-black">Sin movimientos en la bóveda</td></tr>';
 				}
@@ -2100,32 +2081,18 @@
 		}
 
 		async function abrirModalCaja() {
-			console.log("🛡️ Abriendo Terminal de Suministros...");
-			
 			const modal = document.getElementById('modal-gasto');
-			const form = modal?.querySelector('form');
-			
-			if (!modal) {
-				console.error("CRÍTICO: No se encontró el div #modal-gasto");
-				return;
-			}
+			if (!modal) return;
 
+			const form = modal.querySelector('form');
 			if (form) form.reset();
-			
-			// Resetear visibilidad de campos manualmente
-			const camposCompra = document.getElementById('campos-compra-mercaderia');
-			const containerDesc = document.getElementById('container-desc-gasto');
-			
-			if (camposCompra) camposCompra.classList.add('hidden');
-			if (containerDesc) containerDesc.classList.remove('opacity-40');
 
-			// Forzar limpieza de punteros (Fix para el error de redimensionamiento)
-			document.body.style.overflow = 'hidden';
-			modal.style.display = 'flex';
-			modal.classList.remove('hidden');
+			// Resetear visibilidad de campos especiales
+			document.getElementById('campos-compra-mercaderia').classList.add('hidden');
+			document.getElementById('container-desc-gasto').classList.remove('opacity-40');
 
-			// Si tu sistema usa una función global openModal, la llamamos también
 			if (typeof openModal === 'function') openModal('modal-gasto');
+			else modal.classList.remove('hidden');
 		}
 
 		/**
@@ -2151,27 +2118,19 @@
 				camposCompra.classList.remove('hidden');
 				containerDesc.classList.add('opacity-40');
 				descInput.required = false;
-				
-				showVikingToast("Cargando suministros...");
 
-				// Lógica de carga FORZADA: Si state.stock está vacío, hacemos fetch real
+				// Poblamos el select con los productos actuales en el estado global
 				if (!state.stock || state.stock.length === 0) {
-					try {
-						const data = await apiFetch('/stock');
-						state.stock = Array.isArray(data) ? data : [];
-					} catch (e) {
-						console.error("Error cargando stock para el modal", e);
-					}
+					const data = await apiFetch('/stock');
+					state.stock = Array.isArray(data) ? data : [];
 				}
 
-				// Renderizar el SELECT
-				if (state.stock && state.stock.length > 0) {
-					productoSelect.innerHTML = state.stock.map(p => {
-						const nombre = (p.nombre_producto || 'ITEM').toUpperCase();
-						return `<option value="${p.id}">${nombre} (Stock: ${p.stock_actual})</option>`;
-					}).join('');
+				if (state.stock.length > 0) {
+					productoSelect.innerHTML = state.stock.map(p => 
+						`<option value="${p.id}">${(p.nombre_producto || 'ITEM').toUpperCase()} (Actual: ${p.stock_actual})</option>`
+					).join('');
 				} else {
-					productoSelect.innerHTML = '<option value="">SIN MERCADERÍA EN BASE</option>';
+					productoSelect.innerHTML = '<option value="">Sin productos cargados</option>';
 				}
 			} else {
 				camposCompra.classList.add('hidden');
@@ -2184,57 +2143,54 @@
 			if (event && event.preventDefault) event.preventDefault();
 
 			const tipoMov = document.getElementById('input-tipo-movimiento').value;
-			const montoInput = document.getElementById('input-monto-gasto');
-			const descInput = document.getElementById('input-desc-gasto');
-			const prodSelect = document.getElementById('input-producto-stock');
-			const cantInput = document.getElementById('input-cantidad-compra');
+			const monto = parseFloat(document.getElementById('input-monto-gasto').value) || 0;
+			const descInput = document.getElementById('input-desc-gasto').value;
 
-			const monto = parseFloat(montoInput.value) || 0;
 			if (monto <= 0) return showVikingToast("Monto inválido", true);
 
-			let descripcionFinal = descInput.value;
+			let descripcionFinal = descInput;
 
 			try {
+				// --- PROCESO DE COMPRA: ACTUALIZA STOCK ---
 				if (tipoMov === 'Compra') {
-					const productoId = prodSelect.value;
-					const cantidadComprada = parseInt(cantInput.value) || 0;
+					const productoId = document.getElementById('input-producto-stock').value;
+					const cantidad = parseInt(document.getElementById('input-cantidad-compra').value) || 0;
 
-					if (!productoId || cantidadComprada <= 0) {
-						showVikingToast("Datos de compra incompletos", true);
+					if (!productoId || cantidad <= 0) {
+						showVikingToast("Selecciona producto y cantidad", true);
 						return;
 					}
 
-					const prod = state.stock.find(s => String(s.id) === String(productoId));
-					descripcionFinal = `COMPRA: ${prod ? prod.nombre_producto.toUpperCase() : 'MERCADERÍA'} (x${cantidadComprada})`;
+					const producto = state.stock.find(s => String(s.id) === String(productoId));
+					if (!producto) throw new Error("Producto no encontrado");
 
-					// ACTUALIZAR STOCK EN NEON (SUMA)
-					const nuevoStock = (prod ? parseInt(prod.stock_actual) : 0) + cantidadComprada;
+					descripcionFinal = `COMPRA MERCADERÍA: ${producto.nombre_producto.toUpperCase()} (x${cantidad})`;
+
+					// Update Stock en NeonDB (SUMA de lo comprado)
+					const nuevoStock = parseInt(producto.stock_actual) + cantidad;
 					await apiFetch(`/stock/${productoId}`, 'PUT', {
-						...prod,
+						...producto,
 						stock_actual: nuevoStock
 					});
 				}
 
-				// REGISTRAR EN CAJA
+				// --- REGISTRO EN CAJA ---
 				const res = await apiFetch('/caja/movimientos', 'POST', {
 					tipo: tipoMov,
 					descripcion: descripcionFinal,
 					monto: (tipoMov === 'Gasto' || tipoMov === 'Compra') ? -monto : monto,
-					metodo_pago: 'Efectivo',
-					fecha: new Date().toISOString()
+					metodo_pago: 'Efectivo'
 				});
 
 				if (!res.error) {
-					showVikingToast("¡Valhalla Sincronizado!");
-					cerrarModalCaja();
-					// Recarga mandatoria de datos
+					showVikingToast("Operación sincronizada");
+					closeModal('modal-gasto');
 					await Promise.all([loadCaja(), loadStock()]);
 				}
-			} catch (err) {
-				showVikingToast("Falla en la Matrix: " + err.message, true);
+			} catch (e) {
+				showVikingToast("Error: " + e.message, true);
 			}
 		}
-		
         async function initApp() {
             await Promise.all([fetchAlumnos(), loadStaff(), loadPlanes(), loadStock(), loadClases(), fetchReservas(), loadDashboard(), loadMusculacionMetadata(), loadCaja()]);
         }

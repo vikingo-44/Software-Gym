@@ -1044,56 +1044,58 @@
         </div>
     </div>
 
-    <!-- MODAL DE MOVIMIENTOS -->
-		<div id="modal-gasto" class="fixed inset-0 bg-black/80 hidden flex items-center justify-center z-50 backdrop-blur-sm">
-			<div class="glass-panel p-8 rounded-[2.5rem] w-full max-w-md mx-4 relative border border-white/10 bg-zinc-950">
-				
-				<h3 class="text-2xl font-black italic text-white mb-6 uppercase tracking-tight">Caja <span class="text-red-600">&</span> Stock</h3>
-				
-				<form onsubmit="guardarMovimiento(event)">
-					<div class="space-y-5">
-						<!-- Tipo de Movimiento -->
+    <!-- MODAL DE MOVIMIENTOS - VERSIÓN INTEGRAL CORREGIDA -->
+	<div id="modal-gasto" class="fixed inset-0 bg-black/80 hidden flex items-center justify-center z-50 backdrop-blur-sm">
+		<div class="glass-panel p-8 rounded-[2.5rem] w-full max-w-md mx-4 relative border border-white/10 bg-zinc-950">
+			
+			<h3 class="text-2xl font-black italic text-white mb-6 uppercase tracking-tight">Caja <span class="text-red-600">&</span> Stock</h3>
+			
+			<form onsubmit="guardarMovimiento(event)">
+				<div class="space-y-5">
+					<!-- Tipo de Movimiento -->
+					<div>
+						<label class="block text-[10px] font-black uppercase text-gray-500 mb-2 italic">Operación</label>
+						<select id="input-tipo-movimiento" onchange="toggleCamposCompra(this.value)" class="viking-input w-full">
+							<option value="Ingreso">Ingreso Manual</option>
+							<option value="Gasto">Egreso / Gasto General</option>
+							<option value="Compra">Compra de Mercadería (Suma Stock)</option>
+						</select>
+					</div>
+
+					<!-- SECCIÓN DINÁMICA: CAMPOS DE COMPRA (Ocultos por defecto) -->
+					<div id="campos-compra-mercaderia" class="hidden space-y-4 p-4 bg-red-600/5 rounded-2xl border border-red-600/10">
 						<div>
-							<label class="block text-[10px] font-black uppercase text-gray-500 mb-2 italic">Operación</label>
-							<select id="input-tipo-movimiento" onchange="toggleCamposCompra(this.value)" class="viking-input w-full">
-								<option value="Ingreso">Ingreso Manual</option>
-								<option value="Gasto">Egreso / Gasto General</option>
-								<option value="Compra">Compra de Mercadería (Suma Stock)</option>
+							<label class="block text-[10px] font-black uppercase text-red-500 mb-2 italic">Producto a Reponer</label>
+							<select id="input-producto-stock" class="viking-input w-full">
+								<!-- Se puebla desde el JS -->
 							</select>
 						</div>
-
-						<!-- Campos de Compra -->
-						<div id="campos-compra-mercaderia" class="hidden space-y-4 p-4 bg-red-600/5 rounded-2xl border border-red-600/10">
-							<div>
-								<label class="block text-[10px] font-black uppercase text-red-500 mb-2 italic">Producto</label>
-								<select id="input-producto-stock" class="viking-input w-full"></select>
-							</div>
-							<div>
-								<label class="block text-[10px] font-black uppercase text-red-500 mb-2 italic">Cantidad Ingresante</label>
-								<input type="number" id="input-cantidad-compra" class="viking-input w-full" placeholder="0">
-							</div>
-						</div>
-
-						<!-- Descripción -->
-						<div id="container-desc-gasto">
-							<label class="block text-[10px] font-black uppercase text-gray-500 mb-2 italic">Concepto</label>
-							<input type="text" id="input-desc-gasto" class="viking-input w-full" placeholder="Ej: Pago de Luz">
-						</div>
-
-						<!-- Monto -->
 						<div>
-							<label class="block text-[10px] font-black uppercase text-gray-500 mb-2 italic">Importe ($)</label>
-							<input type="number" id="input-monto-gasto" class="viking-input w-full font-black" placeholder="0.00" required step="0.01">
-						</div>
-
-						<div class="flex gap-3 pt-4">
-							<button type="button" onclick="closeModal('modal-gasto')" class="flex-1 py-4 bg-white/5 rounded-2xl font-black uppercase italic text-[11px]">Cerrar</button>
-							<button type="submit" class="flex-1 py-4 viking-bg-red text-black rounded-2xl font-black uppercase italic text-[11px] shadow-lg">Confirmar</button>
+							<label class="block text-[10px] font-black uppercase text-red-500 mb-2 italic">Cantidad Ingresante</label>
+							<input type="number" id="input-cantidad-compra" class="viking-input w-full" placeholder="0">
 						</div>
 					</div>
-				</form>
-			</div>
+
+					<!-- Descripción / Concepto -->
+					<div id="container-desc-gasto">
+						<label class="block text-[10px] font-black uppercase text-gray-500 mb-2 italic">Concepto</label>
+						<input type="text" id="input-desc-gasto" class="viking-input w-full" placeholder="Ej: Pago de Luz">
+					</div>
+
+					<!-- Monto -->
+					<div>
+						<label class="block text-[10px] font-black uppercase text-gray-500 mb-2 italic">Importe ($)</label>
+						<input type="number" id="input-monto-gasto" class="viking-input w-full font-black text-white" placeholder="0.00" required step="0.01">
+					</div>
+
+					<div class="flex gap-3 pt-4">
+						<button type="button" onclick="closeModal('modal-gasto')" class="flex-1 py-4 bg-white/5 rounded-2xl font-black uppercase italic text-[11px] text-gray-400 hover:text-white transition-all">Cerrar</button>
+						<button type="submit" class="flex-1 py-4 viking-bg-red text-black rounded-2xl font-black uppercase italic text-[11px] shadow-lg hover:scale-[1.02] transition-transform">Confirmar</button>
+					</div>
+				</div>
+			</form>
 		</div>
+	</div>
 
     <div id="modal-staff" class="viking-modal">
         <div class="glass-card p-10 rounded-[3rem] w-full max-w-lg text-left">
