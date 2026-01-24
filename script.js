@@ -1012,44 +1012,46 @@
 		async function finalizarVentaMercaderia() {
 			if (state.cart.length === 0) return showVikingToast("El carrito está vacío", true);
 
-			const total = state.cart.reduce((acc, item) => acc + (item.precio * item.cantidad), 0);
-			const metodoEl = document.getElementById('metodo-pago');
-			const metodoPago = metodoEl ? metodoEl.value : "Efectivo";
+			const metodoPago = document.getElementById('metodo-pago').value;
+			showVikingToast("Procesando transacciones...");
+			let errores = 0;
 
-			if (confirm(`¿Finalizar cobro total de $${total.toLocaleString()} con ${metodoPago}?`)) {
-				
-				showVikingToast("Procesando en la Tesorería...");
-				let errores = 0;
-
-				// Recorremos el carrito (pueden ser 3 aguas y 1 Plan de Musculación)
-				for (const item of state.cart) {
-					const exito = await procesarPagoVikingo({
-						tipo: item.tipo, // 'Mercaderia' o 'Plan'
+			for (const item of state.cart) {
+				try {
+					// Registro en Caja
+					await apiFetch('/caja/movimientos', 'POST', {
+						tipo: item.tipo === 'Plan' ? 'Cobro Plan' : 'Venta Mercadería',
+						descripcion: item.tipo === 'Plan' ? `PLAN: ${item.nombre}` : `VENTA: ${item.nombre} (x${item.cantidad})`,
 						monto: item.precio * item.cantidad,
-						descripcion: item.tipo === 'Plan' ? item.nombre : `Venta: ${item.nombre} (x${item.cantidad})`,
-						metodo_pago: metodoPago,
-						producto_id: item.producto_id, // ID del producto o ID del Plan
-						alumno_id: item.alumno_id,     // Si es Plan, esto viaja al servidor
-						cantidad: item.cantidad
-					}, false); // false para que no tire mil toasts seguidos
+						metodo_pago: metodoPago
+					});
 
-					if (!exito) errores++;
-				}
-
-				if (errores === 0) {
-					showVikingToast("¡Cobro exitoso! Vencimientos actualizados.");
-					state.cart = []; 
-					updateCartUI();
-					
-					// Recargamos todo para ver los cambios reflejados
-					await Promise.all([loadStock(), loadCaja(), fetchAlumnos()]);
-					renderCobrar();
-				} else {
-					showVikingToast(`Hubo ${errores} errores en el proceso.`, true);
+					// Descuento de Stock
+					if (item.tipo === 'Mercaderia') {
+						const producto = state.stock.find(s => s.id === item.producto_id);
+						if (producto) {
+							await apiFetch(`/stock/${producto.id}`, 'PUT', {
+								...producto,
+								stock_actual: producto.stock_actual - item.cantidad
+							});
+						}
+					}
+				} catch (e) { 
+					console.error("Error procesando item:", item.nombre, e);
+					errores++; 
 				}
 			}
-		}
 
+			if (errores === 0) {
+				showVikingToast("Venta y Stock actualizados");
+				state.cart = [];
+				if(typeof updateCartUI === 'function') updateCartUI();
+				await Promise.all([loadStock(), loadCaja()]);
+				if(typeof renderCobrar === 'function') renderCobrar();
+			} else {
+				showVikingToast(`Venta con ${errores} errores. Revisar caja.`, true);
+			}
+		}
 		// --- REEMPLAZA TU FUNCIÓN openFichaTecnica POR ESTA VERSIÓN CON DISEÑO DE FILAS ---
 		async function openFichaTecnica(alumnoId) {
 			const rutinaContainer = document.getElementById('ficha-rutina-container');
@@ -1994,13 +1996,13 @@
 			}
 		}
 
-		window.loadCaja = async function() {
+		async function loadCaja() {
 			const movs = await apiFetch('/caja/movimientos');
 			
 			let calcIngresos = 0;
 			let calcGastos = 0;
 
-			// 1. Encabezados Forzados
+			// 1. Encabezados Forzados (Tu Lógica)
 			const thead = document.querySelector('#view-caja table thead tr');
 			if(thead) {
 				thead.innerHTML = `
@@ -2014,10 +2016,9 @@
 			if (Array.isArray(movs)) {
 				movs.forEach(m => {
 					const tipo = (m.tipo || '').toLowerCase();
-					const desc = (m.descripcion || '').toLowerCase();
 					const monto = Math.abs(parseFloat(m.monto));
 
-					// LÓGICA DE FLUJO: 
+					// TU LÓGICA DE FLUJO EXACTA
 					const esPositivo = (tipo.includes('mercaderia') || tipo.includes('mercadería') || tipo.includes('plan') || tipo.includes('venta') || tipo.includes('cobro') || tipo.includes('ingreso')) && !tipo.includes('compra');
 					const esEgreso = !esPositivo && (tipo === 'gasto' || tipo === 'egreso' || tipo === 'salida' || tipo === 'compra');
 
@@ -2048,7 +2049,8 @@
 			const table = document.getElementById('table-caja');
 			if(table) {
 				if(Array.isArray(movs) && movs.length > 0) {
-					table.innerHTML = movs.map(m => {
+					// Invertimos para ver lo último arriba
+					table.innerHTML = movs.reverse().map(m => {
 						const tipoRaw = (m.tipo || '').toLowerCase();
 						const monto = Math.abs(parseFloat(m.monto));
 
@@ -2060,7 +2062,7 @@
 							? 'bg-red-500/10 text-red-500 border-red-500/20' 
 							: 'bg-green-500/10 text-green-500 border-green-500/20';
 
-						// Lógica de Iconos completa
+						// Tu Lógica de Iconos completa
 						let icono = 'tag';
 						if(tipoRaw.includes('plan')) icono = 'users';
 						if(tipoRaw.includes('mercaderia') || tipoRaw.includes('compra')) icono = 'shopping-bag';
@@ -2081,7 +2083,7 @@
 							</td>
 							<td class="py-4 px-2">
 								<p class="text-[11px] font-bold text-white uppercase">${m.descripcion}</p>
-								<p class="text-[9px] text-gray-500">${new Date(m.fecha).toLocaleDateString()} - ${m.metodo_pago || 'Efectivo'}</p>
+								<p class="text-[9px] text-gray-500 font-bold uppercase">${new Date(m.fecha).toLocaleDateString()} - ${m.metodo_pago || 'Efectivo'}</p>
 							</td>
 							<td class="py-4 px-2 text-right font-black italic text-white tracking-wide pr-2">
 								$ ${monto.toLocaleString()}
@@ -2092,115 +2094,97 @@
 					if(window.lucide) lucide.createIcons();
 					
 				} else {
-					table.innerHTML = '<tr><td colspan="4" class="text-center py-6 text-gray-500 italic text-[10px]">Sin movimientos registrados</td></tr>';
+					table.innerHTML = '<tr><td colspan="4" class="text-center py-10 text-gray-500 italic text-[10px] uppercase font-black">Sin movimientos en la bóveda</td></tr>';
 				}
 			}
-		};
+		}
 
-		window.toggleCamposCompra = function(tipo) {
+		async function toggleCamposCompra(tipo) {
 			const camposCompra = document.getElementById('campos-compra-mercaderia');
 			const containerDesc = document.getElementById('container-desc-gasto');
 			const descInput = document.getElementById('input-desc-gasto');
 			const productoSelect = document.getElementById('input-producto-stock');
 
 			if (tipo === 'Compra') {
-				if (camposCompra) camposCompra.classList.remove('hidden');
-				if (containerDesc) containerDesc.classList.add('opacity-40');
-				if (descInput) descInput.required = false;
+				camposCompra.classList.remove('hidden');
+				containerDesc.classList.add('opacity-40');
+				descInput.required = false;
 				
-				// Obtenemos el stock del estado global
-				const currentStock = (window.state && window.state.stock) || (typeof state !== 'undefined' ? state.stock : []);
-
-				if (currentStock && Array.isArray(currentStock) && currentStock.length > 0) {
-					productoSelect.innerHTML = currentStock.map(p => 
+				// Poblamos el select con los productos actuales en state.stock
+				if (state.stock && state.stock.length > 0) {
+					productoSelect.innerHTML = state.stock.map(p => 
 						`<option value="${p.id}">${p.nombre_producto.toUpperCase()} (Stock: ${p.stock_actual})</option>`
 					).join('');
 				} else {
-					productoSelect.innerHTML = '<option value="">No hay productos cargados en Stock</option>';
+					productoSelect.innerHTML = '<option value="">Sin productos en Stock</option>';
 				}
 			} else {
-				if (camposCompra) camposCompra.classList.add('hidden');
-				if (containerDesc) containerDesc.classList.remove('opacity-40');
-				if (descInput) descInput.required = true;
+				camposCompra.classList.add('hidden');
+				containerDesc.classList.remove('opacity-40');
+				descInput.required = true;
 			}
-		};
+		}
 
-		window.guardarMovimiento = async function(event) {
+		async function guardarMovimiento(event) {
 			if (event && event.preventDefault) event.preventDefault();
 
-			const descInput = document.getElementById('input-desc-gasto');
+			const tipoMov = document.getElementById('input-tipo-movimiento').value;
 			const montoInput = document.getElementById('input-monto-gasto');
-			const tipoInput = document.getElementById('input-tipo-movimiento');
+			const descInput = document.getElementById('input-desc-gasto');
 			const prodSelect = document.getElementById('input-producto-stock');
 			const cantInput = document.getElementById('input-cantidad-compra');
 
-			const monto = parseFloat(montoInput?.value) || 0;
-			const tipoSeleccionado = tipoInput ? tipoInput.value : 'Ingreso';
-			let descripcionFinal = descInput?.value || 'Varios';
+			const monto = parseFloat(montoInput.value) || 0;
+			let descripcionFinal = descInput.value || 'Varios';
 
-			if (monto <= 0) return alert("El monto debe ser mayor a 0");
+			if (monto <= 0) {
+				showVikingToast("El monto debe ser mayor a 0", true);
+				return;
+			}
 
-			// --- LÓGICA DE COMPRA: ACTUALIZAMOS STOCK ---
-			if (tipoSeleccionado === 'Compra') {
-				const productoId = prodSelect.value;
-				const cantidadAñadir = parseInt(cantInput.value) || 0;
+			try {
+				// --- LÓGICA DE COMPRA: ACTUALIZA STOCK ---
+				if (tipoMov === 'Compra') {
+					const productoId = prodSelect.value;
+					const cantidadAñadir = parseInt(cantInput.value) || 0;
 
-				if (!productoId || cantidadAñadir <= 0) {
-					return alert("Selecciona un producto y cantidad válida.");
-				}
+					if (!productoId || cantidadAñadir <= 0) {
+						showVikingToast("Selecciona producto y cantidad válida", true);
+						return;
+					}
 
-				const currentStock = (window.state && window.state.stock) || (typeof state !== 'undefined' ? state.stock : []);
-				const producto = currentStock.find(p => String(p.id) === String(productoId));
-				
-				if (!producto) return alert("Producto no identificado.");
+					const producto = state.stock.find(p => String(p.id) === String(productoId));
+					if (!producto) throw new Error("Producto no encontrado");
 
-				descripcionFinal = `COMPRA: ${producto.nombre_producto.toUpperCase()} (x${cantidadAñadir} UNID)`;
+					descripcionFinal = `COMPRA MERCADERÍA: ${producto.nombre_producto} (x${cantidadAñadir})`;
 
-				// 1. ACTUALIZAR STOCK EN EL SERVIDOR
-				try {
 					const nuevoStock = parseInt(producto.stock_actual) + cantidadAñadir;
-					const resStock = await apiFetch(`/stock/${productoId}`, 'PUT', {
+					await apiFetch(`/stock/${productoId}`, 'PUT', {
 						...producto,
 						stock_actual: nuevoStock
 					});
-					
-					if (resStock.error) throw new Error(resStock.error);
-				} catch (err) {
-					console.error("Falla en Stock:", err);
-					return alert("No se pudo actualizar el stock. Movimiento cancelado.");
 				}
-			}
 
-			// --- 2. REGISTRO EN CAJA ---
-			try {
+				// --- REGISTRO EN CAJA ---
 				const res = await apiFetch('/caja/movimientos', 'POST', {
-					tipo: tipoSeleccionado, 
+					tipo: tipoMov === 'Compra' ? 'Compra' : tipoMov,
 					descripcion: descripcionFinal,
-					monto: monto,
-					metodo_pago: 'Efectivo' 
+					monto: (tipoMov === 'Gasto' || tipoMov === 'Compra') ? -monto : monto,
+					metodo_pago: 'Efectivo'
 				});
 
 				if (!res.error) {
-					if (descInput) descInput.value = "";
-					if (montoInput) montoInput.value = "";
-					if (cantInput) cantInput.value = "";
-					
-					const modal = document.getElementById('modal-gasto');
-					if (modal) modal.classList.add('hidden');
-					
-					// Recargar datos
-					await window.loadCaja(); 
-					if (typeof loadStock === 'function') await loadStock(); 
-					
-					if (typeof showVikingToast === 'function') showVikingToast('Caja y Stock actualizados');
+					showVikingToast("Movimiento sincronizado con el Valhalla");
+					closeModal('modal-gasto');
+					await Promise.all([loadCaja(), loadStock()]);
 				} else {
-					alert("Error: " + res.error);
+					showVikingToast("Error: " + res.error, true);
 				}
 			} catch (e) {
 				console.error(e);
-				alert("Error de conexión al guardar.");
+				showVikingToast("Error de conexión", true);
 			}
-		};
+		}
 		
         async function initApp() {
             await Promise.all([fetchAlumnos(), loadStaff(), loadPlanes(), loadStock(), loadClases(), fetchReservas(), loadDashboard(), loadMusculacionMetadata(), loadCaja()]);
