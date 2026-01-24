@@ -243,7 +243,7 @@ class PlanUpdate(BaseModel):
 
 class ClaseUpdate(BaseModel):
     nombre: str
-    coach: str
+    coach: int
     color: Optional[str] = "#FF0000"
     capacidad_max: Optional[int] = 40
     horarios_detalle: Optional[List[dict]] = None
@@ -908,7 +908,7 @@ def get_clases(db: Session = Depends(database.get_db)):
 def create_clase(data: ClaseUpdate, db: Session = Depends(database.get_db)):
     new_c = models.Clase(
         nombre=data.nombre,
-        coach=data.coach, # <--- Usamos el ID
+        profesor_id=data.coach, # <--- Mapeamos el 'coach' del frontend al 'profesor_id' del modelo
         color=data.color,
         capacidad_max=data.capacidad_max,
         horarios_detalle=data.horarios_detalle 
@@ -922,7 +922,7 @@ def update_clase(id: int, data: ClaseUpdate, db: Session = Depends(database.get_
     c = db.query(models.Clase).filter(models.Clase.id == id).first()
     if c:
         c.nombre = data.nombre
-        c.coach = data.coach
+        c.profesor_id = data.coach # <--- Cambiado de c.coach a c.profesor_id
         c.color = data.color
         c.capacidad_max = data.capacidad_max
         c.horarios_detalle = data.horarios_detalle 
