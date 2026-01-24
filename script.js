@@ -1682,28 +1682,36 @@
 				headers['Authorization'] = `Bearer ${token}`;
 			}
 
+			// FIX CRÍTICO: FastAPI a veces requiere la barra al final para evitar el error 405/500
+			let cleanEndpoint = endpoint;
+			if (endpoint === '/login') cleanEndpoint = '/login/';
+
 			const options = { method, headers };
 			if (body) options.body = JSON.stringify(body);
 			
 			try {
-				const res = await fetch(`${API_BASE}${endpoint}`, options);
+				// Usamos API_BASE o API_URL según lo tengas definido
+				const baseUrl = typeof API_BASE !== 'undefined' ? API_BASE : API_URL;
+				const res = await fetch(`${baseUrl}${cleanEndpoint}`, options);
 				
-				// 1. Manejo de sesión expirada
+				// Manejo de sesión expirada
 				if (res.status === 401) {
 					localStorage.removeItem('viking_token');
 					location.reload();
 					return { error: "Sesión expirada" };
 				}
 
-				// 2. LEER EL CUERPO UNA SOLA VEZ
+				// Si el servidor tira un error 500 (Inconsistencia de BD), lo atrapamos acá
+				if (res.status === 500) {
+					return { error: "Error 500: El servidor no pudo procesar la solicitud (Base de Datos vacía o corrupta)" };
+				}
+
+				// Leer respuesta
 				const responseText = await res.text();
-				
-				// 3. Intentar parsear como JSON
 				let responseData;
 				try {
 					responseData = JSON.parse(responseText);
 				} catch (e) {
-					// Si no es JSON, devolvemos el texto plano (útil para errores 500 crudos)
 					responseData = { error: responseText || "Error desconocido del servidor" };
 				}
 
@@ -1717,6 +1725,7 @@
 				return { error: "Error de conexión con el Valhalla" }; 
 			}
 		}
+
 
         function calculateIMC() {
             const peso = parseFloat(document.getElementById('al-peso').value);
@@ -1888,149 +1897,147 @@
 		}
 
 		async function handleLogin(e) {
-    // 1. Detener el refresco automático del formulario
-    if (e && e.preventDefault) e.preventDefault();
+			// Detener el refresco automático del formulario
+			if (e && e.preventDefault) e.preventDefault();
 
-    const dniInput = document.getElementById('login-dni');
-    const passInput = document.getElementById('login-pass');
-    const errorDiv = document.getElementById('login-error');
-    const loginBtn = document.getElementById('login-button');
+			const dniInput = document.getElementById('login-dni');
+			const passInput = document.getElementById('login-pass');
+			const errorDiv = document.getElementById('login-error');
+			const loginBtn = document.getElementById('login-button');
 
-    if (!dniInput || !passInput) return;
+			if (!dniInput || !passInput) return;
 
-    const dni = dniInput.value;
-    const pass = passInput.value;
+			const dni = dniInput.value.trim();
+			const pass = passInput.value.trim();
 
-    // --- 🛡️ BYPASS DE EMERGENCIA (ACCESO LOCAL) ---
-    // Si el servidor falla, esto te deja entrar LOCALMENTE usando estas credenciales:
-    if (dni === "ADMIN" && pass === "VALHALLA123") {
-        console.warn("⚠️ ENTRANDO POR BYPASS DE EMERGENCIA");
-        const mockUser = {
-            id: 1,
-            dni: "ADMIN",
-            nombre_completo: "ADMINISTRADOR DE EMERGENCIA",
-            rol_nombre: "Administrador",
-            access_token: "token_vikingo_emergencia"
-        };
-        
-        state.user = mockUser;
-        localStorage.setItem('viking_token', mockUser.access_token);
-        
-        // Transición de Interfaz
-        document.getElementById('login-overlay').style.display = 'none';
-        document.getElementById('sidebar').classList.remove('hidden');
-        document.getElementById('main-content').classList.remove('hidden');
-        
-        // Cargar datos en la barra lateral para el bypass
-        const elName = document.getElementById('side-user-name');
-        if (elName) elName.innerText = mockUser.nombre_completo;
-        const elRole = document.getElementById('side-user-role');
-        if (elRole) elRole.innerText = mockUser.rol_nombre;
-        const elInitials = document.getElementById('user-initials');
-        if (elInitials) elInitials.innerText = "AE";
+			// --- 🚨 TÚNEL DE EMERGENCIA (BYPASS LOCAL) 🚨 ---
+			// Si usás estas credenciales, NO llama al servidor. Te deja entrar directo.
+			if (dni === "ADMIN" && pass === "VALHALLA123") {
+				console.warn("⚔️ ENTRANDO POR EL TÚNEL DE EMERGENCIA");
+				
+				const mockUser = {
+					id: 1,
+					dni: "ADMIN",
+					nombre_completo: "ADMINISTRADOR DE EMERGENCIA",
+					rol_nombre: "Administrador",
+					access_token: "token_vikingo_emergencia_2025"
+				};
+				
+				state.user = mockUser;
+				localStorage.setItem('viking_token', mockUser.access_token);
+				
+				// Transición de Interfaz
+				document.getElementById('login-overlay').style.display = 'none';
+				document.getElementById('sidebar').classList.remove('hidden');
+				document.getElementById('main-content').classList.remove('hidden');
+				
+				// Cargar datos en la barra lateral
+				if (document.getElementById('side-user-name')) 
+					document.getElementById('side-user-name').innerText = mockUser.nombre_completo;
+				if (document.getElementById('side-user-role')) 
+					document.getElementById('side-user-role').innerText = mockUser.rol_nombre;
+				if (document.getElementById('user-initials')) 
+					document.getElementById('user-initials').innerText = "AE";
 
-        switchView('dashboard');
-        if (window.lucide) lucide.createIcons();
-        showVikingToast("¡Entraste por el bypass de emergencia!");
-        return; 
-    }
-    // --- FIN BYPASS ---
+				if (typeof switchView === 'function') switchView('dashboard');
+				if (window.lucide) lucide.createIcons();
+				
+				showVikingToast("¡Acceso por Bypass de Emergencia!");
+				return; 
+			}
+			// --- FIN BYPASS ---
 
-    // Feedback visual de carga para el flujo normal
-    if (loginBtn) {
-        loginBtn.disabled = true;
-        loginBtn.innerText = "VERIFICANDO...";
-    }
+			// FLUJO NORMAL CONTRA EL SERVIDOR
+			if (loginBtn) {
+				loginBtn.disabled = true;
+				loginBtn.innerText = "VERIFICANDO...";
+			}
+			if (errorDiv) errorDiv.classList.add('hidden');
 
-    const data = {
-        dni: dni,
-        password: pass
-    };
+			const data = { dni, password: pass };
 
-    try {
-        const res = await apiFetch('/login', 'POST', data);
+			try {
+				const res = await apiFetch('/login', 'POST', data);
 
-        if (res && !res.error) {
-            // --- NUEVO: GUARDAR TOKEN JWT ---
-            if (res.access_token) {
-                localStorage.setItem('viking_token', res.access_token);
-            }
+				if (res && !res.error) {
+					// Guardar Token
+					if (res.access_token) {
+						localStorage.setItem('viking_token', res.access_token);
+					}
 
-            // Guardamos al usuario en el estado global
-            state.user = res;
+					state.user = res;
 
-            // 2. Ocultar Login y mostrar App
-            document.getElementById('login-overlay').style.display = 'none';
-            document.getElementById('sidebar').classList.remove('hidden');
-            document.getElementById('main-content').classList.remove('hidden');
+					// Ocultar Login y mostrar App
+					document.getElementById('login-overlay').style.display = 'none';
+					document.getElementById('sidebar').classList.remove('hidden');
+					document.getElementById('main-content').classList.remove('hidden');
 
-            // 3. Cargar datos del usuario en la barra lateral
-            const elName = document.getElementById('side-user-name');
-            if (elName) elName.innerText = res.nombre_completo || "Usuario";
+					// Cargar datos del usuario en la barra lateral
+					const elName = document.getElementById('side-user-name');
+					if (elName) elName.innerText = res.nombre_completo || "Usuario";
 
-            const elRole = document.getElementById('side-user-role');
-            if (elRole) elRole.innerText = res.rol_nombre || 'Staff';
+					const elRole = document.getElementById('side-user-role');
+					if (elRole) elRole.innerText = res.rol_nombre || 'Staff';
 
-            // --- LÓGICA DE INICIALES ---
-            const name = res.nombre_completo || "Usuario Vikingo";
-            const initials = name.split(' ')
-                .filter(n => n)
-                .map(n => n[0])
-                .join('')
-                .toUpperCase()
-                .substring(0, 2);
+					// Lógica de Iniciales
+					const name = res.nombre_completo || "Usuario Vikingo";
+					const initials = name.split(' ')
+						.filter(n => n)
+						.map(n => n[0])
+						.join('')
+						.toUpperCase()
+						.substring(0, 2);
 
-            const elInitials = document.getElementById('user-initials');
-            if (elInitials) elInitials.innerText = initials;
+					const elInitials = document.getElementById('user-initials');
+					if (elInitials) elInitials.innerText = initials;
 
-            // 4. Cargar datos maestros (Profesores, Clases, etc.)
-            await loadProfesores();
+					// Cargar datos maestros
+					if (typeof loadProfesores === 'function') await loadProfesores();
 
-            if (typeof initApp === 'function') {
-                await initApp();
-            } else {
-                if (typeof loadClases === 'function') loadClases();
-                if (typeof loadStock === 'function') loadStock();
-            }
+					if (typeof initApp === 'function') {
+						await initApp();
+					} else {
+						if (typeof loadClases === 'function') loadClases();
+						if (typeof loadStock === 'function') loadStock();
+						if (typeof loadCaja === 'function') loadCaja();
+					}
 
-            // 5. Cambiar a la vista principal
-            switchView('dashboard');
+					// Cambiar a la vista principal
+					switchView('dashboard');
 
-            // --- Renderizar Dashboard específico si es Alumno ---
-            if (res.rol_nombre === "Alumno" && typeof renderStudentDashboard === 'function') {
-                await renderStudentDashboard();
-            }
-            
-            // --- MEJORA: Precarga de datos si es Profesor ---
-            if (res.rol_nombre === "Profesor" && typeof loadProfessorDashboard === 'function') {
-                await loadProfessorDashboard();
-            }
+					// Dashboards específicos según rol
+					if (res.rol_nombre === "Alumno" && typeof renderStudentDashboard === 'function') {
+						await renderStudentDashboard();
+					}
+					if (res.rol_nombre === "Profesor" && typeof loadProfessorDashboard === 'function') {
+						await loadProfessorDashboard();
+					}
 
-            // Refrescar iconos
-            if (window.lucide) lucide.createIcons();
+					if (window.lucide) lucide.createIcons();
+					showVikingToast(`¡Bienvenido al Valhalla, ${res.nombre_completo.split(' ')[0]}!`);
 
-            showVikingToast(`¡Bienvenido al Valhalla, ${res.nombre_completo.split(' ')[0]}!`);
+				} else {
+					// Mostrar error si las credenciales fallan o el servidor tira error
+					if (errorDiv) {
+						errorDiv.innerText = res.error || "Credenciales incorrectas";
+						errorDiv.classList.remove('hidden');
+					}
+					showVikingToast(res.error || "Error de autenticación", true);
+					if (loginBtn) {
+						loginBtn.disabled = false;
+						loginBtn.innerText = "Entrar al Valhalla";
+					}
+				}
+			} catch (err) {
+				console.error("Error en el proceso de login:", err);
+				showVikingToast("Fallo crítico: El servidor no responde (500)", true);
+				if (loginBtn) {
+					loginBtn.disabled = false;
+					loginBtn.innerText = "Entrar al Valhalla";
+				}
+			}
+		}
 
-        } else {
-            // Mostrar error si las credenciales fallan
-            if (errorDiv) {
-                errorDiv.innerText = res.error || "Credenciales incorrectas";
-                errorDiv.classList.remove('hidden');
-            }
-            if (loginBtn) {
-                loginBtn.disabled = false;
-                loginBtn.innerText = "Entrar al Valhalla";
-            }
-        }
-    } catch (err) {
-        console.error("Error en el proceso de login:", err);
-        showVikingToast("Error de conexión con el servidor", true);
-        if (loginBtn) {
-            loginBtn.disabled = false;
-            loginBtn.innerText = "Entrar al Valhalla";
-        }
-    }
-}
 	async function loadCaja() {
         const movs = await apiFetch('/caja/movimientos');
         
