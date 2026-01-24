@@ -243,7 +243,7 @@ class PlanUpdate(BaseModel):
 
 class ClaseUpdate(BaseModel):
     nombre: str
-    coach: int
+    coach: str
     color: Optional[str] = "#FF0000"
     capacidad_max: Optional[int] = 40
     horarios_detalle: Optional[List[dict]] = None
