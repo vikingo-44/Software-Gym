@@ -3255,13 +3255,13 @@
 			openModal('modal-clase');
 		}
 
-// --- NUEVA FUNCIÓN PARA CARGAR PROFESORES REALES ---
-async function loadProfesores() {
-    const res = await apiFetch('/profesores');
-    if (!res.error) {
-        state.profesores = res; // Guardamos en el estado global
-    }
-}
+		// --- NUEVA FUNCIÓN PARA CARGAR PROFESORES REALES ---
+		async function loadProfesores() {
+			const res = await apiFetch('/profesores');
+			if (!res.error) {
+				state.profesores = res; // Guardamos en el estado global
+			}
+		}
 
 		// --- GUARDAR CLASE CON MÚLTIPLES PROFESORES ---
 		async function saveClaseVikinga(e) {
@@ -3275,13 +3275,22 @@ async function loadProfesores() {
 			slotRows.forEach(row => {
 				const diaEl = row.querySelector('.slot-dia');
 				const horaEl = row.querySelector('.slot-hora');
-				const coachEl = row.querySelector('.slot-coach'); // Nuevo campo
+				const coachEl = row.querySelector('.slot-coach'); 
 				
 				if(diaEl && horaEl) {
+					// IMPORTANTE: Si coachEl es un <select>, queremos el texto visible (Nombre), 
+					// no necesariamente el ID, porque tu DB guarda un String.
+					let nombreCoach = "Staff";
+					if (coachEl) {
+						nombreCoach = coachEl.tagName === 'SELECT' 
+							? coachEl.options[coachEl.selectedIndex].text 
+							: coachEl.value;
+					}
+
 					horarios_detalle.push({
 						dia: parseInt(diaEl.value),
 						horario: parseFloat(horaEl.value),
-						coach: coachEl ? coachEl.value : "Staff" // Guardamos el profe específico
+						coach: nombreCoach || "Staff" 
 					});
 				}
 			});
@@ -3290,27 +3299,38 @@ async function loadProfesores() {
 				return showVikingToast("Añade al menos un horario", true);
 			}
 
-			// Usamos el coach del primer turno como "coach principal" para compatibilidad en tablas viejas
+			// Coach principal para la columna 'coach' de la tabla Clases
 			const mainCoach = horarios_detalle[0].coach || "Staff";
 
 			const payload = {
 				nombre: document.getElementById('cl-nombre').value,
-				coach: mainCoach, 
+				coach: String(mainCoach), // Forzamos que sea String para el backend
 				color: document.getElementById('cl-color').value,
-				capacidad_max: parseInt(document.getElementById('cl-cupo').value),
+				capacidad_max: parseInt(document.getElementById('cl-cupo').value) || 20,
 				horarios_detalle: horarios_detalle
 			};
 
+			// LOG para que veas en consola qué estás mandando antes del error
+			console.log("⚔️ Enviando carga Vikinga:", payload);
+
 			const method = id ? 'PUT' : 'POST';
 			const endpoint = id ? `/clases/${id}` : '/clases';
-			const res = await apiFetch(endpoint, method, payload);
 			
-			if(!res.error) {
-				showVikingToast(id ? "Clase Actualizada" : "Clase Creada");
-				closeModal('modal-clase');
-				loadClases();
-			} else {
-				showVikingToast("Error: " + res.error, true);
+			try {
+				const res = await apiFetch(endpoint, method, payload);
+				
+				if(!res.error) {
+					showVikingToast(id ? "¡Valhalla actualizado!" : "¡Clase creada para la batalla!");
+					closeModal('modal-clase');
+					if (typeof loadClases === 'function') loadClases();
+				} else {
+					// Si el error es un objeto, lo convertimos a texto para el toast
+					const msg = typeof res.detail === 'string' ? res.detail : JSON.stringify(res.detail || res.error);
+					showVikingToast("Error del Oráculo: " + msg, true);
+				}
+			} catch (err) {
+				console.error("Fallo crítico en el envío:", err);
+				showVikingToast("Error de conexión con el Valhalla", true);
 			}
 		}
 

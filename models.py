@@ -62,12 +62,14 @@ class Usuario(Base):
 class Clase(Base):
     __tablename__ = "clases"
     id = Column(Integer, primary_key=True)
-    nombre = Column(String)
-    coach = Column(String)
+    nombre = Column(String)  
+    # CAMBIO AQUÍ: Ahora apunta al ID del usuario
+    profesor_id = Column(Integer, ForeignKey("usuarios.id"), nullable=True)  
     capacidad_max = Column(Integer, default=20)
-    # Nueva estructura Vikingo Jefe (JSON para múltiples horarios)
     horarios_detalle = Column(JSON, nullable=True) 
-    color = Column(String, default="#FF0000")
+    color = Column(String, default="#FF0000")  
+    # Relación para poder acceder a los datos del profe fácilmente
+    profesor = relationship("Usuario") 
     reservas = relationship("Reserva", back_populates="clase", cascade="all, delete-orphan")
 
 class Reserva(Base):
