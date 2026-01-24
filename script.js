@@ -3278,19 +3278,14 @@
 				const coachEl = row.querySelector('.slot-coach'); 
 				
 				if(diaEl && horaEl) {
-					// IMPORTANTE: Si coachEl es un <select>, queremos el texto visible (Nombre), 
-					// no necesariamente el ID, porque tu DB guarda un String.
-					let nombreCoach = "Staff";
-					if (coachEl) {
-						nombreCoach = coachEl.tagName === 'SELECT' 
-							? coachEl.options[coachEl.selectedIndex].text 
-							: coachEl.value;
-					}
+					// CAMBIO CLAVE: Ya no usamos .text, usamos .value y lo pasamos a INT
+					// Esto es lo que saca el ID del profesor (ej: 2)
+					const idCoach = coachEl ? parseInt(coachEl.value) : null;
 
 					horarios_detalle.push({
 						dia: parseInt(diaEl.value),
 						horario: parseFloat(horaEl.value),
-						coach: nombreCoach || "Staff" 
+						coach: idCoach // Guardamos el ID numérico
 					});
 				}
 			});
@@ -3299,19 +3294,18 @@
 				return showVikingToast("Añade al menos un horario", true);
 			}
 
-			// Coach principal para la columna 'coach' de la tabla Clases
-			const mainCoach = horarios_detalle[0].coach || "Staff";
+			// El coach principal es el ID del primer turno
+			const mainCoachId = horarios_detalle[0].coach;
 
 			const payload = {
 				nombre: document.getElementById('cl-nombre').value,
-				coach: String(mainCoach), // Forzamos que sea String para el backend
+				coach: mainCoachId, // <--- Esto ahora es un INTEGER (desaparece el 422)
 				color: document.getElementById('cl-color').value,
 				capacidad_max: parseInt(document.getElementById('cl-cupo').value) || 20,
 				horarios_detalle: horarios_detalle
 			};
 
-			// LOG para que veas en consola qué estás mandando antes del error
-			console.log("⚔️ Enviando carga Vikinga:", payload);
+			console.log("⚔️ Enviando carga Vikinga (ID de Profe):", payload);
 
 			const method = id ? 'PUT' : 'POST';
 			const endpoint = id ? `/clases/${id}` : '/clases';
@@ -3320,17 +3314,18 @@
 				const res = await apiFetch(endpoint, method, payload);
 				
 				if(!res.error) {
-					showVikingToast(id ? "¡Valhalla actualizado!" : "¡Clase creada para la batalla!");
+					showVikingToast(id ? "¡Valhalla actualizado!" : "¡Clase creada!");
 					closeModal('modal-clase');
 					if (typeof loadClases === 'function') loadClases();
 				} else {
-					// Si el error es un objeto, lo convertimos a texto para el toast
-					const msg = typeof res.detail === 'string' ? res.detail : JSON.stringify(res.detail || res.error);
-					showVikingToast("Error del Oráculo: " + msg, true);
+					// Mostramos el error detallado de FastAPI si existe
+					const errorMsg = res.detail && Array.isArray(res.detail) 
+						? res.detail[0].msg 
+						: (res.error || "Error desconocido");
+					showVikingToast("Error: " + errorMsg, true);
 				}
 			} catch (err) {
-				console.error("Fallo crítico en el envío:", err);
-				showVikingToast("Error de conexión con el Valhalla", true);
+				showVikingToast("Error de conexión", true);
 			}
 		}
 
