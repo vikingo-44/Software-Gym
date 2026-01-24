@@ -2100,23 +2100,45 @@
 		}
 
 		async function abrirModalCaja() {
-			const form = document.querySelector('#modal-gasto form');
+			console.log("🛡️ Abriendo Terminal de Suministros...");
+			
+			const modal = document.getElementById('modal-gasto');
+			const form = modal?.querySelector('form');
+			
+			if (!modal) {
+				console.error("CRÍTICO: No se encontró el div #modal-gasto");
+				return;
+			}
+
 			if (form) form.reset();
 			
-			// Aseguramos que los campos de compra estén ocultos al iniciar una nueva carga
+			// Resetear visibilidad de campos manualmente
 			const camposCompra = document.getElementById('campos-compra-mercaderia');
-			if (camposCompra) camposCompra.classList.add('hidden');
-			
 			const containerDesc = document.getElementById('container-desc-gasto');
+			
+			if (camposCompra) camposCompra.classList.add('hidden');
 			if (containerDesc) containerDesc.classList.remove('opacity-40');
 
-			// Usamos el sistema de modales existente
-			if (typeof openModal === 'function') {
-				openModal('modal-gasto');
-			} else {
-				const modal = document.getElementById('modal-gasto');
-				if (modal) modal.classList.remove('hidden');
+			// Forzar limpieza de punteros (Fix para el error de redimensionamiento)
+			document.body.style.overflow = 'hidden';
+			modal.style.display = 'flex';
+			modal.classList.remove('hidden');
+
+			// Si tu sistema usa una función global openModal, la llamamos también
+			if (typeof openModal === 'function') openModal('modal-gasto');
+		}
+
+		/**
+		 * Cierra el modal y libera el scroll
+		 */
+		function cerrarModalCaja() {
+			const modal = document.getElementById('modal-gasto');
+			if (modal) {
+				modal.classList.add('hidden');
+				modal.style.display = 'none';
 			}
+			document.body.style.overflow = 'auto';
+			if (typeof closeModal === 'function') closeModal('modal-gasto');
 		}
 
 		async function toggleCamposCompra(tipo) {
@@ -2126,38 +2148,35 @@
 			const productoSelect = document.getElementById('input-producto-stock');
 
 			if (tipo === 'Compra') {
-				// 1. Mostrar campos de stock y atenuar descripción manual
-				if (camposCompra) camposCompra.classList.remove('hidden');
-				if (containerDesc) containerDesc.classList.add('opacity-40');
-				if (descInput) descInput.required = false;
+				camposCompra.classList.remove('hidden');
+				containerDesc.classList.add('opacity-40');
+				descInput.required = false;
 				
-				// 2. Poblar el select con la mercadería actual del sistema desde state.stock
-				if (state.stock && state.stock.length > 0) {
-					productoSelect.innerHTML = state.stock.map(p => {
-						const nombre = (p.nombre_producto || 'Sin Nombre').toUpperCase();
-						return `<option value="${p.id}">${nombre} (Actual: ${p.stock_actual})</option>`;
-					}).join('');
-				} else {
-					// Intento de recuperación si el estado está vacío
+				showVikingToast("Cargando suministros...");
+
+				// Lógica de carga FORZADA: Si state.stock está vacío, hacemos fetch real
+				if (!state.stock || state.stock.length === 0) {
 					try {
 						const data = await apiFetch('/stock');
 						state.stock = Array.isArray(data) ? data : [];
-						if (state.stock.length > 0) {
-							productoSelect.innerHTML = state.stock.map(p => 
-								`<option value="${p.id}">${p.nombre_producto.toUpperCase()} (${p.stock_actual})</option>`
-							).join('');
-						} else {
-							productoSelect.innerHTML = '<option value="">No hay productos cargados</option>';
-						}
-					} catch (err) {
-						productoSelect.innerHTML = '<option value="">Error cargando stock</option>';
+					} catch (e) {
+						console.error("Error cargando stock para el modal", e);
 					}
 				}
+
+				// Renderizar el SELECT
+				if (state.stock && state.stock.length > 0) {
+					productoSelect.innerHTML = state.stock.map(p => {
+						const nombre = (p.nombre_producto || 'ITEM').toUpperCase();
+						return `<option value="${p.id}">${nombre} (Stock: ${p.stock_actual})</option>`;
+					}).join('');
+				} else {
+					productoSelect.innerHTML = '<option value="">SIN MERCADERÍA EN BASE</option>';
+				}
 			} else {
-				// Volver a estado normal para Ingreso o Gasto
-				if (camposCompra) camposCompra.classList.add('hidden');
-				if (containerDesc) containerDesc.classList.remove('opacity-40');
-				if (descInput) descInput.required = true;
+				camposCompra.classList.add('hidden');
+				containerDesc.classList.remove('opacity-40');
+				descInput.required = true;
 			}
 		}
 
@@ -2165,75 +2184,54 @@
 			if (event && event.preventDefault) event.preventDefault();
 
 			const tipoMov = document.getElementById('input-tipo-movimiento').value;
-			const montoVal = document.getElementById('input-monto-gasto').value;
-			const descVal = document.getElementById('input-desc-gasto').value;
-			
-			const monto = parseFloat(montoVal) || 0;
-			if (monto <= 0) {
-				showVikingToast("El monto debe ser superior a cero", true);
-				return;
-			}
+			const montoInput = document.getElementById('input-monto-gasto');
+			const descInput = document.getElementById('input-desc-gasto');
+			const prodSelect = document.getElementById('input-producto-stock');
+			const cantInput = document.getElementById('input-cantidad-compra');
 
-			let descripcionFinal = descVal;
-			showVikingToast("Sincronizando con el servidor...");
+			const monto = parseFloat(montoInput.value) || 0;
+			if (monto <= 0) return showVikingToast("Monto inválido", true);
+
+			let descripcionFinal = descInput.value;
 
 			try {
-				// --- CASO COMPRA DE MERCADERÍA ---
 				if (tipoMov === 'Compra') {
-					const productoId = document.getElementById('input-producto-stock').value;
-					const cantidadInput = document.getElementById('input-cantidad-compra').value;
-					const cantidad = parseInt(cantidadInput) || 0;
+					const productoId = prodSelect.value;
+					const cantidadComprada = parseInt(cantInput.value) || 0;
 
-					if (!productoId || cantidad <= 0) {
-						showVikingToast("Seleccione un producto y cantidad válida", true);
+					if (!productoId || cantidadComprada <= 0) {
+						showVikingToast("Datos de compra incompletos", true);
 						return;
 					}
 
-					const producto = state.stock.find(s => String(s.id) === String(productoId));
-					if (!producto) throw new Error("Producto no encontrado en el sistema");
+					const prod = state.stock.find(s => String(s.id) === String(productoId));
+					descripcionFinal = `COMPRA: ${prod ? prod.nombre_producto.toUpperCase() : 'MERCADERÍA'} (x${cantidadComprada})`;
 
-					descripcionFinal = `COMPRA: ${producto.nombre_producto.toUpperCase()} (x${cantidad})`;
-
-					// Actualización de stock (SUMA)
-					const nuevoStockTotal = parseInt(producto.stock_actual) + cantidad;
-					const updateRes = await apiFetch(`/stock/${productoId}`, 'PUT', {
-						...producto,
-						stock_actual: nuevoStockTotal
+					// ACTUALIZAR STOCK EN NEON (SUMA)
+					const nuevoStock = (prod ? parseInt(prod.stock_actual) : 0) + cantidadComprada;
+					await apiFetch(`/stock/${productoId}`, 'PUT', {
+						...prod,
+						stock_actual: nuevoStock
 					});
-
-					if (updateRes.error) throw new Error("Error al actualizar Stock: " + updateRes.error);
 				}
 
-				// --- REGISTRO EN LA CAJA ---
-				const balanceMonto = (tipoMov === 'Gasto' || tipoMov === 'Compra') ? -monto : monto;
-
-				const resCaja = await apiFetch('/caja/movimientos', 'POST', {
+				// REGISTRAR EN CAJA
+				const res = await apiFetch('/caja/movimientos', 'POST', {
 					tipo: tipoMov,
 					descripcion: descripcionFinal,
-					monto: balanceMonto,
+					monto: (tipoMov === 'Gasto' || tipoMov === 'Compra') ? -monto : monto,
 					metodo_pago: 'Efectivo',
 					fecha: new Date().toISOString()
 				});
 
-				if (resCaja.error) throw new Error("Error en Caja: " + resCaja.error);
-
-				showVikingToast("Movimiento registrado con éxito");
-				
-				if (typeof closeModal === 'function') {
-					closeModal('modal-gasto');
-				} else {
-					document.getElementById('modal-gasto').classList.add('hidden');
+				if (!res.error) {
+					showVikingToast("¡Valhalla Sincronizado!");
+					cerrarModalCaja();
+					// Recarga mandatoria de datos
+					await Promise.all([loadCaja(), loadStock()]);
 				}
-
-				// Refresco de datos maestros
-				await Promise.all([
-					typeof loadCaja === 'function' ? loadCaja() : Promise.resolve(),
-					typeof loadStock === 'function' ? loadStock() : Promise.resolve()
-				]);
-
-			} catch (error) {
-				console.error("Falla en guardarMovimiento:", error);
-				showVikingToast(error.message, true);
+			} catch (err) {
+				showVikingToast("Falla en la Matrix: " + err.message, true);
 			}
 		}
 		

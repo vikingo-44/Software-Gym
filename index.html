@@ -712,9 +712,8 @@
                 <div class="glass-card p-10 rounded-[3rem]">
                     <div class="flex justify-between items-center mb-8">
                         <h3 class="text-sm font-black uppercase italic border-l-4 border-red-600 pl-4 tracking-widest">Flujo Diario de Caja</h3>
-                        <button onclick="document.getElementById('modal-gasto').classList.remove('hidden')" 
-								class="px-3 py-1.5 bg-red-600 hover:bg-red-700 rounded text-[10px] font-bold uppercase transition-colors text-white">
-							+ Nuevo Movimiento
+                        <button onclick="abrirModalCaja()" class="viking-btn-red z-[100] relative">
+							<i data-lucide="plus-circle" class="w-4 h-4 mr-2"></i> Nuevo Movimiento
 						</button>
                     </div>
                     <table class="w-full text-left">
