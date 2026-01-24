@@ -1682,36 +1682,28 @@
 				headers['Authorization'] = `Bearer ${token}`;
 			}
 
-			// FIX CRÍTICO: FastAPI a veces requiere la barra al final para evitar el error 405/500
-			let cleanEndpoint = endpoint;
-			if (endpoint === '/login') cleanEndpoint = '/login/';
-
 			const options = { method, headers };
 			if (body) options.body = JSON.stringify(body);
 			
 			try {
-				// Usamos API_BASE o API_URL según lo tengas definido
-				const baseUrl = typeof API_BASE !== 'undefined' ? API_BASE : API_URL;
-				const res = await fetch(`${baseUrl}${cleanEndpoint}`, options);
+				const res = await fetch(`${API_BASE}${endpoint}`, options);
 				
-				// Manejo de sesión expirada
+				// 1. Manejo de sesión expirada
 				if (res.status === 401) {
 					localStorage.removeItem('viking_token');
 					location.reload();
 					return { error: "Sesión expirada" };
 				}
 
-				// Si el servidor tira un error 500 (Inconsistencia de BD), lo atrapamos acá
-				if (res.status === 500) {
-					return { error: "Error 500: El servidor no pudo procesar la solicitud (Base de Datos vacía o corrupta)" };
-				}
-
-				// Leer respuesta
+				// 2. LEER EL CUERPO UNA SOLA VEZ
 				const responseText = await res.text();
+				
+				// 3. Intentar parsear como JSON
 				let responseData;
 				try {
 					responseData = JSON.parse(responseText);
 				} catch (e) {
+					// Si no es JSON, devolvemos el texto plano (útil para errores 500 crudos)
 					responseData = { error: responseText || "Error desconocido del servidor" };
 				}
 
@@ -1725,7 +1717,6 @@
 				return { error: "Error de conexión con el Valhalla" }; 
 			}
 		}
-
 
         function calculateIMC() {
             const peso = parseFloat(document.getElementById('al-peso').value);
@@ -1897,7 +1888,7 @@
 		}
 
 		async function handleLogin(e) {
-			// Detener el refresco automático del formulario
+			// 1. Detener el refresco automático del formulario
 			if (e && e.preventDefault) e.preventDefault();
 
 			const dniInput = document.getElementById('login-dni');
@@ -1907,79 +1898,42 @@
 
 			if (!dniInput || !passInput) return;
 
-			const dni = dniInput.value.trim();
-			const pass = passInput.value.trim();
-
-			// --- 🚨 TÚNEL DE EMERGENCIA (BYPASS LOCAL) 🚨 ---
-			// Si usás estas credenciales, NO llama al servidor. Te deja entrar directo.
-			if (dni === "ADMIN" && pass === "VALHALLA123") {
-				console.warn("⚔️ ENTRANDO POR EL TÚNEL DE EMERGENCIA");
-				
-				const mockUser = {
-					id: 1,
-					dni: "ADMIN",
-					nombre_completo: "ADMINISTRADOR DE EMERGENCIA",
-					rol_nombre: "Administrador",
-					access_token: "token_vikingo_emergencia_2025"
-				};
-				
-				state.user = mockUser;
-				localStorage.setItem('viking_token', mockUser.access_token);
-				
-				// Transición de Interfaz
-				document.getElementById('login-overlay').style.display = 'none';
-				document.getElementById('sidebar').classList.remove('hidden');
-				document.getElementById('main-content').classList.remove('hidden');
-				
-				// Cargar datos en la barra lateral
-				if (document.getElementById('side-user-name')) 
-					document.getElementById('side-user-name').innerText = mockUser.nombre_completo;
-				if (document.getElementById('side-user-role')) 
-					document.getElementById('side-user-role').innerText = mockUser.rol_nombre;
-				if (document.getElementById('user-initials')) 
-					document.getElementById('user-initials').innerText = "AE";
-
-				if (typeof switchView === 'function') switchView('dashboard');
-				if (window.lucide) lucide.createIcons();
-				
-				showVikingToast("¡Acceso por Bypass de Emergencia!");
-				return; 
-			}
-			// --- FIN BYPASS ---
-
-			// FLUJO NORMAL CONTRA EL SERVIDOR
+			// Feedback visual de carga
 			if (loginBtn) {
 				loginBtn.disabled = true;
 				loginBtn.innerText = "VERIFICANDO...";
 			}
-			if (errorDiv) errorDiv.classList.add('hidden');
 
-			const data = { dni, password: pass };
+			const data = {
+				dni: dniInput.value,
+				password: passInput.value
+			};
 
 			try {
 				const res = await apiFetch('/login', 'POST', data);
 
 				if (res && !res.error) {
-					// Guardar Token
+					// --- NUEVO: GUARDAR TOKEN JWT ---
 					if (res.access_token) {
 						localStorage.setItem('viking_token', res.access_token);
 					}
 
+					// Guardamos al usuario en el estado global
 					state.user = res;
 
-					// Ocultar Login y mostrar App
+					// 2. Ocultar Login y mostrar App
 					document.getElementById('login-overlay').style.display = 'none';
 					document.getElementById('sidebar').classList.remove('hidden');
 					document.getElementById('main-content').classList.remove('hidden');
 
-					// Cargar datos del usuario en la barra lateral
+					// 3. Cargar datos del usuario en la barra lateral
 					const elName = document.getElementById('side-user-name');
 					if (elName) elName.innerText = res.nombre_completo || "Usuario";
 
 					const elRole = document.getElementById('side-user-role');
 					if (elRole) elRole.innerText = res.rol_nombre || 'Staff';
 
-					// Lógica de Iniciales
+					// --- LÓGICA DE INICIALES ---
 					const name = res.nombre_completo || "Usuario Vikingo";
 					const initials = name.split(' ')
 						.filter(n => n)
@@ -1991,38 +1945,40 @@
 					const elInitials = document.getElementById('user-initials');
 					if (elInitials) elInitials.innerText = initials;
 
-					// Cargar datos maestros
-					if (typeof loadProfesores === 'function') await loadProfesores();
+					// 4. Cargar datos maestros (Profesores, Clases, etc.)
+					await loadProfesores();
 
 					if (typeof initApp === 'function') {
 						await initApp();
 					} else {
 						if (typeof loadClases === 'function') loadClases();
 						if (typeof loadStock === 'function') loadStock();
-						if (typeof loadCaja === 'function') loadCaja();
 					}
 
-					// Cambiar a la vista principal
+					// 5. Cambiar a la vista principal
 					switchView('dashboard');
 
-					// Dashboards específicos según rol
+					// --- Renderizar Dashboard específico si es Alumno ---
 					if (res.rol_nombre === "Alumno" && typeof renderStudentDashboard === 'function') {
 						await renderStudentDashboard();
 					}
+					
+					// --- MEJORA: Precarga de datos si es Profesor ---
 					if (res.rol_nombre === "Profesor" && typeof loadProfessorDashboard === 'function') {
 						await loadProfessorDashboard();
 					}
 
+					// Refrescar iconos
 					if (window.lucide) lucide.createIcons();
+
 					showVikingToast(`¡Bienvenido al Valhalla, ${res.nombre_completo.split(' ')[0]}!`);
 
 				} else {
-					// Mostrar error si las credenciales fallan o el servidor tira error
+					// Mostrar error si las credenciales fallan
 					if (errorDiv) {
 						errorDiv.innerText = res.error || "Credenciales incorrectas";
 						errorDiv.classList.remove('hidden');
 					}
-					showVikingToast(res.error || "Error de autenticación", true);
 					if (loginBtn) {
 						loginBtn.disabled = false;
 						loginBtn.innerText = "Entrar al Valhalla";
@@ -2030,7 +1986,7 @@
 				}
 			} catch (err) {
 				console.error("Error en el proceso de login:", err);
-				showVikingToast("Fallo crítico: El servidor no responde (500)", true);
+				showVikingToast("Error de conexión con el servidor", true);
 				if (loginBtn) {
 					loginBtn.disabled = false;
 					loginBtn.innerText = "Entrar al Valhalla";
@@ -2038,144 +1994,138 @@
 			}
 		}
 
-	async function loadCaja() {
-        const movs = await apiFetch('/caja/movimientos');
-        
-        let calcIngresos = 0;
-        let calcGastos = 0;
+		window.loadCaja = async function() {
+			const movs = await apiFetch('/caja/movimientos');
+			
+			let calcIngresos = 0;
+			let calcGastos = 0;
 
-        // 1. Encabezados Forzados (Flujo | Tipo | Descripcion | Monto)
-        const thead = document.querySelector('#view-caja table thead tr');
-        if(thead) {
-            thead.innerHTML = `
-                <th class="pb-5 pl-2 text-left">Flujo</th>
-                <th class="pb-5 text-left">Tipo</th>
-                <th class="pb-5 text-left">Descripción</th>
-                <th class="pb-5 text-right pr-2">Monto</th>
-            `;
-        }
+			// 1. Encabezados Forzados
+			const thead = document.querySelector('#view-caja table thead tr');
+			if(thead) {
+				thead.innerHTML = `
+					<th class="pb-5 pl-2 text-left">Flujo</th>
+					<th class="pb-5 text-left">Tipo</th>
+					<th class="pb-5 text-left">Descripción</th>
+					<th class="pb-5 text-right pr-2">Monto</th>
+				`;
+			}
 
-        if (Array.isArray(movs)) {
-            movs.forEach(m => {
-                const tipo = (m.tipo || '').toLowerCase();
-                const desc = (m.descripcion || '').toLowerCase();
-                const monto = Math.abs(parseFloat(m.monto)); // Leemos siempre positivo para calcular
+			if (Array.isArray(movs)) {
+				movs.forEach(m => {
+					const tipo = (m.tipo || '').toLowerCase();
+					const desc = (m.descripcion || '').toLowerCase();
+					const monto = Math.abs(parseFloat(m.monto));
 
-                // LÓGICA BLINDADA ACTUALIZADA: 
-                // Si dice mercaderia, plan, venta o cobro -> ES INGRESO (Verde)
-                // Solo es Gasto si es 'gasto', 'egreso', 'salida' o nuestra nueva 'compra' (Inversión de stock)
-                const esPositivo = (tipo.includes('mercaderia') || tipo.includes('mercadería') || tipo.includes('plan') || tipo.includes('venta') || tipo.includes('cobro') || tipo.includes('ingreso')) && !tipo.includes('compra');
-                const esEgreso = !esPositivo && (tipo === 'gasto' || tipo === 'egreso' || tipo === 'salida' || tipo === 'compra');
+					// LÓGICA DE FLUJO: 
+					const esPositivo = (tipo.includes('mercaderia') || tipo.includes('mercadería') || tipo.includes('plan') || tipo.includes('venta') || tipo.includes('cobro') || tipo.includes('ingreso')) && !tipo.includes('compra');
+					const esEgreso = !esPositivo && (tipo === 'gasto' || tipo === 'egreso' || tipo === 'salida' || tipo === 'compra');
 
-                if (esEgreso) {
-                    calcGastos += monto;
-                } else {
-                    calcIngresos += monto;
-                }
-            });
-        }
+					if (esEgreso) {
+						calcGastos += monto;
+					} else {
+						calcIngresos += monto;
+					}
+				});
+			}
 
-        const calcBalance = calcIngresos - calcGastos;
+			const calcBalance = calcIngresos - calcGastos;
 
-        // Actualizar tarjetas
-        if(document.getElementById('caja-ingresos')) 
-            document.getElementById('caja-ingresos').innerText = `$ ${calcIngresos.toLocaleString()}`;
-        
-        if(document.getElementById('caja-gastos')) 
-            document.getElementById('caja-gastos').innerText = `$ ${calcGastos.toLocaleString()}`;
-        
-        if(document.getElementById('caja-balance')) {
-            const elBalance = document.getElementById('caja-balance');
-            elBalance.innerText = `$ ${calcBalance.toLocaleString()}`;
-            elBalance.className = `text-3xl font-black ${calcBalance >= 0 ? 'text-white' : 'text-red-500'}`;
-        }
+			// Actualizar tarjetas de resumen
+			if(document.getElementById('caja-ingresos')) 
+				document.getElementById('caja-ingresos').innerText = `$ ${calcIngresos.toLocaleString()}`;
+			
+			if(document.getElementById('caja-gastos')) 
+				document.getElementById('caja-gastos').innerText = `$ ${calcGastos.toLocaleString()}`;
+			
+			if(document.getElementById('caja-balance')) {
+				const elBalance = document.getElementById('caja-balance');
+				elBalance.innerText = `$ ${calcBalance.toLocaleString()}`;
+				elBalance.className = `text-3xl font-black ${calcBalance >= 0 ? 'text-white' : 'text-red-500'}`;
+			}
 
-        // Renderizar Tabla
-        const table = document.getElementById('table-caja');
-        if(table) {
-            if(Array.isArray(movs) && movs.length > 0) {
-                table.innerHTML = movs.map(m => {
-                    const tipoRaw = (m.tipo || '').toLowerCase();
-                    const monto = Math.abs(parseFloat(m.monto));
+			// Renderizar Tabla con Iconos Completos
+			const table = document.getElementById('table-caja');
+			if(table) {
+				if(Array.isArray(movs) && movs.length > 0) {
+					table.innerHTML = movs.map(m => {
+						const tipoRaw = (m.tipo || '').toLowerCase();
+						const monto = Math.abs(parseFloat(m.monto));
 
-                    // Misma lógica de detección visual
-                    const esPositivo = (tipoRaw.includes('mercaderia') || tipoRaw.includes('mercadería') || tipoRaw.includes('plan') || tipoRaw.includes('venta') || tipoRaw.includes('cobro') || tipoRaw.includes('ingreso')) && !tipoRaw.includes('compra');
-                    const esEgreso = !esPositivo && (tipoRaw === 'gasto' || tipoRaw === 'egreso' || tipoRaw === 'salida' || tipoRaw === 'compra');
-                    
-                    const flujoTexto = esEgreso ? 'EGRESO' : 'INGRESO';
-                    const flujoColor = esEgreso 
-                        ? 'bg-red-500/10 text-red-500 border-red-500/20' 
-                        : 'bg-green-500/10 text-green-500 border-green-500/20';
+						const esPositivo = (tipoRaw.includes('mercaderia') || tipoRaw.includes('mercadería') || tipoRaw.includes('plan') || tipoRaw.includes('venta') || tipoRaw.includes('cobro') || tipoRaw.includes('ingreso')) && !tipoRaw.includes('compra');
+						const esEgreso = !esPositivo && (tipoRaw === 'gasto' || tipoRaw === 'egreso' || tipoRaw === 'salida' || tipoRaw === 'compra');
+						
+						const flujoTexto = esEgreso ? 'EGRESO' : 'INGRESO';
+						const flujoColor = esEgreso 
+							? 'bg-red-500/10 text-red-500 border-red-500/20' 
+							: 'bg-green-500/10 text-green-500 border-green-500/20';
 
-                    // Icono según tipo real
-                    let icono = 'tag';
-                    if(tipoRaw.includes('plan')) icono = 'users';
-                    if(tipoRaw.includes('mercaderia') || tipoRaw.includes('compra')) icono = 'shopping-bag';
-                    if(esEgreso && !tipoRaw.includes('compra')) icono = 'arrow-down-circle';
-                    if(tipoRaw.includes('compra')) icono = 'package-plus'; // Icono específico para ingreso de mercadería
+						// Lógica de Iconos completa
+						let icono = 'tag';
+						if(tipoRaw.includes('plan')) icono = 'users';
+						if(tipoRaw.includes('mercaderia') || tipoRaw.includes('compra')) icono = 'shopping-bag';
+						if(esEgreso && !tipoRaw.includes('compra')) icono = 'arrow-down-circle';
+						if(tipoRaw.includes('compra')) icono = 'package-plus';
 
-                    return `
-                    <tr class="viking-table-row border-b border-white/5 hover:bg-white/5 transition-colors">
-                        <!-- COL 1: FLUJO -->
-                        <td class="py-4 px-2">
-                            <span class="px-3 py-1 rounded border text-[9px] font-black uppercase tracking-wider ${flujoColor}">
-                                ${flujoTexto}
-                            </span>
-                        </td>
+						return `
+						<tr class="viking-table-row border-b border-white/5 hover:bg-white/5 transition-colors">
+							<td class="py-4 px-2">
+								<span class="px-3 py-1 rounded border text-[9px] font-black uppercase tracking-wider ${flujoColor}">
+									${flujoTexto}
+								</span>
+							</td>
+							<td class="py-4 px-2">
+								<span class="text-white text-[10px] font-black uppercase italic opacity-70">
+									<i data-lucide="${icono}" class="w-3 h-3 inline mr-1 opacity-50"></i>${m.tipo}
+								</span>
+							</td>
+							<td class="py-4 px-2">
+								<p class="text-[11px] font-bold text-white uppercase">${m.descripcion}</p>
+								<p class="text-[9px] text-gray-500">${new Date(m.fecha).toLocaleDateString()} - ${m.metodo_pago || 'Efectivo'}</p>
+							</td>
+							<td class="py-4 px-2 text-right font-black italic text-white tracking-wide pr-2">
+								$ ${monto.toLocaleString()}
+							</td>
+						</tr>`;
+					}).join('');
+					
+					if(window.lucide) lucide.createIcons();
+					
+				} else {
+					table.innerHTML = '<tr><td colspan="4" class="text-center py-6 text-gray-500 italic text-[10px]">Sin movimientos registrados</td></tr>';
+				}
+			}
+		};
 
-                        <!-- COL 2: TIPO -->
-                        <td class="py-4 px-2">
-                            <span class="text-white text-[10px] font-black uppercase italic opacity-70">
-                                <i data-lucide="${icono}" class="w-3 h-3 inline mr-1 opacity-50"></i>${m.tipo}
-                            </span>
-                        </td>
-
-                        <!-- COL 3: DESCRIPCIÓN -->
-                        <td class="py-4 px-2">
-                            <p class="text-[11px] font-bold text-white uppercase">${m.descripcion}</p>
-                            <p class="text-[9px] text-gray-500">${new Date(m.fecha).toLocaleDateString()} - ${m.metodo_pago || 'Efectivo'}</p>
-                        </td>
-
-                        <!-- COL 4: MONTO -->
-                        <td class="py-4 px-2 text-right font-black italic text-white tracking-wide pr-2">
-                            $ ${monto.toLocaleString()}
-                        </td>
-                    </tr>
-                `;
-                }).join('');
-                
-                if(window.lucide) lucide.createIcons();
-                
-            } else {
-                table.innerHTML = '<tr><td colspan="4" class="text-center py-6 text-gray-500 italic text-[10px]">Sin movimientos registrados</td></tr>';
-            }
-        }
-    }
-
-		function toggleCamposCompra(tipo) {
+		window.toggleCamposCompra = function(tipo) {
 			const camposCompra = document.getElementById('campos-compra-mercaderia');
+			const containerDesc = document.getElementById('container-desc-gasto');
 			const descInput = document.getElementById('input-desc-gasto');
 			const productoSelect = document.getElementById('input-producto-stock');
 
 			if (tipo === 'Compra') {
-				camposCompra.classList.remove('hidden');
-				descInput.required = false;
-				document.getElementById('container-desc-gasto').classList.add('opacity-40');
+				if (camposCompra) camposCompra.classList.remove('hidden');
+				if (containerDesc) containerDesc.classList.add('opacity-40');
+				if (descInput) descInput.required = false;
 				
-				// Llenar el selector con el stock actual
-				if (state.stock && state.stock.length > 0) {
-					productoSelect.innerHTML = state.stock.map(p => 
-						`<option value="${p.id}">${p.nombre_producto} (S: ${p.stock_actual})</option>`
+				// Obtenemos el stock del estado global
+				const currentStock = (window.state && window.state.stock) || (typeof state !== 'undefined' ? state.stock : []);
+
+				if (currentStock && Array.isArray(currentStock) && currentStock.length > 0) {
+					productoSelect.innerHTML = currentStock.map(p => 
+						`<option value="${p.id}">${p.nombre_producto.toUpperCase()} (Stock: ${p.stock_actual})</option>`
 					).join('');
+				} else {
+					productoSelect.innerHTML = '<option value="">No hay productos cargados en Stock</option>';
 				}
 			} else {
-				camposCompra.classList.add('hidden');
-				descInput.required = true;
-				document.getElementById('container-desc-gasto').classList.remove('opacity-40');
+				if (camposCompra) camposCompra.classList.add('hidden');
+				if (containerDesc) containerDesc.classList.remove('opacity-40');
+				if (descInput) descInput.required = true;
 			}
-		}
+		};
 
-		async function guardarMovimiento(event) {
+		window.guardarMovimiento = async function(event) {
 			if (event && event.preventDefault) event.preventDefault();
 
 			const descInput = document.getElementById('input-desc-gasto');
@@ -2187,72 +2137,71 @@
 			const monto = parseFloat(montoInput?.value) || 0;
 			const tipoSeleccionado = tipoInput ? tipoInput.value : 'Ingreso';
 			let descripcionFinal = descInput?.value || 'Varios';
-			let tipoParaCaja = tipoSeleccionado;
 
 			if (monto <= 0) return alert("El monto debe ser mayor a 0");
 
-			// --- LÓGICA DE COMPRA (ACTUALIZACIÓN DE STOCK) ---
+			// --- LÓGICA DE COMPRA: ACTUALIZAMOS STOCK ---
 			if (tipoSeleccionado === 'Compra') {
 				const productoId = prodSelect.value;
-				const cantidadComprada = parseInt(cantInput.value) || 0;
+				const cantidadAñadir = parseInt(cantInput.value) || 0;
 
-				if (!productoId || cantidadComprada <= 0) {
-					return alert("Selecciona un producto y cantidad válida para la compra.");
+				if (!productoId || cantidadAñadir <= 0) {
+					return alert("Selecciona un producto y cantidad válida.");
 				}
 
-				const producto = state.stock.find(p => String(p.id) === String(productoId));
+				const currentStock = (window.state && window.state.stock) || (typeof state !== 'undefined' ? state.stock : []);
+				const producto = currentStock.find(p => String(p.id) === String(productoId));
+				
 				if (!producto) return alert("Producto no identificado.");
 
-				// 1. Forzamos que sea un GASTO para que reste en caja
-				tipoParaCaja = 'Gasto';
-				descripcionFinal = `COMPRA: ${producto.nombre_producto.toUpperCase()} (x${cantidadComprada} UNID)`;
+				descripcionFinal = `COMPRA: ${producto.nombre_producto.toUpperCase()} (x${cantidadAñadir} UNID)`;
 
-				// 2. Ejecutar actualización de Stock en DB
+				// 1. ACTUALIZAR STOCK EN EL SERVIDOR
 				try {
-					const nuevoStock = parseInt(producto.stock_actual) + cantidadComprada;
-					await apiFetch(`/stock/${productoId}`, 'PUT', {
+					const nuevoStock = parseInt(producto.stock_actual) + cantidadAñadir;
+					const resStock = await apiFetch(`/stock/${productoId}`, 'PUT', {
 						...producto,
 						stock_actual: nuevoStock
 					});
+					
+					if (resStock.error) throw new Error(resStock.error);
 				} catch (err) {
-					console.error("Falla crítica al actualizar stock:", err);
-					return alert("Error al conectar con el inventario. El movimiento no se guardó.");
+					console.error("Falla en Stock:", err);
+					return alert("No se pudo actualizar el stock. Movimiento cancelado.");
 				}
 			}
 
-			// --- REGISTRO EN CAJA ---
+			// --- 2. REGISTRO EN CAJA ---
 			try {
 				const res = await apiFetch('/caja/movimientos', 'POST', {
-					tipo: tipoParaCaja, 
+					tipo: tipoSeleccionado, 
 					descripcion: descripcionFinal,
 					monto: monto,
 					metodo_pago: 'Efectivo' 
 				});
 
 				if (!res.error) {
-					// Limpieza de campos
 					if (descInput) descInput.value = "";
 					if (montoInput) montoInput.value = "";
 					if (cantInput) cantInput.value = "";
 					
-					document.getElementById('modal-gasto').classList.add('hidden');
-					document.getElementById('campos-compra-mercaderia').classList.add('hidden');
-					document.getElementById('container-desc-gasto').classList.remove('opacity-40');
+					const modal = document.getElementById('modal-gasto');
+					if (modal) modal.classList.add('hidden');
 					
 					// Recargar datos
-					if (typeof loadCaja === 'function') await loadCaja(); 
-					await loadStock(); // Refrescar stock visualmente
+					await window.loadCaja(); 
+					if (typeof loadStock === 'function') await loadStock(); 
 					
-					showVikingToast('Movimiento y Stock sincronizados');
+					if (typeof showVikingToast === 'function') showVikingToast('Caja y Stock actualizados');
 				} else {
-					alert("Error del servidor: " + (res.error || "No se pudo registrar"));
+					alert("Error: " + res.error);
 				}
 			} catch (e) {
 				console.error(e);
-				alert("Error de conexión al guardar movimiento.");
+				alert("Error de conexión al guardar.");
 			}
-		}
-
+		};
+		
         async function initApp() {
             await Promise.all([fetchAlumnos(), loadStaff(), loadPlanes(), loadStock(), loadClases(), fetchReservas(), loadDashboard(), loadMusculacionMetadata(), loadCaja()]);
         }
@@ -2918,8 +2867,12 @@
 					const stockBajo = s.stock_actual <= 5;
 					let finalImgUrl;
 
-					if (s.url_images && s.url_images.startsWith('http')) {
-						finalImgUrl = s.url_images;
+					const imgData = s.url_imagen || s.url_images || s.imagen || "";
+
+					if (imgData && imgData.startsWith('http')) {
+						finalImgUrl = imgData;
+					} else if (imgData && imgData.length > 100) {
+						finalImgUrl = imgData; 
 					} else {
 						const n = (s.nombre_producto || "").trim().split(' ');
 						const clave = n[n.length - 1].toLowerCase();
@@ -2956,6 +2909,8 @@
 			}
 			if (window.lucide) lucide.createIcons();
 		}
+
+		window.loadStock = loadStock;
 		
 		// FUNCIÓN PARA PREVISUALIZAR Y CONVERTIR A BASE64
 		function previewStockImage(event) {
@@ -3148,6 +3103,8 @@
 
 			openModal('modal-stock');
 		}
+
+		window.openEditStock = openEditStock;
 				
 		// 4. GUARDAR CAMBIOS (Vincular al onsubmit del form)
 		async function saveStockVikingo(e) {
@@ -3161,7 +3118,6 @@
 				url_imagen: document.getElementById('stock-imagen-base64').value 
 			};
 
-			// Validaciones básicas
 			if(!payload.nombre_producto) return showVikingToast("Falta el nombre", true);
 
 			const method = id ? 'PUT' : 'POST';
@@ -3173,11 +3129,13 @@
 			if(!res.error) {
 				showVikingToast(id ? "Producto Actualizado" : "Producto Registrado");
 				closeModal('modal-stock');
-				setTimeout(loadStock, 300); // Pequeño delay para asegurar que la DB escribió el Base64
+				setTimeout(loadStock, 300); 
 			} else {
 				showVikingToast("Error: " + res.error, true);
 			}
 		}
+
+		window.saveStockVikingo = saveStockVikingo;
 
         document.getElementById('form-stock').onsubmit = async (e) => {
             e.preventDefault(); const id = document.getElementById('stock-id').value;
