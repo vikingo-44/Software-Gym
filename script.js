@@ -1012,46 +1012,44 @@
 		async function finalizarVentaMercaderia() {
 			if (state.cart.length === 0) return showVikingToast("El carrito está vacío", true);
 
-			const metodoPago = document.getElementById('metodo-pago').value;
-			showVikingToast("Procesando transacciones...");
-			let errores = 0;
+			const total = state.cart.reduce((acc, item) => acc + (item.precio * item.cantidad), 0);
+			const metodoEl = document.getElementById('metodo-pago');
+			const metodoPago = metodoEl ? metodoEl.value : "Efectivo";
 
-			for (const item of state.cart) {
-				try {
-					// Registro en Caja
-					await apiFetch('/caja/movimientos', 'POST', {
-						tipo: item.tipo === 'Plan' ? 'Cobro Plan' : 'Venta Mercadería',
-						descripcion: item.tipo === 'Plan' ? `PLAN: ${item.nombre}` : `VENTA: ${item.nombre} (x${item.cantidad})`,
+			if (confirm(`¿Finalizar cobro total de $${total.toLocaleString()} con ${metodoPago}?`)) {
+				
+				showVikingToast("Procesando en la Tesorería...");
+				let errores = 0;
+
+				// Recorremos el carrito (pueden ser 3 aguas y 1 Plan de Musculación)
+				for (const item of state.cart) {
+					const exito = await procesarPagoVikingo({
+						tipo: item.tipo, // 'Mercaderia' o 'Plan'
 						monto: item.precio * item.cantidad,
-						metodo_pago: metodoPago
-					});
+						descripcion: item.tipo === 'Plan' ? item.nombre : `Venta: ${item.nombre} (x${item.cantidad})`,
+						metodo_pago: metodoPago,
+						producto_id: item.producto_id, // ID del producto o ID del Plan
+						alumno_id: item.alumno_id,     // Si es Plan, esto viaja al servidor
+						cantidad: item.cantidad
+					}, false); // false para que no tire mil toasts seguidos
 
-					// Descuento de Stock
-					if (item.tipo === 'Mercaderia') {
-						const producto = state.stock.find(s => s.id === item.producto_id);
-						if (producto) {
-							await apiFetch(`/stock/${producto.id}`, 'PUT', {
-								...producto,
-								stock_actual: producto.stock_actual - item.cantidad
-							});
-						}
-					}
-				} catch (e) { 
-					console.error("Error procesando item:", item.nombre, e);
-					errores++; 
+					if (!exito) errores++;
+				}
+
+				if (errores === 0) {
+					showVikingToast("¡Cobro exitoso! Vencimientos actualizados.");
+					state.cart = []; 
+					updateCartUI();
+					
+					// Recargamos todo para ver los cambios reflejados
+					await Promise.all([loadStock(), loadCaja(), fetchAlumnos()]);
+					renderCobrar();
+				} else {
+					showVikingToast(`Hubo ${errores} errores en el proceso.`, true);
 				}
 			}
-
-			if (errores === 0) {
-				showVikingToast("Venta y Stock actualizados");
-				state.cart = [];
-				if(typeof updateCartUI === 'function') updateCartUI();
-				await Promise.all([loadStock(), loadCaja()]);
-				if(typeof renderCobrar === 'function') renderCobrar();
-			} else {
-				showVikingToast(`Venta con ${errores} errores. Revisar caja.`, true);
-			}
 		}
+
 		// --- REEMPLAZA TU FUNCIÓN openFichaTecnica POR ESTA VERSIÓN CON DISEÑO DE FILAS ---
 		async function openFichaTecnica(alumnoId) {
 			const rutinaContainer = document.getElementById('ficha-rutina-container');
@@ -1996,201 +1994,221 @@
 			}
 		}
 
-		async function loadCaja() {
-			const movs = await apiFetch('/caja/movimientos');
-			
-			let calcIngresos = 0;
-			let calcGastos = 0;
+	async function loadCaja() {
+        const movs = await apiFetch('/caja/movimientos');
+        
+        let calcIngresos = 0;
+        let calcGastos = 0;
 
-			const thead = document.querySelector('#view-caja table thead tr');
-			if(thead) {
-				thead.innerHTML = `
-					<th class="pb-5 pl-2 text-left">Flujo</th>
-					<th class="pb-5 text-left">Tipo</th>
-					<th class="pb-5 text-left">Descripción</th>
-					<th class="pb-5 text-right pr-2">Monto</th>
-				`;
-			}
+        // 1. Encabezados Forzados (Flujo | Tipo | Descripcion | Monto)
+        const thead = document.querySelector('#view-caja table thead tr');
+        if(thead) {
+            thead.innerHTML = `
+                <th class="pb-5 pl-2 text-left">Flujo</th>
+                <th class="pb-5 text-left">Tipo</th>
+                <th class="pb-5 text-left">Descripción</th>
+                <th class="pb-5 text-right pr-2">Monto</th>
+            `;
+        }
 
-			if (Array.isArray(movs)) {
-				movs.forEach(m => {
-					const tipo = (m.tipo || '').toLowerCase();
-					const monto = Math.abs(parseFloat(m.monto));
+        if (Array.isArray(movs)) {
+            movs.forEach(m => {
+                const tipo = (m.tipo || '').toLowerCase();
+                const desc = (m.descripcion || '').toLowerCase();
+                const monto = Math.abs(parseFloat(m.monto)); // Leemos siempre positivo para calcular
 
-					const esPositivo = (tipo.includes('mercaderia') || tipo.includes('mercadería') || tipo.includes('plan') || tipo.includes('venta') || tipo.includes('cobro') || tipo.includes('ingreso')) && !tipo.includes('compra');
-					const esEgreso = !esPositivo && (tipo === 'gasto' || tipo === 'egreso' || tipo === 'salida' || tipo === 'compra');
+                // LÓGICA BLINDADA ACTUALIZADA: 
+                // Si dice mercaderia, plan, venta o cobro -> ES INGRESO (Verde)
+                // Solo es Gasto si es 'gasto', 'egreso', 'salida' o nuestra nueva 'compra' (Inversión de stock)
+                const esPositivo = (tipo.includes('mercaderia') || tipo.includes('mercadería') || tipo.includes('plan') || tipo.includes('venta') || tipo.includes('cobro') || tipo.includes('ingreso')) && !tipo.includes('compra');
+                const esEgreso = !esPositivo && (tipo === 'gasto' || tipo === 'egreso' || tipo === 'salida' || tipo === 'compra');
 
-					if (esEgreso) calcGastos += monto;
-					else calcIngresos += monto;
-				});
-			}
+                if (esEgreso) {
+                    calcGastos += monto;
+                } else {
+                    calcIngresos += monto;
+                }
+            });
+        }
 
-			const calcBalance = calcIngresos - calcGastos;
+        const calcBalance = calcIngresos - calcGastos;
 
-			if(document.getElementById('caja-ingresos')) 
-				document.getElementById('caja-ingresos').innerText = `$ ${calcIngresos.toLocaleString()}`;
-			if(document.getElementById('caja-gastos')) 
-				document.getElementById('caja-gastos').innerText = `$ ${calcGastos.toLocaleString()}`;
-			if(document.getElementById('caja-balance')) {
-				const elBalance = document.getElementById('caja-balance');
-				elBalance.innerText = `$ ${calcBalance.toLocaleString()}`;
-				elBalance.className = `text-3xl font-black ${calcBalance >= 0 ? 'text-white' : 'text-red-500'}`;
-			}
+        // Actualizar tarjetas
+        if(document.getElementById('caja-ingresos')) 
+            document.getElementById('caja-ingresos').innerText = `$ ${calcIngresos.toLocaleString()}`;
+        
+        if(document.getElementById('caja-gastos')) 
+            document.getElementById('caja-gastos').innerText = `$ ${calcGastos.toLocaleString()}`;
+        
+        if(document.getElementById('caja-balance')) {
+            const elBalance = document.getElementById('caja-balance');
+            elBalance.innerText = `$ ${calcBalance.toLocaleString()}`;
+            elBalance.className = `text-3xl font-black ${calcBalance >= 0 ? 'text-white' : 'text-red-500'}`;
+        }
 
-			const table = document.getElementById('table-caja');
-			if(table) {
-				if(Array.isArray(movs) && movs.length > 0) {
-					table.innerHTML = movs.reverse().map(m => {
-						const tipoRaw = (m.tipo || '').toLowerCase();
-						const monto = Math.abs(parseFloat(m.monto));
+        // Renderizar Tabla
+        const table = document.getElementById('table-caja');
+        if(table) {
+            if(Array.isArray(movs) && movs.length > 0) {
+                table.innerHTML = movs.map(m => {
+                    const tipoRaw = (m.tipo || '').toLowerCase();
+                    const monto = Math.abs(parseFloat(m.monto));
 
-						const esPositivo = (tipoRaw.includes('mercaderia') || tipoRaw.includes('mercadería') || tipoRaw.includes('plan') || tipoRaw.includes('venta') || tipoRaw.includes('cobro') || tipoRaw.includes('ingreso')) && !tipoRaw.includes('compra');
-						const esEgreso = !esPositivo && (tipoRaw === 'gasto' || tipoRaw === 'egreso' || tipoRaw === 'salida' || tipoRaw === 'compra');
-						
-						const flujoTexto = esEgreso ? 'EGRESO' : 'INGRESO';
-						const flujoColor = esEgreso ? 'bg-red-500/10 text-red-500 border-red-500/20' : 'bg-green-500/10 text-green-500 border-green-500/20';
+                    // Misma lógica de detección visual
+                    const esPositivo = (tipoRaw.includes('mercaderia') || tipoRaw.includes('mercadería') || tipoRaw.includes('plan') || tipoRaw.includes('venta') || tipoRaw.includes('cobro') || tipoRaw.includes('ingreso')) && !tipoRaw.includes('compra');
+                    const esEgreso = !esPositivo && (tipoRaw === 'gasto' || tipoRaw === 'egreso' || tipoRaw === 'salida' || tipoRaw === 'compra');
+                    
+                    const flujoTexto = esEgreso ? 'EGRESO' : 'INGRESO';
+                    const flujoColor = esEgreso 
+                        ? 'bg-red-500/10 text-red-500 border-red-500/20' 
+                        : 'bg-green-500/10 text-green-500 border-green-500/20';
 
-						let icono = 'tag';
-						if(tipoRaw.includes('plan')) icono = 'users';
-						if(tipoRaw.includes('mercaderia') || tipoRaw.includes('compra')) icono = 'shopping-bag';
-						if(esEgreso && !tipoRaw.includes('compra')) icono = 'arrow-down-circle';
-						if(tipoRaw.includes('compra')) icono = 'package-plus';
+                    // Icono según tipo real
+                    let icono = 'tag';
+                    if(tipoRaw.includes('plan')) icono = 'users';
+                    if(tipoRaw.includes('mercaderia') || tipoRaw.includes('compra')) icono = 'shopping-bag';
+                    if(esEgreso && !tipoRaw.includes('compra')) icono = 'arrow-down-circle';
+                    if(tipoRaw.includes('compra')) icono = 'package-plus'; // Icono específico para ingreso de mercadería
 
-						return `
-						<tr class="viking-table-row border-b border-white/5 hover:bg-white/5 transition-colors">
-							<td class="py-4 px-2">
-								<span class="px-3 py-1 rounded border text-[9px] font-black uppercase tracking-wider ${flujoColor}">${flujoTexto}</span>
-							</td>
-							<td class="py-4 px-2">
-								<span class="text-white text-[10px] font-black uppercase italic opacity-70">
-									<i data-lucide="${icono}" class="w-3 h-3 inline mr-1 opacity-50"></i>${m.tipo}
-								</span>
-							</td>
-							<td class="py-4 px-2">
-								<p class="text-[11px] font-bold text-white uppercase">${m.descripcion}</p>
-								<p class="text-[9px] text-gray-500 font-bold uppercase">${new Date(m.fecha).toLocaleDateString()} - ${m.metodo_pago || 'Efectivo'}</p>
-							</td>
-							<td class="py-4 px-2 text-right font-black italic text-white pr-2">$ ${monto.toLocaleString()}</td>
-						</tr>`;
-					}).join('');
-					if(window.lucide) lucide.createIcons();
-				} else {
-					table.innerHTML = '<tr><td colspan="4" class="text-center py-10 text-gray-500 italic text-[10px] uppercase font-black">Sin movimientos en la bóveda</td></tr>';
-				}
-			}
-		}
+                    return `
+                    <tr class="viking-table-row border-b border-white/5 hover:bg-white/5 transition-colors">
+                        <!-- COL 1: FLUJO -->
+                        <td class="py-4 px-2">
+                            <span class="px-3 py-1 rounded border text-[9px] font-black uppercase tracking-wider ${flujoColor}">
+                                ${flujoTexto}
+                            </span>
+                        </td>
 
-		async function abrirModalCaja() {
-			const modal = document.getElementById('modal-gasto');
-			if (!modal) return;
+                        <!-- COL 2: TIPO -->
+                        <td class="py-4 px-2">
+                            <span class="text-white text-[10px] font-black uppercase italic opacity-70">
+                                <i data-lucide="${icono}" class="w-3 h-3 inline mr-1 opacity-50"></i>${m.tipo}
+                            </span>
+                        </td>
 
-			const form = modal.querySelector('form');
-			if (form) form.reset();
+                        <!-- COL 3: DESCRIPCIÓN -->
+                        <td class="py-4 px-2">
+                            <p class="text-[11px] font-bold text-white uppercase">${m.descripcion}</p>
+                            <p class="text-[9px] text-gray-500">${new Date(m.fecha).toLocaleDateString()} - ${m.metodo_pago || 'Efectivo'}</p>
+                        </td>
 
-			// Resetear visibilidad de campos especiales
-			document.getElementById('campos-compra-mercaderia').classList.add('hidden');
-			document.getElementById('container-desc-gasto').classList.remove('opacity-40');
+                        <!-- COL 4: MONTO -->
+                        <td class="py-4 px-2 text-right font-black italic text-white tracking-wide pr-2">
+                            $ ${monto.toLocaleString()}
+                        </td>
+                    </tr>
+                `;
+                }).join('');
+                
+                if(window.lucide) lucide.createIcons();
+                
+            } else {
+                table.innerHTML = '<tr><td colspan="4" class="text-center py-6 text-gray-500 italic text-[10px]">Sin movimientos registrados</td></tr>';
+            }
+        }
+    }
 
-			if (typeof openModal === 'function') openModal('modal-gasto');
-			else modal.classList.remove('hidden');
-		}
-
-		/**
-		 * Cierra el modal y libera el scroll
-		 */
-		function cerrarModalCaja() {
-			const modal = document.getElementById('modal-gasto');
-			if (modal) {
-				modal.classList.add('hidden');
-				modal.style.display = 'none';
-			}
-			document.body.style.overflow = 'auto';
-			if (typeof closeModal === 'function') closeModal('modal-gasto');
-		}
-
-		async function toggleCamposCompra(tipo) {
+		function toggleCamposCompra(tipo) {
 			const camposCompra = document.getElementById('campos-compra-mercaderia');
-			const containerDesc = document.getElementById('container-desc-gasto');
 			const descInput = document.getElementById('input-desc-gasto');
 			const productoSelect = document.getElementById('input-producto-stock');
 
 			if (tipo === 'Compra') {
 				camposCompra.classList.remove('hidden');
-				containerDesc.classList.add('opacity-40');
 				descInput.required = false;
-
-				// Poblamos el select con los productos actuales en el estado global
-				if (!state.stock || state.stock.length === 0) {
-					const data = await apiFetch('/stock');
-					state.stock = Array.isArray(data) ? data : [];
-				}
-
-				if (state.stock.length > 0) {
+				document.getElementById('container-desc-gasto').classList.add('opacity-40');
+				
+				// Llenar el selector con el stock actual
+				if (state.stock && state.stock.length > 0) {
 					productoSelect.innerHTML = state.stock.map(p => 
-						`<option value="${p.id}">${(p.nombre_producto || 'ITEM').toUpperCase()} (Actual: ${p.stock_actual})</option>`
+						`<option value="${p.id}">${p.nombre_producto} (S: ${p.stock_actual})</option>`
 					).join('');
-				} else {
-					productoSelect.innerHTML = '<option value="">Sin productos cargados</option>';
 				}
 			} else {
 				camposCompra.classList.add('hidden');
-				containerDesc.classList.remove('opacity-40');
 				descInput.required = true;
+				document.getElementById('container-desc-gasto').classList.remove('opacity-40');
 			}
 		}
 
 		async function guardarMovimiento(event) {
 			if (event && event.preventDefault) event.preventDefault();
 
-			const tipoMov = document.getElementById('input-tipo-movimiento').value;
-			const monto = parseFloat(document.getElementById('input-monto-gasto').value) || 0;
-			const descInput = document.getElementById('input-desc-gasto').value;
+			const descInput = document.getElementById('input-desc-gasto');
+			const montoInput = document.getElementById('input-monto-gasto');
+			const tipoInput = document.getElementById('input-tipo-movimiento');
+			const prodSelect = document.getElementById('input-producto-stock');
+			const cantInput = document.getElementById('input-cantidad-compra');
 
-			if (monto <= 0) return showVikingToast("Monto inválido", true);
+			const monto = parseFloat(montoInput?.value) || 0;
+			const tipoSeleccionado = tipoInput ? tipoInput.value : 'Ingreso';
+			let descripcionFinal = descInput?.value || 'Varios';
+			let tipoParaCaja = tipoSeleccionado;
 
-			let descripcionFinal = descInput;
+			if (monto <= 0) return alert("El monto debe ser mayor a 0");
 
-			try {
-				// --- PROCESO DE COMPRA: ACTUALIZA STOCK ---
-				if (tipoMov === 'Compra') {
-					const productoId = document.getElementById('input-producto-stock').value;
-					const cantidad = parseInt(document.getElementById('input-cantidad-compra').value) || 0;
+			// --- LÓGICA DE COMPRA (ACTUALIZACIÓN DE STOCK) ---
+			if (tipoSeleccionado === 'Compra') {
+				const productoId = prodSelect.value;
+				const cantidadComprada = parseInt(cantInput.value) || 0;
 
-					if (!productoId || cantidad <= 0) {
-						showVikingToast("Selecciona producto y cantidad", true);
-						return;
-					}
+				if (!productoId || cantidadComprada <= 0) {
+					return alert("Selecciona un producto y cantidad válida para la compra.");
+				}
 
-					const producto = state.stock.find(s => String(s.id) === String(productoId));
-					if (!producto) throw new Error("Producto no encontrado");
+				const producto = state.stock.find(p => String(p.id) === String(productoId));
+				if (!producto) return alert("Producto no identificado.");
 
-					descripcionFinal = `COMPRA MERCADERÍA: ${producto.nombre_producto.toUpperCase()} (x${cantidad})`;
+				// 1. Forzamos que sea un GASTO para que reste en caja
+				tipoParaCaja = 'Gasto';
+				descripcionFinal = `COMPRA: ${producto.nombre_producto.toUpperCase()} (x${cantidadComprada} UNID)`;
 
-					// Update Stock en NeonDB (SUMA de lo comprado)
-					const nuevoStock = parseInt(producto.stock_actual) + cantidad;
+				// 2. Ejecutar actualización de Stock en DB
+				try {
+					const nuevoStock = parseInt(producto.stock_actual) + cantidadComprada;
 					await apiFetch(`/stock/${productoId}`, 'PUT', {
 						...producto,
 						stock_actual: nuevoStock
 					});
+				} catch (err) {
+					console.error("Falla crítica al actualizar stock:", err);
+					return alert("Error al conectar con el inventario. El movimiento no se guardó.");
 				}
+			}
 
-				// --- REGISTRO EN CAJA ---
+			// --- REGISTRO EN CAJA ---
+			try {
 				const res = await apiFetch('/caja/movimientos', 'POST', {
-					tipo: tipoMov,
+					tipo: tipoParaCaja, 
 					descripcion: descripcionFinal,
-					monto: (tipoMov === 'Gasto' || tipoMov === 'Compra') ? -monto : monto,
-					metodo_pago: 'Efectivo'
+					monto: monto,
+					metodo_pago: 'Efectivo' 
 				});
 
 				if (!res.error) {
-					showVikingToast("Operación sincronizada");
-					closeModal('modal-gasto');
-					await Promise.all([loadCaja(), loadStock()]);
+					// Limpieza de campos
+					if (descInput) descInput.value = "";
+					if (montoInput) montoInput.value = "";
+					if (cantInput) cantInput.value = "";
+					
+					document.getElementById('modal-gasto').classList.add('hidden');
+					document.getElementById('campos-compra-mercaderia').classList.add('hidden');
+					document.getElementById('container-desc-gasto').classList.remove('opacity-40');
+					
+					// Recargar datos
+					if (typeof loadCaja === 'function') await loadCaja(); 
+					await loadStock(); // Refrescar stock visualmente
+					
+					showVikingToast('Movimiento y Stock sincronizados');
+				} else {
+					alert("Error del servidor: " + (res.error || "No se pudo registrar"));
 				}
 			} catch (e) {
-				showVikingToast("Error: " + e.message, true);
+				console.error(e);
+				alert("Error de conexión al guardar movimiento.");
 			}
 		}
+
         async function initApp() {
             await Promise.all([fetchAlumnos(), loadStaff(), loadPlanes(), loadStock(), loadClases(), fetchReservas(), loadDashboard(), loadMusculacionMetadata(), loadCaja()]);
         }
@@ -2856,12 +2874,8 @@
 					const stockBajo = s.stock_actual <= 5;
 					let finalImgUrl;
 
-					const imgData = s.url_imagen || s.url_images || s.imagen || "";
-
-					if (imgData && imgData.startsWith('http')) {
-						finalImgUrl = imgData;
-					} else if (imgData && imgData.length > 100) {
-						finalImgUrl = imgData; 
+					if (s.url_images && s.url_images.startsWith('http')) {
+						finalImgUrl = s.url_images;
 					} else {
 						const n = (s.nombre_producto || "").trim().split(' ');
 						const clave = n[n.length - 1].toLowerCase();
@@ -2898,8 +2912,6 @@
 			}
 			if (window.lucide) lucide.createIcons();
 		}
-
-		window.loadStock = loadStock;
 		
 		// FUNCIÓN PARA PREVISUALIZAR Y CONVERTIR A BASE64
 		function previewStockImage(event) {
@@ -3092,8 +3104,6 @@
 
 			openModal('modal-stock');
 		}
-
-		window.openEditStock = openEditStock;
 				
 		// 4. GUARDAR CAMBIOS (Vincular al onsubmit del form)
 		async function saveStockVikingo(e) {
@@ -3107,6 +3117,7 @@
 				url_imagen: document.getElementById('stock-imagen-base64').value 
 			};
 
+			// Validaciones básicas
 			if(!payload.nombre_producto) return showVikingToast("Falta el nombre", true);
 
 			const method = id ? 'PUT' : 'POST';
@@ -3118,13 +3129,11 @@
 			if(!res.error) {
 				showVikingToast(id ? "Producto Actualizado" : "Producto Registrado");
 				closeModal('modal-stock');
-				setTimeout(loadStock, 300); 
+				setTimeout(loadStock, 300); // Pequeño delay para asegurar que la DB escribió el Base64
 			} else {
 				showVikingToast("Error: " + res.error, true);
 			}
 		}
-
-		window.saveStockVikingo = saveStockVikingo;
 
         document.getElementById('form-stock').onsubmit = async (e) => {
             e.preventDefault(); const id = document.getElementById('stock-id').value;
