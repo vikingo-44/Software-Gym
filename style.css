@@ -99,7 +99,7 @@
     }
     .cal-cell-closed {
         background: repeating-linear-gradient(45deg, rgba(255,255,255,0.01), rgba(255,255,255,0.01) 10px, rgba(255,255,255,0.03) 10px, rgba(255,255,255,0.03) 20px);
-        opacity: 0.3;
+        opacity: 0.5;
     }
 
     /* Lógica Sidebar Colapsada PC (Sagrado) */
@@ -353,19 +353,26 @@
             height: auto !important;
         }
 
-        .cal-header {
-            position: sticky;
-            top: 69px; 
-            z-index: 30;
-            border-right: none !important;
-            font-size: 11px !important;
-        }
-
-        .cal-cell {
-            height: auto !important;
-            min-height: 70px;
-            border-right: none !important;
-        }
+        .cal-header { 
+        background: rgba(255,0,0,0.15); 
+        padding: 4px 2px !important; 
+        text-align: center; 
+        font-weight: 900; 
+        font-size: 8px !important; 
+        border-right: 1px solid rgba(255,255,255,0.05); 
+        text-transform: uppercase;
+        height: 28px !important;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .cal-cell { 
+        border-right: 1px solid rgba(255,255,255,0.05); 
+        border-bottom: 1px solid rgba(255,255,255,0.05); 
+        height: 28px !important; 
+        min-height: 28px !important; 
+        position: relative; 
+    }
 
         /* Badge de clase en móvil */
         .class-badge {
