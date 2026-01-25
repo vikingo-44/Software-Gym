@@ -445,8 +445,9 @@
 			const cal = document.getElementById('calendar-grid'); 
 			if (!cal) return;
 
-			// Configuración del Grid
-			cal.className = "calendar-container h-[700px] overflow-y-auto custom-scrollbar grid grid-cols-[50px_repeat(6,1fr)] auto-rows-max gap-[1px] bg-white/5 p-1 rounded-3xl";
+			// Configuración del Grid - Ajustado a h-[600px] y 38px por fila para que entre en el monitor
+			cal.className = "calendar-container h-[600px] overflow-y-auto custom-scrollbar grid grid-cols-[50px_repeat(6,1fr)] gap-[1px] bg-white/5 p-1 rounded-3xl";
+			cal.style.gridAutoRows = "38px";
 
 			if (!state.clases || state.clases.length === 0) {
 				state.clases = await apiFetch('/clases');
@@ -467,7 +468,7 @@
 			const diasNombres = ["LUNES", "MARTES", "MIÉRCOLES", "JUEVES", "VIERNES", "SÁBADO"];
 			
 			let headersHTML = `
-				<div class="cal-header sticky top-0 z-20 bg-[#1a1a1a] flex items-center justify-center font-black italic text-[9px] text-white/30 p-2 border-b border-white/10 rounded-tl-2xl">
+				<div class="cal-header sticky top-0 z-20 bg-[#1a1a1a] flex items-center justify-center font-black italic text-[9px] text-white/30 p-1 border-b border-white/10 rounded-tl-2xl">
 					HORA
 				</div>
 			`;
@@ -485,10 +486,10 @@
 				const roundedClass = index === 5 ? "rounded-tr-2xl" : ""; 
 
 				headersHTML += `
-					<div class="cal-header sticky top-0 z-20 ${bgClass} ${roundedClass} p-2 flex flex-col items-center justify-center border-b border-white/10 transition-colors">
-						<span class="text-[8px] font-black uppercase tracking-widest leading-none mb-0.5 ${subTextClass}">${mesNombre}</span>
-						<h4 class="text-xl font-black italic leading-none mb-0.5 ${textClass}">${numeroDia}</h4>
-						<span class="text-[9px] font-bold uppercase ${subTextClass}">${nombreDia}</span>
+					<div class="cal-header sticky top-0 z-20 ${bgClass} ${roundedClass} p-1 flex flex-col items-center justify-center border-b border-white/10 transition-colors">
+						<span class="text-[7px] font-black uppercase tracking-widest leading-none mb-0.5 ${subTextClass}">${mesNombre}</span>
+						<h4 class="text-sm font-black italic leading-none mb-0.5 ${textClass}">${numeroDia}</h4>
+						<span class="text-[8px] font-bold uppercase ${subTextClass}">${nombreDia}</span>
 					</div>
 				`;
 			});
@@ -499,7 +500,8 @@
 			for(let h=7; h<=21.5; h+=0.5) {
 				const label = h % 1 === 0 ? `${h}:00` : `${Math.floor(h)}:30`;
 				const hourLabel = document.createElement('div');
-				hourLabel.className = "cal-cell flex items-center justify-center font-black text-[9px] text-white/40 bg-white/5 border-r border-white/20 min-h-[50px]";
+				hourLabel.className = "cal-cell flex items-center justify-center font-black text-[9px] text-white/40 bg-white/5 border-r border-white/20";
+				hourLabel.style.height = "38px";
 				hourLabel.innerText = label;
 				cal.appendChild(hourLabel);
 				
@@ -510,7 +512,8 @@
 					
 					const cell = document.createElement('div');
 					cell.id = cellId;
-					cell.className = `cal-cell relative min-h-[50px] border-b border-r border-white/5 hover:bg-white/5 transition-colors ${isClosed ? 'bg-stripes-gray opacity-30 pointer-events-none' : ''}`;
+					cell.style.height = "38px";
+					cell.className = `cal-cell relative border-b border-r border-white/5 hover:bg-white/5 transition-colors ${isClosed ? 'bg-stripes-gray opacity-30 pointer-events-none' : ''}`;
 					
 					if (isAdmin && !isClosed) {
 						cell.ondragover = (e) => {
@@ -583,8 +586,9 @@
 							const estaLleno = cupoActual >= cupoMax;
 
 							const badge = document.createElement('div');
-							badge.className = "absolute inset-1 rounded-xl shadow-lg transition-all hover:scale-[1.02] active:scale-95 cursor-pointer flex flex-col items-center justify-center p-1 group z-10 class-badge border border-black/5"; 
+							badge.className = "absolute inset-1 rounded-lg shadow-lg transition-all hover:scale-[1.02] active:scale-95 cursor-pointer flex flex-col items-center justify-center p-0.5 group z-10 class-badge border border-black/5"; 
 							badge.style.backgroundColor = c.color || '#FF0000';
+							badge.style.height = "calc(100% - 4px)";
 							
 							if (isAdmin) {
 								badge.draggable = true; 
@@ -599,13 +603,13 @@
 
 							badge.innerHTML = `
 								<div class="flex flex-col items-center justify-center h-full w-full px-1">
-									<span class="text-[10px] leading-tight mb-0.5 font-black uppercase italic ${colores.text} text-center truncate w-full drop-shadow-sm">
+									<span class="text-[8px] leading-tight mb-0.5 font-black uppercase italic ${colores.text} text-center truncate w-full drop-shadow-sm">
 										${c.nombre}
 									</span>
-									<span class="text-[8px] font-extrabold ${colores.sub} mb-0.5 lowercase italic leading-none truncate w-full text-center">
+									<span class="text-[7px] font-extrabold ${colores.sub} mb-0.5 lowercase italic leading-none truncate w-full text-center">
 										${slot.coach || 'staff'}
 									</span>
-									<div class="${colores.bg} px-1.5 py-px rounded-full text-[8px] font-black leading-none ${estaLleno ? (colores.text === 'text-white' ? 'text-red-300 animate-pulse' : 'text-red-700 animate-pulse') : colores.text}">
+									<div class="${colores.bg} px-1 rounded-full text-[7px] font-black leading-none ${estaLleno ? (colores.text === 'text-white' ? 'text-red-300 animate-pulse' : 'text-red-700 animate-pulse') : colores.text}">
 										${cupoActual}/${cupoMax}
 									</div>
 								</div>

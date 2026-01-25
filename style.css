@@ -1,4 +1,4 @@
-    /* =================================================================
+/* =================================================================
     ESTILOS ORIGINALES (MANTENIDOS AL 100% - RESPETO TOTAL)
     ================================================================= */
     body {
@@ -76,29 +76,30 @@
     .viking-table-row:hover { background: rgba(255, 0, 0, 0.02); }
 
     .calendar-container {
-        display: grid; grid-template-columns: 50px repeat(6, 1fr);
-        background: rgba(255, 255, 255, 0.02); border-radius: 24px; overflow: hidden;
+        display: grid; grid-template-columns: 55px repeat(6, 1fr);
+        background: rgba(0, 0, 0, 0.8); border-radius: 24px; overflow: hidden;
         border: 1px solid rgba(255, 255, 255, 0.1);
+        grid-auto-rows: 40px; /* ALTURA MAESTRA DE FILA */
     }
     .cal-header { 
         background: rgba(255,0,0,0.15); 
-        padding: 12px 4px; 
+        padding: 6px 2px; 
         text-align: center; 
         font-weight: 900; 
-        font-size: 13px; 
+        font-size: 10px; 
         border-right: 1px solid rgba(255,255,255,0.1); 
         text-transform: uppercase;
         letter-spacing: 1px;
     }
     .cal-cell { 
-        border-right: 1px solid rgba(255,255,255,0.1); 
-        border-bottom: 1px solid rgba(255,255,255,0.1); 
-        height: 50px; 
+        border-right: 1px solid rgba(255,255,255,0.05); 
+        border-bottom: 1px solid rgba(255,255,255,0.05); 
+        height: 40px !important; 
         position: relative; 
     }
     .cal-cell-closed {
-        background: repeating-linear-gradient(45deg, rgba(255,255,255,0.02), rgba(255,255,255,0.02) 10px, rgba(255,255,255,0.05) 10px, rgba(255,255,255,0.05) 20px);
-        opacity: 0.5;
+        background: repeating-linear-gradient(45deg, rgba(255,255,255,0.01), rgba(255,255,255,0.01) 10px, rgba(255,255,255,0.03) 10px, rgba(255,255,255,0.03) 20px);
+        opacity: 0.3;
     }
 
     /* Lógica Sidebar Colapsada PC (Sagrado) */
@@ -147,9 +148,9 @@
     }
 
     .class-badge {
-        color: black; 
+        color: white !important; 
         font-weight: 900;
-        padding: 4px; 
+        padding: 2px; 
         text-transform: uppercase; 
         font-style: italic;
         cursor: pointer;
@@ -158,11 +159,11 @@
         justify-content: center; 
         align-items: center;
         text-align: center; 
-        height: calc(200% + 1px); 
+        height: calc(100% - 4px) !important; /* CORREGIDO: Ocupa el 100% de la celda de 40px */
         width: calc(100% - 4px);
         margin: 2px;
-        border-radius: 14px;
-        border: 1px solid rgba(255,255,255,0.3);
+        border-radius: 8px;
+        border: 1px solid rgba(255,255,255,0.15);
         box-shadow: 0 4px 12px rgba(0,0,0,0.4);
         position: absolute;
         top: 0; 
@@ -170,7 +171,7 @@
         z-index: 20;
         transition: all 0.2s;
     }
-    .class-badge:hover { transform: scale(0.97); z-index: 20; }
+    .class-badge:hover { transform: scale(1.02); z-index: 25; }
 
     .filter-btn {
         background: rgba(255, 255, 255, 0.05);
@@ -451,8 +452,10 @@
         align-items: center;
         justify-content: center;
         transition: all 0.3s ease;
+        text-decoration: none !important;
     }
     .whatsapp-float:hover {
         transform: scale(1.1);
         background-color: #128c7e;
+        color: white;
     }
