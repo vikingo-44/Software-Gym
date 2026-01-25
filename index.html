@@ -1319,29 +1319,35 @@
 			const containerDesc = document.getElementById('container-desc-gasto');
 			const descInput = document.getElementById('input-desc-gasto');
 			const productoSelect = document.getElementById('input-producto-stock');
-
 			if (tipo === 'Compra') {
-				if (camposCompra) camposCompra.classList.remove('hidden');
-				if (containerDesc) containerDesc.classList.add('opacity-40');
+				camposCompra?.classList.remove('hidden');
+				containerDesc?.classList.add('opacity-40');
 				if (descInput) descInput.required = false;
-				
-				// Obtenemos el stock del estado global
-				const currentStock = window.state?.stock || [];
-
-				if (currentStock && Array.isArray(currentStock) && currentStock.length > 0) {
+				// PRIORIDAD: Intentamos sacar el stock del estado global
+				let currentStock = [];
+				if (window.state && window.state.stock) {
+					currentStock = window.state.stock;
+				} else if (typeof state !== 'undefined' && state.stock) {
+					currentStock = state.stock;
+				}
+				// Si tenemos productos, los dibujamos
+				if (currentStock.length > 0) {
 					productoSelect.innerHTML = currentStock.map(p => 
 						`<option value="${p.id}">${p.nombre_producto.toUpperCase()} (Stock: ${p.stock_actual})</option>`
 					).join('');
 				} else {
-					productoSelect.innerHTML = '<option value="">No hay productos cargados en Stock</option>';
+					// Si no hay nada en el estado, mostramos aviso y re-intentamos cargar
+					productoSelect.innerHTML = '<option value="">Sincronizando stock...</option>';
+					// Intentamos disparar la carga del script original por las dudas
+					if (typeof loadStock === 'function') loadStock();
 				}
 			} else {
-				if (camposCompra) camposCompra.classList.add('hidden');
-				if (containerDesc) containerDesc.classList.remove('opacity-40');
+				camposCompra?.classList.add('hidden');
+				containerDesc?.classList.remove('opacity-40');
 				if (descInput) descInput.required = true;
 			}
 		};
-	</script> 
+	</script>
 
 </body>
 </html>

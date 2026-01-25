@@ -2858,6 +2858,10 @@
 			const data = await apiFetch('/stock');
 			state.stock = Array.isArray(data) ? data : [];
 
+			if (Array.isArray(data)) {
+				window.state = window.state || {}; // Crea el objeto si no existe
+				window.state.stock = data;         // Guarda la mercadería aquí
+
 			const container = document.getElementById('stock-container');
 			if (!container) return;
 
