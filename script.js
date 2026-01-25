@@ -445,7 +445,7 @@
 			const cal = document.getElementById('calendar-grid'); 
 			if (!cal) return;
 
-			// Configuración del Grid - Ajustado a h-[600px] y 38px por fila para que entre en el monitor
+			// Configuración del Grid - Forzamos h-[600px] y eliminamos auto-rows-max para evitar que se estire
 			cal.className = "calendar-container h-[600px] overflow-y-auto custom-scrollbar grid grid-cols-[50px_repeat(6,1fr)] gap-[1px] bg-white/5 p-1 rounded-3xl";
 			cal.style.gridAutoRows = "38px";
 
@@ -468,7 +468,7 @@
 			const diasNombres = ["LUNES", "MARTES", "MIÉRCOLES", "JUEVES", "VIERNES", "SÁBADO"];
 			
 			let headersHTML = `
-				<div class="cal-header sticky top-0 z-20 bg-[#1a1a1a] flex items-center justify-center font-black italic text-[9px] text-white/30 p-1 border-b border-white/10 rounded-tl-2xl">
+				<div class="cal-header sticky top-0 z-20 bg-[#1a1a1a] flex items-center justify-center font-black italic text-[9px] text-white/30 p-1 border-b border-white/10 rounded-tl-2xl h-[38px]">
 					HORA
 				</div>
 			`;
@@ -486,9 +486,9 @@
 				const roundedClass = index === 5 ? "rounded-tr-2xl" : ""; 
 
 				headersHTML += `
-					<div class="cal-header sticky top-0 z-20 ${bgClass} ${roundedClass} p-1 flex flex-col items-center justify-center border-b border-white/10 transition-colors">
+					<div class="cal-header sticky top-0 z-20 ${bgClass} ${roundedClass} p-1 flex flex-col items-center justify-center border-b border-white/10 transition-colors h-[38px]">
 						<span class="text-[7px] font-black uppercase tracking-widest leading-none mb-0.5 ${subTextClass}">${mesNombre}</span>
-						<h4 class="text-sm font-black italic leading-none mb-0.5 ${textClass}">${numeroDia}</h4>
+						<h4 class="text-xs font-black italic leading-none mb-0.5 ${textClass}">${numeroDia}</h4>
 						<span class="text-[8px] font-bold uppercase ${subTextClass}">${nombreDia}</span>
 					</div>
 				`;
@@ -501,7 +501,7 @@
 				const label = h % 1 === 0 ? `${h}:00` : `${Math.floor(h)}:30`;
 				const hourLabel = document.createElement('div');
 				hourLabel.className = "cal-cell flex items-center justify-center font-black text-[9px] text-white/40 bg-white/5 border-r border-white/20";
-				hourLabel.style.height = "38px";
+				hourLabel.style.height = "38px"; // Altura fija estricta
 				hourLabel.innerText = label;
 				cal.appendChild(hourLabel);
 				
@@ -512,7 +512,7 @@
 					
 					const cell = document.createElement('div');
 					cell.id = cellId;
-					cell.style.height = "38px";
+					cell.style.height = "38px"; // Altura fija estricta
 					cell.className = `cal-cell relative border-b border-r border-white/5 hover:bg-white/5 transition-colors ${isClosed ? 'bg-stripes-gray opacity-30 pointer-events-none' : ''}`;
 					
 					if (isAdmin && !isClosed) {
@@ -586,6 +586,7 @@
 							const estaLleno = cupoActual >= cupoMax;
 
 							const badge = document.createElement('div');
+							// Cambiamos rounded-xl por rounded-lg y inset-1 para ganar espacio
 							badge.className = "absolute inset-1 rounded-lg shadow-lg transition-all hover:scale-[1.02] active:scale-95 cursor-pointer flex flex-col items-center justify-center p-0.5 group z-10 class-badge border border-black/5"; 
 							badge.style.backgroundColor = c.color || '#FF0000';
 							badge.style.height = "calc(100% - 4px)";
