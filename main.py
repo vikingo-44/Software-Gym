@@ -986,17 +986,29 @@ def create_movimiento(data: MovimientoCajaCreate, db: Session = Depends(database
 
 @app.post("/api/caja/movimientos", tags=["Caja"])
 def crear_movimiento_caja(mov: MovimientoCreate, db: Session = Depends(database.get_db)):
+    # LÓGICA VIKINGA: Si el tipo es Gasto o Compra, se asegura de que sea Egreso
+    tipo_final = mov.tipo
+    if mov.tipo in ["Gasto", "Compra", "Egreso"]:
+        tipo_final = "Egreso"
+    
+    # Esta es la línea que consultabas: es la creación del objeto para la DB
     nuevo_movimiento = models.MovimientoCaja(
         descripcion=mov.descripcion,
-        monto=abs(mov.monto), # Forzar positivo
-        tipo=mov.tipo,
+        monto=abs(mov.monto),   # Siempre guardamos el monto positivo
+        tipo=tipo_final,        # Aquí definimos si entró o salió plata
         metodo_pago=mov.metodo_pago,
         fecha=datetime.now()
     )
+    
     db.add(nuevo_movimiento)
     db.commit()
     db.refresh(nuevo_movimiento)
-    return {"mensaje": "Movimiento registrado con éxito", "id": nuevo_movimiento.id}
+    
+    return {
+        "status": "success", 
+        "mensaje": "Movimiento registrado con éxito", 
+        "id": nuevo_movimiento.id
+    }
 
 # --- PROCESAR COBROS ---
 @app.post("/api/cobros/procesar", tags=["Finanzas"])

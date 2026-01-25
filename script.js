@@ -2109,7 +2109,7 @@
 				if (descInput) descInput.required = false;
 				
 				// Obtenemos el stock del estado global
-				const currentStock = (window.state && window.state.stock) || (typeof state !== 'undefined' ? state.stock : []);
+				const currentStock = window.state?.stock || [];
 
 				if (currentStock && Array.isArray(currentStock) && currentStock.length > 0) {
 					productoSelect.innerHTML = currentStock.map(p => 
@@ -2138,7 +2138,7 @@
 			const tipoSeleccionado = tipoInput ? tipoInput.value : 'Ingreso';
 			let descripcionFinal = descInput?.value || 'Varios';
 
-			if (monto <= 0) return alert("El monto debe ser mayor a 0");
+			if (monto <= 0) return showVikingToast("El monto debe ser mayor a 0", true);
 
 			// --- LÓGICA DE COMPRA: ACTUALIZAMOS STOCK ---
 			if (tipoSeleccionado === 'Compra') {
@@ -2146,32 +2146,37 @@
 				const cantidadAñadir = parseInt(cantInput.value) || 0;
 
 				if (!productoId || cantidadAñadir <= 0) {
-					return alert("Selecciona un producto y cantidad válida.");
+					return showVikingToast("Selecciona producto y cantidad válida", true);
 				}
 
-				const currentStock = (window.state && window.state.stock) || (typeof state !== 'undefined' ? state.stock : []);
+				const currentStock = window.state?.stock || [];
 				const producto = currentStock.find(p => String(p.id) === String(productoId));
 				
-				if (!producto) return alert("Producto no identificado.");
+				if (!producto) return showVikingToast("Producto no encontrado", true);
 
 				descripcionFinal = `COMPRA: ${producto.nombre_producto.toUpperCase()} (x${cantidadAñadir} UNID)`;
 
 				// 1. ACTUALIZAR STOCK EN EL SERVIDOR
 				try {
-					const nuevoStock = parseInt(producto.stock_actual) + cantidadAñadir;
+					const nuevoStockTotal = parseInt(producto.stock_actual) + cantidadAñadir;
+					
+					// Importante: Mandamos el objeto completo para que SQLAlchemy no de error de campos faltantes
 					const resStock = await apiFetch(`/stock/${productoId}`, 'PUT', {
-						...producto,
-						stock_actual: nuevoStock
+						nombre_producto: producto.nombre_producto,
+						precio_venta: producto.precio_venta,
+						stock_actual: nuevoStockTotal,
+						url_imagen: producto.url_imagen
 					});
 					
 					if (resStock.error) throw new Error(resStock.error);
 				} catch (err) {
 					console.error("Falla en Stock:", err);
-					return alert("No se pudo actualizar el stock. Movimiento cancelado.");
+					return showVikingToast("Error al actualizar stock", true);
 				}
 			}
 
 			// --- 2. REGISTRO EN CAJA ---
+			// Si es 'Compra' o 'Gasto', el backend lo procesará como egreso.
 			try {
 				const res = await apiFetch('/caja/movimientos', 'POST', {
 					tipo: tipoSeleccionado, 
@@ -2181,24 +2186,23 @@
 				});
 
 				if (!res.error) {
+					// Limpiar campos
 					if (descInput) descInput.value = "";
 					if (montoInput) montoInput.value = "";
 					if (cantInput) cantInput.value = "";
 					
-					const modal = document.getElementById('modal-gasto');
-					if (modal) modal.classList.add('hidden');
+					document.getElementById('modal-gasto').classList.add('hidden');
 					
-					// Recargar datos
+					// RECARGA TOTAL DE DATOS PARA SINCRONIZAR
 					await window.loadCaja(); 
 					if (typeof loadStock === 'function') await loadStock(); 
 					
-					if (typeof showVikingToast === 'function') showVikingToast('Caja y Stock actualizados');
+					showVikingToast('Caja e Inventario actualizados ⚔️');
 				} else {
-					alert("Error: " + res.error);
+					showVikingToast("Error: " + res.error, true);
 				}
 			} catch (e) {
-				console.error(e);
-				alert("Error de conexión al guardar.");
+				showVikingToast("Fallo de conexión", true);
 			}
 		};
 		
