@@ -74,33 +74,33 @@
 			accesos: []
 		};
 
-		window.toggleCamposCompra = function(tipo) {
-			const camposCompra = document.getElementById('campos-compra-mercaderia');
-			const containerDesc = document.getElementById('container-desc-gasto');
-			const descInput = document.getElementById('input-desc-gasto');
-			const productoSelect = document.getElementById('input-producto-stock');
+		// window.toggleCamposCompra = function(tipo) {
+			// const camposCompra = document.getElementById('campos-compra-mercaderia');
+			// const containerDesc = document.getElementById('container-desc-gasto');
+			// const descInput = document.getElementById('input-desc-gasto');
+			// const productoSelect = document.getElementById('input-producto-stock');
 
-			if (tipo === 'Compra') {
-				if (camposCompra) camposCompra.classList.remove('hidden');
-				if (containerDesc) containerDesc.classList.add('opacity-40');
-				if (descInput) descInput.required = false;
+			// if (tipo === 'Compra') {
+				// if (camposCompra) camposCompra.classList.remove('hidden');
+				// if (containerDesc) containerDesc.classList.add('opacity-40');
+				// if (descInput) descInput.required = false;
 				
 				// Obtenemos el stock del estado global
-				const currentStock = window.state?.stock || [];
+				// const currentStock = window.state?.stock || [];
 
-				if (currentStock && Array.isArray(currentStock) && currentStock.length > 0) {
-					productoSelect.innerHTML = currentStock.map(p => 
-						`<option value="${p.id}">${p.nombre_producto.toUpperCase()} (Stock: ${p.stock_actual})</option>`
-					).join('');
-				} else {
-					productoSelect.innerHTML = '<option value="">No hay productos cargados en Stock</option>';
-				}
-			} else {
-				if (camposCompra) camposCompra.classList.add('hidden');
-				if (containerDesc) containerDesc.classList.remove('opacity-40');
-				if (descInput) descInput.required = true;
-			}
-		};
+				// if (currentStock && Array.isArray(currentStock) && currentStock.length > 0) {
+					// productoSelect.innerHTML = currentStock.map(p => 
+						// `<option value="${p.id}">${p.nombre_producto.toUpperCase()} (Stock: ${p.stock_actual})</option>`
+					// ).join('');
+				// } else {
+					// productoSelect.innerHTML = '<option value="">No hay productos cargados en Stock</option>';
+				// }
+			// } else {
+				// if (camposCompra) camposCompra.classList.add('hidden');
+				// if (containerDesc) containerDesc.classList.remove('opacity-40');
+				// if (descInput) descInput.required = true;
+			// }
+		// };
 
         function showVikingToast(msg, error = false) {
             const toast = document.getElementById('viking-toast');
