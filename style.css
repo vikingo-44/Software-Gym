@@ -81,7 +81,7 @@
     .viking-table-row { border-bottom: 1px solid rgba(255, 255, 255, 0.03); transition: background 0.2s; }
     .viking-table-row:hover { background: rgba(255, 0, 0, 0.02); }
 
-    /* SECCIÓN CALENDARIO CORREGIDA - ESTILO PROFESIONAL */
+    /* SECCIÓN CALENDARIO CORREGIDA - ESTILO PROFESIONAL COMPACTO */
     .calendar-container {
         display: grid; 
         grid-template-columns: 80px repeat(6, 1fr);
@@ -92,12 +92,12 @@
     }
     .cal-header { 
         background: #000000 !important; 
-        padding: 8px 4px; 
+        padding: 6px 4px; /* Reducido */
         text-align: center; 
         font-weight: 900; 
-        font-size: 10px; 
+        font-size: 9px; /* Reducido */
         border-right: 1px solid rgba(255,255,255,0.1); 
-        border-bottom: 4px solid #FF0000 !important; /* Cuchilla refinada */
+        border-bottom: 3px solid #FF0000 !important; /* Más elegante */
         text-transform: uppercase;
         letter-spacing: 1px;
         z-index: 100 !important; 
@@ -106,7 +106,7 @@
         border-right: 1px solid rgba(255,255,255,0.05); 
         border-bottom: 1px solid rgba(255,255,255,0.05); 
         height: auto !important; 
-        min-height: 100px; /* Altura profesional balanceada */
+        min-height: 70px; /* Reducido de 100px para compactar */
         position: relative; 
     }
     .cal-cell-closed {
@@ -159,11 +159,11 @@
         padding: 20px;
     }
 
-    /* BADGE DE CLASE REFINADO */
+    /* BADGE DE CLASE REFINADO - COMPACTO */
     .class-badge {
         color: white !important; 
         font-weight: 900;
-        padding: 6px; 
+        padding: 4px; 
         text-transform: uppercase; 
         font-style: italic;
         cursor: pointer;
@@ -172,10 +172,10 @@
         justify-content: center; 
         align-items: center;
         text-align: center; 
-        height: calc(100% - 12px) !important; 
-        width: calc(100% - 12px);
-        margin: 6px;
-        border-radius: 16px;
+        height: calc(100% - 8px) !important; 
+        width: calc(100% - 8px);
+        margin: 4px;
+        border-radius: 12px;
         border: 1px solid rgba(255,255,255,0.2);
         box-shadow: 0 4px 15px rgba(0,0,0,0.5);
         position: absolute;
@@ -184,7 +184,7 @@
         z-index: 20;
         transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     }
-    .class-badge:hover { transform: translateY(-2px); z-index: 50; filter: brightness(1.1); }
+    .class-badge:hover { transform: translateY(-1px); z-index: 50; filter: brightness(1.1); }
 
     .filter-btn {
         background: rgba(255, 255, 255, 0.05);
@@ -370,14 +370,14 @@
 
         .cal-cell {
             height: auto !important;
-            min-height: 100px;
+            min-height: 70px;
             border-right: none !important;
         }
 
         .class-badge {
             position: relative;
             height: auto !important;
-            min-height: 80px;
+            min-height: 60px;
             width: calc(100% - 12px);
             margin: 6px;
         }
