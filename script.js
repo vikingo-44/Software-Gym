@@ -437,13 +437,16 @@
             }
         }
 
+		/**
+		 * RENDERIZADO DEL CALENDARIO VIKINGO (VERSIÓN FINAL COMPACTA 40PX)
+		 */
 		async function renderCalendar() {
 			const cal = document.getElementById('calendar-grid'); 
 			if (!cal) return;
 
-			// Configuración del Grid: 70px por slot para excelente visibilidad en monitor
+			// Configuración del Grid: 40px por slot para diseño compacto
 			cal.className = "calendar-container h-[850px] overflow-y-auto custom-scrollbar grid grid-cols-[80px_repeat(6,1fr)] gap-[1px] bg-white/5 p-1 rounded-3xl";
-			cal.style.gridAutoRows = "70px";
+			cal.style.gridAutoRows = "40px";
 
 			if (!state.clases || state.clases.length === 0) {
 				state.clases = await apiFetch('/clases');
@@ -463,7 +466,7 @@
 			const diasNombres = ["LUNES", "MARTES", "MIÉRCOLES", "JUEVES", "VIERNES", "SÁBADO"];
 			
 			let headersHTML = `
-				<div class="cal-header sticky top-0 z-20 bg-[#1a1a1a] flex items-center justify-center font-black italic text-[11px] text-white/30 p-2 border-b border-white/10 rounded-tl-2xl">
+				<div class="cal-header sticky top-0 z-20 bg-[#1a1a1a] flex items-center justify-center font-black italic text-[10px] text-white/30 p-2 border-b border-white/10 rounded-tl-2xl">
 					HORA
 				</div>
 			`;
@@ -475,28 +478,28 @@
 				const mesNombre = fecha.toLocaleString('es-ES', { month: 'short' }).toUpperCase().replace('.', '');
 				const esHoy = fecha.getDate() === hoy.getDate() && fecha.getMonth() === hoy.getMonth();
 
-				const bgClass = esHoy ? "bg-red-600 text-black shadow-lg shadow-red-600/20" : "bg-[#1a1a1a] text-gray-400";
+				const bgClass = esHoy ? "bg-red-600 text-black shadow-lg" : "bg-[#1a1a1a] text-gray-400";
 				const textClass = esHoy ? "text-black" : "text-white";
-				const subTextClass = esHoy ? "text-black/70" : "text-gray-500";
 				const roundedClass = index === 5 ? "rounded-tr-2xl" : ""; 
 
+				// CABECERA EN UNA SOLA LÍNEA: ENE 19 LUNES
 				headersHTML += `
-					<div class="cal-header sticky top-0 z-20 ${bgClass} ${roundedClass} p-2 flex flex-col items-center justify-center border-b border-white/10 transition-colors">
-						<span class="text-[9px] font-black uppercase tracking-widest leading-none mb-0.5 ${subTextClass}">${mesNombre}</span>
-						<h4 class="text-lg font-black italic leading-none mb-0.5 ${textClass}">${numeroDia}</h4>
-						<span class="text-[10px] font-bold uppercase ${subTextClass}">${nombreDia}</span>
+					<div class="cal-header sticky top-0 z-20 ${bgClass} ${roundedClass} flex items-center justify-center border-b border-white/10">
+						<span class="text-[10px] font-black uppercase italic ${textClass} tracking-tighter">
+							${mesNombre} ${numeroDia} ${nombreDia}
+						</span>
 					</div>
 				`;
 			});
 
 			cal.innerHTML = headersHTML;
 
-			// --- 3. GRILLA ---
+			// --- 3. GRILLA (Filas de 40px) ---
 			for(let h=7; h<=21.5; h+=0.5) {
 				const label = h % 1 === 0 ? `${h}:00` : `${Math.floor(h)}:30`;
 				const hourLabel = document.createElement('div');
 				hourLabel.className = "cal-cell flex items-center justify-center font-black text-[10px] text-white/40 bg-white/5 border-r border-white/20";
-				hourLabel.style.height = "70px";
+				hourLabel.style.height = "40px";
 				hourLabel.innerText = label;
 				cal.appendChild(hourLabel);
 				
@@ -507,8 +510,8 @@
 					
 					const cell = document.createElement('div');
 					cell.id = cellId;
+					cell.style.height = "40px";
 					cell.className = `cal-cell relative border-b border-r border-white/5 hover:bg-white/5 transition-colors ${isClosed ? 'cal-cell-closed pointer-events-none' : ''}`;
-					cell.style.height = "70px";
 					
 					if (isAdmin && !isClosed) {
 						cell.ondragover = (e) => {
@@ -595,7 +598,7 @@
 								badge.ondragend = () => badge.classList.remove('opacity-40');
 							}
 
-							// Contenido del Badge respetando la jerarquía para visibilidad
+							// Contenido del Badge optimizado para el nuevo tamaño 40px (clase de 1 hora = 80px)
 							badge.innerHTML = `
 								<div class="flex flex-col items-center justify-center h-full w-full">
 									<span class="badge-title ${colores.text}">
@@ -604,7 +607,7 @@
 									<span class="badge-coach ${colores.sub}">
 										${slot.coach || 'staff'}
 									</span>
-									<div class="badge-capacity ${colores.bg} ${estaLleno ? 'text-red-500 animate-pulse' : colores.text}">
+									<div class="badge-capacity ${colores.bg} ${estaLleno ? 'text-red-500 font-black' : colores.text}">
 										${cupoActual}/${cupoMax}
 									</div>
 								</div>

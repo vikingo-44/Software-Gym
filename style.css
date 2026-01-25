@@ -81,7 +81,7 @@
     .viking-table-row { border-bottom: 1px solid rgba(255, 255, 255, 0.03); transition: background 0.2s; }
     .viking-table-row:hover { background: rgba(255, 0, 0, 0.02); }
 
-    /* SECCIÓN CALENDARIO CORREGIDA - ESTILO PROFESIONAL COMPACTO */
+    /* SECCIÓN CALENDARIO CORREGIDA - ESTILO PROFESIONAL COMPACTO (40PX) */
     .calendar-container {
         display: grid; 
         grid-template-columns: 80px repeat(6, 1fr);
@@ -89,15 +89,14 @@
         border-radius: 24px; 
         overflow-y: auto;
         border: 1px solid rgba(255, 255, 255, 0.1);
-        /* Altura de 70px por slot para excelente visibilidad */
-        grid-auto-rows: 70px !important;
+        grid-auto-rows: 40px !important;
     }
     .cal-header { 
         background: #000000 !important; 
-        padding: 12px 4px; 
+        padding: 8px 4px; 
         text-align: center; 
         font-weight: 900; 
-        font-size: 11px; 
+        font-size: 10px; 
         border-right: 1px solid rgba(255,255,255,0.1); 
         border-bottom: 3px solid #FF0000 !important; 
         text-transform: uppercase;
@@ -105,12 +104,13 @@
         z-index: 100 !important; 
         position: sticky;
         top: 0;
+        white-space: nowrap;
     }
     .cal-cell { 
         border-right: 1px solid rgba(255,255,255,0.05); 
         border-bottom: 1px solid rgba(255,255,255,0.05); 
-        height: 70px !important; 
-        min-height: 70px !important; 
+        height: 40px !important; 
+        min-height: 40px !important; 
         position: relative; 
     }
     .cal-cell-closed {
@@ -167,7 +167,7 @@
     .class-badge {
         color: white !important; 
         font-weight: 900;
-        padding: 8px 6px; 
+        padding: 4px 6px; 
         text-transform: uppercase; 
         font-style: italic;
         cursor: pointer;
@@ -177,10 +177,10 @@
         align-items: center;
         text-align: center; 
         /* Ocupa 2 filas (1 hora) menos el margen */
-        height: calc(200% - 12px) !important; 
-        width: calc(100% - 12px);
-        margin: 6px;
-        border-radius: 16px;
+        height: calc(200% - 6px) !important; 
+        width: calc(100% - 6px);
+        margin: 3px;
+        border-radius: 12px;
         border: 1px solid rgba(255,255,255,0.25);
         box-shadow: 0 10px 30px rgba(0,0,0,0.6);
         position: absolute;
@@ -199,28 +199,31 @@
 
     /* Jerarquía Tipográfica dentro del Badge */
     .badge-title {
-        font-size: 13px; /* Aumentado */
-        line-height: 1.1;
+        font-size: 11px;
+        line-height: 1;
         font-weight: 900;
-        margin-bottom: 4px;
+        margin-bottom: 2px;
         display: block;
         width: 100%;
         text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
     }
     .badge-coach {
-        font-size: 10px; /* Aumentado */
+        font-size: 9px;
         opacity: 0.8;
         font-weight: 700;
-        margin-bottom: 8px;
+        margin-bottom: 4px;
         text-transform: lowercase;
         letter-spacing: 0.5px;
     }
     .badge-capacity {
         background: rgba(0, 0, 0, 0.3);
         backdrop-filter: blur(4px);
-        padding: 3px 12px;
+        padding: 1px 8px;
         border-radius: 99px;
-        font-size: 11px; /* Aumentado */
+        font-size: 10px;
         border: 1px solid rgba(255,255,255,0.15);
     }
 
@@ -431,14 +434,14 @@
 
         .cal-cell {
             height: auto !important;
-            min-height: 80px;
+            min-height: 50px;
             border-right: none !important;
         }
 
         .class-badge {
             position: relative;
             height: auto !important;
-            min-height: 75px;
+            min-height: 60px;
             width: calc(100% - 12px);
             margin: 6px;
         }
