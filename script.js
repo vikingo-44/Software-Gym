@@ -2125,6 +2125,7 @@
 			}
 		};
 
+		// ESTA ES LA VERSIÓN DEFINITIVA PARA TU SCRIPT.JS
 		window.guardarMovimiento = async function(event) {
 			if (event && event.preventDefault) event.preventDefault();
 
@@ -2160,7 +2161,7 @@
 				try {
 					const nuevoStockTotal = parseInt(producto.stock_actual) + cantidadAñadir;
 					
-					// Importante: Mandamos el objeto completo para que SQLAlchemy no de error de campos faltantes
+					// Mandamos el objeto completo para que la base de datos no rechace campos vacíos
 					const resStock = await apiFetch(`/stock/${productoId}`, 'PUT', {
 						nombre_producto: producto.nombre_producto,
 						precio_venta: producto.precio_venta,
@@ -2176,7 +2177,6 @@
 			}
 
 			// --- 2. REGISTRO EN CAJA ---
-			// Si es 'Compra' o 'Gasto', el backend lo procesará como egreso.
 			try {
 				const res = await apiFetch('/caja/movimientos', 'POST', {
 					tipo: tipoSeleccionado, 
@@ -2186,14 +2186,15 @@
 				});
 
 				if (!res.error) {
-					// Limpiar campos
+					// Limpiar campos del modal
 					if (descInput) descInput.value = "";
 					if (montoInput) montoInput.value = "";
 					if (cantInput) cantInput.value = "";
 					
+					// Ocultar modal
 					document.getElementById('modal-gasto').classList.add('hidden');
 					
-					// RECARGA TOTAL DE DATOS PARA SINCRONIZAR
+					// RECARGA TOTAL DE DATOS PARA SINCRONIZAR VISTAS
 					await window.loadCaja(); 
 					if (typeof loadStock === 'function') await loadStock(); 
 					
