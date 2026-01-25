@@ -90,21 +90,26 @@
         overflow-y: auto;
         border: 1px solid rgba(255, 255, 255, 0.1);
         grid-auto-rows: 40px !important;
+        gap: 0 !important; /* Sin gap para que el sticky sea bloque sólido */
     }
     .cal-header { 
         background: #000000 !important; 
-        padding: 8px 4px; 
-        text-align: center; 
+        padding: 0 4px; 
+        height: 40px;
+        display: flex !important;
+        flex-direction: row !important; /* Forzado horizontal */
+        align-items: center; 
+        justify-content: center; 
         font-weight: 900; 
         font-size: 10px; 
         border-right: 1px solid rgba(255,255,255,0.1); 
         border-bottom: 3px solid #FF0000 !important; 
         text-transform: uppercase;
-        letter-spacing: 1px;
-        z-index: 100 !important; 
+        letter-spacing: 0.5px;
+        z-index: 50 !important; /* Superior a las clases para taparlas al scrollear */
         position: sticky;
         top: 0;
-        white-space: nowrap;
+        white-space: nowrap; /* Evita saltos de línea */
     }
     .cal-cell { 
         border-right: 1px solid rgba(255,255,255,0.05); 
@@ -163,7 +168,7 @@
         padding: 20px;
     }
 
-    /* BADGE DE CLASE REFINADO - ESTÉTICA PREMIUM MEJORADA */
+    /* BADGE DE CLASE REFINADO - ESTÉTICA PREMIUM MEJORADA (COMPACTO) */
     .class-badge {
         color: white !important; 
         font-weight: 900;
@@ -176,23 +181,23 @@
         justify-content: center; 
         align-items: center;
         text-align: center; 
-        /* Ocupa 2 filas (1 hora) menos el margen */
+        /* Ocupa 2 filas (1 hora) menos el margen para 40px slots */
         height: calc(200% - 6px) !important; 
         width: calc(100% - 6px);
         margin: 3px;
         border-radius: 12px;
         border: 1px solid rgba(255,255,255,0.25);
-        box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+        box-shadow: 0 6px 20px rgba(0,0,0,0.6);
         position: absolute;
         top: 0; 
         left: 0; 
         z-index: 20;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
         overflow: hidden;
     }
     .class-badge:hover { 
         transform: translateY(-2px) scale(0.98); 
-        z-index: 50; 
+        z-index: 30; 
         filter: brightness(1.15);
         box-shadow: 0 15px 40px rgba(0,0,0,0.8);
     }
@@ -205,7 +210,7 @@
         margin-bottom: 2px;
         display: block;
         width: 100%;
-        text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        text-shadow: 0 1px 2px rgba(0,0,0,0.3);
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
@@ -216,7 +221,7 @@
         font-weight: 700;
         margin-bottom: 4px;
         text-transform: lowercase;
-        letter-spacing: 0.5px;
+        letter-spacing: 0.3px;
     }
     .badge-capacity {
         background: rgba(0, 0, 0, 0.3);
@@ -420,6 +425,7 @@
         .calendar-container {
             grid-template-columns: 1fr !important;
             height: auto !important;
+            gap: 0 !important;
         }
 
         .cal-header {

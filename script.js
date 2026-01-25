@@ -439,13 +439,14 @@
 
 		/**
 		 * RENDERIZADO DEL CALENDARIO VIKINGO (VERSIÓN FINAL COMPACTA 40PX)
+		 * Ajuste: Se eliminó el gap del grid para evitar el sangrado de badges al scrollear.
 		 */
 		async function renderCalendar() {
 			const cal = document.getElementById('calendar-grid'); 
 			if (!cal) return;
 
-			// Configuración del Grid: 40px por slot para diseño compacto
-			cal.className = "calendar-container h-[850px] overflow-y-auto custom-scrollbar grid grid-cols-[80px_repeat(6,1fr)] gap-[1px] bg-white/5 p-1 rounded-3xl";
+			// Configuración del Grid: 40px por slot. Sin gap para que el sticky sea un bloque sólido.
+			cal.className = "calendar-container h-[850px] overflow-y-auto custom-scrollbar grid grid-cols-[80px_repeat(6,1fr)] bg-white/5 p-1 rounded-3xl";
 			cal.style.gridAutoRows = "40px";
 
 			if (!state.clases || state.clases.length === 0) {
@@ -466,7 +467,7 @@
 			const diasNombres = ["LUNES", "MARTES", "MIÉRCOLES", "JUEVES", "VIERNES", "SÁBADO"];
 			
 			let headersHTML = `
-				<div class="cal-header sticky top-0 z-20 bg-[#1a1a1a] flex items-center justify-center font-black italic text-[10px] text-white/30 p-2 border-b border-white/10 rounded-tl-2xl">
+				<div class="cal-header sticky top-0 z-50 bg-[#000000] flex items-center justify-center font-black italic text-[10px] text-white/30 p-2 border-b border-white/10 rounded-tl-2xl">
 					HORA
 				</div>
 			`;
@@ -478,14 +479,14 @@
 				const mesNombre = fecha.toLocaleString('es-ES', { month: 'short' }).toUpperCase().replace('.', '');
 				const esHoy = fecha.getDate() === hoy.getDate() && fecha.getMonth() === hoy.getMonth();
 
-				const bgClass = esHoy ? "bg-red-600 text-black shadow-lg" : "bg-[#1a1a1a] text-gray-400";
+				const bgClass = esHoy ? "bg-red-600 text-black shadow-lg" : "bg-[#000000] text-gray-400";
 				const textClass = esHoy ? "text-black" : "text-white";
 				const roundedClass = index === 5 ? "rounded-tr-2xl" : ""; 
 
-				// CABECERA EN UNA SOLA LÍNEA: ENE 19 LUNES
+				// CABECERA EN UNA SOLA LÍNEA: ENE 19 LUNES (Horizontal)
 				headersHTML += `
-					<div class="cal-header sticky top-0 z-20 ${bgClass} ${roundedClass} flex items-center justify-center border-b border-white/10">
-						<span class="text-[10px] font-black uppercase italic ${textClass} tracking-tighter">
+					<div class="cal-header sticky top-0 z-50 ${bgClass} ${roundedClass} flex flex-row items-center justify-center border-b border-white/10 px-2">
+						<span class="text-[10px] font-black uppercase italic ${textClass} tracking-tighter whitespace-nowrap">
 							${mesNombre} ${numeroDia} ${nombreDia}
 						</span>
 					</div>
@@ -551,7 +552,7 @@
 				}
 			}
 
-			// --- 4. RENDERIZADO DE CLASES CON CONTRASTE Y JERARQUÍA ---
+			// --- 4. RENDERIZADO DE CLASES ---
 			if(state.clases && Array.isArray(state.clases)){
 				state.clases.forEach(c => {
 					const horarios = Array.isArray(c.horarios_detalle) ? c.horarios_detalle : [];
@@ -598,7 +599,6 @@
 								badge.ondragend = () => badge.classList.remove('opacity-40');
 							}
 
-							// Contenido del Badge optimizado para el nuevo tamaño 40px (clase de 1 hora = 80px)
 							badge.innerHTML = `
 								<div class="flex flex-col items-center justify-center h-full w-full">
 									<span class="badge-title ${colores.text}">
