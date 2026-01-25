@@ -436,205 +436,107 @@
                 showVikingToast("Alumno removido del cupo.");
             }
         }
-
 		/**
-		 * RENDERIZADO DEL CALENDARIO VIKINGO (VERSIÓN FINAL)
-		 * Incluye: Drag & Drop funcional, Contador de Cupos Real y Estética de 1 Hora.
+		 * RENDERIZADO DEL CALENDARIO VIKINGO
+		 * Esta versión corrige el error de "0 cupos" y el fallo post-reserva.
 		 */
-		/**
-		 * RENDERIZADO DEL CALENDARIO VIKINGO (VERSIÓN FINAL)
-		 * Incluye: Drag & Drop funcional, Contador de Cupos Real y Estética de 1 Hora.
-		 */
-		async function renderCalendar() {
+		function renderCalendar() {
 			const cal = document.getElementById('calendar-grid'); 
 			if (!cal) return;
 
-			// Configuración del Grid
-			cal.className = "calendar-container h-[700px] overflow-y-auto custom-scrollbar grid grid-cols-[50px_repeat(6,1fr)] auto-rows-max gap-[1px] bg-white/5 p-1 rounded-3xl";
-
-			if (!state.clases || state.clases.length === 0) {
-				state.clases = await apiFetch('/clases');
-			}
-
-			const isAdmin = (state.user?.rol_nombre === "Administrador" || state.user?.rol_nombre === "Supervisor" || state.user?.rol_nombre === "Profesor");
+			const isAdmin = (state.user?.rol_nombre === "Administrador" || state.user?.rol_nombre === "Supervisor");
 			const esAlumno = (state.user?.rol_nombre === "Alumno");
 
-			// --- 1. CÁLCULO DE FECHAS ---
-			const hoy = new Date();
-			const diaSemanaActual = hoy.getDay(); 
-			const diffParaLunes = diaSemanaActual === 0 ? 6 : diaSemanaActual - 1;
-			const fechaLunes = new Date(hoy);
-			fechaLunes.setDate(hoy.getDate() - diffParaLunes);
-
-			// --- 2. CABECERAS ---
-			const diasNombres = ["LUNES", "MARTES", "MIÉRCOLES", "JUEVES", "VIERNES", "SÁBADO"];
-			
-			let headersHTML = `
-				<div class="cal-header sticky top-0 z-20 bg-[#1a1a1a] flex items-center justify-center font-black italic text-[9px] text-white/30 p-2 border-b border-white/10 rounded-tl-2xl">
-					HORA
-				</div>
+			// 1. Limpiar y crear cabeceras
+			cal.innerHTML = `
+				<div class="cal-header">HORA</div>
+				<div class="cal-header">LUNES</div>
+				<div class="cal-header">MARTES</div>
+				<div class="cal-header">MIÉRCOLES</div>
+				<div class="cal-header">JUEVES</div>
+				<div class="cal-header">VIERNES</div>
+				<div class="cal-header">SÁBADO</div>
 			`;
 
-			diasNombres.forEach((nombreDia, index) => {
-				const fecha = new Date(fechaLunes);
-				fecha.setDate(fechaLunes.getDate() + index);
-				const numeroDia = fecha.getDate();
-				const mesNombre = fecha.toLocaleString('es-ES', { month: 'short' }).toUpperCase().replace('.', '');
-				const esHoy = fecha.getDate() === hoy.getDate() && fecha.getMonth() === hoy.getMonth();
-
-				const bgClass = esHoy ? "bg-red-600 text-black shadow-lg shadow-red-600/20" : "bg-[#1a1a1a] text-gray-400";
-				const textClass = esHoy ? "text-black" : "text-white";
-				const subTextClass = esHoy ? "text-black/70" : "text-gray-500";
-				const roundedClass = index === 5 ? "rounded-tr-2xl" : ""; 
-
-				headersHTML += `
-					<div class="cal-header sticky top-0 z-20 ${bgClass} ${roundedClass} p-2 flex flex-col items-center justify-center border-b border-white/10 transition-colors">
-						<span class="text-[8px] font-black uppercase tracking-widest leading-none mb-0.5 ${subTextClass}">${mesNombre}</span>
-						<h4 class="text-xl font-black italic leading-none mb-0.5 ${textClass}">${numeroDia}</h4>
-						<span class="text-[9px] font-bold uppercase ${subTextClass}">${nombreDia}</span>
-					</div>
-				`;
-			});
-
-			cal.innerHTML = headersHTML;
-
-			// --- 3. GRILLA ---
+			// 2. Generar grilla de tiempo (7hs a 21:30hs)
 			for(let h=7; h<=21.5; h+=0.5) {
 				const label = h % 1 === 0 ? `${h}:00` : `${Math.floor(h)}:30`;
-				const hourLabel = document.createElement('div');
-				hourLabel.className = "cal-cell flex items-center justify-center font-black text-[9px] text-white/40 bg-white/5 border-r border-white/20 min-h-[50px]";
-				hourLabel.innerText = label;
-				cal.appendChild(hourLabel);
+				cal.innerHTML += `<div class="cal-cell flex items-center justify-center font-black text-[9px] text-white/40 bg-white/5 border-r border-white/20">${label}</div>`;
 				
 				for(let d=1; d<=6; d++) {
 					const isSat = d === 6; 
 					const isClosed = isSat && (h < 10 || h > 13);
 					const cellId = `cell-${d}-${h.toString().replace('.','_')}`;
-					
-					const cell = document.createElement('div');
-					cell.id = cellId;
-					cell.className = `cal-cell relative min-h-[50px] border-b border-r border-white/5 hover:bg-white/5 transition-colors ${isClosed ? 'bg-stripes-gray opacity-30 pointer-events-none' : ''}`;
-					
-					if (isAdmin && !isClosed) {
-						cell.ondragover = (e) => {
-							e.preventDefault(); 
-							e.dataTransfer.dropEffect = "move";
-							cell.classList.add('bg-red-600/10');
-						};
-						cell.ondragleave = () => cell.classList.remove('bg-red-600/10');
-						cell.ondrop = async (e) => {
-							e.preventDefault();
-							cell.classList.remove('bg-red-600/10');
-							const claseId = e.dataTransfer.getData("claseId");
-							const oldDia = e.dataTransfer.getData("oldDia");
-							const oldHorario = e.dataTransfer.getData("oldHorario");
-							if (!claseId) return;
-							const parts = cell.id.split('-');
-							const newDia = parseInt(parts[1]);
-							const newHorario = parseFloat(parts[2].replace('_', '.'));
-							if (oldDia == newDia && oldHorario == newHorario) return;
-
-							const res = await apiFetch(`/clases/${claseId}/move`, 'PUT', {
-								old_dia: parseInt(oldDia),
-								old_horario: parseFloat(oldHorario),
-								new_dia: newDia,
-								new_horario: newHorario
-							});
-							if (!res.error) {
-								showVikingToast("¡Turno Reubicado!");
-								state.clases = await apiFetch('/clases');
-								renderCalendar(); 
-							} else {
-								showVikingToast("Error al mover: " + res.error, true);
-							}
-						};
-					}
-					cal.appendChild(cell);
+					cal.innerHTML += `<div id="${cellId}" class="cal-cell ${isClosed ? 'cal-cell-closed' : ''}" ondragover="event.preventDefault()"></div>`;
 				}
 			}
 
-			// --- 4. RENDERIZADO DE CLASES CON CONTRASTE ---
-			if(state.clases && Array.isArray(state.clases)){
-				state.clases.forEach(c => {
-					const horarios = Array.isArray(c.horarios_detalle) ? c.horarios_detalle : [];
+			// 3. Renderizado de Clases con Filtro de Cupos Corregido
+			state.clases.forEach(c => {
+				const horarios = Array.isArray(c.horarios_detalle) ? c.horarios_detalle : [];
+				
+				horarios.forEach(slot => {
+					const hKey = slot.horario.toString().replace('.', '_');
+					const cell = document.getElementById(`cell-${slot.dia}-${hKey}`);
 					
-					// --- LÓGICA DE CONTRASTE (NUEVO) ---
-					// Función auxiliar interna para determinar brillo
-					const getTextColorClass = (hexColor) => {
-						if (!hexColor) return { text: 'text-white', sub: 'text-white/70', bg: 'bg-white/20' };
-						// Convertir hex a RGB
-						const r = parseInt(hexColor.substr(1, 2), 16);
-						const g = parseInt(hexColor.substr(3, 2), 16);
-						const b = parseInt(hexColor.substr(5, 2), 16);
-						// Fórmula de Luminancia (YIQ)
-						const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
-						// Si es oscuro (<128), texto blanco. Si es claro, texto negro.
-						return (yiq >= 128) 
-							? { text: 'text-black', sub: 'text-black/60', bg: 'bg-black/10' } 
-							: { text: 'text-white', sub: 'text-white/80', bg: 'bg-white/20' };
-					};
-
-					const colores = getTextColorClass(c.color || '#FF0000');
-
-					horarios.forEach(slot => {
-						const hKey = slot.horario.toString().replace('.', '_');
-						const cell = document.getElementById(`cell-${slot.dia}-${hKey}`);
+					if (cell) {
+						// CORRECCIÓN DE CONTADOR: 
+						// Aseguramos que state.reservas sea un array y comparamos tipos correctamente
+						const reservasArray = Array.isArray(state.reservas) ? state.reservas : [];
+						const cupoMax = c.capacidad_max || 40;
 						
-						if (cell) {
-							const reservasArray = Array.isArray(state.reservas) ? state.reservas : [];
-							const cupoMax = c.capacidad_max || 40;
-							const cupoActual = reservasArray.filter(r => 
-								String(r.clase_id) === String(c.id) && 
-								Number(r.dia_semana) === Number(slot.dia) && 
-								Number(r.horario) === Number(slot.horario)
-							).length;
-							const estaLleno = cupoActual >= cupoMax;
+						const cupoActual = reservasArray.filter(r => 
+							String(r.clase_id) === String(c.id) && 
+							Number(r.dia_semana) === Number(slot.dia) && 
+							Number(r.horario) === Number(slot.horario)
+						).length;
+						
+						const estaLleno = cupoActual >= cupoMax;
 
-							const badge = document.createElement('div');
-							badge.className = "absolute inset-1 rounded-xl shadow-lg transition-all hover:scale-[1.02] active:scale-95 cursor-pointer flex flex-col items-center justify-center p-1 group z-10 class-badge border border-black/5"; 
-							badge.style.backgroundColor = c.color || '#FF0000';
-							
-							if (isAdmin) {
-								badge.draggable = true; 
-								badge.ondragstart = (e) => {
-									e.dataTransfer.setData("claseId", c.id);
-									e.dataTransfer.setData("oldDia", slot.dia);
-									e.dataTransfer.setData("oldHorario", slot.horario);
-									badge.classList.add('opacity-40');
-								};
-								badge.ondragend = () => badge.classList.remove('opacity-40');
-							}
-
-							// Usamos las variables de color calculadas arriba
-							badge.innerHTML = `
-								<div class="flex flex-col items-center justify-center h-full w-full px-1">
-									<span class="text-[10px] leading-tight mb-0.5 font-black uppercase italic ${colores.text} text-center truncate w-full drop-shadow-sm">
-										${c.nombre}
-									</span>
-									<span class="text-[8px] font-extrabold ${colores.sub} mb-0.5 lowercase italic leading-none truncate w-full text-center">
-										${slot.coach || 'staff'}
-									</span>
-									<div class="${colores.bg} px-1.5 py-px rounded-full text-[8px] font-black leading-none ${estaLleno ? (colores.text === 'text-white' ? 'text-red-300 animate-pulse' : 'text-red-700 animate-pulse') : colores.text}">
-										${cupoActual}/${cupoMax}
-									</div>
-								</div>
-							`;
-							
-							badge.onclick = (e) => {
-								e.stopPropagation();
-								if (esAlumno) {
-									if (estaLleno) showVikingToast("Cupo lleno para este turno", true);
-									else if(typeof confirmarReservaVikinga === 'function') confirmarReservaVikinga(c, slot.dia, slot.horario);
-								} else {
-									if (typeof openInscriptos === 'function') openInscriptos(c.id, slot.dia, slot.horario);
-								}
+						const badge = document.createElement('div');
+						badge.className = "class-badge cursor-move group transition-all hover:scale-105 active:scale-95 shadow-lg"; 
+						badge.style.backgroundColor = c.color || '#FF0000';
+						
+						// Drag & Drop para Admins
+						if (isAdmin) {
+							badge.draggable = true; 
+							badge.ondragstart = (e) => {
+								e.dataTransfer.setData("claseId", c.id);
+								e.dataTransfer.setData("oldDia", slot.dia);
+								e.dataTransfer.setData("oldHorario", slot.horario);
+								badge.classList.add('opacity-40');
 							};
-
-							cell.appendChild(badge);
+							badge.ondragend = () => badge.classList.remove('opacity-40');
 						}
-					});
+
+						badge.innerHTML = `
+							<div class="flex flex-col items-center justify-center h-full w-full">
+								<span class="text-[8px] sm:text-[9px] mb-0.5 leading-none font-black uppercase italic tracking-tighter text-black/90">
+									${c.nombre}
+								</span>
+								<div class="bg-black/30 px-1.5 rounded-full text-[7px] font-black ${estaLleno ? 'text-red-400 animate-pulse' : 'text-white/80'}">
+									${cupoActual}/${cupoMax}
+								</div>
+							</div>
+						`;
+						
+						badge.onclick = (e) => {
+							e.stopPropagation();
+							if (esAlumno) {
+								if (estaLleno) {
+									showVikingToast("Cupo lleno para este turno", true);
+								} else {
+									confirmarReservaVikinga(c, slot.dia, slot.horario);
+								}
+							} else {
+								if (typeof openInscriptos === 'function') openInscriptos(c.id, slot.dia, slot.horario);
+							}
+						};
+
+						cell.appendChild(badge);
+					}
 				});
-			}
+			});
 
 			if (window.lucide) lucide.createIcons();
 		}

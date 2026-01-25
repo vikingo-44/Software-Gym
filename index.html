@@ -16,13 +16,6 @@
 	<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/vikingo-44/Software-Gym/style.css">
 	<link rel="icon" type="image/png" href="https://github.com/vikingo-44/Software-Gym/blob/main/icono2.png?raw=true">
 	<link rel="apple-touch-icon" href="https://github.com/vikingo-44/Software-Gym/blob/main/icono2.png?raw=true">
-
-	<!-- STYLE PARA VERLO LOCAL -->
-	<link rel="stylesheet" href="style.css">
-
-	<!-- STYLE PARA VERLO LOCAL -->
-	<script src="script.js"></script>
-
 </head>
 <body class="flex h-screen w-screen overflow-hidden text-left">
 
@@ -770,20 +763,16 @@
             </div>
 
             <div id="view-calendario" class="view-content">
-				<div class="flex justify-between items-center mb-10">
-					<h3 class="text-3xl font-black italic uppercase text-left">Agenda Vikinga</h3>
-					<div class="flex gap-4">
-						<div class="flex bg-white/5 p-1 rounded-2xl border border-white/5">
-							<button onclick="renderCalendar()" class="px-6 py-2 bg-red-600 text-black rounded-xl text-[11px] font-black uppercase italic hover:scale-105 transition-transform">Semana Actual</button>
-						</div>
-					</div>
-				</div>
-				
-				<!-- GRILLA DEL CALENDARIO (Agregadas clases grid para columnas) -->
-				<div class="calendar-container h-[700px] overflow-y-auto custom-scrollbar grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 pb-10" id="calendar-grid">
-					<!-- El JS inyectará las columnas con fechas aquí -->
-				</div>
-			</div>
+                <div class="flex justify-between items-center mb-10">
+                    <h3 class="text-3xl font-black italic uppercase text-left">Agenda de Clases</h3>
+                    <div class="flex gap-4">
+                        <div class="flex bg-white/5 p-1 rounded-2xl border border-white/5">
+                            <button class="px-6 py-2 bg-red-600 text-black rounded-xl text-[11px] font-black uppercase italic">Semana Actual</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="calendar-container h-[700px] overflow-y-auto custom-scrollbar" id="calendar-grid"></div>
+            </div>
 
             <div id="view-rutinas" class="view-content">
 			<!-- HEADER -->

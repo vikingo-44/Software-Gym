@@ -73,24 +73,17 @@ body {
             background: rgba(255, 255, 255, 0.02); border-radius: 24px; overflow: hidden;
             border: 1px solid rgba(255, 255, 255, 0.1);
         }
-        /* Cabeceras de los días con letra más grande */
-		.cal-header { 
-			background: rgba(255,0,0,0.15); 
-			padding: 12px 4px; 
-			text-align: center; 
-			font-weight: 900; 
-			font-size: 13px; /* Antes era 8px */
-			border-right: 1px solid rgba(255,255,255,0.1); 
-			text-transform: uppercase;
-			letter-spacing: 1px;
-		}
-        /* Celdas más altas para que quepa el Profesor */
-		.cal-cell { 
-			border-right: 1px solid rgba(255,255,255,0.1); 
-			border-bottom: 1px solid rgba(255,255,255,0.1); 
-			height: 50px; /* La mitad de lo anterior */
-			position: relative; 
-		}
+        .cal-header { 
+            background: rgba(255,0,0,0.1); padding: 8px 4px; text-align: center; 
+            font-weight: 900; font-size: 8px; border-right: 1px solid rgba(255,255,255,0.2); 
+            text-transform: uppercase;
+        }
+        .cal-cell { 
+            border-right: 1px solid rgba(255,255,255,0.15); 
+            border-bottom: 1px solid rgba(255,255,255,0.15); 
+            min-height: 40px;
+            position: relative; 
+        }
         .cal-cell-closed {
             background: repeating-linear-gradient(45deg, rgba(255,255,255,0.02), rgba(255,255,255,0.02) 10px, rgba(255,255,255,0.05) 10px, rgba(255,255,255,0.05) 20px);
             opacity: 0.5;
