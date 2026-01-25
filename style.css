@@ -1,4 +1,4 @@
-/* =================================================================
+    /* =================================================================
     ESTILOS ORIGINALES (MANTENIDOS AL 100% - RESPETO TOTAL)
     ================================================================= */
     body {
@@ -13,13 +13,7 @@
         touch-action: pan-x pan-y; /* Permite scroll pero ayuda a mitigar zoom accidental */
         -webkit-text-size-adjust: 100%; /* Evita que iOS cambie el tamaño de letra al rotar */
     }
-
-    /*.bebas-neue-regular {
-        font-family: "Bebas Neue", sans-serif;
-        font-weight: 400;
-        font-style: normal;
-        }*/
-            
+    
     .viking-red { color: #FF0000; }
     .viking-bg-red { background-color: #FF0000; }
 
@@ -81,37 +75,30 @@
     .viking-table-row { border-bottom: 1px solid rgba(255, 255, 255, 0.03); transition: background 0.2s; }
     .viking-table-row:hover { background: rgba(255, 0, 0, 0.02); }
 
-    /* SECCIÓN CALENDARIO CORREGIDA - ESTILO PROFESIONAL COMPACTO */
     .calendar-container {
-        display: grid; 
-        grid-template-columns: 80px repeat(6, 1fr);
-        background: #000000; 
-        border-radius: 24px; 
-        overflow: hidden;
+        display: grid; grid-template-columns: 50px repeat(6, 1fr);
+        background: rgba(255, 255, 255, 0.02); border-radius: 24px; overflow: hidden;
         border: 1px solid rgba(255, 255, 255, 0.1);
     }
     .cal-header { 
-        background: #000000 !important; 
-        padding: 6px 4px; /* Reducido */
+        background: rgba(255,0,0,0.15); 
+        padding: 12px 4px; 
         text-align: center; 
         font-weight: 900; 
-        font-size: 9px; /* Reducido */
+        font-size: 13px; 
         border-right: 1px solid rgba(255,255,255,0.1); 
-        border-bottom: 3px solid #FF0000 !important; /* Más elegante */
         text-transform: uppercase;
         letter-spacing: 1px;
-        z-index: 100 !important; 
     }
     .cal-cell { 
-        border-right: 1px solid rgba(255,255,255,0.05); 
-        border-bottom: 1px solid rgba(255,255,255,0.05); 
-        height: auto !important; 
-        min-height: 70px; /* Reducido de 100px para compactar */
+        border-right: 1px solid rgba(255,255,255,0.1); 
+        border-bottom: 1px solid rgba(255,255,255,0.1); 
+        height: 50px; 
         position: relative; 
     }
     .cal-cell-closed {
         background: repeating-linear-gradient(45deg, rgba(255,255,255,0.02), rgba(255,255,255,0.02) 10px, rgba(255,255,255,0.05) 10px, rgba(255,255,255,0.05) 20px);
-        opacity: 0.3;
+        opacity: 0.5;
     }
 
     /* Lógica Sidebar Colapsada PC (Sagrado) */
@@ -159,9 +146,8 @@
         padding: 20px;
     }
 
-    /* BADGE DE CLASE REFINADO - COMPACTO */
     .class-badge {
-        color: white !important; 
+        color: black; 
         font-weight: 900;
         padding: 4px; 
         text-transform: uppercase; 
@@ -172,19 +158,19 @@
         justify-content: center; 
         align-items: center;
         text-align: center; 
-        height: calc(100% - 8px) !important; 
-        width: calc(100% - 8px);
-        margin: 4px;
-        border-radius: 12px;
-        border: 1px solid rgba(255,255,255,0.2);
-        box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        height: calc(200% + 1px); 
+        width: calc(100% - 4px);
+        margin: 2px;
+        border-radius: 14px;
+        border: 1px solid rgba(255,255,255,0.3);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.4);
         position: absolute;
         top: 0; 
         left: 0; 
         z-index: 20;
-        transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        transition: all 0.2s;
     }
-    .class-badge:hover { transform: translateY(-1px); z-index: 50; filter: brightness(1.1); }
+    .class-badge:hover { transform: scale(0.97); z-index: 20; }
 
     .filter-btn {
         background: rgba(255, 255, 255, 0.05);
@@ -292,10 +278,11 @@
     ================================================================= */
     @media (max-width: 1024px) {
         body {
-            overflow-y: auto !important; 
-            overflow-x: hidden !important; 
+            overflow-y: auto !important; /* Habilitar scroll en móvil */
+            overflow-x: hidden !important; /* BLOQUEO DE DESFASE LATERAL */
         }
 
+        /* Sidebar: De lateral fijo a Menú Desplegable (Drawer) */
         #sidebar {
             position: fixed;
             left: -100%; 
@@ -312,6 +299,7 @@
             box-shadow: 20px 0 50px rgba(0,0,0,0.9);
         }
 
+        /* Overlay oscuro para cerrar el menú */
         .sidebar-overlay {
             display: none;
             position: fixed;
@@ -322,6 +310,7 @@
         }
         .sidebar-overlay.active { display: block; }
 
+        /* Contenido Principal: Ocupa todo el ancho sin márgenes */
         main {
             margin-left: 0 !important;
             width: 100% !important;
@@ -329,12 +318,14 @@
             overflow-x: hidden !important;
         }
 
+        /* Ajuste de contenedores para evitar defasajes */
         .view-content {
             width: 100% !important;
             padding: 0.75rem !important;
             overflow-x: hidden !important;
         }
 
+        /* Header Mobile: Corregimos padding y altura para look app */
         header {
             padding-left: 1rem !important; 
             padding-right: 1rem !important;
@@ -343,16 +334,19 @@
             gap: 12px;
         }
 
+        /* Grillas: Una sola columna para que nada desborde */
         .grid-cols-2, .grid-cols-3, .grid-cols-4, .exercise-grid {
             grid-template-columns: 1fr !important;
             gap: 0.75rem !important;
         }
 
+        /* Inputs: Forzamos que nunca superen el ancho del padre */
         .viking-input, input, select, textarea {
             max-width: 100% !important;
             box-sizing: border-box !important;
         }
 
+        /* El calendario en móvil */
         .calendar-container {
             grid-template-columns: 1fr !important;
             height: auto !important;
@@ -364,8 +358,6 @@
             z-index: 30;
             border-right: none !important;
             font-size: 11px !important;
-            background: black !important;
-            border-bottom: 6px solid #FF0000 !important;
         }
 
         .cal-cell {
@@ -374,14 +366,16 @@
             border-right: none !important;
         }
 
+        /* Badge de clase en móvil */
         .class-badge {
             position: relative;
             height: auto !important;
-            min-height: 60px;
+            min-height: 55px;
             width: calc(100% - 12px);
             margin: 6px;
         }
 
+        /* Tablas: Tipo tarjeta refinada con bordes limpios */
         .viking-table-row {
             display: flex;
             flex-direction: column;
@@ -394,6 +388,7 @@
             box-sizing: border-box;
         }
 
+        /* Modales: Ajuste estético para móvil */
         .viking-modal > div {
             width: 95% !important;
             max-width: 95% !important;
@@ -402,21 +397,25 @@
             padding: 1.5rem !important;
         }
 
+        /* AJUSTE SOLICITADO: BOTONES MÁS PEQUEÑOS Y PROPORCIONADOS */
         button, .nav-item, .filter-btn, .payment-method-btn {
-            min-height: 40px !important; 
+            min-height: 40px !important; /* Más elegante para pantallas móviles */
             padding-top: 0.4rem !important;
             padding-bottom: 0.4rem !important;
             font-size: 0.85rem !important;
             border-radius: 0.85rem !important;
         }
 
+        /* Iconos de navegación ligeramente más pequeños */
         .nav-item i {
             width: 18px !important;
             height: 18px !important;
         }
 
+        /* Esconder sidebar si se intenta colapsar en móvil */
         .sidebar-collapsed { width: 0 !important; overflow: hidden; }
 
+        /* Botón Disparador del Menú */
         .mobile-menu-trigger {
             display: flex !important;
             width: 44px;
@@ -430,6 +429,30 @@
         .mobile-menu-trigger i { width: 22px; height: 22px; }
     }
 
+    /* Ocultar disparador en resoluciones de computadora */
     @media (min-width: 1025px) {
         .mobile-menu-trigger { display: none !important; }
+    }
+
+    /* BOTÓN FLOTANTE WHATSAPP */
+    .whatsapp-float {
+        position: fixed;
+        width: 50px;
+        height: 50px;
+        bottom: 25px;
+        left: 25px; 
+        background-color: #25d366;
+        color: #FFF;
+        border-radius: 50px;
+        text-align: center;
+        box-shadow: 0 5px 15px rgba(37, 211, 102, 0.3);
+        z-index: 1000; 
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.3s ease;
+    }
+    .whatsapp-float:hover {
+        transform: scale(1.1);
+        background-color: #128c7e;
     }
