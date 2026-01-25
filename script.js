@@ -3,7 +3,35 @@
 		// ==========================================
 
 		// Detectamos automáticamente si estás en tu PC o en la Nube
-		const IS_LOCALHOST = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+		const IS_LOCALHOST = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.protocol === 'file:';
+
+		// ==========================================
+		// MODO DESARROLLO: AUTO-LOGIN LOCAL
+		// ==========================================
+		if (IS_LOCALHOST) {
+			console.warn("🛠️ MODO DEV ACTIVO: Saltando autenticación...");
+			
+			// Seteamos un usuario Administrador falso en el estado global
+			window.state = window.state || {};
+			state.user = {
+				id: 999,
+				nombre: "VIKINGO DEV",
+				rol_nombre: "Administrador", // Esto te da todos los permisos
+				sucursal_id: 1
+			};
+
+			// Forzamos que se oculte el login y se vea la app apenas cargue el DOM
+			document.addEventListener('DOMContentLoaded', () => {
+				const loginOverlay = document.getElementById('login-overlay');
+				const appContainer = document.getElementById('app-container');
+				
+				if (loginOverlay) loginOverlay.style.display = 'none';
+				if (appContainer) appContainer.classList.remove('hidden');
+				
+				// Ejecutamos la carga inicial de la vista por defecto
+				if (typeof showView === 'function') showView('calendario');
+			});
+		}
 
 		// Definimos la URL Maestra (Para compatibilidad con código antiguo y nuevo)
 		const API_URL = IS_LOCALHOST ? "http://localhost:8000/api" : "/api";

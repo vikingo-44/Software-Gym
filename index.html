@@ -13,7 +13,15 @@
 	<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <title>GYMFIT PRO</title>
-	<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/vikingo-44/Software-Gym@main/style.css?v=1.3">
+	<!-- <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/vikingo-44/Software-Gym@main/style.css?v=1.3"> -->
+	
+	<!--  Si estás en tu PC, carga el archivo local. Si no, carga el de GitHub. -->
+	<script>
+		const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.protocol === 'file:';
+		const cssPath = isLocal ? "style.css" : "https://cdn.jsdelivr.net/gh/vikingo-44/Software-Gym@main/style.css?v=1.3";
+		document.write(`<link rel="stylesheet" href="${cssPath}?v=${Date.now()}">`);
+	</script>
+
 	<link rel="icon" type="image/png" href="https://github.com/vikingo-44/Software-Gym/blob/main/icono2.png?raw=true">
 	<link rel="apple-touch-icon" href="https://github.com/vikingo-44/Software-Gym/blob/main/icono2.png?raw=true">
 </head>
@@ -1307,8 +1315,14 @@
 	<!-- Fondo oscuro para cerrar el menú al tocar afuera -->
 		<div id="mobile-overlay" class="sidebar-overlay" onclick="toggleMobileMenu()"></div>
 
-	<!-- Script fuera para que tome la lista de alumnos -->
-	<script src="https://cdn.jsdelivr.net/gh/vikingo-44/Software-Gym@main/script.js?v=1.3"></script>
+	<!-- Script fuera para que tome la lista de alumnos 
+	<script src="https://cdn.jsdelivr.net/gh/vikingo-44/Software-Gym@main/script.js?v=1.3"></script> -->
+
+	<!--  Si estás en tu PC, carga el archivo local. Si no, carga el de GitHub. -->
+	<script>
+		const jsPath = isLocal ? "script.js" : "https://cdn.jsdelivr.net/gh/vikingo-44/Software-Gym@main/script.js?v=1.3";
+		document.write(`<script src="${jsPath}?v=${Date.now()}"><\/script>`);
+	</script>
 
 	<script>
 		window.toggleCamposCompra = function(tipo) {
