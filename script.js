@@ -442,209 +442,198 @@
 		 * Incluye: Drag & Drop funcional, Contador de Cupos Real y Estética de 1 Hora.
 		 */
 		async function renderCalendar() {
-            const cal = document.getElementById('calendar-grid'); 
-            if (!cal) return;
+			const cal = document.getElementById('calendar-grid'); 
+			if (!cal) return;
 
-            // --- CONFIGURACIÓN VISUAL (MODO IMPACTO TOTAL - SINCRONIZADO) ---
-            // 1. Aumentamos las columnas y el fondo para evitar transparencias.
-            // 2. 'gridAutoRows' en 160px para que el texto gigante respire.
-            cal.className = "calendar-container h-[750px] overflow-auto custom-scrollbar grid grid-cols-[80px_repeat(6,minmax(220px,1fr))] gap-[2px] bg-black p-1 rounded-3xl border-4 border-white/10 shadow-2xl snap-none"; 
-            cal.style.gridAutoRows = "160px";
+			// --- CONFIGURACIÓN VISUAL PROFESIONAL ---
+			// Ajustamos el minmax a 160px para que no sea gigante y gridAutoRows a 100px
+			cal.className = "calendar-container h-[700px] overflow-auto custom-scrollbar grid grid-cols-[80px_repeat(6,minmax(160px,1fr))] gap-[1px] bg-white/5 p-1 rounded-3xl border border-white/10 shadow-2xl"; 
+			cal.style.gridAutoRows = "100px";
 
-            // Cargar clases si no existen en el estado
-            if (!state.clases || state.clases.length === 0) {
-                state.clases = await apiFetch('/clases');
-            }
+			// Cargar clases si no existen en el estado
+			if (!state.clases || state.clases.length === 0) {
+				state.clases = await apiFetch('/clases');
+			}
 
-            // Definir permisos
-            const isAdmin = (state.user?.rol_nombre === "Administrador" || state.user?.rol_nombre === "Supervisor");
-            const esAlumno = (state.user?.rol_nombre === "Alumno");
+			// Definir permisos
+			const isAdmin = (state.user?.rol_nombre === "Administrador" || state.user?.rol_nombre === "Supervisor");
+			const esAlumno = (state.user?.rol_nombre === "Alumno");
 
-            // --- 1. CÁLCULO DE FECHAS (Semana Actual) ---
-            const hoy = new Date();
-            const diaSemanaActual = hoy.getDay(); 
-            const diffParaLunes = diaSemanaActual === 0 ? 6 : diaSemanaActual - 1;
-            const fechaLunes = new Date(hoy);
-            fechaLunes.setDate(hoy.getDate() - diffParaLunes);
+			// --- 1. CÁLCULO DE FECHAS (Semana Actual) ---
+			const hoy = new Date();
+			const diaSemanaActual = hoy.getDay(); 
+			const diffParaLunes = diaSemanaActual === 0 ? 6 : diaSemanaActual - 1;
+			const fechaLunes = new Date(hoy);
+			fechaLunes.setDate(hoy.getDate() - diffParaLunes);
 
-            // --- 2. GENERACIÓN DE CABECERAS (DÍAS) ---
-            const diasNombres = ["LUNES", "MARTES", "MIÉRCOLES", "JUEVES", "VIERNES", "SÁBADO"];
-            
-            // Header HORA con fondo sólido negro y borde inferior ROJO GRUESO (Máscara para el scroll)
-            let headersHTML = `
-                <div class="cal-header sticky top-0 left-0 z-[120] bg-[#000000] flex items-center justify-center font-black italic text-[12px] text-red-600 p-2 border-b-8 border-red-600 rounded-tl-2xl shadow-2xl">
-                    HORA
-                </div>
-            `;
+			// --- 2. GENERACIÓN DE CABECERAS (DÍAS) ---
+			const diasNombres = ["LUNES", "MARTES", "MIÉRCOLES", "JUEVES", "VIERNES", "SÁBADO"];
+			
+			let headersHTML = `
+				<div class="cal-header sticky top-0 left-0 z-[120] bg-black flex items-center justify-center font-black italic text-[10px] text-red-600 p-2 border-b-4 border-red-600 rounded-tl-2xl">
+					HORA
+				</div>
+			`;
 
-            diasNombres.forEach((nombreDia, index) => {
-                const fecha = new Date(fechaLunes);
-                fecha.setDate(fechaLunes.getDate() + index);
-                const numeroDia = fecha.getDate();
-                const mesNombre = fecha.toLocaleString('es-ES', { month: 'short' }).toUpperCase().replace('.', '');
-                const esHoy = fecha.getDate() === hoy.getDate() && fecha.getMonth() === hoy.getMonth();
+			diasNombres.forEach((nombreDia, index) => {
+				const fecha = new Date(fechaLunes);
+				fecha.setDate(fechaLunes.getDate() + index);
+				const numeroDia = fecha.getDate();
+				const mesNombre = fecha.toLocaleString('es-ES', { month: 'short' }).toUpperCase().replace('.', '');
+				const esHoy = fecha.getDate() === hoy.getDate() && fecha.getMonth() === hoy.getMonth();
 
-                const bgClass = esHoy ? "bg-red-600 text-black shadow-lg shadow-red-600/20" : "bg-[#0a0a0a] text-gray-400";
-                const textClass = esHoy ? "text-black" : "text-white";
-                const subTextClass = esHoy ? "text-black/70" : "text-gray-500";
-                const borderClass = esHoy ? "border-white" : "border-red-600";
-                const roundedClass = index === 5 ? "rounded-tr-2xl" : ""; 
+				const bgClass = esHoy ? "bg-red-600 text-black" : "bg-black text-white/40";
+				const textClass = esHoy ? "text-black" : "text-white";
+				const subTextClass = esHoy ? "text-black/60" : "text-white/20";
+				const borderClass = esHoy ? "border-white" : "border-red-600";
+				const roundedClass = index === 5 ? "rounded-tr-2xl" : ""; 
 
-                headersHTML += `
-                    <div class="cal-header sticky top-0 z-[110] ${bgClass} ${roundedClass} p-3 flex flex-col items-center justify-center border-b-8 ${borderClass} shadow-2xl transition-colors">
-                        <span class="text-[11px] font-black uppercase tracking-widest leading-none mb-1 ${subTextClass}">${mesNombre}</span>
-                        <h4 class="text-4xl font-black italic leading-none mb-1 ${textClass}">${numeroDia}</h4>
-                        <span class="text-[14px] font-bold uppercase ${subTextClass}">${nombreDia}</span>
-                    </div>
-                `;
-            });
+				headersHTML += `
+					<div class="cal-header sticky top-0 z-[110] ${bgClass} ${roundedClass} p-2 flex flex-col items-center justify-center border-b-4 ${borderClass} transition-colors">
+						<span class="text-[9px] font-black uppercase tracking-widest leading-none ${subTextClass}">${mesNombre}</span>
+						<h4 class="text-xl font-black italic leading-none ${textClass}">${numeroDia}</h4>
+						<span class="text-[10px] font-bold uppercase ${subTextClass}">${nombreDia}</span>
+					</div>
+				`;
+			});
 
-            cal.innerHTML = headersHTML;
+			cal.innerHTML = headersHTML;
 
-            // --- 3. GENERACIÓN DE LA GRILLA (HORARIOS) ---
-            for(let h=7; h<=21.5; h+=0.5) {
-                const label = h % 1 === 0 ? `${h}:00` : `${Math.floor(h)}:30`;
-                
-                const hourLabel = document.createElement('div');
-                // Sincronizamos altura de fila y sticky para columna de horas
-                hourLabel.className = "cal-cell sticky left-0 z-40 bg-[#0d0d0d] flex items-center justify-center font-black text-[14px] text-white/60 border-r-4 border-red-600/20 shadow-2xl";
-                hourLabel.style.height = "160px";
-                hourLabel.innerText = label;
-                cal.appendChild(hourLabel);
-                
-                for(let d=1; d<=6; d++) {
-                    const isSat = d === 6; 
-                    const isClosed = isSat && (h < 10 || h > 13);
-                    const cellId = `cell-${d}-${h.toString().replace('.','_')}`;
-                    
-                    const cell = document.createElement('div');
-                    cell.id = cellId;
-                    cell.style.height = "160px";
-                    cell.className = `cal-cell relative border-b border-r border-white/5 hover:bg-white/5 transition-colors ${isClosed ? 'bg-stripes-gray opacity-20 pointer-events-none' : ''}`;
-                    
-                    if (isAdmin && !isClosed) {
-                        cell.ondragover = (e) => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; cell.classList.add('bg-red-600/10'); };
-                        cell.ondragleave = () => cell.classList.remove('bg-red-600/10');
-                        cell.ondrop = async (e) => {
-                            e.preventDefault();
-                            cell.classList.remove('bg-red-600/10');
-                            const claseId = e.dataTransfer.getData("claseId");
-                            const oldDia = e.dataTransfer.getData("oldDia");
-                            const oldHorario = e.dataTransfer.getData("oldHorario");
-                            if (!claseId) return;
-                            const parts = cell.id.split('-');
-                            const newDia = parseInt(parts[1]);
-                            const newHorario = parseFloat(parts[2].replace('_', '.'));
-                            if (oldDia == newDia && oldHorario == newHorario) return;
+			// --- 3. GENERACIÓN DE LA GRILLA (HORARIOS) ---
+			for(let h=7; h<=21.5; h+=0.5) {
+				const label = h % 1 === 0 ? `${h}:00` : `${Math.floor(h)}:30`;
+				
+				const hourLabel = document.createElement('div');
+				hourLabel.className = "cal-cell sticky left-0 z-40 bg-[#0a0a0a] flex items-center justify-center font-black text-[11px] text-white/30 border-r border-white/5";
+				hourLabel.style.height = "100px";
+				hourLabel.innerText = label;
+				cal.appendChild(hourLabel);
+				
+				for(let d=1; d<=6; d++) {
+					const isSat = d === 6; 
+					const isClosed = isSat && (h < 10 || h > 13);
+					const cellId = `cell-${d}-${h.toString().replace('.','_')}`;
+					
+					const cell = document.createElement('div');
+					cell.id = cellId;
+					cell.style.height = "100px";
+					cell.className = `cal-cell relative border-b border-r border-white/5 hover:bg-white/5 transition-colors ${isClosed ? 'cal-cell-closed pointer-events-none' : ''}`;
+					
+					if (isAdmin && !isClosed) {
+						cell.ondragover = (e) => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; cell.classList.add('bg-red-600/10'); };
+						cell.ondragleave = () => cell.classList.remove('bg-red-600/10');
+						cell.ondrop = async (e) => {
+							e.preventDefault();
+							cell.classList.remove('bg-red-600/10');
+							const claseId = e.dataTransfer.getData("claseId");
+							const oldDia = e.dataTransfer.getData("oldDia");
+							const oldHorario = e.dataTransfer.getData("oldHorario");
+							if (!claseId) return;
+							
+							const parts = cell.id.split('-');
+							const newDia = parseInt(parts[1]);
+							const newHorario = parseFloat(parts[2].replace('_', '.'));
+							if (oldDia == newDia && oldHorario == newHorario) return;
 
-                            const res = await apiFetch(`/clases/${claseId}/move`, 'PUT', { 
-                                old_dia: parseInt(oldDia), 
-                                old_horario: parseFloat(oldHorario), 
-                                new_dia: newDia, 
-                                new_horario: newHorario 
-                            });
+							const res = await apiFetch(`/clases/${claseId}/move`, 'PUT', { 
+								old_dia: parseInt(oldDia), 
+								old_horario: parseFloat(oldHorario), 
+								new_dia: newDia, 
+								new_horario: newHorario 
+							});
 
-                            if (!res.error) { 
-                                showVikingToast("¡Turno Reubicado!"); 
-                                state.clases = await apiFetch('/clases'); 
-                                renderCalendar(); 
-                            } else { 
-                                showVikingToast("Error al mover: " + res.error, true); 
-                            }
-                        };
-                    }
-                    cal.appendChild(cell);
-                }
-            }
+							if (!res.error) { 
+								showVikingToast("¡Turno Reubicado!"); 
+								state.clases = await apiFetch('/clases'); 
+								renderCalendar(); 
+							} else { 
+								showVikingToast("Error al mover: " + res.error, true); 
+							}
+						};
+					}
+					cal.appendChild(cell);
+				}
+			}
 
-            // --- 4. RENDERIZADO DE CLASES (TARJETAS PREMIUM IMPACTANTES) ---
-            if(state.clases && Array.isArray(state.clases)){
-                state.clases.forEach(c => {
-                    const horarios = Array.isArray(c.horarios_detalle) ? c.horarios_detalle : [];
-                    
-                    const getTextColorClass = (hexColor) => {
-                        if (!hexColor) return { text: 'text-white', sub: 'text-white/70', bg: 'bg-white/20' };
-                        const r = parseInt(hexColor.substr(1, 2), 16);
-                        const g = parseInt(hexColor.substr(3, 2), 16);
-                        const b = parseInt(hexColor.substr(5, 2), 16);
-                        const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
-                        return (yiq >= 128) 
-                            ? { text: 'text-black', sub: 'text-black/70', bg: 'bg-black/20' } 
-                            : { text: 'text-white', sub: 'text-white/80', bg: 'bg-white/20' };
-                    };
+			// --- 4. RENDERIZADO DE CLASES REFINADO ---
+			if(state.clases && Array.isArray(state.clases)){
+				state.clases.forEach(c => {
+					const horarios = Array.isArray(c.horarios_detalle) ? c.horarios_detalle : [];
+					
+					const getTextColorClass = (hexColor) => {
+						if (!hexColor) return { text: 'text-white', sub: 'text-white/60' };
+						const r = parseInt(hexColor.substr(1, 2), 16);
+						const g = parseInt(hexColor.substr(3, 2), 16);
+						const b = parseInt(hexColor.substr(5, 2), 16);
+						const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
+						return (yiq >= 128) 
+							? { text: 'text-black', sub: 'text-black/60' } 
+							: { text: 'text-white', sub: 'text-white/70' };
+					};
 
-                    const colores = getTextColorClass(c.color || '#FF0000');
+					const colores = getTextColorClass(c.color || '#FF0000');
 
-                    horarios.forEach(slot => {
-                        const hKey = slot.horario.toString().replace('.', '_');
-                        const cell = document.getElementById(`cell-${slot.dia}-${hKey}`);
-                        
-                        if (cell) {
-                            const reservasArray = Array.isArray(state.reservas) ? state.reservas : [];
-                            const cupoMax = c.capacidad_max || 40;
-                            const cupoActual = reservasArray.filter(r => 
-                                String(r.clase_id) === String(c.id) && 
-                                Number(r.dia_semana) === Number(slot.dia) && 
-                                Number(r.horario) === Number(slot.horario)
-                            ).length;
-                            
-                            const estaLleno = cupoActual >= cupoMax;
+					horarios.forEach(slot => {
+						const hKey = slot.horario.toString().replace('.', '_');
+						const cell = document.getElementById(`cell-${slot.dia}-${hKey}`);
+						
+						if (cell) {
+							const reservasArray = Array.isArray(state.reservas) ? state.reservas : [];
+							const cupoMax = c.capacidad_max || 40;
+							const cupoActual = reservasArray.filter(r => 
+								String(r.clase_id) === String(c.id) && 
+								Number(r.dia_semana) === Number(slot.dia) && 
+								Number(r.horario) === Number(slot.horario)
+							).length;
+							
+							const estaLleno = cupoActual >= cupoMax;
 
-                            const badge = document.createElement('div');
-                            // Inset mayor y bordes reforzados para impacto visual
-                            badge.className = "absolute inset-2 class-badge shadow-2xl flex flex-col items-center justify-center p-4 z-10 border-4 border-black/20 transition-all hover:scale-[1.03] active:scale-95 cursor-pointer"; 
-                            badge.style.backgroundColor = c.color || '#FF0000';
-                            badge.style.height = "calc(100% - 16px)";
-                            
-                            if (isAdmin) {
-                                badge.draggable = true; 
-                                badge.ondragstart = (e) => { 
-                                    e.dataTransfer.setData("claseId", c.id); 
-                                    e.dataTransfer.setData("oldDia", slot.dia); 
-                                    e.dataTransfer.setData("oldHorario", slot.horario); 
-                                    badge.classList.add('opacity-40'); 
-                                };
-                                badge.ondragend = () => badge.classList.remove('opacity-40');
-                            }
+							const badge = document.createElement('div');
+							badge.className = "class-badge"; 
+							badge.style.backgroundColor = c.color || '#FF0000';
+							
+							if (isAdmin) {
+								badge.draggable = true; 
+								badge.ondragstart = (e) => { 
+									e.dataTransfer.setData("claseId", c.id); 
+									e.dataTransfer.setData("oldDia", slot.dia); 
+									e.dataTransfer.setData("oldHorario", slot.horario); 
+									badge.classList.add('opacity-40'); 
+								};
+								badge.ondragend = () => badge.classList.remove('opacity-40');
+							}
 
-                            // --- DISEÑO GIGANTE VIKINGO ---
-                            // El profesor y los cupos ahora tienen 28px de tamaño de fuente
-                            badge.innerHTML = `
-                                <div class="flex flex-col items-center justify-center h-full w-full px-2 gap-4">
-                                    <!-- Nombre de la Clase -->
-                                    <span class="text-[18px] leading-tight font-black uppercase italic ${colores.text} text-center truncate w-full drop-shadow-xl">
-                                        ${c.nombre}
-                                    </span>
-                                    
-                                    <!-- Nombre del Profesor GIGANTE + PREFIJO "Prof.:" -->
-                                    <span class="text-[28px] font-black ${colores.sub} uppercase italic leading-none truncate w-full text-center tracking-tighter">
-                                        Prof.: ${slot.coach || 'STAFF'}
-                                    </span>
-                                    
-                                    <!-- Cupos GIGANTES (Estilo Pill) -->
-                                    <div class="mt-2 ${colores.bg} px-10 py-3 rounded-2xl text-[28px] font-black leading-none border-2 border-black/10 ${estaLleno ? 'bg-red-600 text-white animate-pulse shadow-[0_0_40px_rgba(255,0,0,1)]' : colores.text}">
-                                        ${cupoActual} / ${cupoMax}
-                                    </div>
-                                </div>
-                            `;
-                            
-                            badge.onclick = (e) => {
-                                e.stopPropagation();
-                                if (esAlumno) {
-                                    if (estaLleno) showVikingToast("Cupo lleno para este turno", true);
-                                    else if(typeof confirmarReservaVikinga === 'function') confirmarReservaVikinga(c, slot.dia, slot.horario);
-                                } else {
-                                    if (typeof openInscriptos === 'function') openInscriptos(c.id, slot.dia, slot.horario);
-                                }
-                            };
-                            cell.appendChild(badge);
-                        }
-                    });
-                });
-            }
+							badge.innerHTML = `
+								<div class="flex flex-col items-center justify-center h-full w-full px-1">
+									<span class="text-[10px] leading-tight font-black uppercase italic ${colores.text} text-center truncate w-full">
+										${c.nombre}
+									</span>
+									<span class="text-[11px] font-black ${colores.sub} uppercase italic leading-none truncate w-full text-center mt-1">
+										Prof: ${slot.coach || 'STAFF'}
+									</span>
+									<div class="mt-1.5 px-3 py-1 rounded-lg text-[10px] font-black bg-black/20 ${estaLleno ? 'bg-red-600 text-white animate-pulse' : colores.text}">
+										${cupoActual}/${cupoMax}
+									</div>
+								</div>
+							`;
+							
+							badge.onclick = (e) => {
+								e.stopPropagation();
+								if (esAlumno) {
+									if (estaLleno) showVikingToast("Cupo lleno para este turno", true);
+									else if(typeof confirmarReservaVikinga === 'function') confirmarReservaVikinga(c, slot.dia, slot.horario);
+								} else {
+									if (typeof openInscriptos === 'function') openInscriptos(c.id, slot.dia, slot.horario);
+								}
+							};
+							cell.appendChild(badge);
+						}
+					});
+				});
+			}
 
-            if (window.lucide) lucide.createIcons();
-        }
+			if (window.lucide) lucide.createIcons();
+		}
 		
 		/**
 		 * FUNCIÓN DE RESERVA CORREGIDA

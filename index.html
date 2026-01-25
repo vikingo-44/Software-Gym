@@ -38,7 +38,7 @@
                 <form onsubmit="handleLogin(event)" class="space-y-4">
                     <input type="text" id="login-dni" placeholder="DNI" required class="viking-input">
                     <input type="password" id="login-pass" placeholder="Contraseña" required class="viking-input">
-                    <button type="submit" id="login-button" class="w-full viking-bg-red text-black py-5 rounded-2xl font-black uppercase italic tracking-widest hover:scale-[1.02] active:scale-95 transition-all shadow-[0_0_20px_rgba(255,0,0,0.3)]">Entrar al Valhalla</button>
+                    <button type="submit" id="login-button" class="w-full viking-bg-red text-black py-5 rounded-2xl font-black uppercase italic tracking-widest hover:scale-[1.02] active:scale-95 transition-all shadow-[0_0_20px_rgba(255,0,0,0.3)]">Ingresar</button>
                 </form>
                 <button onclick="toggleResetPass(true)" class="mt-6 text-[10px] font-black uppercase italic text-gray-500 hover:text-red-600 transition-colors tracking-widest">¿Olvidaste tu contraseña?</button>
             </div>
@@ -772,8 +772,8 @@
 					</div>
 				</div>
 				
-				<!-- GRILLA DEL CALENDARIO (Agregadas clases grid para columnas) -->
-				<div class="calendar-container h-[700px] overflow-y-auto custom-scrollbar grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 pb-10" id="calendar-grid">
+				<!-- GRILLA DEL CALENDARIO CORREGIDA -->
+				<div class="calendar-container h-[700px] overflow-auto custom-scrollbar" id="calendar-grid">
 					<!-- El JS inyectará las columnas con fechas aquí -->
 				</div>
 			</div>
