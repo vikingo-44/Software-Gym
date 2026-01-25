@@ -3,35 +3,7 @@
 		// ==========================================
 
 		// Detectamos automáticamente si estás en tu PC o en la Nube
-		const IS_LOCALHOST = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.protocol === 'file:';
-
-		// ==========================================
-		// MODO DESARROLLO: AUTO-LOGIN LOCAL
-		// ==========================================
-		if (IS_LOCALHOST) {
-			console.warn("🛠️ MODO DEV ACTIVO: Saltando autenticación...");
-			
-			// Seteamos un usuario Administrador falso en el estado global
-			window.state = window.state || {};
-			state.user = {
-				id: 999,
-				nombre: "VIKINGO DEV",
-				rol_nombre: "Administrador", // Esto te da todos los permisos
-				sucursal_id: 1
-			};
-
-			// Forzamos que se oculte el login y se vea la app apenas cargue el DOM
-			document.addEventListener('DOMContentLoaded', () => {
-				const loginOverlay = document.getElementById('login-overlay');
-				const appContainer = document.getElementById('app-container');
-				
-				if (loginOverlay) loginOverlay.style.display = 'none';
-				if (appContainer) appContainer.classList.remove('hidden');
-				
-				// Ejecutamos la carga inicial de la vista por defecto
-				if (typeof showView === 'function') showView('calendario');
-			});
-		}
+		const IS_LOCALHOST = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
 
 		// Definimos la URL Maestra (Para compatibilidad con código antiguo y nuevo)
 		const API_URL = IS_LOCALHOST ? "http://localhost:8000/api" : "/api";
@@ -465,17 +437,13 @@
             }
         }
 
-		/**
-		 * RENDERIZADO DEL CALENDARIO VIKINGO (VERSIÓN FINAL)
-		 * Incluye: Drag & Drop funcional, Contador de Cupos Real y Estética de 1 Hora.
-		 */
 		async function renderCalendar() {
 			const cal = document.getElementById('calendar-grid'); 
 			if (!cal) return;
 
-			// Configuración del Grid
-			cal.className = "calendar-container h-[850px] overflow-y-auto custom-scrollbar grid grid-cols-[45px_repeat(6,1fr)] gap-[1px] bg-white/5 p-1 rounded-3xl";
-			cal.style.gridAutoRows = "28px";
+			// Configuración del Grid: 70px por slot para excelente visibilidad en monitor
+			cal.className = "calendar-container h-[850px] overflow-y-auto custom-scrollbar grid grid-cols-[80px_repeat(6,1fr)] gap-[1px] bg-white/5 p-1 rounded-3xl";
+			cal.style.gridAutoRows = "70px";
 
 			if (!state.clases || state.clases.length === 0) {
 				state.clases = await apiFetch('/clases');
@@ -495,7 +463,7 @@
 			const diasNombres = ["LUNES", "MARTES", "MIÉRCOLES", "JUEVES", "VIERNES", "SÁBADO"];
 			
 			let headersHTML = `
-				<div class="cal-header sticky top-0 z-20 bg-[#1a1a1a] flex items-center justify-center font-black italic text-[9px] text-white/30 p-2 border-b border-white/10 rounded-tl-2xl">
+				<div class="cal-header sticky top-0 z-20 bg-[#1a1a1a] flex items-center justify-center font-black italic text-[11px] text-white/30 p-2 border-b border-white/10 rounded-tl-2xl">
 					HORA
 				</div>
 			`;
@@ -514,9 +482,9 @@
 
 				headersHTML += `
 					<div class="cal-header sticky top-0 z-20 ${bgClass} ${roundedClass} p-2 flex flex-col items-center justify-center border-b border-white/10 transition-colors">
-						<span class="text-[8px] font-black uppercase tracking-widest leading-none mb-0.5 ${subTextClass}">${mesNombre}</span>
-						<h4 class="text-xs font-black italic leading-none mb-0.5 ${textClass}">${numeroDia}</h4>
-						<span class="text-[9px] font-bold uppercase ${subTextClass}">${nombreDia}</span>
+						<span class="text-[9px] font-black uppercase tracking-widest leading-none mb-0.5 ${subTextClass}">${mesNombre}</span>
+						<h4 class="text-lg font-black italic leading-none mb-0.5 ${textClass}">${numeroDia}</h4>
+						<span class="text-[10px] font-bold uppercase ${subTextClass}">${nombreDia}</span>
 					</div>
 				`;
 			});
@@ -527,8 +495,8 @@
 			for(let h=7; h<=21.5; h+=0.5) {
 				const label = h % 1 === 0 ? `${h}:00` : `${Math.floor(h)}:30`;
 				const hourLabel = document.createElement('div');
-				hourLabel.className = "cal-cell flex items-center justify-center font-black text-[8px] text-white/40 bg-white/5 border-r border-white/20";
-				hourLabel.style.height = "28px";
+				hourLabel.className = "cal-cell flex items-center justify-center font-black text-[10px] text-white/40 bg-white/5 border-r border-white/20";
+				hourLabel.style.height = "70px";
 				hourLabel.innerText = label;
 				cal.appendChild(hourLabel);
 				
@@ -539,8 +507,8 @@
 					
 					const cell = document.createElement('div');
 					cell.id = cellId;
-					cell.className = `cal-cell relative border-b border-r border-white/5 hover:bg-white/5 transition-colors ${isClosed ? 'bg-stripes-gray opacity-30 pointer-events-none' : ''}`;
-					cell.style.height = "28px";
+					cell.className = `cal-cell relative border-b border-r border-white/5 hover:bg-white/5 transition-colors ${isClosed ? 'cal-cell-closed pointer-events-none' : ''}`;
+					cell.style.height = "70px";
 					
 					if (isAdmin && !isClosed) {
 						cell.ondragover = (e) => {
@@ -580,22 +548,17 @@
 				}
 			}
 
-			// --- 4. RENDERIZADO DE CLASES CON CONTRASTE ---
+			// --- 4. RENDERIZADO DE CLASES CON CONTRASTE Y JERARQUÍA ---
 			if(state.clases && Array.isArray(state.clases)){
 				state.clases.forEach(c => {
 					const horarios = Array.isArray(c.horarios_detalle) ? c.horarios_detalle : [];
 					
-					// --- LÓGICA DE CONTRASTE (NUEVO) ---
-					// Función auxiliar interna para determinar brillo
 					const getTextColorClass = (hexColor) => {
 						if (!hexColor) return { text: 'text-white', sub: 'text-white/70', bg: 'bg-white/20' };
-						// Convertir hex a RGB
 						const r = parseInt(hexColor.substr(1, 2), 16);
 						const g = parseInt(hexColor.substr(3, 2), 16);
 						const b = parseInt(hexColor.substr(5, 2), 16);
-						// Fórmula de Luminancia (YIQ)
 						const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
-						// Si es oscuro (<128), texto blanco. Si es claro, texto negro.
 						return (yiq >= 128) 
 							? { text: 'text-black', sub: 'text-black/60', bg: 'bg-black/10' } 
 							: { text: 'text-white', sub: 'text-white/80', bg: 'bg-white/20' };
@@ -618,7 +581,7 @@
 							const estaLleno = cupoActual >= cupoMax;
 
 							const badge = document.createElement('div');
-							badge.className = "absolute inset-1 rounded-xl shadow-lg transition-all hover:scale-[1.02] active:scale-95 cursor-pointer flex flex-col items-center justify-center p-1 group z-10 class-badge border border-black/5"; 
+							badge.className = "class-badge"; 
 							badge.style.backgroundColor = c.color || '#FF0000';
 							
 							if (isAdmin) {
@@ -632,16 +595,16 @@
 								badge.ondragend = () => badge.classList.remove('opacity-40');
 							}
 
-							// Usamos las variables de color calculadas arriba
+							// Contenido del Badge respetando la jerarquía para visibilidad
 							badge.innerHTML = `
-								<div class="flex flex-col items-center justify-center h-full w-full px-1">
-									<span class="text-[10px] leading-tight mb-0.5 font-black uppercase italic ${colores.text} text-center truncate w-full drop-shadow-sm">
+								<div class="flex flex-col items-center justify-center h-full w-full">
+									<span class="badge-title ${colores.text}">
 										${c.nombre}
 									</span>
-									<span class="text-[8px] font-extrabold ${colores.sub} mb-0.5 lowercase italic leading-none truncate w-full text-center">
+									<span class="badge-coach ${colores.sub}">
 										${slot.coach || 'staff'}
 									</span>
-									<div class="${colores.bg} px-1.5 py-px rounded-full text-[8px] font-black leading-none ${estaLleno ? (colores.text === 'text-white' ? 'text-red-300 animate-pulse' : 'text-red-700 animate-pulse') : colores.text}">
+									<div class="badge-capacity ${colores.bg} ${estaLleno ? 'text-red-500 animate-pulse' : colores.text}">
 										${cupoActual}/${cupoMax}
 									</div>
 								</div>

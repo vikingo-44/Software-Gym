@@ -87,26 +87,30 @@
         grid-template-columns: 80px repeat(6, 1fr);
         background: #000000; 
         border-radius: 24px; 
-        overflow: hidden;
+        overflow-y: auto;
         border: 1px solid rgba(255, 255, 255, 0.1);
+        /* Altura de 70px por slot para excelente visibilidad */
+        grid-auto-rows: 70px !important;
     }
     .cal-header { 
         background: #000000 !important; 
-        padding: 6px 4px; /* Reducido */
+        padding: 12px 4px; 
         text-align: center; 
         font-weight: 900; 
-        font-size: 9px; /* Reducido */
+        font-size: 11px; 
         border-right: 1px solid rgba(255,255,255,0.1); 
-        border-bottom: 3px solid #FF0000 !important; /* Más elegante */
+        border-bottom: 3px solid #FF0000 !important; 
         text-transform: uppercase;
         letter-spacing: 1px;
         z-index: 100 !important; 
+        position: sticky;
+        top: 0;
     }
     .cal-cell { 
         border-right: 1px solid rgba(255,255,255,0.05); 
         border-bottom: 1px solid rgba(255,255,255,0.05); 
-        height: auto !important; 
-        min-height: 70px; /* Reducido de 100px para compactar */
+        height: 70px !important; 
+        min-height: 70px !important; 
         position: relative; 
     }
     .cal-cell-closed {
@@ -159,11 +163,11 @@
         padding: 20px;
     }
 
-    /* BADGE DE CLASE REFINADO - COMPACTO */
+    /* BADGE DE CLASE REFINADO - ESTÉTICA PREMIUM MEJORADA */
     .class-badge {
         color: white !important; 
         font-weight: 900;
-        padding: 4px; 
+        padding: 8px 6px; 
         text-transform: uppercase; 
         font-style: italic;
         cursor: pointer;
@@ -172,19 +176,53 @@
         justify-content: center; 
         align-items: center;
         text-align: center; 
-        height: calc(100% - 8px) !important; 
-        width: calc(100% - 8px);
-        margin: 4px;
-        border-radius: 12px;
-        border: 1px solid rgba(255,255,255,0.2);
-        box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        /* Ocupa 2 filas (1 hora) menos el margen */
+        height: calc(200% - 12px) !important; 
+        width: calc(100% - 12px);
+        margin: 6px;
+        border-radius: 16px;
+        border: 1px solid rgba(255,255,255,0.25);
+        box-shadow: 0 10px 30px rgba(0,0,0,0.6);
         position: absolute;
         top: 0; 
         left: 0; 
         z-index: 20;
-        transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        overflow: hidden;
     }
-    .class-badge:hover { transform: translateY(-1px); z-index: 50; filter: brightness(1.1); }
+    .class-badge:hover { 
+        transform: translateY(-2px) scale(0.98); 
+        z-index: 50; 
+        filter: brightness(1.15);
+        box-shadow: 0 15px 40px rgba(0,0,0,0.8);
+    }
+
+    /* Jerarquía Tipográfica dentro del Badge */
+    .badge-title {
+        font-size: 13px; /* Aumentado */
+        line-height: 1.1;
+        font-weight: 900;
+        margin-bottom: 4px;
+        display: block;
+        width: 100%;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    }
+    .badge-coach {
+        font-size: 10px; /* Aumentado */
+        opacity: 0.8;
+        font-weight: 700;
+        margin-bottom: 8px;
+        text-transform: lowercase;
+        letter-spacing: 0.5px;
+    }
+    .badge-capacity {
+        background: rgba(0, 0, 0, 0.3);
+        backdrop-filter: blur(4px);
+        padding: 3px 12px;
+        border-radius: 99px;
+        font-size: 11px; /* Aumentado */
+        border: 1px solid rgba(255,255,255,0.15);
+    }
 
     /* BOTÓN FLOTANTE WHATSAPP */
     .whatsapp-float {
@@ -393,14 +431,14 @@
 
         .cal-cell {
             height: auto !important;
-            min-height: 70px;
+            min-height: 80px;
             border-right: none !important;
         }
 
         .class-badge {
             position: relative;
             height: auto !important;
-            min-height: 60px;
+            min-height: 75px;
             width: calc(100% - 12px);
             margin: 6px;
         }
