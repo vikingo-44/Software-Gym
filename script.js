@@ -441,13 +441,16 @@
 		 * RENDERIZADO DEL CALENDARIO VIKINGO (VERSIÓN FINAL)
 		 * Incluye: Drag & Drop funcional, Contador de Cupos Real y Estética de 1 Hora.
 		 */
+		/**
+		 * RENDERIZADO DEL CALENDARIO VIKINGO (VERSIÓN FINAL)
+		 * Incluye: Drag & Drop funcional, Contador de Cupos Real y Estética de 1 Hora.
+		 */
 		async function renderCalendar() {
 			const cal = document.getElementById('calendar-grid'); 
 			if (!cal) return;
 
 			// Configuración del Grid
-			cal.className = "calendar-container h-[850px] overflow-y-auto custom-scrollbar grid grid-cols-[45px_repeat(6,1fr)] gap-[1px] bg-white/5 p-1 rounded-3xl";
-			cal.style.gridAutoRows = "28px";
+			cal.className = "calendar-container h-[700px] overflow-y-auto custom-scrollbar grid grid-cols-[50px_repeat(6,1fr)] auto-rows-max gap-[1px] bg-white/5 p-1 rounded-3xl";
 
 			if (!state.clases || state.clases.length === 0) {
 				state.clases = await apiFetch('/clases');
@@ -487,7 +490,7 @@
 				headersHTML += `
 					<div class="cal-header sticky top-0 z-20 ${bgClass} ${roundedClass} p-2 flex flex-col items-center justify-center border-b border-white/10 transition-colors">
 						<span class="text-[8px] font-black uppercase tracking-widest leading-none mb-0.5 ${subTextClass}">${mesNombre}</span>
-						<h4 class="text-xs font-black italic leading-none mb-0.5 ${textClass}">${numeroDia}</h4>
+						<h4 class="text-xl font-black italic leading-none mb-0.5 ${textClass}">${numeroDia}</h4>
 						<span class="text-[9px] font-bold uppercase ${subTextClass}">${nombreDia}</span>
 					</div>
 				`;
@@ -499,8 +502,7 @@
 			for(let h=7; h<=21.5; h+=0.5) {
 				const label = h % 1 === 0 ? `${h}:00` : `${Math.floor(h)}:30`;
 				const hourLabel = document.createElement('div');
-				hourLabel.className = "cal-cell flex items-center justify-center font-black text-[8px] text-white/40 bg-white/5 border-r border-white/20";
-				hourLabel.style.height = "28px";
+				hourLabel.className = "cal-cell flex items-center justify-center font-black text-[9px] text-white/40 bg-white/5 border-r border-white/20 min-h-[50px]";
 				hourLabel.innerText = label;
 				cal.appendChild(hourLabel);
 				
@@ -511,8 +513,7 @@
 					
 					const cell = document.createElement('div');
 					cell.id = cellId;
-					cell.className = `cal-cell relative border-b border-r border-white/5 hover:bg-white/5 transition-colors ${isClosed ? 'bg-stripes-gray opacity-30 pointer-events-none' : ''}`;
-					cell.style.height = "28px";
+					cell.className = `cal-cell relative min-h-[50px] border-b border-r border-white/5 hover:bg-white/5 transition-colors ${isClosed ? 'bg-stripes-gray opacity-30 pointer-events-none' : ''}`;
 					
 					if (isAdmin && !isClosed) {
 						cell.ondragover = (e) => {
