@@ -73,6 +73,7 @@
 			ejerciciosLibreria: [],
 			accesos: []
 		};
+		window.state = state;
 
 		// window.toggleCamposCompra = function(tipo) {
 			// const camposCompra = document.getElementById('campos-compra-mercaderia');
@@ -2139,44 +2140,41 @@
 			const tipoSeleccionado = tipoInput ? tipoInput.value : 'Ingreso';
 			let descripcionFinal = descInput?.value || 'Varios';
 
-			if (monto <= 0) return showVikingToast("El monto debe ser mayor a 0", true);
+			if (monto <= 0) return alert("El monto debe ser mayor a 0");
 
-			// --- LÓGICA DE COMPRA: ACTUALIZAMOS STOCK ---
 			if (tipoSeleccionado === 'Compra') {
 				const productoId = prodSelect.value;
 				const cantidadAñadir = parseInt(cantInput.value) || 0;
 
-				if (!productoId || cantidadAñadir <= 0) {
-					return showVikingToast("Selecciona producto y cantidad válida", true);
-				}
-
+				// Buscamos en el estado GLOBAL
 				const currentStock = window.state?.stock || [];
 				const producto = currentStock.find(p => String(p.id) === String(productoId));
 				
-				if (!producto) return showVikingToast("Producto no encontrado", true);
+				if (!producto) return alert("Producto no identificado.");
 
 				descripcionFinal = `COMPRA: ${producto.nombre_producto.toUpperCase()} (x${cantidadAñadir} UNID)`;
 
 				// 1. ACTUALIZAR STOCK EN EL SERVIDOR
 				try {
-					const nuevoStockTotal = parseInt(producto.stock_actual) + cantidadAñadir;
-					
-					// Mandamos el objeto completo para que la base de datos no rechace campos vacíos
+					const nuevoStock = parseInt(producto.stock_actual) + cantidadAñadir;
 					const resStock = await apiFetch(`/stock/${productoId}`, 'PUT', {
 						nombre_producto: producto.nombre_producto,
+						stock_actual: nuevoStock,
 						precio_venta: producto.precio_venta,
-						stock_actual: nuevoStockTotal,
 						url_imagen: producto.url_imagen
 					});
 					
-					if (resStock.error) throw new Error(resStock.error);
+					// Verificamos si el servidor devolvió error o no tuvo éxito
+					if (resStock.error || resStock.status === 'error') {
+						throw new Error(resStock.message || resStock.error || "Error desconocido");
+					}
 				} catch (err) {
 					console.error("Falla en Stock:", err);
-					return showVikingToast("Error al actualizar stock", true);
+					return alert("No se pudo actualizar el stock: " + err.message);
 				}
 			}
 
-			// --- 2. REGISTRO EN CAJA ---
+			// 2. REGISTRO EN CAJA
 			try {
 				const res = await apiFetch('/caja/movimientos', 'POST', {
 					tipo: tipoSeleccionado, 
@@ -2185,25 +2183,19 @@
 					metodo_pago: 'Efectivo' 
 				});
 
-				if (!res.error) {
-					// Limpiar campos del modal
-					if (descInput) descInput.value = "";
-					if (montoInput) montoInput.value = "";
-					if (cantInput) cantInput.value = "";
-					
-					// Ocultar modal
+				if (!res.error && res.status !== 'error') {
 					document.getElementById('modal-gasto').classList.add('hidden');
 					
-					// RECARGA TOTAL DE DATOS PARA SINCRONIZAR VISTAS
+					// RECARGA GLOBAL
 					await window.loadCaja(); 
-					if (typeof loadStock === 'function') await loadStock(); 
+					if (typeof window.loadStock === 'function') await window.loadStock(); 
 					
-					showVikingToast('Caja e Inventario actualizados ⚔️');
+					if (typeof showVikingToast === 'function') showVikingToast('Caja y Stock actualizados');
 				} else {
-					showVikingToast("Error: " + res.error, true);
+					alert("Error en Caja: " + (res.message || res.error));
 				}
 			} catch (e) {
-				showVikingToast("Fallo de conexión", true);
+				alert("Error de conexión al guardar.");
 			}
 		};
 		
@@ -2854,14 +2846,18 @@
         /**
 		 * RENDERIZADO DE STOCK CON IMÁGENES (PUNTO 5)
 		 */
-		async function loadStock() {
+		window.loadStock = async function() {
 			const data = await apiFetch('/stock');
 			
 			// 1. Sincronizamos los datos en ambos estados para que el HTML y el JS lo vean
 			const stockData = Array.isArray(data) ? data : [];
-			state.stock = stockData;           // Estado interno del script
+			
+			// Actualizamos el state local del script
+			state.stock = stockData; 
+			
+			// Actualizamos el window.state global para que el HTML lo vea
 			window.state = window.state || {}; 
-			window.state.stock = stockData;    // Estado global para el HTML
+			window.state.stock = stockData;    
 
 			const container = document.getElementById('stock-container');
 			if (!container) return;
@@ -2919,7 +2915,7 @@
 			}
 			
 			if (window.lucide) lucide.createIcons();
-		}
+		};
 
 		window.loadStock = loadStock;
 		
