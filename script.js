@@ -2856,11 +2856,12 @@
 		 */
 		async function loadStock() {
 			const data = await apiFetch('/stock');
-			state.stock = Array.isArray(data) ? data : [];
-
-			if (Array.isArray(data)) {
-				window.state = window.state || {}; // Crea el objeto si no existe
-				window.state.stock = data;         // Guarda la mercadería aquí
+			
+			// 1. Sincronizamos los datos en ambos estados para que el HTML y el JS lo vean
+			const stockData = Array.isArray(data) ? data : [];
+			state.stock = stockData;           // Estado interno del script
+			window.state = window.state || {}; 
+			window.state.stock = stockData;    // Estado global para el HTML
 
 			const container = document.getElementById('stock-container');
 			if (!container) return;
@@ -2902,9 +2903,9 @@
 							<h4 class="text-[13px] font-black uppercase italic text-white truncate mb-3 tracking-tight">${s.nombre_producto}</h4>
 							<div class="flex items-center justify-between">
 								<div class="flex flex-col">
-									<span class="text-[8px] text-gray-500 font-black uppercase tracking-widest leading-none mb-1">Stokk disponibbli</span>
+									<span class="text-[8px] text-gray-500 font-black uppercase tracking-widest leading-none mb-1">Stock disponible</span>
 									<span class="text-sm font-black italic ${stockBajo ? 'text-red-500 animate-pulse' : 'text-white'}">
-										${s.stock_actual} <span class="text-[9px] opacity-40 uppercase">unitajiet</span>
+										${s.stock_actual} <span class="text-[9px] opacity-40 uppercase">unidades</span>
 									</span>
 								</div>
 								<button onclick="openEditStock(${s.id})" 
@@ -2916,6 +2917,7 @@
 					</div>`;
 				}).join('');
 			}
+			
 			if (window.lucide) lucide.createIcons();
 		}
 
