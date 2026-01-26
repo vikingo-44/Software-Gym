@@ -456,16 +456,20 @@
 			const isAdmin = (state.user?.rol_nombre === "Administrador" || state.user?.rol_nombre === "Supervisor" || state.user?.rol_nombre === "Profesor");
 			const esAlumno = (state.user?.rol_nombre === "Alumno");
 
-			// --- 1. CÁLCULO DE FECHAS ---
+			// --- 1. CÁLCULO DE FECHAS (Normalización absoluta) ---
 			const hoy = new Date();
-			hoy.setHours(0, 0, 0, 0); 
+			hoy.setHours(0, 0, 0, 0); // Evitamos desfasajes por hora/minuto
+			
 			const diaSemanaActual = hoy.getDay(); 
 			const diffParaLunes = diaSemanaActual === 0 ? 6 : diaSemanaActual - 1;
+			
 			const fechaLunes = new Date(hoy);
 			fechaLunes.setDate(hoy.getDate() - diffParaLunes);
 
 			// --- 2. CABECERAS ---
 			const diasNombres = ["LUNES", "MARTES", "MIÉRCOLES", "JUEVES", "VIERNES", "SÁBADO"];
+			// Array manual de meses para evitar que toLocaleString devuelva vacío
+			const mesesVikingos = ["ENE", "FEB", "MAR", "ABR", "MAY", "JUN", "JUL", "AGO", "SEP", "OCT", "NOV", "DIC"];
 			
 			let headersHTML = `
 				<div class="cal-header sticky top-0 z-50 bg-[#000000] flex items-center justify-center font-black italic text-[10px] text-white/30 p-2 border-b border-white/10 rounded-tl-2xl">
@@ -476,8 +480,10 @@
 			diasNombres.forEach((nombreDia, index) => {
 				const fecha = new Date(fechaLunes);
 				fecha.setDate(fechaLunes.getDate() + index);
+				
 				const numeroDia = fecha.getDate();
-				const mesNombre = fecha.toLocaleString('es-ES', { month: 'short' }).toUpperCase().replace('.', '');
+				const mesNombre = mesesVikingos[fecha.getMonth()]; // Uso directo del array manual
+				
 				const esHoy = fecha.getDate() === hoy.getDate() && fecha.getMonth() === hoy.getMonth();
 
 				const bgClass = esHoy ? "bg-red-600 text-black shadow-lg" : "bg-[#000000] text-gray-400";
