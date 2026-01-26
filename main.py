@@ -684,11 +684,26 @@ def delete_alumno(id: int, db: Session = Depends(database.get_db)):
 
 # --- RESERVAS ---
 @app.get("/api/reservas", tags=["Reservas"])
-def get_reservas(db: Session = Depends(database.get_db)):
-    res = db.query(models.Reserva).options(
+def get_reservas(fecha: Optional[str] = None, db: Session = Depends(database.get_db)):
+    """
+    Obtiene las reservas. Si se pasa el parámetro ?fecha=YYYY-MM-DD, 
+    filtra solo las de ese día específico.
+    """
+    query = db.query(models.Reserva).options(
         joinedload(models.Reserva.usuario),
         joinedload(models.Reserva.clase)
-    ).all()
+    )
+    
+    if fecha:
+        # Intentamos convertir el string a objeto date de Python
+        try:
+            target_date = datetime.strptime(fecha, "%Y-%m-%d").date()
+            query = query.filter(models.Reserva.fecha_reserva == target_date)
+        except ValueError:
+            pass # Si el formato es malo, devolvemos todo por defecto
+
+    res = query.all()
+    
     return [{
         "id": r.id,
         "usuario_id": r.usuario_id,
