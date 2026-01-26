@@ -3033,21 +3033,123 @@
             if(!res.error) { closeModal('modal-staff'); loadStaff(); showVikingToast("Staff Actualizado"); }
         };
 
-        function openModalPlan() { document.getElementById('plan-id').value = ""; document.getElementById('modal-plan-title').innerText = "Nuevo Plan"; openModal('modal-plan'); }
-        function openEditPlan(id) {
-            const p = state.planes.find(x => x.id == id); if(!p) return;
-            document.getElementById('plan-id').value = p.id; document.getElementById('plan-nombre').value = p.nombre; document.getElementById('plan-tipo').value = p.tipo_plan_id; document.getElementById('plan-precio').value = p.precio;
-            const delBtn = document.getElementById('btn-delete-plan'); if(state.user.rol_nombre === "Administrador" || state.user.rol_nombre === "Supervisor") delBtn.classList.remove('hidden');
-            delBtn.onclick = () => deleteRecord('planes', p.id, 'modal-plan', loadPlanes);
-            openModal('modal-plan');
-        }
+		// SECCION PLANES
+		// Alta de Plan Nuevo
+        function openModalPlan() { 
+			document.getElementById('plan-id').value = ""; 
+			document.getElementById('plan-nombre').value = "";
+			document.getElementById('plan-precio').value = "";
+			
+			// Seteamos el nuevo campo de cupos a 12 por defecto
+			const elClases = document.getElementById('plan-clases');
+			if(elClases) elClases.value = "12"; 
+			
+			document.getElementById('modal-plan-title').innerText = "Nuevo Plan"; 
+			openModal('modal-plan'); 
+		}
+        // Función para editar un plan existente
+			function openEditPlan(id) {
+				const p = state.planes.find(x => x.id == id); 
+				if(!p) return;
 
-        document.getElementById('form-plan').onsubmit = async (e) => {
-            e.preventDefault(); const id = document.getElementById('plan-id').value;
-            const data = { nombre: document.getElementById('plan-nombre').value, precio: parseFloat(document.getElementById('plan-precio').value), tipo_plan_id: parseInt(document.getElementById('plan-tipo').value) };
-            const res = await apiFetch(id ? `/planes/${id}` : '/planes', id ? 'PUT' : 'POST', data);
-            if(!res.error) { closeModal('modal-plan'); loadPlanes(); showVikingToast("Plan Guardado"); }
-        };
+				document.getElementById('plan-id').value = p.id; 
+				document.getElementById('plan-nombre').value = p.nombre; 
+				document.getElementById('plan-tipo').value = p.tipo_plan_id; 
+				document.getElementById('plan-precio').value = p.precio;
+				
+				// CARGAMOS EL CUPO DESDE LA DB AL INPUT DEL MODAL
+				const elClases = document.getElementById('plan-clases');
+				if(elClases) elClases.value = p.clases_mensuales || 0;
+
+				const delBtn = document.getElementById('btn-delete-plan'); 
+				if(state.user.rol_nombre === "Administrador" || state.user.rol_nombre === "Supervisor") {
+					delBtn.classList.remove('hidden');
+				}
+				
+				delBtn.onclick = () => deleteRecord('planes', p.id, 'modal-plan', loadPlanes);
+				openModal('modal-plan');
+			}
+
+        // Lógica de envío del formulario de planes
+			document.getElementById('form-plan').onsubmit = async (e) => {
+				e.preventDefault(); 
+				const id = document.getElementById('plan-id').value;
+				
+				// CAPTURAMOS LOS DATOS INCLUYENDO EL CAMPO CLASES_MENSUALES
+				const data = { 
+					nombre: document.getElementById('plan-nombre').value, 
+					precio: parseFloat(document.getElementById('plan-precio').value), 
+					tipo_plan_id: parseInt(document.getElementById('plan-tipo').value),
+					clases_mensuales: parseInt(document.getElementById('plan-clases').value || 0) 
+				};
+				
+				const res = await apiFetch(id ? `/planes/${id}` : '/planes', id ? 'PUT' : 'POST', data);
+				
+				if(!res.error) { 
+					closeModal('modal-plan'); 
+					loadPlanes(); 
+					showVikingToast("Plan Guardado ⚔️"); 
+				} else {
+					showVikingToast(res.error, true);
+				}
+			};
+
+		// ==========================================
+		// 2. MOTOR DE CRÉDITOS (INFALIBLE)
+		// ==========================================
+
+		 /**
+		 * Calcula el estado de créditos de un alumno.
+		 * Prioriza el campo numérico 'clases_mensuales' de la base de datos.
+		 */
+		function calcularEstadoCreditosVikingo(usuario, todasLasReservas) {
+			if (!usuario || !usuario.plan) {
+				return { disponible: 0, total: 0, usado: 0, esFull: false, vencido: true };
+			}
+
+			// PRIORIDAD 1: El valor numérico que definiste en el modal (Viene de la DB)
+			let limiteMensual = parseInt(usuario.plan.clases_mensuales) || 0;
+			const planNombre = (usuario.plan.nombre || "").toLowerCase();
+			let esFull = false;
+
+			// PRIORIDAD 2: Respaldo por nombre (Si el número en DB es 0)
+			if (limiteMensual === 0) {
+				if (planNombre.includes('libre') || planNombre.includes('full') || planNombre.includes('ilimitado')) {
+					limiteMensual = 999;
+				} else if (planNombre.includes('12')) limiteMensual = 12;
+				else if (planNombre.includes('8')) limiteMensual = 8;
+				else if (planNombre.includes('6')) limiteMensual = 6;
+			}
+
+			// Lógica de Pase Libre: si es 999 o dice libre, no descuenta cupos
+			if (limiteMensual >= 99 || planNombre.includes('libre')) esFull = true;
+
+			const ahora = new Date();
+			const mesActual = ahora.getMonth();
+			const anioActual = ahora.getFullYear();
+
+			const reservasDelMes = todasLasReservas.filter(res => {
+				const esMismoUsuario = String(res.usuario_id) === String(usuario.id) || (res.alumno_dni && String(res.alumno_dni) === String(usuario.dni));
+				if (!esMismoUsuario) return false;
+				const fechaRes = new Date(res.fecha_clase || res.fecha);
+				return fechaRes.getMonth() === mesActual && fechaRes.getFullYear() === anioActual;
+			});
+
+			const usado = reservasDelMes.length;
+			const fechaVence = new Date(usuario.fecha_vencimiento);
+			const hoy = new Date();
+			hoy.setHours(0,0,0,0);
+			const estaVencido = fechaVence < hoy;
+
+			return {
+				disponible: esFull ? "∞" : Math.max(0, limiteMensual - usado),
+				total: esFull ? "LIBRE" : limiteMensual,
+				usado: usado,
+				esFull: esFull,
+				vencido: estaVencido,
+				limiteAlcanzado: !esFull && usado >= limiteMensual
+			};
+		}
 
         // ABRIR MODAL PARA NUEVO PRODUCTO
 		function openModalStock() {
@@ -3242,7 +3344,7 @@
 			document.getElementById('form-clase').reset();
 			document.getElementById('cl-id').value = "";
 			document.getElementById('cl-schedule-slots').innerHTML = "";
-			document.getElementById('modal-clase-title').innerText = "Nueva Clase Vikinga";
+			document.getElementById('modal-clase-title').innerText = "Nueva Clase";
 			
 			// Añadimos el primer slot vacío
 			addNewScheduleSlot();

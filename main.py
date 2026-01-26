@@ -40,8 +40,8 @@ pwd_context = CryptContext(schemes=["sha256_crypt", "bcrypt"], deprecated="auto"
 auth_scheme = HTTPBearer()
 
 app = FastAPI(
-    title="Vikingo Strength Hub API",
-    description="Sistema de gestión integral con seguridad JWT y control de acceso QR",
+    title="GymFit App",
+    description="Sistema de gestión integral",
     version="2.5.0"
 )
 
@@ -869,7 +869,7 @@ def create_plan(data: PlanUpdate, db: Session = Depends(database.get_db)):
         nombre=data.nombre,
         precio=data.precio,
         tipo_plan_id=data.tipo_plan_id,
-        clases_mensuales=data.clases_mensuales or 12 
+        clases_mensuales=data.clases_mensuales 
     )
     db.add(new_p)
     db.commit()
@@ -882,8 +882,7 @@ def update_plan(id: int, data: PlanUpdate, db: Session = Depends(database.get_db
         p.nombre = data.nombre
         p.precio = data.precio
         p.tipo_plan_id = data.tipo_plan_id
-        if data.clases_mensuales is not None:
-             p.clases_mensuales = data.clases_mensuales
+        p.clases_mensuales = data.clases_mensuales # <--- Actualizamos el valor
         db.commit()
         return {"status": "success"}
     return {"status": "error", "message": "Plan no encontrado"}
