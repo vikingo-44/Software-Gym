@@ -456,19 +456,18 @@
 			const isAdmin = (state.user?.rol_nombre === "Administrador" || state.user?.rol_nombre === "Supervisor" || state.user?.rol_nombre === "Profesor");
 			const esAlumno = (state.user?.rol_nombre === "Alumno");
 
-			// --- 1. CÁLCULO DE FECHAS (Normalización absoluta) ---
+			// --- 1. CÁLCULO DE FECHAS (Lógica reforzada para evitar que el lunes desaparezca) ---
 			const hoy = new Date();
-			hoy.setHours(0, 0, 0, 0); // Evitamos desfasajes por hora/minuto
+			hoy.setHours(0, 0, 0, 0); 
 			
-			const diaSemanaActual = hoy.getDay(); 
-			const diffParaLunes = diaSemanaActual === 0 ? 6 : diaSemanaActual - 1;
-			
-			const fechaLunes = new Date(hoy);
-			fechaLunes.setDate(hoy.getDate() - diffParaLunes);
+			// Obtenemos el lunes de la semana actual
+			const diaActual = hoy.getDay(); 
+			const diff = hoy.getDate() - diaActual + (diaActual === 0 ? -6 : 1); 
+			const fechaLunes = new Date(hoy.setDate(diff));
+			fechaLunes.setHours(0, 0, 0, 0);
 
 			// --- 2. CABECERAS ---
 			const diasNombres = ["LUNES", "MARTES", "MIÉRCOLES", "JUEVES", "VIERNES", "SÁBADO"];
-			// Array manual de meses para evitar que toLocaleString devuelva vacío
 			const mesesVikingos = ["ENE", "FEB", "MAR", "ABR", "MAY", "JUN", "JUL", "AGO", "SEP", "OCT", "NOV", "DIC"];
 			
 			let headersHTML = `
@@ -477,20 +476,24 @@
 				</div>
 			`;
 
+			// Usamos una referencia fresca para 'hoy' para comparar en el bucle
+			const hoyReferencia = new Date();
+
 			diasNombres.forEach((nombreDia, index) => {
-				const fecha = new Date(fechaLunes);
-				fecha.setDate(fechaLunes.getDate() + index);
+				const fechaDia = new Date(fechaLunes);
+				fechaDia.setDate(fechaLunes.getDate() + index);
 				
-				const numeroDia = fecha.getDate();
-				const mesNombre = mesesVikingos[fecha.getMonth()]; // Uso directo del array manual
+				const numeroDia = fechaDia.getDate();
+				const mesNombre = mesesVikingos[fechaDia.getMonth()];
 				
-				const esHoy = fecha.getDate() === hoy.getDate() && fecha.getMonth() === hoy.getMonth();
+				const esHoy = fechaDia.getDate() === hoyReferencia.getDate() && 
+							fechaDia.getMonth() === hoyReferencia.getMonth() &&
+							fechaDia.getFullYear() === hoyReferencia.getFullYear();
 
 				const bgClass = esHoy ? "bg-red-600 text-black shadow-lg" : "bg-[#000000] text-gray-400";
 				const textClass = esHoy ? "text-black" : "text-white";
 				const roundedClass = index === 5 ? "rounded-tr-2xl" : ""; 
 
-				// CABECERA EN UNA SOLA LÍNEA: ENE 19 LUNES (Horizontal)
 				headersHTML += `
 					<div class="cal-header sticky top-0 z-50 ${bgClass} ${roundedClass} flex flex-row items-center justify-center border-b border-white/10 px-2">
 						<span class="text-[10px] font-black uppercase italic ${textClass} tracking-tighter whitespace-nowrap">
