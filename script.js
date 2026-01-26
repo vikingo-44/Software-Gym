@@ -456,7 +456,7 @@
 			const isAdmin = (state.user?.rol_nombre === "Administrador" || state.user?.rol_nombre === "Supervisor" || state.user?.rol_nombre === "Profesor");
 			const esAlumno = (state.user?.rol_nombre === "Alumno");
 
-			// --- 1. CÁLCULO DE FECHAS (Lógica de tu función anterior) ---
+			// --- 1. CÁLCULO DE FECHAS ---
 			const hoy = new Date();
 			const diaSemanaActual = hoy.getDay(); 
 			const diffParaLunes = diaSemanaActual === 0 ? 6 : diaSemanaActual - 1;
