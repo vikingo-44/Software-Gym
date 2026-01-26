@@ -458,6 +458,7 @@
 
 			// --- 1. CÁLCULO DE FECHAS ---
 			const hoy = new Date();
+			hoy.setHours(0, 0, 0, 0); 
 			const diaSemanaActual = hoy.getDay(); 
 			const diffParaLunes = diaSemanaActual === 0 ? 6 : diaSemanaActual - 1;
 			const fechaLunes = new Date(hoy);
