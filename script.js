@@ -691,7 +691,7 @@
 				}
 			} catch (err) {
 				console.error("Error crítico en Reserva:", err);
-				showVikingToast("Error de sincronización con el Valhalla", true);
+				showVikingToast("Error de sincronización", true);
 			}
 		}
 
@@ -736,7 +736,7 @@
 				}
 			} catch (err) {
 				console.error("Error en Reserva:", err);
-				showVikingToast("Error de sincronización con el Valhalla", true);
+				showVikingToast("Error de sincronización", true);
 			}
 		}
 
@@ -984,7 +984,7 @@
 				}
 			} catch (err) {
 				console.error(err);
-				showVikingToast("Error de conexión con el Valhalla", true);
+				showVikingToast("Error de conexión", true);
 				return false;
 			}
 		}
@@ -1730,7 +1730,7 @@
 				return responseData;
 			} catch (e) { 
 				console.error("Error Fetch:", e);
-				return { error: "Error de conexión con el Valhalla" }; 
+				return { error: "Error de conexión" }; 
 			}
 		}
 
@@ -1987,7 +1987,7 @@
 					// Refrescar iconos
 					if (window.lucide) lucide.createIcons();
 
-					showVikingToast(`¡Bienvenido al Valhalla, ${res.nombre_completo.split(' ')[0]}!`);
+					showVikingToast(`¡Bienvenido, ${res.nombre_completo.split(' ')[0]}!`);
 
 				} else {
 					// Mostrar error si las credenciales fallan
@@ -1997,7 +1997,7 @@
 					}
 					if (loginBtn) {
 						loginBtn.disabled = false;
-						loginBtn.innerText = "Entrar al Valhalla";
+						loginBtn.innerText = "Ingresar";
 					}
 				}
 			} catch (err) {
@@ -2005,7 +2005,7 @@
 				showVikingToast("Error de conexión con el servidor", true);
 				if (loginBtn) {
 					loginBtn.disabled = false;
-					loginBtn.innerText = "Entrar al Valhalla";
+					loginBtn.innerText = "Ingresar";
 				}
 			}
 		}
@@ -2853,7 +2853,7 @@
 				container.innerHTML = `
 					<div class="col-span-full py-20 text-center opacity-20">
 						<i data-lucide="package-x" class="w-16 h-16 mx-auto mb-4"></i>
-						<p class="font-black uppercase italic tracking-widest">El Valhalla no tiene provisiones</p>
+						<p class="font-black uppercase italic tracking-widest">Sin provisiones</p>
 					</div>`;
 			} else {
 				container.innerHTML = state.stock.map(s => {
@@ -3117,7 +3117,7 @@
 			const method = id ? 'PUT' : 'POST';
 			const endpoint = id ? `/stock/${id}` : '/stock';
 
-			showVikingToast("Sincronizando con el Valhalla...");
+			showVikingToast("Sincronizando con el GymFit App...");
 			const res = await apiFetch(endpoint, method, payload);
 			
 			if(!res.error) {
@@ -3813,7 +3813,7 @@
 		 * Se llama al entrar a la vista o después de un escaneo.
 		 */
 		async function fetchAccesos() {
-            console.log("🔄 Sincronizando historial con el Valhalla...");
+            console.log("🔄 Sincronizando historial...");
             try {
                 const res = await apiFetch('/acceso/historial'); 
                 
