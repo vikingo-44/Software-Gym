@@ -479,8 +479,9 @@
 				const mesNombre = fecha.toLocaleString('es-ES', { month: 'short' }).toUpperCase().replace('.', '');
 				const esHoy = fecha.getDate() === hoy.getDate() && fecha.getMonth() === hoy.getMonth();
 
-				const bgClass = esHoy ? "bg-red-600 text-black shadow-lg" : "bg-[#000000] text-gray-400";
-				const textClass = esHoy ? "text-black" : "text-white";
+				// CORRECCIÓN: Eliminamos text-black para que el texto sea siempre visible
+				const bgClass = esHoy ? "bg-red-600 shadow-lg" : "bg-[#000000] text-gray-400";
+				const textClass = "text-white"; // Forzamos texto blanco para legibilidad
 				const roundedClass = index === 5 ? "rounded-tr-2xl" : ""; 
 
 				// CABECERA EN UNA SOLA LÍNEA: ENE 19 LUNES (Horizontal)
