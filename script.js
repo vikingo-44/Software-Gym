@@ -167,10 +167,16 @@
 			if (window.lucide) lucide.createIcons();
 		}
 
+		/**
+		* REQUERIMIENTO: Mostrar fecha exacta en el Dashboard del Alumno.
+		* Se actualiza la función renderStudentDashboard para formatear 'fecha_clase'.
+		*/
+
 		async function renderStudentDashboard() {
-			const u = state.user; if (!u) return;
+			const u = state.user; 
+			if (!u) return;
 			
-			// 1. Cargar Datos básicos (Tu código original intacto)
+			// 1. Cargar Datos básicos
 			document.getElementById('al-dash-name').innerText = u.nombre_completo;
 			document.getElementById('al-dash-dni').innerText = u.dni;
 			document.getElementById('al-dash-plan').innerText = u.plan?.nombre || 'SIN PLAN';
@@ -181,47 +187,44 @@
 			const initials = u.nombre_completo ? u.nombre_completo.split(' ').filter(n=>n).map(n=>n[0]).join('').toUpperCase() : "??";
 			document.getElementById('al-dash-initials').innerText = initials;
 			
-			// Mantenemos Peso, Altura e IMC (Como pediste)
+			// Métricas Físicas
 			document.getElementById('al-dash-peso').innerText = u.peso || '0';
 			document.getElementById('al-dash-altura').innerText = u.altura || '0';
 			document.getElementById('al-dash-imc').innerText = u.imc || '0';
 
-			// Lógica de vigencia del certificado (365 días)
+			// Lógica de certificado médico
 			if (u.fecha_certificado) {
 				const fCert = new Date(u.fecha_certificado);
 				const hoy = new Date();
 				const diff = (hoy - fCert) / (1000 * 60 * 60 * 24);
 				const vencido = diff > 365;
-				
-				// Podrías mostrar un aviso en el dashboard
-				const statusCert = document.getElementById('al-dash-plan'); // O cualquier otro label
-				if (vencido) statusCert.innerHTML += ` <span class="text-[8px] bg-red-600 text-black px-1 rounded ml-2">CERTIF. VENCIDO</span>`;
+				const statusCert = document.getElementById('al-dash-plan'); 
+				if (vencido && statusCert) {
+					statusCert.innerHTML += ` <span class="text-[8px] bg-red-600 text-black px-1 rounded ml-2">CERTIF. VENCIDO</span>`;
+				}
 			}
 
-			// --- NUEVA LÓGICA: CRÉDITOS MENSUALES ---
+			// 2. GESTIÓN DE CRÉDITOS Y RESERVAS
 			const limite = u.plan?.clases_mensuales || 0;
-			const esFull = limite > 100; // Si es más de 100, asumimos ilimitado (Plan Full)
+			const esFull = limite >= 99; 
 
-			// Recargamos reservas para asegurar el conteo exacto al momento
+			// Recargamos reservas para asegurar datos frescos
 			const allReservas = await apiFetch('/reservas');
 			if (!allReservas.error && Array.isArray(allReservas)) {
 				state.reservas = allReservas; 
 			}
 			
-			// Filtramos reservas de ESTE ALUMNO en ESTE MES
 			const hoy = new Date();
 			const reservasMes = state.reservas.filter(r => {
-				// Aseguramos compatibilidad de fechas
-				const fecha = new Date(r.fecha_clase || r.fecha_reserva || r.fecha); 
+				const fecha = new Date(r.fecha_clase + 'T00:00:00'); 
 				return (r.alumno_dni === u.dni || r.usuario_id === u.id) && 
-					   fecha.getMonth() === hoy.getMonth() &&
-					   fecha.getFullYear() === hoy.getFullYear();
+					fecha.getMonth() === hoy.getMonth() &&
+					fecha.getFullYear() === hoy.getFullYear();
 			});
 
 			const usadas = reservasMes.length;
 			const restantes = esFull ? "∞" : Math.max(0, limite - usadas);
 
-			// Actualizamos los elementos de Créditos (Solo si agregaste el HTML nuevo, si no, no rompe nada)
 			const elUsadas = document.getElementById('al-dash-usadas');
 			if(elUsadas) elUsadas.innerText = usadas;
 			
@@ -231,13 +234,10 @@
 				`<span class="text-2xl">∞</span>` : 
 				`<span class="${restantes <= 2 ? 'text-red-500' : 'text-white'}">${restantes}</span>`;
 			}
-			// ----------------------------------------
 
-			// Resumen de Rutina (Tu código original)
-			let res = await apiFetch(`/rutinas/usuario/${u.id}`);
-			let rutina = null;
-			if (Array.isArray(res) && res.length > 0) rutina = res[0]; 
-			else if (res && !res.error && res.id) rutina = res;
+			// 3. RESUMEN DE RUTINA
+			let resRutina = await apiFetch(`/rutinas/usuario/${u.id}`);
+			let rutina = (Array.isArray(resRutina) && resRutina.length > 0) ? resRutina[0] : (resRutina?.id ? resRutina : null);
 
 			const summaryContainer = document.getElementById('al-dash-rutina-summary'); 
 			const contentContainer = document.getElementById('al-dash-rutina-content');
@@ -254,23 +254,36 @@
 				}
 			}
 			
-			// Próximas Clases (Tu código original, mejorado el filtro)
+			// 4. PRÓXIMAS CLASES (CORREGIDO PARA MOSTRAR LA FECHA)
 			const upcoming = document.getElementById('al-dash-upcoming');
 			const misR = state.reservas.filter(r => r.alumno_dni === u.dni || r.usuario_id === u.id);
 			
-			// Ordenar por fecha para mostrar las más cercanas primero
+			// Ordenar por fecha cronológica
 			misR.sort((a, b) => new Date(a.fecha_clase) - new Date(b.fecha_clase));
 
 			if (upcoming) {
-				upcoming.innerHTML = misR.length ? misR.map(r => `
+				upcoming.innerHTML = misR.length ? misR.map(r => {
+					// Formateamos la fecha (Ej: "lun. 26/01")
+					let fechaDisplay = "S/F";
+					if (r.fecha_clase) {
+						const [y, m, d] = r.fecha_clase.split('-');
+						const dateObj = new Date(y, m - 1, d);
+						fechaDisplay = dateObj.toLocaleDateString('es-AR', { weekday: 'short', day: '2-digit', month: '2-digit' });
+					}
+
+					return `
 					<div class="flex items-center justify-between p-3 bg-white/5 rounded-xl border border-red-600/10 mb-2">
 						<div>
 							<p class="text-[10px] font-black uppercase italic text-white">${r.clase_nombre}</p>
-							<p class="text-[9px] text-gray-500 font-bold">${r.dia_nombre || 'Fecha'} - ${r.horario || ''}hs</p>
+							<p class="text-[9px] text-gray-500 font-bold uppercase">${fechaDisplay} - ${r.horario || ''}HS</p>
 						</div>
-						<button onclick="cancelBooking(${r.id})" class="text-[9px] text-red-500 hover:text-white">X</button>
+						<button onclick="cancelBooking(${r.id})" class="text-[9px] text-red-500 hover:text-white transition-colors">
+							<i data-lucide="x" class="w-3 h-3"></i>
+						</button>
 					</div>
-				`).join('') : '<p class="text-gray-500 italic text-[11px]">Sin reservas próximas.</p>';
+				`}).join('') : '<p class="text-gray-500 italic text-[11px]">Sin reservas próximas.</p>';
+				
+				if (typeof lucide !== 'undefined') lucide.createIcons();
 			}
 		}
 		
