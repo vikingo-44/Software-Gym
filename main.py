@@ -403,9 +403,12 @@ def update_db_user(user_id: int, data: Union[AlumnoUpdate, StaffUpdate], db: Ses
 # ENDPOINTS
 # ==========================================
 
-@app.get("/", tags=["Sistema"])
-def api_root():
-    return {"status": "Vikingo Strength Hub API is running", "version": "2.5.0"}
+# 1. ROOT: Carga tu web directamente al entrar a la URL
+@app.get("/")
+async def read_index():
+    if os.path.exists("index.html"):
+        return FileResponse("index.html")
+    return {"message": "Sistema Online. No se encontró index.html"}
 
 @app.get("/app", tags=["Sistema"])
 async def serve_app():
@@ -1204,4 +1207,5 @@ def get_historial_rutinas(id: int, db: Session = Depends(database.get_db)):
 if __name__ == "__main__":
     import uvicorn
     port = int(os.environ.get("PORT", 8000))
+
     uvicorn.run(app, host="0.0.0.0", port=port)
