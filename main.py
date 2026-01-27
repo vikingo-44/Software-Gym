@@ -1158,6 +1158,7 @@ def create_plan_rutina(data: PlanRutinaCreate, db: Session = Depends(database.ge
             for e in lista_ejercicios:
                 ej_en_rut = models.EjercicioEnRutina(
                     dia_id=nuevo_dia.id,
+                    rutina_id=nuevo_plan.id,
                     ejercicio_id=e.ejercicio_id,
                     comentario=e.comentario
                 )
