@@ -410,11 +410,24 @@ async def read_index():
         return FileResponse("index.html")
     return {"message": "Sistema Online. No se encontró index.html"}
 
-@app.get("/app", tags=["Sistema"])
-async def serve_app():
-    if os.path.exists("index.html"):
-        return FileResponse("index.html")
-    return {"message": "Frontend file not found"}
+# 2. STATIC FILES: Sirve script.js, style.css e imágenes
+@app.get("/{filename}")
+async def serve_file(filename: str):
+    # Lista blanca de seguridad: solo estos archivos se pueden descargar
+    whitelist = [
+        "script.js", 
+        "style.css", 
+        "icono2.png", 
+        "manifest.json", 
+        "robots.txt"
+    ]
+    
+    if filename in whitelist:
+        if os.path.exists(filename):
+            return FileResponse(filename)
+            
+    # Si piden algo raro (como main.py o .env), damos error 404
+    raise HTTPException(status_code=404)
 
 # --- LOGIN (RESTAURADO COMPLETO) ---
 @app.post("/api/login", response_model=TokenResponse, tags=["Autenticacion"])
@@ -1209,3 +1222,4 @@ if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
 
     uvicorn.run(app, host="0.0.0.0", port=port)
+
