@@ -172,7 +172,8 @@ class EjercicioEnRutina(Base):
     ejercicio_id = Column(Integer, ForeignKey("ejercicios_libreria.id"))
     rutina_id = Column(Integer, ForeignKey("planes_rutina.id"), nullable=True)
     
-    # Eliminamos los campos planos para usar la relación con la tabla series_ejercicio
+    # Sincronización total con tu JSON (soporta 'comentario' y 'comentarios')
+    comentario = Column(Text, nullable=True)
     comentarios = Column(Text, nullable=True) 
 
     dia = relationship("DiaRutina", back_populates="ejercicios")
