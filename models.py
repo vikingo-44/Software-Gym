@@ -170,9 +170,14 @@ class EjercicioEnRutina(Base):
     id = Column(Integer, primary_key=True)
     dia_id = Column(Integer, ForeignKey("rutina_dias.id"))
     ejercicio_id = Column(Integer, ForeignKey("ejercicios_libreria.id"))
-    comentario = Column(Text, nullable=True)
+    rutina_id = Column(Integer, ForeignKey("planes_rutina.id"), nullable=True)
+    
+    # Eliminamos los campos planos para usar la relación con la tabla series_ejercicio
+    comentarios = Column(Text, nullable=True) 
+
     dia = relationship("DiaRutina", back_populates="ejercicios")
     ejercicio_obj = relationship("Ejercicio", back_populates="ejercicios_en_rutina")
+    # Esta es la clave:
     series_detalle = relationship("SerieEjercicio", back_populates="ejercicio_en_rutina", cascade="all, delete-orphan")
 
 class SerieEjercicio(Base):
