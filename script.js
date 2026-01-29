@@ -1917,111 +1917,114 @@
 		}
 
 		async function handleLogin(e) {
-			// 1. Detener el refresco automático del formulario
-			if (e && e.preventDefault) e.preventDefault();
+            // 1. Detener el refresco automático del formulario
+            if (e && e.preventDefault) e.preventDefault();
 
-			const dniInput = document.getElementById('login-dni');
-			const passInput = document.getElementById('login-pass');
-			const errorDiv = document.getElementById('login-error');
-			const loginBtn = document.getElementById('login-button');
+            const dniInput = document.getElementById('login-dni');
+            const passInput = document.getElementById('login-pass');
+            const errorDiv = document.getElementById('login-error');
+            const loginBtn = document.getElementById('login-button');
 
-			if (!dniInput || !passInput) return;
+            if (!dniInput || !passInput) return;
 
-			// Feedback visual de carga
-			if (loginBtn) {
-				loginBtn.disabled = true;
-				loginBtn.innerText = "VERIFICANDO...";
-			}
+            // Feedback visual de carga
+            if (loginBtn) {
+                loginBtn.disabled = true;
+                loginBtn.innerText = "VERIFICANDO...";
+            }
 
-			const data = {
-				dni: dniInput.value,
-				password: passInput.value
-			};
+            const data = {
+                dni: dniInput.value,
+                password: passInput.value
+            };
 
-			try {
-				const res = await apiFetch('/login', 'POST', data);
+            try {
+                const res = await apiFetch('/login', 'POST', data);
 
-				if (res && !res.error) {
-					// --- NUEVO: GUARDAR TOKEN JWT ---
-					if (res.access_token) {
-						localStorage.setItem('viking_token', res.access_token);
-					}
+                if (res && !res.error) {
+                    // --- NUEVO: GUARDAR TOKEN JWT ---
+                    if (res.access_token) {
+                        localStorage.setItem('viking_token', res.access_token);
+                    }
 
-					// Guardamos al usuario en el estado global
-					state.user = res;
+                    // --- NUEVO: GUARDAR SESIÓN PARA F5 ---
+                    localStorage.setItem('viking_user', JSON.stringify(res));
 
-					// 2. Ocultar Login y mostrar App
-					document.getElementById('login-overlay').style.display = 'none';
-					document.getElementById('sidebar').classList.remove('hidden');
-					document.getElementById('main-content').classList.remove('hidden');
+                    // Guardamos al usuario en el estado global
+                    state.user = res;
 
-					// 3. Cargar datos del usuario en la barra lateral
-					const elName = document.getElementById('side-user-name');
-					if (elName) elName.innerText = res.nombre_completo || "Usuario";
+                    // 2. Ocultar Login y mostrar App
+                    document.getElementById('login-overlay').style.display = 'none';
+                    document.getElementById('sidebar').classList.remove('hidden');
+                    document.getElementById('main-content').classList.remove('hidden');
 
-					const elRole = document.getElementById('side-user-role');
-					if (elRole) elRole.innerText = res.rol_nombre || 'Staff';
+                    // 3. Cargar datos del usuario en la barra lateral
+                    const elName = document.getElementById('side-user-name');
+                    if (elName) elName.innerText = res.nombre_completo || "Usuario";
 
-					// --- LÓGICA DE INICIALES ---
-					const name = res.nombre_completo || "Usuario Vikingo";
-					const initials = name.split(' ')
-						.filter(n => n)
-						.map(n => n[0])
-						.join('')
-						.toUpperCase()
-						.substring(0, 2);
+                    const elRole = document.getElementById('side-user-role');
+                    if (elRole) elRole.innerText = res.rol_nombre || 'Staff';
 
-					const elInitials = document.getElementById('user-initials');
-					if (elInitials) elInitials.innerText = initials;
+                    // --- LÓGICA DE INICIALES ---
+                    const name = res.nombre_completo || "Usuario Vikingo";
+                    const initials = name.split(' ')
+                        .filter(n => n)
+                        .map(n => n[0])
+                        .join('')
+                        .toUpperCase()
+                        .substring(0, 2);
 
-					// 4. Cargar datos maestros (Profesores, Clases, etc.)
-					await loadProfesores();
+                    const elInitials = document.getElementById('user-initials');
+                    if (elInitials) elInitials.innerText = initials;
 
-					if (typeof initApp === 'function') {
-						await initApp();
-					} else {
-						if (typeof loadClases === 'function') loadClases();
-						if (typeof loadStock === 'function') loadStock();
-					}
+                    // 4. Cargar datos maestros (Profesores, Clases, etc.)
+                    await loadProfesores();
 
-					// 5. Cambiar a la vista principal
-					switchView('dashboard');
+                    if (typeof initApp === 'function') {
+                        await initApp();
+                    } else {
+                        if (typeof loadClases === 'function') loadClases();
+                        if (typeof loadStock === 'function') loadStock();
+                    }
 
-					// --- Renderizar Dashboard específico si es Alumno ---
-					if (res.rol_nombre === "Alumno" && typeof renderStudentDashboard === 'function') {
-						await renderStudentDashboard();
-					}
-					
-					// --- MEJORA: Precarga de datos si es Profesor ---
-					if (res.rol_nombre === "Profesor" && typeof loadProfessorDashboard === 'function') {
-						await loadProfessorDashboard();
-					}
+                    // 5. Cambiar a la vista principal
+                    switchView('dashboard');
 
-					// Refrescar iconos
-					if (window.lucide) lucide.createIcons();
+                    // --- Renderizar Dashboard específico si es Alumno ---
+                    if (res.rol_nombre === "Alumno" && typeof renderStudentDashboard === 'function') {
+                        await renderStudentDashboard();
+                    }
+                    
+                    // --- MEJORA: Precarga de datos si es Profesor ---
+                    if (res.rol_nombre === "Profesor" && typeof loadProfessorDashboard === 'function') {
+                        await loadProfessorDashboard();
+                    }
 
-					showVikingToast(`¡Bienvenido, ${res.nombre_completo.split(' ')[0]}!`);
+                    // Refrescar iconos
+                    if (window.lucide) lucide.createIcons();
 
-				} else {
-					// Mostrar error si las credenciales fallan
-					if (errorDiv) {
-						errorDiv.innerText = res.error || "Credenciales incorrectas";
-						errorDiv.classList.remove('hidden');
-					}
-					if (loginBtn) {
-						loginBtn.disabled = false;
-						loginBtn.innerText = "Ingresar";
-					}
-				}
-			} catch (err) {
-				console.error("Error en el proceso de login:", err);
-				showVikingToast("Error de conexión con el servidor", true);
-				if (loginBtn) {
-					loginBtn.disabled = false;
-					loginBtn.innerText = "Ingresar";
-				}
-			}
-		}
+                    showVikingToast(`¡Bienvenido, ${res.nombre_completo.split(' ')[0]}!`);
+
+                } else {
+                    // Mostrar error si las credenciales fallan
+                    if (errorDiv) {
+                        errorDiv.innerText = res.error || "Credenciales incorrectas";
+                        errorDiv.classList.remove('hidden');
+                    }
+                    if (loginBtn) {
+                        loginBtn.disabled = false;
+                        loginBtn.innerText = "Ingresar";
+                    }
+                }
+            } catch (err) {
+                console.error("Error en el proceso de login:", err);
+                showVikingToast("Error de conexión con el servidor", true);
+                if (loginBtn) {
+                    loginBtn.disabled = false;
+                    loginBtn.innerText = "Ingresar";
+                }
+            }
+        }
 
 		window.loadCaja = async function() {
 			const movs = await apiFetch('/caja/movimientos');
