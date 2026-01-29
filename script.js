@@ -4616,60 +4616,10 @@
 			}
 		});
 		
-        window.onload = async () => {
-			// --- 1. PERSISTENCIA DE SESIÓN (EL CORAZÓN DEL F5) ---
-			const savedUser = localStorage.getItem('viking_user');
-			const savedToken = localStorage.getItem('viking_token');
-
-			if (savedUser && savedToken) {
-				console.log("⚔️ Sesión recuperada: Entrando al Valhalla...");
-				const user = JSON.parse(savedUser);
-				
-				// Restaurar el estado global para que las APIs funcionen
-				state.user = user;
-
-				// Ocultar login y mostrar el sistema
-				document.getElementById('login-overlay').style.display = 'none';
-				document.getElementById('sidebar').classList.remove('hidden');
-				document.getElementById('main-content').classList.remove('hidden');
-
-				// Llenar datos de UI
-				const elName = document.getElementById('side-user-name');
-				if (elName) elName.innerText = user.nombre_completo || "Usuario";
-
-				const elRole = document.getElementById('side-user-role');
-				if (elRole) elRole.innerText = user.rol_nombre || 'Staff';
-
-				// Lógica de Iniciales
-				const name = user.nombre_completo || "Usuario Vikingo";
-				const initials = name.split(' ').filter(n => n).map(n => n[0]).join('').toUpperCase().substring(0, 2);
-				const elInitials = document.getElementById('user-initials');
-				if (elInitials) elInitials.innerText = initials;
-
-				// Cargar datos maestros (Profesores, etc.)
-				await loadProfesores();
-
-				if (typeof initApp === 'function') {
-					await initApp();
-				} else {
-					if (typeof loadClases === 'function') loadClases();
-					if (typeof loadStock === 'function') loadStock();
-				}
-
-				// Ir al Dashboard directamente
-				switchView('dashboard');
-
-				// Dashboards específicos según el rol
-				if (user.rol_nombre === "Alumno" && typeof renderStudentDashboard === 'function') await renderStudentDashboard();
-				if (user.rol_nombre === "Profesor" && typeof loadProfessorDashboard === 'function') await loadProfessorDashboard();
-			}
-
-			// --- 2. CONFIGURACIÓN DE FORMULARIOS (TU LÓGICA ORIGINAL) ---
+        window.onload = () => {
 			const formClase = document.getElementById('form-clase');
 			if(formClase) {
 				formClase.onsubmit = saveClaseVikinga;
 			}
-
-			// Dibujar iconos de Lucide
 			if(window.lucide) lucide.createIcons();
 		};				
