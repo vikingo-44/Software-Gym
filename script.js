@@ -3254,11 +3254,22 @@
         };
 
         function openModalClase() { 
-            document.getElementById('cl-id').value = ""; 
-            document.getElementById('modal-clase-title').innerText = "Alta de Clase";
-            openModal('modal-clase'); 
-        }
+			// 1. Resetea todos los inputs del formulario (nombre, cupo, color, etc.)
+			document.getElementById('form-clase').reset(); 
 
+			// 2. Limpia el ID oculto para asegurar que sea un "Alta"
+			document.getElementById('cl-id').value = ""; 
+
+			// 3. Limpia el contenedor de turnos/horarios para que no queden los anteriores
+			document.getElementById('cl-schedule-slots').innerHTML = '<p class="text-[9px] text-gray-600 italic py-4 text-center">No hay horarios definidos</p>';
+
+			// 4. Asegura que el título sea el correcto y abre el modal
+			document.getElementById('modal-clase-title').innerText = "Alta de Clase";
+			document.getElementById('btn-delete-clase').classList.add('hidden'); // Oculta el botón eliminar si existe
+			
+			openModal('modal-clase'); 
+		}
+		
 		// --- 1. GENERAR FILA: DÍA + HORA + PROFESOR ---
 		function addNewScheduleSlot(data = { dia: 1, horario: 7, coach: "" }) {
 			const container = document.getElementById('cl-schedule-slots');
