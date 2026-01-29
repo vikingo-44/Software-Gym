@@ -21,67 +21,62 @@
 
     <div id="viking-toast" class="notification-toast">¡Acción Completada!</div>
 
-    <!-- LOGIN OVERLAY - FONDO INYECTADO Y FORMULARIO A LA DERECHA -->
+    <!-- LOGIN OVERLAY - EL FORMULARIO AHORA FLOTA DIRECTAMENTE SOBRE EL WALLPAPER -->
 		<div id="login-overlay" 
-			class="fixed inset-0 z-[1000] flex items-center justify-end bg-black overflow-hidden bg-cover bg-center"
+			class="fixed inset-0 z-[1000] flex items-center justify-center lg:justify-end bg-black overflow-hidden bg-cover bg-center p-4"
 			style="background-image: url('https://github.com/vikingo-44/Software-Gym/blob/main/wallpaper.png?raw=true');">
 			
-			<!-- Capa de oscurecimiento sutil para la imagen de fondo -->
-			<div class="absolute inset-0 bg-black/20"></div>
+			<!-- Capa de oscurecimiento sutil para que el wallpaper no moleste la lectura -->
+			<div class="absolute inset-0 bg-black/30"></div>
 
-			<!-- BLOQUE NEGRO DERECHO CON CORTE CURVO (Muerde la imagen) -->
-			<div class="login-form-side-container absolute right-0 top-0 w-full lg:w-[55%] h-full bg-black flex items-center justify-center z-10"
-				style="clip-path: path('M220,0 L1000,0 L1000,1000 L0,1000 C100,800 180,400 220,0 Z');">
+			<!-- CONTENEDOR DEL FORMULARIO (Sin fondo negro, sin clip-path) -->
+			<div class="relative z-10 w-full max-w-md lg:mr-20">
 				
-				<!-- Contenedor del Formulario (con padding para alejarlo de la curva) -->
-				<div class="w-full flex justify-center pl-[15%] pr-4">
+				<!-- CARD DE LOGIN (GLASSMORPHISM MEJORADO PARA LEER SOBRE EL FONDO) -->
+				<div class="glass-card p-10 md:p-12 rounded-[3.5rem] w-full border border-white/10 text-center relative overflow-hidden shadow-2xl backdrop-blur-3xl bg-black/60">
 					
-					<!-- CARD DE LOGIN (GLASSMORPHISM CON 40% TRANSPARENCIA) -->
-					<div class="glass-card p-10 md:p-12 rounded-[3.5rem] w-full max-w-md border border-white/10 text-center relative overflow-hidden shadow-2xl backdrop-blur-3xl bg-black/40">
-						
-						<!-- LOGO -->
-						<div class="w-full max-w-[280px] h-auto mx-auto mb-10 logo-viking-glow flex items-center justify-center">
-							<img src="https://github.com/vikingo-44/Software-Gym/blob/main/gymfitpro2.png?raw=true" 
-								alt="GymFit Pro" 
-								class="w-full h-auto object-contain" 
-								onerror="this.src='https://via.placeholder.com/397x65/FF0000/000000?text=GYMFIT+PRO'">
-						</div>
-
-						<!-- FORMULARIO DE LOGIN -->
-						<div id="login-form-container">
-							<h1 class="text-4xl font-black italic uppercase mb-2 tracking-tighter text-white">BIENVENIDO</h1>
-							<p class="text-[11px] tracking-[0.5em] text-gray-400 uppercase mb-10 font-bold">Acceso al Sistema</p>
-							
-							<form onsubmit="handleLogin(event)" class="space-y-4">
-								<input type="text" id="login-dni" placeholder="DNI" required 
-									class="viking-input bg-black/60 border border-white/10 text-white p-4 rounded-2xl w-full outline-none focus:border-red-600 transition-all font-bold">
-								<input type="password" id="login-pass" placeholder="Contraseña" required 
-									class="viking-input bg-black/60 border border-white/10 text-white p-4 rounded-2xl w-full outline-none focus:border-red-600 transition-all font-bold">
-								
-								<button type="submit" id="login-button" 
-										class="w-full viking-bg-red text-black py-5 rounded-2xl font-black uppercase italic tracking-widest hover:scale-[1.02] active:scale-95 transition-all shadow-[0_0_30px_rgba(255,0,0,0.4)] mt-6">
-									Ingresar
-								</button>
-							</form>
-							<button onclick="toggleResetPass(true)" class="mt-8 text-[10px] font-black uppercase italic text-gray-500 hover:text-red-600 transition-colors tracking-widest">
-								¿Olvidaste tu contraseña?
-							</button>
-						</div>
-
-						<!-- FORMULARIO DE RESET (OCULTO) -->
-						<div id="reset-form-container" class="hidden">
-							<h1 class="text-2xl font-black italic uppercase mb-2 text-white">Reset <span class="text-red-600">Pass</span></h1>
-							<p class="text-[10px] tracking-[0.2em] text-gray-500 uppercase mb-8">Recupera tu acceso</p>
-							<form onsubmit="handleResetPassword(event)" class="space-y-4">
-								<input type="text" id="reset-dni" placeholder="DNI" required class="viking-input bg-black/60 border border-white/10 p-4 rounded-2xl w-full text-white font-bold">
-								<input type="password" id="reset-pass-new" placeholder="NUEVA PASS" required class="viking-input bg-black/60 border border-white/10 p-4 rounded-2xl w-full text-white font-bold">
-								<button type="submit" class="w-full bg-white text-black py-4 rounded-2xl font-black uppercase italic tracking-widest mt-4">Cambiar</button>
-							</form>
-							<button onclick="toggleResetPass(false)" class="mt-6 text-[10px] font-black uppercase italic text-gray-500 hover:text-white transition-colors">Volver</button>
-						</div>
-
-						<div id="login-error" class="mt-4 text-[12px] text-red-600 font-bold uppercase hidden animate-pulse">Error en credenciales</div>
+					<!-- LOGO -->
+					<div class="w-full max-w-[280px] h-auto mx-auto mb-10 logo-viking-glow flex items-center justify-center">
+						<img src="https://github.com/vikingo-44/Software-Gym/blob/main/gymfitpro2.png?raw=true" 
+							alt="GymFit Pro" 
+							class="w-full h-auto object-contain" 
+							onerror="this.src='https://via.placeholder.com/397x65/FF0000/000000?text=GYMFIT+PRO'">
 					</div>
+
+					<!-- FORMULARIO DE LOGIN -->
+					<div id="login-form-container">
+						<h1 class="text-4xl font-black italic uppercase mb-2 tracking-tighter text-white">BIENVENIDO</h1>
+						<p class="text-[11px] tracking-[0.5em] text-gray-400 uppercase mb-10 font-bold">Acceso al Sistema</p>
+						
+						<form onsubmit="handleLogin(event)" class="space-y-4">
+							<input type="text" id="login-dni" placeholder="DNI" required 
+								class="viking-input bg-black/80 border border-white/10 text-white p-4 rounded-2xl w-full outline-none focus:border-red-600 transition-all font-bold">
+							<input type="password" id="login-pass" placeholder="Contraseña" required 
+								class="viking-input bg-black/80 border border-white/10 text-white p-4 rounded-2xl w-full outline-none focus:border-red-600 transition-all font-bold">
+							
+							<button type="submit" id="login-button" 
+									class="w-full viking-bg-red text-black py-5 rounded-2xl font-black uppercase italic tracking-widest hover:scale-[1.02] active:scale-95 transition-all shadow-[0_0_30px_rgba(255,0,0,0.4)] mt-6">
+								Ingresar
+							</button>
+						</form>
+						<button onclick="toggleResetPass(true)" class="mt-8 text-[10px] font-black uppercase italic text-gray-500 hover:text-red-600 transition-colors tracking-widest">
+							¿Olvidaste tu contraseña?
+						</button>
+					</div>
+
+					<!-- FORMULARIO DE RESET -->
+					<div id="reset-form-container" class="hidden">
+						<h1 class="text-2xl font-black italic uppercase mb-2 text-white">Reset <span class="text-red-600">Pass</span></h1>
+						<p class="text-[10px] tracking-[0.2em] text-gray-500 uppercase mb-8">Recupera tu acceso</p>
+						<form onsubmit="handleResetPassword(event)" class="space-y-4">
+							<input type="text" id="reset-dni" placeholder="DNI" required class="viking-input bg-black/80 border border-white/10 p-4 rounded-2xl w-full text-white font-bold">
+							<input type="password" id="reset-pass-new" placeholder="NUEVA PASS" required class="viking-input bg-black/80 border border-white/10 p-4 rounded-2xl w-full text-white font-bold">
+							<button type="submit" class="w-full bg-white text-black py-4 rounded-2xl font-black uppercase italic tracking-widest mt-4">Cambiar</button>
+						</form>
+						<button onclick="toggleResetPass(false)" class="mt-6 text-[10px] font-black uppercase italic text-gray-500 hover:text-white transition-colors">Volver</button>
+					</div>
+
+					<div id="login-error" class="mt-4 text-[12px] text-red-600 font-bold uppercase hidden animate-pulse">Error en credenciales</div>
 				</div>
 			</div>
 		</div>
