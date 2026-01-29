@@ -403,15 +403,31 @@ def update_db_user(user_id: int, data: Union[AlumnoUpdate, StaffUpdate], db: Ses
 # ENDPOINTS
 # ==========================================
 
-@app.get("/", tags=["Sistema"])
-def api_root():
-    return {"status": "Vikingo Strength Hub API is running", "version": "2.5.0"}
-
-@app.get("/app", tags=["Sistema"])
-async def serve_app():
+# 1. ROOT: Carga tu web directamente al entrar a la URL
+@app.get("/")
+async def read_index():
     if os.path.exists("index.html"):
         return FileResponse("index.html")
-    return {"message": "Frontend file not found"}
+    return {"message": "Sistema Online. No se encontró index.html"}
+
+# 2. STATIC FILES: Sirve script.js, style.css e imágenes
+@app.get("/{filename}")
+async def serve_file(filename: str):
+    # Lista blanca de seguridad: solo estos archivos se pueden descargar
+    whitelist = [
+        "script.js", 
+        "style.css", 
+        "icono2.png", 
+        "manifest.json", 
+        "robots.txt"
+    ]
+    
+    if filename in whitelist:
+        if os.path.exists(filename):
+            return FileResponse(filename)
+            
+    # Si piden algo raro (como main.py o .env), damos error 404
+    raise HTTPException(status_code=404)
 
 # --- LOGIN (RESTAURADO COMPLETO) ---
 @app.post("/api/login", response_model=TokenResponse, tags=["Autenticacion"])
@@ -1204,4 +1220,5 @@ def get_historial_rutinas(id: int, db: Session = Depends(database.get_db)):
 if __name__ == "__main__":
     import uvicorn
     port = int(os.environ.get("PORT", 8000))
+
     uvicorn.run(app, host="0.0.0.0", port=port)
