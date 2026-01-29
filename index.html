@@ -773,30 +773,41 @@
             </div>
 
             <div id="view-rutinas" class="view-content">
-			<!-- HEADER -->
-			<div class="flex justify-between items-center mb-8">
-				<div>
-					<h3 class="text-3xl font-black italic uppercase" id="rutina-title">Rutinas de Alumnos</h3>
-					<p class="text-[10px] text-gray-500 font-bold uppercase tracking-[0.2em] mt-1 italic">Diseño y Seguimiento de Entrenamientos</p>
+				<!-- HEADER -->
+				<div class="flex justify-between items-center mb-8">
+					<div>
+						<h3 class="text-3xl font-black italic uppercase" id="rutina-title">Rutinas de Alumnos</h3>
+						<p class="text-[10px] text-gray-500 font-bold uppercase tracking-[0.2em] mt-1 italic">Diseño y Seguimiento de Entrenamientos</p>
+					</div>
+					<!-- Aquí podrías poner un buscador futuro si quisieras -->
 				</div>
-				<!-- Aquí podrías poner un buscador futuro si quisieras -->
-			</div>
 
-			<!-- VISTA ALUMNO (Se mantiene igual, dentro de una tarjeta para que destaque) -->
-			<div id="musculacion-student-view" class="hidden glass-card p-10 rounded-[3rem] border-red-600/10 mb-6 space-y-8">
-				<div class="bg-red-600/10 p-6 rounded-3xl border border-red-600/20" id="student-plan-header">
-					<h4 class="text-xl font-black italic uppercase mb-2">MI RUTINA</h4>
-					<p class="text-[11px] text-gray-400 font-bold uppercase tracking-widest" id="al-rutina-objetivo">Cargando objetivo...</p>
+				<div class="flex flex-col md:flex-row gap-4 mb-8">
+					<div class="flex-1 relative">
+						<i data-lucide="search" class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500"></i>
+						<input type="text" 
+							placeholder="Buscar Alumno..." 
+							oninput="searchRutinaAlumno(this.value)"
+							class="viking-input pl-12 bg-white/5 border-white/10 text-white rounded-2xl focus:border-red-600 transition-all">
+					</div>
 				</div>
-				<div class="grid grid-cols-1 md:grid-cols-2 gap-6" id="student-routine-exercises">
-				</div>
-			</div>
 
-			<!-- VISTA PROFESOR: LISTA (Estilo idéntico a Alumnos) -->
-			<div id="rutinas-lista" class="space-y-3 min-h-[400px] overflow-y-auto custom-scrollbar flex-1 pr-2 pb-10 hidden">
-				<!-- El JS inyectará las tarjetas aquí -->
+				<!-- VISTA ALUMNO (Se mantiene igual, dentro de una tarjeta para que destaque) -->
+				<div id="musculacion-student-view" class="hidden glass-card p-10 rounded-[3rem] border-red-600/10 mb-6 space-y-8">
+					<div class="bg-red-600/10 p-6 rounded-3xl border border-red-600/20" id="student-plan-header">
+						<h4 class="text-xl font-black italic uppercase mb-2">MI RUTINA</h4>
+						<p class="text-[11px] text-gray-400 font-bold uppercase tracking-widest" id="al-rutina-objetivo">Cargando objetivo...</p>
+					</div>
+					<div class="grid grid-cols-1 md:grid-cols-2 gap-6" id="student-routine-exercises"></div>
+				</div>
+
+				<div id="musculacion-student-view" class="hidden glass-card p-10 rounded-[3rem] border-red-600/10 mb-6 space-y-8"></div>
+					<!-- VISTA PROFESOR: LISTA (Estilo idéntico a Alumnos) -->
+					<div id="rutinas-lista" class="space-y-3 min-h-[400px] overflow-y-auto custom-scrollbar flex-1 pr-2 pb-10 hidden">
+						<!-- El JS inyectará las tarjetas aquí -->
+					</div>
+				</div>
 			</div>
-		</div>
 
 			<!-- Vista de Acceso Virtual -->
 			<div id="view-acceso-virtual" class="view-content">
