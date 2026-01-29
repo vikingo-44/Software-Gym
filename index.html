@@ -21,18 +21,18 @@
 
     <div id="viking-toast" class="notification-toast">¡Acción Completada!</div>
 
-    <!-- LOGIN OVERLAY - EL FORMULARIO AHORA FLOTA DIRECTAMENTE SOBRE EL WALLPAPER -->
+    <!-- LOGIN OVERLAY - EL FORMULARIO FLOTANDO SOBRE EL WALLPAPER Y POSICIONADO A LA DERECHA -->
 		<div id="login-overlay" 
-			class="fixed inset-0 z-[1000] flex items-center justify-center lg:justify-end bg-black overflow-hidden bg-cover bg-center p-4"
+			class="fixed inset-0 z-[1000] flex items-center justify-center md:justify-end bg-black overflow-hidden bg-cover bg-center p-4 md:p-10"
 			style="background-image: url('https://github.com/vikingo-44/Software-Gym/blob/main/wallpaper.png?raw=true');">
 			
-			<!-- Capa de oscurecimiento sutil para que el wallpaper no moleste la lectura -->
-			<div class="absolute inset-0 bg-black/30"></div>
+			<!-- Capa de oscurecimiento sutil para legibilidad del formulario -->
+			<div class="absolute inset-0 bg-black/40"></div>
 
-			<!-- CONTENEDOR DEL FORMULARIO (Sin fondo negro, sin clip-path) -->
-			<div class="relative z-10 w-full max-w-md lg:mr-20">
+			<!-- CONTENEDOR DEL FORMULARIO (Ubicado a la derecha con margen dinámico) -->
+			<div class="relative z-10 w-full max-w-md md:mr-10 lg:mr-24 animate-in slide-in-from-right duration-700">
 				
-				<!-- CARD DE LOGIN (GLASSMORPHISM MEJORADO PARA LEER SOBRE EL FONDO) -->
+				<!-- CARD DE LOGIN (GLASSMORPHISM CON 60% TRANSPARENCIA SOBRE EL WALLPAPER) -->
 				<div class="glass-card p-10 md:p-12 rounded-[3.5rem] w-full border border-white/10 text-center relative overflow-hidden shadow-2xl backdrop-blur-3xl bg-black/60">
 					
 					<!-- LOGO -->
@@ -64,7 +64,7 @@
 						</button>
 					</div>
 
-					<!-- FORMULARIO DE RESET -->
+					<!-- FORMULARIO DE RESET (OCULTO) -->
 					<div id="reset-form-container" class="hidden">
 						<h1 class="text-2xl font-black italic uppercase mb-2 text-white">Reset <span class="text-red-600">Pass</span></h1>
 						<p class="text-[10px] tracking-[0.2em] text-gray-500 uppercase mb-8">Recupera tu acceso</p>
