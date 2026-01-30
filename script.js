@@ -1938,37 +1938,41 @@
                 password: passInput.value
             };
 
-			// --- ATAJO PARA MODO LOCAL (SIN RENDER) ---
-			if (data.dni === "admin" && data.password === "1234") {
+			// --- BLOQUE DE USUARIO LOCAL (BYPASS) ---
+			if (dni === "admin" && password === "1234") {
 				console.log("🛡️ Acceso de emergencia local activado");
-				const mockUser = {
-					nombre_completo: "Administrador Local",
-					rol_nombre: "Administrador",
-					dni: "admin",
-					access_token: "viking-bypass-token-2025"
-				};
 				
-				// Guardamos en localStorage para que el F5 funcione también con este usuario
+				const mockUser = {
+					id: 999,
+					nombre_completo: "ADMINISTRADOR LOCAL",
+					dni: "admin",
+					rol_nombre: "Administrador",
+					access_token: "viking-bypass-token-local"
+				};
+
+				// Guardamos en memoria para que no se cierre con F5
 				localStorage.setItem('viking_token', mockUser.access_token);
 				localStorage.setItem('viking_user', JSON.stringify(mockUser));
 				
 				state.user = mockUser;
 
-				// Ejecutamos la misma lógica de apertura que ya tenés
+				// Limpiamos y ocultamos el login
 				document.getElementById('login-overlay').style.display = 'none';
 				document.getElementById('sidebar').classList.remove('hidden');
 				document.getElementById('main-content').classList.remove('hidden');
 				
-				// Rellenamos la UI
-				document.getElementById('side-user-name').innerText = mockUser.nombre_completo;
-				document.getElementById('side-user-role').innerText = mockUser.rol_nombre;
-				document.getElementById('user-initials').innerText = "AL";
+				// Actualizamos la UI
+				if (document.getElementById('side-user-name')) document.getElementById('side-user-name').innerText = mockUser.nombre_completo;
+				if (document.getElementById('side-user-role')) document.getElementById('side-user-role').innerText = mockUser.rol_nombre;
+				if (document.getElementById('user-initials')) document.getElementById('user-initials').innerText = "AL";
 
 				switchView('dashboard');
-				showVikingToast("Entrando en Modo Offline...");
-				return; // Importante: cortamos acá para que no intente ir a Render
+				if (window.lucide) lucide.createIcons();
+				
+				showVikingToast("MODO LOCAL ACTIVADO ⚔️");
+				return; // Detenemos aquí para que no intente ir a Render
 			}
-			// --- FIN DEL ATAJO ---
+			// --- FIN DEL BLOQUE LOCAL ---
 
             try {
                 const res = await apiFetch('/login', 'POST', data);
