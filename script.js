@@ -4568,8 +4568,8 @@
 							<div class="overflow-hidden">
 								<h4 class="text-sm font-black uppercase italic text-white group-hover:text-red-500 transition-colors truncate">${a.nombre_completo}</h4>
 								<div class="flex flex-col mt-1">
-									<p class="text-[10px] text-gray-500 font-bold flex items-center gap-1.5"><i data-lucide="id-card" class="w-3 h-3"></i> ${a.dni}</p>
-									${a.email ? `<p class="text-[10px] text-gray-500 font-bold flex items-center gap-1.5 truncate"><i data-lucide="mail" class="w-3 h-3"></i> ${a.email}</p>` : ''}
+									<p class="text-[10px] text-white-500 font-bold flex items-center gap-1.5"><i data-lucide="id-card" class="w-3 h-3"></i> ${a.dni}</p>
+									${a.email ? `<p class="text-[10px] text-white-500 font-bold flex items-center gap-1.5 truncate"><i data-lucide="mail" class="w-3 h-3"></i> ${a.email}</p>` : ''}
 								</div>
 							</div>
 						</div>
@@ -4593,7 +4593,7 @@
 											${textoEstado}
 										</span>
 									</div>
-									<p class="text-[10px] text-gray-400 font-bold italic flex items-center gap-1">
+									<p class="text-[10px] text-white-500 font-bold italic flex items-center gap-1">
 										Vence: <span class="text-white">${a.fecha_vencimiento || 'N/A'}</span>
 									</p>
 								</div>
