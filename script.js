@@ -1939,39 +1939,39 @@
             };
 
 			// --- BLOQUE DE USUARIO LOCAL (BYPASS) ---
-			if (dni === "admin" && password === "1234") {
-				console.log("🛡️ Acceso de emergencia local activado");
+			// ---if (dni === "admin" && password === "1234") {
+				// ---console.log("🛡️ Acceso de emergencia local activado");
 				
-				const mockUser = {
-					id: 999,
-					nombre_completo: "ADMINISTRADOR LOCAL",
-					dni: "admin",
-					rol_nombre: "Administrador",
-					access_token: "viking-bypass-token-local"
-				};
+				// ---const mockUser = {
+				// ---	id: 999,
+				// ---	nombre_completo: "ADMINISTRADOR LOCAL",
+				// ---	dni: "admin",
+			// ---		rol_nombre: "Administrador",
+			// ---		access_token: "viking-bypass-token-local"
+			// ---	};
 
 				// Guardamos en memoria para que no se cierre con F5
-				localStorage.setItem('viking_token', mockUser.access_token);
-				localStorage.setItem('viking_user', JSON.stringify(mockUser));
+			// ---	localStorage.setItem('viking_token', mockUser.access_token);
+			// ---	localStorage.setItem('viking_user', JSON.stringify(mockUser));
 				
-				state.user = mockUser;
+			// ---	state.user = mockUser;
 
 				// Limpiamos y ocultamos el login
-				document.getElementById('login-overlay').style.display = 'none';
-				document.getElementById('sidebar').classList.remove('hidden');
-				document.getElementById('main-content').classList.remove('hidden');
+			// ---	document.getElementById('login-overlay').style.display = 'none';
+			// ---	document.getElementById('sidebar').classList.remove('hidden');
+			// ---	document.getElementById('main-content').classList.remove('hidden');
 				
 				// Actualizamos la UI
-				if (document.getElementById('side-user-name')) document.getElementById('side-user-name').innerText = mockUser.nombre_completo;
-				if (document.getElementById('side-user-role')) document.getElementById('side-user-role').innerText = mockUser.rol_nombre;
-				if (document.getElementById('user-initials')) document.getElementById('user-initials').innerText = "AL";
+			// ---	if (document.getElementById('side-user-name')) document.getElementById('side-user-name').innerText = mockUser.nombre_completo;
+			// ---	if (document.getElementById('side-user-role')) document.getElementById('side-user-role').innerText = mockUser.rol_nombre;
+			// ---	if (document.getElementById('user-initials')) document.getElementById('user-initials').innerText = "AL";
 
-				switchView('dashboard');
-				if (window.lucide) lucide.createIcons();
+			// ---	switchView('dashboard');
+			// ---	if (window.lucide) lucide.createIcons();
 				
-				showVikingToast("MODO LOCAL ACTIVADO ⚔️");
-				return; // Detenemos aquí para que no intente ir a Render
-			}
+			// ---	showVikingToast("MODO LOCAL ACTIVADO ⚔️");
+			// ---	return; // Detenemos aquí para que no intente ir a Render
+			// ---}
 			// --- FIN DEL BLOQUE LOCAL ---
 
             try {
