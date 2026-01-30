@@ -2568,7 +2568,7 @@
 						<div>
 							<h4 class="text-sm font-black uppercase italic text-white group-hover:text-red-500 transition-colors">${u.nombre_completo}</h4>
 							<div class="flex flex-wrap gap-x-4 gap-y-1 mt-1">
-								<p class="text-[10px] text-gray-500 font-bold flex items-center gap-1"><i data-lucide="id-card" class="w-3 h-3"></i> ${u.dni}</p>
+								<p class="text-[10px] text-white-500 font-bold flex items-center gap-1"><i data-lucide="id-card" class="w-3 h-3"></i> ${u.dni}</p>
 								${u.email ? `<p class="text-[10px] text-gray-500 font-bold flex items-center gap-1"><i data-lucide="mail" class="w-3 h-3"></i> ${u.email}</p>` : ''}
 							</div>
 						</div>
@@ -2577,7 +2577,7 @@
 					<!-- Rol / Especialidad -->
 					<div class="flex flex-wrap items-center gap-6 md:justify-center border-t md:border-t-0 md:border-l border-white/5 pt-3 md:pt-0 md:pl-6">
 						<div class="min-w-[150px]">
-							<p class="text-[9px] text-gray-500 font-black uppercase tracking-widest mb-1 flex items-center gap-1">
+							<p class="text-[9px] text-white-500 font-black uppercase tracking-widest mb-1 flex items-center gap-1">
 								<i data-lucide="${icon}" class="w-3 h-3 text-red-600"></i> ${roleLabel}
 							</p>
 							<p class="text-[11px] font-black uppercase italic text-white truncate max-w-[200px]">${roleValue}</p>
