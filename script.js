@@ -4580,7 +4580,7 @@
 								
 								<!-- Info Plan (Más grande) -->
 								<div>
-									<p class="text-[9px] text-gray-500 font-black uppercase tracking-widest mb-1 flex items-center gap-1.5">
+									<p class="text-[9px] text-white-500 font-black uppercase tracking-widest mb-1 flex items-center gap-1.5">
 										<i data-lucide="ticket" class="w-3 h-3 text-red-600"></i> Plan Actual
 									</p>
 									<p class="text-sm font-black uppercase italic text-white truncate">${planNombre}</p>
