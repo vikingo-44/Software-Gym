@@ -2063,57 +2063,43 @@
         }
 
 		window.loadCaja = async function() {
-			// 1. Obtener los valores de los filtros desde el DOM
-			let desde = document.getElementById('caja-filtro-desde')?.value;
-			let hasta = document.getElementById('caja-filtro-hasta')?.value;
+			// 1. Elementos del DOM
+			const inputDesde = document.getElementById('caja-filtro-desde');
+			const inputHasta = document.getElementById('caja-filtro-hasta');
 
-			// 2. Lógica de fecha por defecto (HOY) si los filtros están vacíos
-			if (!desde || !hasta) {
-				const hoy = new Date().toISOString().split('T')[0];
-				desde = hoy;
-				hasta = hoy;
-				if(document.getElementById('caja-filtro-desde')) document.getElementById('caja-filtro-desde').value = hoy;
-				if(document.getElementById('caja-filtro-hasta')) document.getElementById('caja-filtro-hasta').value = hoy;
-			}
+			// 2. Lógica de "Hoy" por defecto si están vacíos
+			const hoy = new Date().toISOString().split('T')[0];
+			
+			if (inputDesde && !inputDesde.value) inputDesde.value = hoy;
+			if (inputHasta && !inputHasta.value) inputHasta.value = hoy;
 
-			// 3. Petición a la API con parámetros de fecha
+			const desde = inputDesde.value;
+			const hasta = inputHasta.value;
+
+			// 3. Petición a la API
 			const movs = await apiFetch(`/caja/movimientos?inicio=${desde}&fin=${hasta}`);
 			
 			let calcIngresos = 0;
 			let calcGastos = 0;
 
-			// 4. Encabezados Forzados
-			const thead = document.querySelector('#view-caja table thead tr');
-			if(thead) {
-				thead.innerHTML = `
-					<th class="pb-5 pl-2 text-left">Flujo</th>
-					<th class="pb-5 text-left">Tipo</th>
-					<th class="pb-5 text-left">Descripción</th>
-					<th class="pb-5 text-right pr-2">Monto</th>
-				`;
-			}
-
-			// 5. Procesamiento de montos y totales
+			// 4. Procesamiento de montos
 			if (Array.isArray(movs)) {
 				movs.forEach(m => {
 					const tipo = (m.tipo || '').toLowerCase();
 					const monto = Math.abs(parseFloat(m.monto));
 
-					// LÓGICA DE FLUJO: 
+					// Lógica de Flujo Vikingo
 					const esPositivo = (tipo.includes('mercaderia') || tipo.includes('mercadería') || tipo.includes('plan') || tipo.includes('venta') || tipo.includes('cobro') || tipo.includes('ingreso')) && !tipo.includes('compra');
 					const esEgreso = !esPositivo && (tipo === 'gasto' || tipo === 'egreso' || tipo === 'salida' || tipo === 'compra');
 
-					if (esEgreso) {
-						calcGastos += monto;
-					} else {
-						calcIngresos += monto;
-					}
+					if (esEgreso) calcGastos += monto;
+					else calcIngresos += monto;
 				});
 			}
 
 			const calcBalance = calcIngresos - calcGastos;
 
-			// 6. Actualizar tarjetas de resumen
+			// 5. Actualizar Tarjetas (Ingresos, Gastos, Balance)
 			if(document.getElementById('caja-ingresos')) 
 				document.getElementById('caja-ingresos').innerText = `$ ${calcIngresos.toLocaleString()}`;
 			
@@ -2126,40 +2112,26 @@
 				elBalance.className = `text-3xl font-black italic ${calcBalance >= 0 ? 'text-green-500' : 'text-red-500'}`;
 			}
 
-			// 7. Renderizar Tabla con Iconos Completos
+			// 6. Renderizar Tabla
 			const table = document.getElementById('table-caja');
 			if(table) {
 				if(Array.isArray(movs) && movs.length > 0) {
 					table.innerHTML = movs.map(m => {
 						const tipoRaw = (m.tipo || '').toLowerCase();
 						const monto = Math.abs(parseFloat(m.monto));
-
 						const esPositivo = (tipoRaw.includes('mercaderia') || tipoRaw.includes('mercadería') || tipoRaw.includes('plan') || tipoRaw.includes('venta') || tipoRaw.includes('cobro') || tipoRaw.includes('ingreso')) && !tipoRaw.includes('compra');
 						const esEgreso = !esPositivo && (tipoRaw === 'gasto' || tipoRaw === 'egreso' || tipoRaw === 'salida' || tipoRaw === 'compra');
 						
 						const flujoTexto = esEgreso ? 'EGRESO' : 'INGRESO';
-						const flujoColor = esEgreso 
-							? 'bg-red-500/10 text-red-500 border-red-500/20' 
-							: 'bg-green-500/10 text-green-500 border-green-500/20';
-
-						// Lógica de Iconos completa
-						let icono = 'tag';
-						if(tipoRaw.includes('plan')) icono = 'users';
-						if(tipoRaw.includes('mercaderia') || tipoRaw.includes('compra')) icono = 'shopping-bag';
-						if(esEgreso && !tipoRaw.includes('compra')) icono = 'arrow-down-circle';
-						if(tipoRaw.includes('compra')) icono = 'package-plus';
+						const flujoColor = esEgreso ? 'bg-red-500/10 text-red-500 border-red-500/20' : 'bg-green-500/10 text-green-500 border-green-500/20';
 
 						return `
 						<tr class="viking-table-row border-b border-white/5 hover:bg-white/5 transition-colors">
 							<td class="py-4 px-2">
-								<span class="px-3 py-1 rounded border text-[9px] font-black uppercase tracking-wider ${flujoColor}">
-									${flujoTexto}
-								</span>
+								<span class="px-3 py-1 rounded border text-[9px] font-black uppercase tracking-wider ${flujoColor}">${flujoTexto}</span>
 							</td>
 							<td class="py-4 px-2">
-								<span class="text-white text-[10px] font-black uppercase italic opacity-70">
-									<i data-lucide="${icono}" class="w-3 h-3 inline mr-1 opacity-50"></i>${m.tipo}
-								</span>
+								<span class="text-white text-[10px] font-black uppercase italic opacity-70">${m.tipo}</span>
 							</td>
 							<td class="py-4 px-2">
 								<p class="text-[11px] font-bold text-white uppercase">${m.descripcion}</p>
@@ -2170,20 +2142,18 @@
 							</td>
 						</tr>`;
 					}).join('');
-					
 					if(window.lucide) lucide.createIcons();
-					
 				} else {
-					table.innerHTML = '<tr><td colspan="4" class="text-center py-10 text-gray-500 italic text-[10px]">Sin movimientos registrados en este rango de fechas</td></tr>';
+					table.innerHTML = '<tr><td colspan="4" class="text-center py-10 text-gray-500 italic text-[10px]">Sin movimientos en este rango.</td></tr>';
 				}
 			}
 		};
 
-		// Función de apoyo para el botón "Hoy"
+		// Reiniciar a "Hoy"
 		window.resetFiltrosCaja = function() {
 			const hoy = new Date().toISOString().split('T')[0];
-			if(document.getElementById('caja-filtro-desde')) document.getElementById('caja-filtro-desde').value = hoy;
-			if(document.getElementById('caja-filtro-hasta')) document.getElementById('caja-filtro-hasta').value = hoy;
+			document.getElementById('caja-filtro-desde').value = hoy;
+			document.getElementById('caja-filtro-hasta').value = hoy;
 			window.loadCaja();
 		};
 
