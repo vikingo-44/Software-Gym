@@ -3011,7 +3011,7 @@
 								</div>
 								<div>
 									<h4 class="text-sm font-black uppercase italic text-white group-hover:text-red-500 transition-colors">${c.nombre}</h4>
-									<p class="text-[10px] text-gray-500 font-bold uppercase tracking-wider flex items-center gap-1">
+									<p class="text-[10px] text-white-500 font-bold uppercase tracking-wider flex items-center gap-1">
 										<i data-lucide="user" class="w-3 h-3"></i> ${c.coach || 'Sin Coach'}
 									</p>
 								</div>
@@ -4058,7 +4058,7 @@
 					container.innerHTML = `
 						<div class="flex flex-col items-center justify-center py-20 opacity-20">
 							<i data-lucide="database-zap" class="w-12 h-12 mb-4"></i>
-							<p class="text-sm font-black uppercase italic tracking-widest">Esperando Guerreros...</p>
+							<p class="text-sm font-white uppercase italic tracking-widest">Esperando Guerreros...</p>
 						</div>`;
 					if(window.lucide) lucide.createIcons();
 					return;
@@ -4079,7 +4079,7 @@
 								<span class="text-[11px] font-black uppercase italic text-white truncate">${acc.nombre}</span>
 							</div>
 
-							<span class="text-[10px] font-bold text-gray-400">${acc.dni}</span>
+							<span class="text-[10px] font-bold text-white-400">${acc.dni}</span>
 
 							<div class="flex flex-col">
 								<!-- Se muestra el texto directo del servidor -->
@@ -4088,7 +4088,7 @@
 
 							<div class="flex items-center gap-2">
 								<i data-lucide="${acc.metodo && acc.metodo.includes('QR') ? 'qr-code' : 'hard-drive'}" class="w-3 h-3 text-red-600"></i>
-								<span class="text-[9px] font-bold text-gray-500 uppercase">${acc.metodo || 'S/D'}</span>
+								<span class="text-[9px] font-bold text-white-500 uppercase">${acc.metodo || 'S/D'}</span>
 							</div>
 
 							<div class="text-right">
