@@ -1087,18 +1087,29 @@
 			const metodoEl = document.getElementById('metodo-pago');
 			const metodoPago = metodoEl ? metodoEl.value : "Efectivo";
 
-			if (confirm(`¿Finalizar cobro total de $${total.toLocaleString()} con ${metodoPago}?`)) {
+			// CAPTURAMOS EL VALOR DE LAS CUOTAS DESDE EL SELECTOR DEL HTML
+			const cuotasEl = document.getElementById('cobrar-cuotas');
+			const cuotas = cuotasEl ? parseInt(cuotasEl.value) : 1;
+
+			// Ajustamos el mensaje de confirmación para que sea claro con las cuotas
+			let mensajeConfirmacion = `¿Finalizar cobro total de $${total.toLocaleString()} con ${metodoPago}?`;
+			if (metodoPago === 'T. Credito' && cuotas > 1) {
+				mensajeConfirmacion = `¿Finalizar cobro total de $${total.toLocaleString()} en ${cuotas} cuotas con ${metodoPago}?`;
+			}
+
+			if (confirm(mensajeConfirmacion)) {
 				
 				showVikingToast("Procesando en la Tesorería...");
 				let errores = 0;
 
-				// Recorremos el carrito (pueden ser 3 aguas y 1 Plan de Musculación)
+				// Recorremos el carrito (pueden ser productos o planes)
 				for (const item of state.cart) {
 					const exito = await procesarPagoVikingo({
 						tipo: item.tipo, // 'Mercaderia' o 'Plan'
 						monto: item.precio * item.cantidad,
 						descripcion: item.tipo === 'Plan' ? item.nombre : `Venta: ${item.nombre} (x${item.cantidad})`,
 						metodo_pago: metodoPago,
+						cuotas: cuotas, // <--- AHORA SÍ ENVIAMOS LAS CUOTAS REALES A LA DB
 						producto_id: item.producto_id, // ID del producto o ID del Plan
 						alumno_id: item.alumno_id,     // Si es Plan, esto viaja al servidor
 						cantidad: item.cantidad
@@ -1112,7 +1123,7 @@
 					state.cart = []; 
 					updateCartUI();
 					
-					// Recargamos todo para ver los cambios reflejados
+					// Recargamos todo para ver los cambios reflejados (Caja ahora mostrará la leyenda)
 					await Promise.all([loadStock(), loadCaja(), fetchAlumnos()]);
 					renderCobrar();
 				} else {
