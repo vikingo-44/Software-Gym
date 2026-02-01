@@ -802,7 +802,7 @@
 											</div>
 											<div>
 												<p class="text-[13px] font-black italic uppercase leading-tight text-white group-hover:text-red-500 transition-colors">${a.nombre_completo}</p>
-												<p class="text-[9px] text-gray-500 font-bold uppercase tracking-widest mt-1">DNI: ${a.dni}</p>
+												<p class="text-[9px] text-white-500 font-bold uppercase tracking-widest mt-1">DNI: ${a.dni}</p>
 											</div>
 										</div>
 										<span class="text-[8px] px-3 py-1 rounded-full ${statusBg} ${statusColor} font-black uppercase italic border border-white/5">
@@ -812,7 +812,7 @@
 
 									<div class="flex gap-2 items-center mt-2 pt-3 border-t border-white/5">
 										<div class="flex-1">
-											<p class="text-[8px] text-gray-600 font-black uppercase italic mb-1 px-2">Seleccionar Plan</p>
+											<p class="text-[8px] text-white-600 font-black uppercase italic mb-1 px-2">Seleccionar Plan</p>
 											<select id="plan-select-${a.id}" class="viking-input !py-2 !text-[10px] h-10 bg-black/60 border-white/10">
 												${state.planes.map(p => `
 													<option value="${p.id}" ${p.id === a.plan_id ? 'selected' : ''}>
@@ -896,7 +896,7 @@
 			if (!list) return; 
 			
 			if (state.cart.length === 0) {
-				list.innerHTML = '<p class="text-center text-gray-500 text-[11px] italic py-10">Sin ítems seleccionados</p>';
+				list.innerHTML = '<p class="text-center text-white-500 text-[11px] italic py-10">Sin ítems seleccionados</p>';
 				updateTotales(0);
 				return;
 			}
@@ -1363,7 +1363,7 @@
 								</div>
 								<div class="overflow-hidden">
 									<h4 class="text-sm font-black uppercase italic text-white group-hover:text-red-500 transition-colors truncate">${a.nombre_completo}</h4>
-									<p class="text-[10px] text-gray-500 font-bold flex items-center gap-1.5 mt-1">
+									<p class="text-[10px] text-white-500 font-bold flex items-center gap-1.5 mt-1">
 										<i data-lucide="id-card" class="w-3 h-3"></i> DNI: ${a.dni}
 									</p>
 								</div>
@@ -1373,7 +1373,7 @@
 							<div class="flex-1 border-t md:border-t-0 md:border-l border-white/5 pt-4 md:pt-0 md:pl-8">
 								<div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
 									<div>
-										<p class="text-[9px] text-gray-500 font-black uppercase tracking-widest mb-1 flex items-center gap-1.5">
+										<p class="text-[9px] text-white-500 font-black uppercase tracking-widest mb-1 flex items-center gap-1.5">
 											<i data-lucide="ticket" class="w-3 h-3 text-red-600"></i> Plan Actual
 										</p>
 										<p class="text-sm font-black uppercase italic text-white truncate">${planNombre}</p>
@@ -2938,7 +2938,7 @@
 							<h4 class="text-[13px] font-black uppercase italic text-white truncate mb-3 tracking-tight">${s.nombre_producto}</h4>
 							<div class="flex items-center justify-between">
 								<div class="flex flex-col">
-									<span class="text-[8px] text-gray-500 font-black uppercase tracking-widest leading-none mb-1">Stock disponible</span>
+									<span class="text-[8px] text-white-500 font-black uppercase tracking-widest leading-none mb-1">Stock disponible</span>
 									<span class="text-sm font-black italic ${stockBajo ? 'text-red-500 animate-pulse' : 'text-white'}">
 										${s.stock_actual} <span class="text-[9px] opacity-40 uppercase">unidades</span>
 									</span>
