@@ -2108,14 +2108,14 @@
 			const inputDesde = document.getElementById('caja-filtro-desde');
 			const inputHasta = document.getElementById('caja-filtro-hasta');
 
-			// 1. Seteo de HOY si está vacío
+			// 1. Seteo de HOY si está vacío (Manejo de zona horaria para precisión)
 			const timezoneOffset = new Date().getTimezoneOffset() * 60000;
 			const hoyLocal = new Date(Date.now() - timezoneOffset).toISOString().split('T')[0];
 			
 			if (inputDesde && !inputDesde.value) inputDesde.value = hoyLocal;
 			if (inputHasta && !inputHasta.value) inputHasta.value = hoyLocal;
 
-			// 2. Traer TODOS los movimientos (para luego filtrar manualmente y asegurar precisión)
+			// 2. Traer los movimientos
 			const movs = await apiFetch('/caja/movimientos');
 			
 			let calcIngresos = 0;
@@ -2124,19 +2124,20 @@
 
 			if (!Array.isArray(movs)) return;
 
-			// 3. FILTRADO MANUAL: Comparamos las fechas de los movimientos con el rango elegido
+			// 3. FILTRADO: Comparamos las fechas
 			const filtrados = movs.filter(m => {
-				// Normalizamos la fecha del movimiento (quitamos la hora si existe)
 				const fechaMov = m.fecha.split('T')[0]; 
 				return fechaMov >= inputDesde.value && fechaMov <= inputHasta.value;
 			});
 
-			// 4. Procesar los movimientos filtrados
+			// 4. Renderizado de Tabla
 			if (table) {
 				if (filtrados.length > 0) {
 					table.innerHTML = filtrados.map(m => {
 						const tipoRaw = (m.tipo || '').toLowerCase();
 						const monto = Math.abs(parseFloat(m.monto));
+						const metodo = m.metodo_pago || 'Efectivo';
+						const cuotas = parseInt(m.cuotas) || 1; // Leemos las cuotas (por defecto 1)
 						
 						// Lógica de Ingreso vs Egreso
 						const esPositivo = (tipoRaw.includes('mercaderia') || tipoRaw.includes('mercadería') || tipoRaw.includes('plan') || tipoRaw.includes('venta') || tipoRaw.includes('cobro') || tipoRaw.includes('ingreso')) && !tipoRaw.includes('compra');
@@ -2148,6 +2149,15 @@
 						const flujoTexto = esEgreso ? 'EGRESO' : 'INGRESO';
 						const flujoColor = esEgreso ? 'bg-red-500/10 text-red-500 border-red-500/20' : 'bg-green-500/10 text-green-500 border-green-500/20';
 
+						// LÓGICA DE CUOTAS: Solo si es T. Credito y más de 1 cuota
+						let detalleCuotas = '';
+						if (metodo === 'T. Credito' && cuotas > 1) {
+							const valorCuota = monto / cuotas;
+							detalleCuotas = `<span class="block text-[8px] text-red-500 font-black mt-0.5">
+												PAGO EN ${cuotas} CUOTAS DE $ ${valorCuota.toLocaleString()}
+											</span>`;
+						}
+
 						return `
 						<tr class="viking-table-row border-b border-white/5 hover:bg-white/5 transition-colors">
 							<td class="py-3 px-2">
@@ -2158,7 +2168,10 @@
 							</td>
 							<td class="py-3 px-2">
 								<p class="text-[10px] font-bold text-white uppercase leading-tight">${m.descripcion}</p>
-								<p class="text-[8px] text-gray-500 uppercase">${new Date(m.fecha).toLocaleDateString()} - ${m.metodo_pago || 'Efectivo'}</p>
+								<p class="text-[8px] text-gray-500 uppercase">
+									${new Date(m.fecha).toLocaleDateString()} - ${metodo}
+								</p>
+								${detalleCuotas}
 							</td>
 							<td class="py-3 px-2 text-right font-black italic text-white text-[11px] pr-2">
 								$ ${monto.toLocaleString()}
@@ -2172,7 +2185,7 @@
 				}
 			}
 
-			// 5. Actualizar los totales del Dashboard
+			// 5. Totales
 			const calcBalance = calcIngresos - calcGastos;
 			if(document.getElementById('caja-ingresos')) document.getElementById('caja-ingresos').innerText = `$ ${calcIngresos.toLocaleString()}`;
 			if(document.getElementById('caja-gastos')) document.getElementById('caja-gastos').innerText = `$ ${calcGastos.toLocaleString()}`;
