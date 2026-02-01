@@ -758,6 +758,7 @@
             document.querySelectorAll('.cobrar-tab').forEach(t => t.classList.remove('active'));
             document.getElementById('tab-' + tab).classList.add('active');
             renderCobrar();
+			window.updatePaymentButtons();
         }
 		
 		
@@ -934,18 +935,59 @@
 			updateCartUI(); 
 		}
 
-		function setPaymentMethod(metodo) {
-			const select = document.getElementById('metodo-pago');
-			if (select) select.value = metodo;
+		// --- ACTUALIZACIÓN DE MÉTODO DE PAGO (REEMPLAZA A LA TUYA) ---
+		window.setPaymentMethod = function(method) {
+			// Actualizamos el select oculto que procesa la venta
+			const inputOculto = document.getElementById('metodo-pago');
+			if (inputOculto) inputOculto.value = method;
 
+			// LÓGICA DE CUOTAS: Si es Crédito, mostramos el desplegable. Si no, lo escondemos.
+			const cuotasCont = document.getElementById('cuotas-container');
+			if (cuotasCont) {
+				if (method === 'T. Credito') {
+					cuotasCont.classList.remove('hidden');
+				} else {
+					cuotasCont.classList.add('hidden');
+					// Si no es crédito, reseteamos a 1 cuota por seguridad
+					const selCuotas = document.getElementById('cobrar-cuotas');
+					if (selCuotas) selCuotas.value = "1";
+				}
+			}
+
+			// Actualizar visual de los botones (encendido/apagado)
 			document.querySelectorAll('.btn-pago').forEach(btn => {
-				const btnMethod = btn.getAttribute('data-method');
-				const isActive = btnMethod === metodo;
-				btn.className = isActive 
+				const isMatch = btn.getAttribute('data-method') === method;
+				btn.className = isMatch 
 					? "btn-pago w-full py-3 rounded-xl text-[10px] font-black uppercase italic transition-all bg-red-600 text-black shadow-lg shadow-red-600/20 transform scale-105"
-					: "btn-pago w-full py-3 rounded-xl text-[10px] font-black uppercase italic transition-all bg-white/5 text-gray-400 hover:text-white border border-transparent hover:border-red-600/30";
+					: "btn-pago w-full py-3 rounded-xl text-[10px] font-black uppercase italic transition-all bg-white/5 text-white-400 hover:text-white border border-transparent hover:border-red-600/30";
 			});
-		}
+		};
+
+		// --- NUEVA: DIBUJA LOS BOTONES SEGÚN LA SOLAPA ACTIVA ---
+		window.updatePaymentButtons = function() {
+			const container = document.getElementById('metodos-pago-container');
+			if (!container) return;
+
+			const currentTab = state.cobrarTab || 'mercaderia';
+			
+			// Botones base (Siempre presentes)
+			let html = `
+				<button onclick="setPaymentMethod('MercadoPago')" data-method="MercadoPago" class="btn-pago w-full py-3 rounded-xl text-[10px] font-black uppercase italic transition-all bg-white/5 text-white-400 hover:text-white border border-transparent hover:border-red-600/30">MercadoLibre</button>
+				<button onclick="setPaymentMethod('Transferencia')" data-method="Transferencia" class="btn-pago w-full py-3 rounded-xl text-[10px] font-black uppercase italic transition-all bg-white/5 text-white-400 hover:text-white border border-transparent hover:border-red-600/30">Transf.</button>
+				<button onclick="setPaymentMethod('Efectivo')" data-method="Efectivo" class="btn-pago w-full py-3 rounded-xl text-[10px] font-black uppercase italic transition-all bg-red-600 text-black shadow-lg shadow-red-600/20 transform scale-105">Efectivo</button>
+				<button onclick="setPaymentMethod('T. Debito')" data-method="T. Debito" class="btn-pago w-full py-3 rounded-xl text-[10px] font-black uppercase italic transition-all bg-white/5 text-white-400 hover:text-white border border-transparent hover:border-red-600/30">T. Debito</button>
+			`;
+
+			// Si la solapa es Planes, sumamos el botón de Crédito
+			if (currentTab === 'planes') {
+				html += `<button onclick="setPaymentMethod('T. Credito')" data-method="T. Credito" class="btn-pago w-full py-3 rounded-xl text-[10px] font-black uppercase italic transition-all bg-white/5 text-white-400 hover:text-white border border-transparent hover:border-red-600/30">T. Credito</button>`;
+			}
+
+			container.innerHTML = html;
+			
+			// Forzamos que siempre empiece en Efectivo al cambiar de solapa
+			setPaymentMethod('Efectivo');
+		};
 
 		/**
 		 * =========================================================
