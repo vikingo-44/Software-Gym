@@ -2063,12 +2063,26 @@
         }
 
 		window.loadCaja = async function() {
-			const movs = await apiFetch('/caja/movimientos');
+			// 1. Obtener los valores de los filtros desde el DOM
+			let desde = document.getElementById('caja-filtro-desde')?.value;
+			let hasta = document.getElementById('caja-filtro-hasta')?.value;
+
+			// 2. Lógica de fecha por defecto (HOY) si los filtros están vacíos
+			if (!desde || !hasta) {
+				const hoy = new Date().toISOString().split('T')[0];
+				desde = hoy;
+				hasta = hoy;
+				if(document.getElementById('caja-filtro-desde')) document.getElementById('caja-filtro-desde').value = hoy;
+				if(document.getElementById('caja-filtro-hasta')) document.getElementById('caja-filtro-hasta').value = hoy;
+			}
+
+			// 3. Petición a la API con parámetros de fecha
+			const movs = await apiFetch(`/caja/movimientos?inicio=${desde}&fin=${hasta}`);
 			
 			let calcIngresos = 0;
 			let calcGastos = 0;
 
-			// 1. Encabezados Forzados
+			// 4. Encabezados Forzados
 			const thead = document.querySelector('#view-caja table thead tr');
 			if(thead) {
 				thead.innerHTML = `
@@ -2079,10 +2093,10 @@
 				`;
 			}
 
+			// 5. Procesamiento de montos y totales
 			if (Array.isArray(movs)) {
 				movs.forEach(m => {
 					const tipo = (m.tipo || '').toLowerCase();
-					const desc = (m.descripcion || '').toLowerCase();
 					const monto = Math.abs(parseFloat(m.monto));
 
 					// LÓGICA DE FLUJO: 
@@ -2099,7 +2113,7 @@
 
 			const calcBalance = calcIngresos - calcGastos;
 
-			// Actualizar tarjetas de resumen
+			// 6. Actualizar tarjetas de resumen
 			if(document.getElementById('caja-ingresos')) 
 				document.getElementById('caja-ingresos').innerText = `$ ${calcIngresos.toLocaleString()}`;
 			
@@ -2109,10 +2123,10 @@
 			if(document.getElementById('caja-balance')) {
 				const elBalance = document.getElementById('caja-balance');
 				elBalance.innerText = `$ ${calcBalance.toLocaleString()}`;
-				elBalance.className = `text-3xl font-black ${calcBalance >= 0 ? 'text-white' : 'text-red-500'}`;
+				elBalance.className = `text-3xl font-black italic ${calcBalance >= 0 ? 'text-green-500' : 'text-red-500'}`;
 			}
 
-			// Renderizar Tabla con Iconos Completos
+			// 7. Renderizar Tabla con Iconos Completos
 			const table = document.getElementById('table-caja');
 			if(table) {
 				if(Array.isArray(movs) && movs.length > 0) {
@@ -2160,9 +2174,17 @@
 					if(window.lucide) lucide.createIcons();
 					
 				} else {
-					table.innerHTML = '<tr><td colspan="4" class="text-center py-6 text-gray-500 italic text-[10px]">Sin movimientos registrados</td></tr>';
+					table.innerHTML = '<tr><td colspan="4" class="text-center py-10 text-gray-500 italic text-[10px]">Sin movimientos registrados en este rango de fechas</td></tr>';
 				}
 			}
+		};
+
+		// Función de apoyo para el botón "Hoy"
+		window.resetFiltrosCaja = function() {
+			const hoy = new Date().toISOString().split('T')[0];
+			if(document.getElementById('caja-filtro-desde')) document.getElementById('caja-filtro-desde').value = hoy;
+			if(document.getElementById('caja-filtro-hasta')) document.getElementById('caja-filtro-hasta').value = hoy;
+			window.loadCaja();
 		};
 
 		// ESTA ES LA VERSIÓN DEFINITIVA PARA TU SCRIPT.JS
