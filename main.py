@@ -1030,7 +1030,6 @@ def crear_movimiento_caja(mov: MovimientoCreate, db: Session = Depends(database.
         tipo=tipo_final,        # Aquí definimos si entró o salió plata
         metodo_pago=mov.metodo_pago,
         cuotas=mov.cuotas,      # <--- AGREGADO: Aquí se guarda el valor (3, 6, 12, etc.)
-        fecha=datetime.now()
     )
     
     db.add(nuevo_movimiento)
@@ -1065,7 +1064,6 @@ def procesar_cobro(data: TransactionCreate, db: Session = Depends(database.get_d
             descripcion=detalle,
             metodo_pago=data.metodo_pago,
             cuotas=data.cuotas,
-            fecha=datetime.now()
         )
         
         db.add(nueva_transaccion)

@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, Date, DateTime, ForeignKey, Text, Boolean, JSON
+from sqlalchemy import Column, Integer, String, Float, Date, DateTime, ForeignKey, Text, Boolean, JSON, func
 from sqlalchemy.orm import relationship
 from database import Base
 import datetime
@@ -100,7 +100,7 @@ class MovimientoCaja(Base):
     monto = Column(Float)
     descripcion = Column(String)
     metodo_pago = Column(String, default="Efectivo") # <-- Agregado para reportes
-    fecha = Column(DateTime, default=datetime.datetime.now)
+    fecha = Column(DateTime, server_default=func.now())
     cuotas = Column(Integer, default=1)
 
 # =========================================
