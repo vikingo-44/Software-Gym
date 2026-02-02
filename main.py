@@ -275,6 +275,7 @@ class TransactionCreate(BaseModel):
     alumno_id: Optional[int] = None
     producto_id: Optional[int] = None
     cantidad: int = 1
+    cuotas: Optional[int] = 1
 
 # --- SCHEMAS RUTINAS ---
 class SerieResponse(BaseModel):
@@ -1063,6 +1064,7 @@ def procesar_cobro(data: TransactionCreate, db: Session = Depends(database.get_d
             monto=monto_positivo,
             descripcion=detalle,
             metodo_pago=data.metodo_pago,
+            cuotas=data.cuotas,
             fecha=datetime.now()
         )
         
