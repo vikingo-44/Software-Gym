@@ -101,6 +101,7 @@ class MovimientoCaja(Base):
     descripcion = Column(String)
     metodo_pago = Column(String, default="Efectivo") # <-- Agregado para reportes
     fecha = Column(DateTime, default=datetime.datetime.now)
+    cuotas = Column(Integer, default=1)
 
 # =========================================
 # NUEVA TABLA: ACCESO (HISTORIAL)

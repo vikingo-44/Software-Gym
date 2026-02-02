@@ -265,6 +265,7 @@ class MovimientoCreate(BaseModel):
     monto: float
     tipo: str  
     metodo_pago: str = "Efectivo"
+    cuotas: Optional[int] = 1
 
 class TransactionCreate(BaseModel):
     tipo: str  # 'Plan' o 'Mercaderia'
@@ -1021,12 +1022,13 @@ def crear_movimiento_caja(mov: MovimientoCreate, db: Session = Depends(database.
     if mov.tipo in ["Gasto", "Compra", "Egreso"]:
         tipo_final = "Egreso"
     
-    # Esta es la línea que consultabas: es la creación del objeto para la DB
+    # Creación del objeto para la DB incluyendo la nueva columna 'cuotas'
     nuevo_movimiento = models.MovimientoCaja(
         descripcion=mov.descripcion,
         monto=abs(mov.monto),   # Siempre guardamos el monto positivo
         tipo=tipo_final,        # Aquí definimos si entró o salió plata
         metodo_pago=mov.metodo_pago,
+        cuotas=mov.cuotas,      # <--- AGREGADO: Aquí se guarda el valor (3, 6, 12, etc.)
         fecha=datetime.now()
     )
     
