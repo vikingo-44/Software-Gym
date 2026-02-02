@@ -1005,12 +1005,14 @@ def get_movimientos(db: Session = Depends(database.get_db)):
 
 @app.post("/api/caja/movimiento", tags=["Finanzas"])
 def create_movimiento(data: MovimientoCajaCreate, db: Session = Depends(database.get_db)):
+    tz_arg = timezone(timedelta(hours=-3))
+    ahora_arg = datetime.now(tz_arg)
     new_mov = models.MovimientoCaja(
         tipo=data.tipo,
         monto=abs(data.monto), # Forzar positivo
         descripcion=data.descripcion,
         metodo_pago=data.metodo_pago,
-        fecha=datetime.now()
+        fecha=ahora_arg
     )
     db.add(new_mov)
     db.commit()
