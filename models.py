@@ -100,7 +100,7 @@ class MovimientoCaja(Base):
     monto = Column(Float)
     descripcion = Column(String)
     metodo_pago = Column(String, default="Efectivo") # <-- Agregado para reportes
-    fecha = Column(DateTime, server_default=func.now())
+    fecha = Column(DateTime, default=None, nullable=True)
     cuotas = Column(Integer, default=1)
 
 # =========================================

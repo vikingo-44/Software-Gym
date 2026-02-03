@@ -1033,9 +1033,8 @@ def create_movimiento(data: MovimientoCajaCreate, db: Session = Depends(database
 
 @app.post("/api/caja/movimientos", tags=["Caja"])
 def crear_movimiento_caja(mov: MovimientoCreate, db: Session = Depends(database.get_db)):
-    # AGREGÁ ESTO PARA LA HORA
-    tz_arg = timezone(timedelta(hours=-3))
-    ahora_arg = datetime.now(tz_arg)
+    # LÓGICA DE FUERZA BRUTA
+    fecha_argentina = datetime.now() - timedelta(hours=3)
 
     # LÓGICA VIKINGA: Si el tipo es Gasto o Compra, se asegura de que sea Egreso
     tipo_final = mov.tipo
@@ -1049,7 +1048,7 @@ def crear_movimiento_caja(mov: MovimientoCreate, db: Session = Depends(database.
         tipo=tipo_final,        # Aquí definimos si entró o salió plata
         metodo_pago=mov.metodo_pago,
         cuotas=mov.cuotas,      # <--- AGREGADO: Aquí se guarda el valor (3, 6, 12, etc.)
-        fecha=ahora_arg
+        fecha=fecha_argentina
     )
     
     db.add(nuevo_movimiento)
@@ -1070,10 +1069,8 @@ def procesar_cobro(data: TransactionCreate, db: Session = Depends(database.get_d
     Actualiza la membresía sumando días del plan a la fecha de vencimiento actual (si existe) o desde hoy.
     """
     try:
-
-        # Definimos la hora de Argentina restando 3 horas al UTC
-        tz_arg = timezone(timedelta(hours=-3))
-        ahora_arg = datetime.now(tz_arg)
+        # LÓGICA DE FUERZA BRUTA: Restamos 3 horas directo al reloj del sistema
+        fecha_argentina = datetime.now() - timedelta(hours=3)
 
         # 1. Registro automático en Caja
         monto_positivo = abs(data.monto)
@@ -1089,7 +1086,7 @@ def procesar_cobro(data: TransactionCreate, db: Session = Depends(database.get_d
             descripcion=detalle,
             metodo_pago=data.metodo_pago,
             cuotas=data.cuotas,
-            fecha=ahora_arg
+            fecha=fecha_argentina
         )
         
         db.add(nueva_transaccion)
