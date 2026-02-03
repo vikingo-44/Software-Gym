@@ -1001,7 +1001,27 @@ def get_caja_resumen(db: Session = Depends(database.get_db)):
 
 @app.get("/api/caja/movimientos", tags=["Finanzas"])
 def get_movimientos(db: Session = Depends(database.get_db)):
-    return db.query(models.MovimientoCaja).order_by(models.MovimientoCaja.fecha.desc()).limit(20).all()
+    try:
+        # Traemos los movimientos crudos de la DB
+        movs = db.query(models.MovimientoCaja).order_by(models.MovimientoCaja.fecha.desc()).limit(20).all()
+        
+        # APLICAMOS LA MISMA LÓGICA QUE EN ACCESOS (Línea 352 de tu main.py)
+        # Restamos 3 horas al envío para sincronizar con Argentina.
+        offset = timedelta(hours=-3) 
+
+        return [{
+            "id": m.id,
+            "tipo": m.tipo,
+            "monto": m.monto,
+            "descripcion": m.descripcion,
+            "metodo_pago": m.metodo_pago,
+            "cuotas": m.cuotas,
+            # Aquí se corrige la hora antes de que llegue al navegador
+            "fecha": (m.fecha + offset).isoformat() if m.fecha else None
+        } for m in movs]
+    except Exception as e:
+        logger.error(f"Error al obtener movimientos de caja: {e}")
+        return []
 
 @app.post("/api/caja/movimiento", tags=["Finanzas"])
 def create_movimiento(data: MovimientoCajaCreate, db: Session = Depends(database.get_db)):
