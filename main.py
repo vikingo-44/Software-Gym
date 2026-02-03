@@ -11,7 +11,7 @@ from sqlalchemy import func, extract, text
 from sqlalchemy.orm.attributes import flag_modified
 from typing import List, Optional, Union
 from pydantic import BaseModel
-from datetime import datetime, timedelta, date, timezone
+from datetime import datetime, timedelta, date
 
 # Librerías para Seguridad (JWT y Hashing de contraseñas)
 from jose import JWTError, jwt
@@ -1001,19 +1001,16 @@ def get_caja_resumen(db: Session = Depends(database.get_db)):
 
 @app.get("/api/caja/movimientos", tags=["Finanzas"])
 def get_movimientos(db: Session = Depends(database.get_db)):
-    # Devolvemos los objetos directos de SQLAlchemy como hacías al principio
-    # Esto asegura que el JS reciba exactamente lo que recibía antes
     return db.query(models.MovimientoCaja).order_by(models.MovimientoCaja.fecha.desc()).limit(20).all()
 
 @app.post("/api/caja/movimiento", tags=["Finanzas"])
 def create_movimiento(data: MovimientoCajaCreate, db: Session = Depends(database.get_db)):
-    fecha_db = datetime.now() - timedelta(hours=3)
     new_mov = models.MovimientoCaja(
         tipo=data.tipo,
         monto=abs(data.monto), # Forzar positivo
         descripcion=data.descripcion,
         metodo_pago=data.metodo_pago,
-        fecha=fecha_db
+        fecha=datetime.now()
     )
     db.add(new_mov)
     db.commit()
@@ -1021,9 +1018,6 @@ def create_movimiento(data: MovimientoCajaCreate, db: Session = Depends(database
 
 @app.post("/api/caja/movimientos", tags=["Caja"])
 def crear_movimiento_caja(mov: MovimientoCreate, db: Session = Depends(database.get_db)):
-    # LÓGICA DE FUERZA BRUTA
-    fecha_db = datetime.now() - timedelta(hours=3)
-
     # LÓGICA VIKINGA: Si el tipo es Gasto o Compra, se asegura de que sea Egreso
     tipo_final = mov.tipo
     if mov.tipo in ["Gasto", "Compra", "Egreso"]:
@@ -1036,7 +1030,7 @@ def crear_movimiento_caja(mov: MovimientoCreate, db: Session = Depends(database.
         tipo=tipo_final,        # Aquí definimos si entró o salió plata
         metodo_pago=mov.metodo_pago,
         cuotas=mov.cuotas,      # <--- AGREGADO: Aquí se guarda el valor (3, 6, 12, etc.)
-        fecha=fecha_db
+        fecha=datetime.now()
     )
     
     db.add(nuevo_movimiento)
@@ -1057,9 +1051,6 @@ def procesar_cobro(data: TransactionCreate, db: Session = Depends(database.get_d
     Actualiza la membresía sumando días del plan a la fecha de vencimiento actual (si existe) o desde hoy.
     """
     try:
-        # Usamos la resta directa que ya comprobaste que te da la hora bien
-        fecha_db = datetime.now() - timedelta(hours=3)
-
         # 1. Registro automático en Caja
         monto_positivo = abs(data.monto)
         
@@ -1074,7 +1065,7 @@ def procesar_cobro(data: TransactionCreate, db: Session = Depends(database.get_d
             descripcion=detalle,
             metodo_pago=data.metodo_pago,
             cuotas=data.cuotas,
-            fecha=fecha_db
+            fecha=datetime.now()
         )
         
         db.add(nueva_transaccion)
