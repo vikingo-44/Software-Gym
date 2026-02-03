@@ -1005,14 +1005,12 @@ def get_movimientos(db: Session = Depends(database.get_db)):
 
 @app.post("/api/caja/movimiento", tags=["Finanzas"])
 def create_movimiento(data: MovimientoCajaCreate, db: Session = Depends(database.get_db)):
-    tz_arg = timezone(timedelta(hours=-3))
-    ahora_arg = datetime.now(tz_arg)
     new_mov = models.MovimientoCaja(
         tipo=data.tipo,
         monto=abs(data.monto), # Forzar positivo
         descripcion=data.descripcion,
         metodo_pago=data.metodo_pago,
-        fecha=ahora_arg
+        fecha=datetime.now()
     )
     db.add(new_mov)
     db.commit()
@@ -1020,11 +1018,6 @@ def create_movimiento(data: MovimientoCajaCreate, db: Session = Depends(database
 
 @app.post("/api/caja/movimientos", tags=["Caja"])
 def crear_movimiento_caja(mov: MovimientoCreate, db: Session = Depends(database.get_db)):
-
-    # Definimos la hora de Argentina
-    tz_arg = timezone(timedelta(hours=-3))
-    ahora_arg = datetime.now(tz_arg)
-
     # LÓGICA VIKINGA: Si el tipo es Gasto o Compra, se asegura de que sea Egreso
     tipo_final = mov.tipo
     if mov.tipo in ["Gasto", "Compra", "Egreso"]:
@@ -1037,7 +1030,7 @@ def crear_movimiento_caja(mov: MovimientoCreate, db: Session = Depends(database.
         tipo=tipo_final,        # Aquí definimos si entró o salió plata
         metodo_pago=mov.metodo_pago,
         cuotas=mov.cuotas,      # <--- AGREGADO: Aquí se guarda el valor (3, 6, 12, etc.)
-        fecha=ahora_arg
+        fecha=datetime.now()
     )
     
     db.add(nuevo_movimiento)
@@ -1077,7 +1070,7 @@ def procesar_cobro(data: TransactionCreate, db: Session = Depends(database.get_d
             descripcion=detalle,
             metodo_pago=data.metodo_pago,
             cuotas=data.cuotas,
-            fecha=ahora_arg
+            fecha=datetime.now()
         )
         
         db.add(nueva_transaccion)
