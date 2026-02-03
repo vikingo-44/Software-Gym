@@ -1002,22 +1002,17 @@ def get_caja_resumen(db: Session = Depends(database.get_db)):
 @app.get("/api/caja/movimientos", tags=["Finanzas"])
 def get_movimientos(db: Session = Depends(database.get_db)):
     try:
-        # Traemos los movimientos crudos de la DB
+        # Traemos los movimientos tal cual están en la DB (porque ya se guardaron bien)
         movs = db.query(models.MovimientoCaja).order_by(models.MovimientoCaja.fecha.desc()).limit(20).all()
         
-        # APLICAMOS LA MISMA LÓGICA QUE EN ACCESOS (Línea 352 de tu main.py)
-        # Restamos 3 horas al envío para sincronizar con Argentina.
-        offset = timedelta(hours=-3) 
-
         return [{
             "id": m.id,
             "tipo": m.tipo,
             "monto": m.monto,
             "descripcion": m.descripcion,
-            "metodo_pago": m.metodo_pago,
-            "cuotas": m.cuotas,
-            # Aquí se corrige la hora antes de que llegue al navegador
-            "fecha": (m.fecha + offset).isoformat() if m.fecha else None
+            "metodo_pago": m.metodo_pago or "Efectivo",
+            "cuotas": m.cuotas or 1,
+            "fecha": m.fecha.isoformat() if m.fecha else None # <--- SIN RESTAR NADA ACÁ
         } for m in movs]
     except Exception as e:
         logger.error(f"Error al obtener movimientos de caja: {e}")
@@ -1038,6 +1033,10 @@ def create_movimiento(data: MovimientoCajaCreate, db: Session = Depends(database
 
 @app.post("/api/caja/movimientos", tags=["Caja"])
 def crear_movimiento_caja(mov: MovimientoCreate, db: Session = Depends(database.get_db)):
+    # AGREGÁ ESTO PARA LA HORA
+    tz_arg = timezone(timedelta(hours=-3))
+    ahora_arg = datetime.now(tz_arg)
+
     # LÓGICA VIKINGA: Si el tipo es Gasto o Compra, se asegura de que sea Egreso
     tipo_final = mov.tipo
     if mov.tipo in ["Gasto", "Compra", "Egreso"]:
@@ -1050,7 +1049,7 @@ def crear_movimiento_caja(mov: MovimientoCreate, db: Session = Depends(database.
         tipo=tipo_final,        # Aquí definimos si entró o salió plata
         metodo_pago=mov.metodo_pago,
         cuotas=mov.cuotas,      # <--- AGREGADO: Aquí se guarda el valor (3, 6, 12, etc.)
-        fecha=datetime.now()
+        fecha=ahora_arg
     )
     
     db.add(nuevo_movimiento)
@@ -1090,7 +1089,7 @@ def procesar_cobro(data: TransactionCreate, db: Session = Depends(database.get_d
             descripcion=detalle,
             metodo_pago=data.metodo_pago,
             cuotas=data.cuotas,
-            fecha=datetime.now()
+            fecha=ahora_arg
         )
         
         db.add(nueva_transaccion)
