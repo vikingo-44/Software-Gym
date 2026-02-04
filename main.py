@@ -572,7 +572,7 @@ def validar_acceso_qr(data: AccessCheck, db: Session = Depends(database.get_db))
             metodo="QR SCAN",
             accion=final_response["status"],  # Campo 'accion' del modelo
             exitoso=(final_response["status"] == "AUTHORIZED"), # Campo 'exitoso'
-            fecha=datetime.now()
+            fecha=models.get_local_time()  # <--- HORA LOCAL ARGENTINA
         )
         db.add(nuevo_acceso)
         db.commit()
@@ -590,12 +590,10 @@ def get_historial_accesos(db: Session = Depends(database.get_db)):
     Enviamos la fecha ya formateada como texto para evitar desfases en el navegador.
     """
     try:
-        from datetime import timedelta
         accesos = db.query(models.Acceso).order_by(models.Acceso.id.desc()).limit(50).all()
         
         # PRIORIDAD 0: CORRECCIÓN HORARIA.
-        # Restamos 3 horas al envío para corregir el adelanto del servidor y sincronizar con Argentina.
-        offset = timedelta(hours=-3) 
+        # Ya no hace falta restar horas aquí manualmente porque se guarda con la hora local.
 
         return [{
             "id": a.id,
@@ -603,7 +601,7 @@ def get_historial_accesos(db: Session = Depends(database.get_db)):
             "dni": a.dni,
             "rol": a.rol or "Alumno",
             # Formateamos aquí a string: "HH:MM - DD/MM/YY"
-            "fecha": (a.fecha + offset).strftime("%H:%M - %d/%m/%y") if a.fecha else "S/D",
+            "fecha": a.fecha.strftime("%H:%M - %d/%m/%y") if a.fecha else "S/D",
             "metodo": a.metodo or "QR",
             "estado": a.accion 
         } for a in accesos]
@@ -1001,7 +999,17 @@ def get_caja_resumen(db: Session = Depends(database.get_db)):
 
 @app.get("/api/caja/movimientos", tags=["Finanzas"])
 def get_movimientos(db: Session = Depends(database.get_db)):
-    return db.query(models.MovimientoCaja).order_by(models.MovimientoCaja.fecha.desc()).limit(20).all()
+    """Trae movimientos de caja ordenados por fecha."""
+    movs = db.query(models.MovimientoCaja).order_by(models.MovimientoCaja.fecha.desc()).limit(20).all()
+    return [{
+        "id": m.id,
+        "tipo": m.tipo,
+        "monto": float(m.monto),
+        "descripcion": m.descripcion,
+        "metodo_pago": m.metodo_pago,
+        "cuotas": m.cuotas,
+        "fecha": m.fecha.strftime("%H:%M - %d/%m/%y") if m.fecha else "S/D"
+    } for m in movs]
 
 @app.post("/api/caja/movimiento", tags=["Finanzas"])
 def create_movimiento(data: MovimientoCajaCreate, db: Session = Depends(database.get_db)):
@@ -1010,7 +1018,7 @@ def create_movimiento(data: MovimientoCajaCreate, db: Session = Depends(database
         monto=abs(data.monto), # Forzar positivo
         descripcion=data.descripcion,
         metodo_pago=data.metodo_pago,
-        fecha=datetime.now()
+        fecha=models.get_local_time() # <--- HORA LOCAL ARGENTINA
     )
     db.add(new_mov)
     db.commit()
@@ -1030,7 +1038,7 @@ def crear_movimiento_caja(mov: MovimientoCreate, db: Session = Depends(database.
         tipo=tipo_final,        # Aquí definimos si entró o salió plata
         metodo_pago=mov.metodo_pago,
         cuotas=mov.cuotas,      # <--- AGREGADO: Aquí se guarda el valor (3, 6, 12, etc.)
-        fecha=datetime.now()
+        fecha=models.get_local_time() # <--- HORA LOCAL ARGENTINA
     )
     
     db.add(nuevo_movimiento)
@@ -1065,7 +1073,7 @@ def procesar_cobro(data: TransactionCreate, db: Session = Depends(database.get_d
             descripcion=detalle,
             metodo_pago=data.metodo_pago,
             cuotas=data.cuotas,
-            fecha=datetime.now()
+            fecha=models.get_local_time() # <--- HORA LOCAL ARGENTINA
         )
         
         db.add(nueva_transaccion)
