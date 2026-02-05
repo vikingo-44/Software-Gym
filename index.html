@@ -727,7 +727,6 @@
                             Hoy
                         </button>
 
-                        <!-- BOTÓN CONFIGURADO PARA TU FUNCIÓN guardarMovimiento -->
                         <button onclick="document.getElementById('modal-gasto').classList.remove('hidden')" 
                                 class="h-9 px-4 bg-green-600 hover:bg-green-700 text-white rounded-xl text-[9px] font-black uppercase italic transition-all flex items-center gap-2 shadow-lg shadow-green-900/20 ml-auto">
                             <i data-lucide="plus-circle" class="w-3 h-3"></i> Nuevo Movimiento
@@ -737,9 +736,10 @@
                     <table class="w-full text-left">
                         <thead>
                             <tr class="text-[10px] font-black uppercase text-white-500 italic border-b border-white/5">
-                                <th class="pb-5">Tipo</th>
-                                <th class="pb-5">Descripción</th>
-                                <th class="pb-5 text-right">Monto</th>
+                                <th class="pb-5 px-2">Tipo</th>
+                                <th class="pb-5 px-2">Descripción</th>
+                                <th class="pb-5 px-2">Forma de Pago</th>
+                                <th class="pb-5 text-right pr-2">Monto</th>
                             </tr>
                         </thead>
                         <tbody id="table-caja" class="text-[12px] font-black italic uppercase"></tbody>

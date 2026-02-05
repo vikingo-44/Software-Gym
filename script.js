@@ -2116,104 +2116,90 @@
         }
 
 		window.loadCaja = async function() {
-			const inputDesde = document.getElementById('caja-filtro-desde');
-			const inputHasta = document.getElementById('caja-filtro-hasta');
+            const inputDesde = document.getElementById('caja-filtro-desde');
+            const inputHasta = document.getElementById('caja-filtro-hasta');
 
-			// 1. Seteo de HOY si está vacío (Manejo de zona horaria para precisión)
-			const timezoneOffset = new Date().getTimezoneOffset() * 60000;
-			const hoyLocal = new Date(Date.now() - timezoneOffset).toISOString().split('T')[0];
-			
-			if (inputDesde && !inputDesde.value) inputDesde.value = hoyLocal;
-			if (inputHasta && !inputHasta.value) inputHasta.value = hoyLocal;
+            const timezoneOffset = new Date().getTimezoneOffset() * 60000;
+            const hoyLocal = new Date(Date.now() - timezoneOffset).toISOString().split('T')[0];
+            
+            if (inputDesde && !inputDesde.value) inputDesde.value = hoyLocal;
+            if (inputHasta && !inputHasta.value) inputHasta.value = hoyLocal;
 
-			// 2. Traer los movimientos
-			const movs = await apiFetch('/caja/movimientos');
-			
-			let calcIngresos = 0;
-			let calcGastos = 0;
-			const table = document.getElementById('table-caja');
+            const movs = await apiFetch('/caja/movimientos');
+            
+            let calcIngresos = 0;
+            let calcGastos = 0;
+            const table = document.getElementById('table-caja');
 
-			if (!Array.isArray(movs)) return;
+            if (!Array.isArray(movs)) return;
 
-			// 3. FILTRADO: Comparamos las fechas
-			const filtrados = movs.filter(m => {
-				const fechaMov = m.fecha.split('T')[0]; 
-				return fechaMov >= inputDesde.value && fechaMov <= inputHasta.value;
-			});
+            const filtrados = movs.filter(m => {
+                const fechaMov = m.fecha.split('T')[0]; 
+                return fechaMov >= inputDesde.value && fechaMov <= inputHasta.value;
+            });
 
-			// 4. Renderizado de Tabla
-			if (table) {
-				if (filtrados.length > 0) {
-					table.innerHTML = filtrados.map(m => {
-						const tipoRaw = (m.tipo || '').toLowerCase();
-						const monto = Math.abs(parseFloat(m.monto));
-						const metodo = m.metodo_pago || 'Efectivo';
-						const cuotas = parseInt(m.cuotas) || 1; // Leemos las cuotas (por defecto 1)
-						
-						// Lógica de Ingreso vs Egreso
-						const esPositivo = (tipoRaw.includes('mercaderia') || tipoRaw.includes('mercadería') || tipoRaw.includes('plan') || tipoRaw.includes('venta') || tipoRaw.includes('cobro') || tipoRaw.includes('ingreso')) && !tipoRaw.includes('compra');
-						const esEgreso = !esPositivo && (tipoRaw === 'gasto' || tipoRaw === 'egreso' || tipoRaw === 'salida' || tipoRaw === 'compra');
+            if (table) {
+                if (filtrados.length > 0) {
+                    table.innerHTML = filtrados.map(m => {
+                        const tipoRaw = (m.tipo || '').toLowerCase();
+                        const monto = Math.abs(parseFloat(m.monto));
+                        const metodo = m.metodo_pago || 'Efectivo';
+                        const cuotas = parseInt(m.cuotas) || 1;
+                        
+                        const esPositivo = (tipoRaw.includes('mercaderia') || tipoRaw.includes('mercadería') || tipoRaw.includes('plan') || tipoRaw.includes('venta') || tipoRaw.includes('cobro') || tipoRaw.includes('ingreso')) && !tipoRaw.includes('compra');
+                        const esEgreso = !esPositivo && (tipoRaw === 'gasto' || tipoRaw === 'egreso' || tipoRaw === 'salida' || tipoRaw === 'compra');
 
-						if (esEgreso) calcGastos += monto;
-						else calcIngresos += monto;
+                        if (esEgreso) calcGastos += monto;
+                        else calcIngresos += monto;
 
-						const flujoTexto = esEgreso ? 'EGRESO' : 'INGRESO';
-						const flujoColor = esEgreso ? 'bg-red-500/10 text-red-500 border-red-500/20' : 'bg-green-500/10 text-green-500 border-green-500/20';
+                        const flujoTexto = esEgreso ? 'EGRESO' : 'INGRESO';
+                        const flujoColor = esEgreso ? 'bg-red-500/10 text-red-500 border-red-500/20' : 'bg-green-500/10 text-green-500 border-green-500/20';
 
-						// LÓGICA DE CUOTAS: Solo si es T. Credito y más de 1 cuota
-						let detalleCuotas = '';
-						if (metodo === 'T. Credito' && cuotas > 1) {
-							const valorCuota = monto / cuotas;
-							detalleCuotas = `<span class="block text-[8px] text-red-500 font-black mt-0.5">
-												PAGO EN ${cuotas} CUOTAS DE $ ${valorCuota.toLocaleString()}
-											</span>`;
-						}
+                        // LÓGICA DE CUOTAS PARA LA NUEVA COLUMNA
+                        let infoPago = `<span class="text-white opacity-80">${metodo}</span>`;
+                        if ((metodo === 'T. Credito' || metodo.includes('Tarjeta')) && cuotas > 1) {
+                            const valorCuota = monto / cuotas;
+                            infoPago += `<span class="block text-[8px] text-red-500 font-black mt-1">
+                                            ${cuotas} CUOTAS DE $ ${valorCuota.toLocaleString()}
+                                         </span>`;
+                        }
 
-						return `
-						<tr class="viking-table-row border-b border-white/5 hover:bg-white/5 transition-colors">
-							<td class="py-3 px-2">
-								<span class="px-2 py-0.5 rounded border text-[8px] font-black uppercase tracking-wider ${flujoColor}">${flujoTexto}</span>
-							</td>
-							<td class="py-3 px-2">
-								<span class="text-white text-[9px] font-black uppercase italic opacity-60">${m.tipo}</span>
-							</td>
-							<td class="py-3 px-2">
-								<p class="text-[10px] font-bold text-white uppercase leading-tight">${m.descripcion}</p>
-								<p class="text-[8px] text-gray-500 uppercase">
-									${new Date(m.fecha).toLocaleDateString()} - ${metodo}
-								</p>
-								${detalleCuotas}
-							</td>
-							<td class="py-3 px-2 text-right font-black italic text-white text-[11px] pr-2">
-								$ ${monto.toLocaleString()}
-							</td>
-						</tr>`;
-					}).join('');
-					
-					if (window.lucide) lucide.createIcons();
-				} else {
-					table.innerHTML = '<tr><td colspan="4" class="text-center py-12 text-gray-600 italic text-[10px] uppercase tracking-widest">Sin movimientos en este rango</td></tr>';
-				}
-			}
+                        return `
+                        <tr class="viking-table-row border-b border-white/5 hover:bg-white/5 transition-colors">
+                            <td class="py-4 px-2">
+                                <span class="px-2 py-0.5 rounded border text-[8px] font-black uppercase tracking-wider ${flujoColor}">${flujoTexto}</span>
+                                <span class="block text-gray-500 text-[8px] mt-1">${new Date(m.fecha).toLocaleDateString()}</span>
+                            </td>
+                            <td class="py-4 px-2">
+                                <p class="text-[10px] font-bold text-white uppercase leading-tight">${m.descripcion}</p>
+                                <span class="text-gray-600 text-[8px] font-black uppercase italic">${m.tipo}</span>
+                            </td>
+                            <td class="py-4 px-2">
+                                <div class="text-[9px] font-black uppercase italic">
+                                    ${infoPago}
+                                </div>
+                            </td>
+                            <td class="py-4 px-2 text-right font-black italic text-white text-[11px] pr-2">
+                                $ ${monto.toLocaleString()}
+                            </td>
+                        </tr>`;
+                    }).join('');
+                    
+                    if (window.lucide) lucide.createIcons();
+                } else {
+                    table.innerHTML = '<tr><td colspan="4" class="text-center py-12 text-gray-600 italic text-[10px] uppercase tracking-widest">Sin movimientos en este rango</td></tr>';
+                }
+            }
 
-			// 5. Totales
-			const calcBalance = calcIngresos - calcGastos;
-			if(document.getElementById('caja-ingresos')) document.getElementById('caja-ingresos').innerText = `$ ${calcIngresos.toLocaleString()}`;
-			if(document.getElementById('caja-gastos')) document.getElementById('caja-gastos').innerText = `$ ${calcGastos.toLocaleString()}`;
-			if(document.getElementById('caja-balance')) {
-				const eb = document.getElementById('caja-balance');
-				eb.innerText = `$ ${calcBalance.toLocaleString()}`;
-				eb.className = `text-3xl font-black italic ${calcBalance >= 0 ? 'text-green-500' : 'text-red-500'}`;
-			}
-		};
-
-		window.resetFiltrosCaja = function() {
-			const timezoneOffset = new Date().getTimezoneOffset() * 60000;
-			const hoy = new Date(Date.now() - timezoneOffset).toISOString().split('T')[0];
-			document.getElementById('caja-filtro-desde').value = hoy;
-			document.getElementById('caja-filtro-hasta').value = hoy;
-			window.loadCaja();
-		};
+            const calcBalance = calcIngresos - calcGastos;
+            if(document.getElementById('caja-ingresos')) document.getElementById('caja-ingresos').innerText = `$ ${calcIngresos.toLocaleString()}`;
+            if(document.getElementById('caja-gastos')) document.getElementById('caja-gastos').innerText = `$ ${calcGastos.toLocaleString()}`;
+            if(document.getElementById('caja-balance')) {
+                const eb = document.getElementById('caja-balance');
+                eb.innerText = `$ ${calcBalance.toLocaleString()}`;
+                eb.className = `text-3xl font-black italic ${calcBalance >= 0 ? 'text-green-500' : 'text-red-500'}`;
+            }
+        };
 
 		// ESTA ES LA VERSIÓN DEFINITIVA PARA TU SCRIPT.JS
 		window.guardarMovimiento = async function(event) {
