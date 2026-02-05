@@ -1136,7 +1136,7 @@
 		async function openFichaTecnica(alumnoId) {
 			const rutinaContainer = document.getElementById('ficha-rutina-container');
 
-			// Estado de carga visual mejorado
+			// Estado de carga visual premium
 			rutinaContainer.innerHTML = `
 				<div class="col-span-2 py-20 flex flex-col items-center justify-center space-y-6">
 					<div class="relative">
@@ -1145,7 +1145,7 @@
 							<div class="w-2 h-2 bg-red-600 rounded-full animate-ping"></div>
 						</div>
 					</div>
-					<p class="text-[10px] text-gray-500 font-black uppercase italic tracking-[0.3em] animate-pulse">Sincronizando datos de combate...</p>
+					<p class="text-[10px] text-gray-500 font-black uppercase italic tracking-[0.3em] animate-pulse">Sincronizando Archivos de Combate...</p>
 				</div>
 			`;
 
@@ -1161,18 +1161,18 @@
 			if (document.getElementById('ficha-dni')) document.getElementById('ficha-dni').innerText = "DNI: " + (res.dni || '---');
 			if (document.getElementById('ficha-plan')) document.getElementById('ficha-plan').innerText = res.plan || 'Sin Plan Activo';
 			
-			// CORRECCIÓN DEL BADGE "AL DÍA / VENCIDA"
+			// FIX DEL BADGE: Usamos max-w-fit y inline-flex para que no ocupe todo el ancho
 			const elCuenta = document.getElementById('ficha-cuenta');
 			if (elCuenta) {
 				const esVencido = (res.estado_cuenta || '').toLowerCase().includes('vencido');
-				// Agregamos whitespace-nowrap y px-4 para que el texto no se rompa ni se estire de más
 				elCuenta.innerText = res.estado_cuenta || 'Inactivo';
-				elCuenta.className = `inline-block whitespace-nowrap px-4 py-1 rounded-full text-[9px] font-black uppercase italic border ${esVencido ? 'bg-red-600/20 text-red-500 border-red-500/30' : 'bg-green-600/20 text-green-500 border-green-500/30'}`;
+				elCuenta.className = `inline-flex items-center px-4 py-1.5 rounded-full text-[9px] font-black uppercase italic border whitespace-nowrap w-fit ${esVencido ? 'bg-red-600/20 text-red-500 border-red-500/30' : 'bg-green-600/20 text-green-500 border-green-500/30'}`;
 			}
 
-			if (document.getElementById('ficha-peso')) document.getElementById('ficha-peso').innerHTML = `<span class="text-white font-black">${res.peso || 0}</span> <span class="text-[10px] text-gray-500">KG</span>`;
-			if (document.getElementById('ficha-altura')) document.getElementById('ficha-altura').innerHTML = `<span class="text-white font-black">${res.altura || 0}</span> <span class="text-[10px] text-gray-500">CM</span>`;
-			if (document.getElementById('ficha-imc')) document.getElementById('ficha-imc').innerHTML = `<span class="text-red-500 font-black">${res.imc || 0}</span>`;
+			// Stats Físicos con diseño de "Dashboard"
+			if (document.getElementById('ficha-peso')) document.getElementById('ficha-peso').innerHTML = `<span class="text-white font-black">${res.peso || 0}</span> <span class="text-[9px] text-gray-500">KG</span>`;
+			if (document.getElementById('ficha-altura')) document.getElementById('ficha-altura').innerHTML = `<span class="text-white font-black">${res.altura || 0}</span> <span class="text-[9px] text-gray-500">CM</span>`;
+			if (document.getElementById('ficha-imc')) document.getElementById('ficha-imc').innerHTML = `<span class="text-red-600 font-black">${res.imc || 0}</span>`;
 
 			// 2. Obtener Rutina
 			let rutinaData = await apiFetch(`/rutinas/usuario/${alumnoId}`);
@@ -1189,55 +1189,59 @@
 
 					const statusBadge = esActiva 
 						? `<span class="bg-green-600 text-white px-3 py-1 rounded-lg text-[9px] font-black uppercase italic shadow-[0_0_15px_rgba(22,163,74,0.4)]">En Curso</span>`
-						: `<span class="bg-gray-800 text-gray-500 border border-white/5 px-3 py-1 rounded-lg text-[9px] font-black uppercase italic">Finalizada</span>`;
+						: `<span class="bg-gray-800 text-gray-400 border border-white/5 px-3 py-1 rounded-lg text-[9px] font-black uppercase italic">Vencida</span>`;
 
 					const diasHTML = (rutina.dias || []).map((d, dIdx) => {
 						const diaId = `ficha-dia-${rIdx}-${dIdx}`;
 						return `
-						<div class="mb-4 group">
+						<div class="mb-4">
 							<button onclick="toggleFichaElement('${diaId}')" 
-									class="w-full flex items-center justify-between p-5 bg-white/2 hover:bg-white/5 border border-white/5 rounded-2xl transition-all group-hover:border-red-600/30">
+									class="w-full flex items-center justify-between p-5 bg-white/2 hover:bg-white/5 border border-white/5 rounded-2xl transition-all group">
 								<div class="flex items-center gap-4">
-									<div class="w-10 h-10 rounded-xl bg-black/40 border border-white/10 flex items-center justify-center text-red-600 font-black italic">
+									<div class="w-10 h-10 rounded-xl bg-black/40 border border-white/10 flex items-center justify-center text-red-600 font-black italic shadow-inner">
 										${dIdx + 1}
 									</div>
-									<div>
-										<h6 class="text-[12px] font-black uppercase italic tracking-wider text-white">${d.nombre_dia}</h6>
-										<p class="text-[8px] text-gray-500 font-bold uppercase">${(d.ejercicios || []).length} Ejercicios Programados</p>
-									</div>
+									<span class="text-[12px] font-black uppercase italic tracking-wider text-gray-200 group-hover:text-red-500 transition-colors">${d.nombre_dia}</span>
 								</div>
 								<i data-lucide="chevron-down" class="w-5 h-5 text-gray-600 transition-transform duration-500" id="icon-${diaId}"></i>
 							</button>
-							<div id="${diaId}" class="hidden mt-2 p-2 space-y-3">
+							
+							<div id="${diaId}" class="hidden mt-3 p-1 space-y-4">
 								${(d.ejercicios || d.ejercicios_list || []).map(ex => {
 									const nombreEjercicio = ex.ejercicio_obj?.nombre || ex.nombre || ex.ejercicio?.nombre || "Ejercicio Sin Nombre";
 									const series = ex.series_detalle || ex.series || [];
+									
 									return `
-										<div class="bg-black/30 border border-white/5 rounded-2xl p-5">
-											<div class="flex items-center justify-between mb-4 pb-3 border-b border-white/5">
-												<h6 class="text-[11px] font-black uppercase italic text-red-500 tracking-tight">${nombreEjercicio}</h6>
-												<i data-lucide="dumbbell" class="w-3 h-3 text-white/20"></i>
+										<div class="bg-black/40 border border-white/5 rounded-3xl p-6 hover:border-red-600/20 transition-all">
+											<h6 class="text-[12px] font-black uppercase italic text-white tracking-tight mb-4 flex items-center gap-2">
+												<div class="w-1.5 h-1.5 bg-red-600 rounded-full animate-pulse"></div>
+												${nombreEjercicio}
+											</h6>
+											
+											<div class="grid grid-cols-4 gap-2 mb-3 px-3 opacity-40">
+												<span class="text-[7px] font-black uppercase tracking-widest">Serie</span>
+												<span class="text-[7px] font-black uppercase tracking-widest text-center">Peso</span>
+												<span class="text-[7px] font-black uppercase tracking-widest text-center">Reps</span>
+												<span class="text-[7px] font-black uppercase tracking-widest text-right">Pausa</span>
 											</div>
-											<div class="grid grid-cols-4 gap-2 mb-3 px-2">
-												<span class="text-[7px] font-black uppercase text-gray-500">Nº Serie</span>
-												<span class="text-[7px] font-black uppercase text-gray-500 text-center">Carga</span>
-												<span class="text-[7px] font-black uppercase text-gray-500 text-center">Objetivo</span>
-												<span class="text-[7px] font-black uppercase text-gray-500 text-right">Pausa</span>
-											</div>
+
 											<div class="space-y-1.5">
 												${series.sort((a, b) => (a.numero_serie || 0) - (b.numero_serie || 0)).map(s => `
-														<div class="grid grid-cols-4 items-center bg-white/2 px-3 py-2.5 rounded-xl border border-white/5">
-															<span class="text-[10px] font-black text-gray-400">#0${s.numero_serie}</span>
-															<div class="text-center"><span class="text-[11px] font-black text-white">${s.peso}</span> <span class="text-[7px] text-gray-600 uppercase">kg</span></div>
-															<div class="text-center"><span class="text-[11px] font-black text-white">${s.repeticiones}</span> <span class="text-[7px] text-gray-600 uppercase">reps</span></div>
-															<div class="text-right"><span class="text-[9px] text-red-500 font-bold italic">${s.descanso || '-'}</span></div>
+														<div class="grid grid-cols-4 items-center bg-white/5 px-4 py-3 rounded-xl border border-white/5">
+															<span class="text-[10px] font-black text-red-600/60">#0${s.numero_serie}</span>
+															<div class="text-center font-black text-white text-[11px]">${s.peso} <span class="text-[7px] text-gray-600">KG</span></div>
+															<div class="text-center font-black text-white text-[11px]">${s.repeticiones} <span class="text-[7px] text-gray-600">REPS</span></div>
+															<div class="text-right font-black italic text-red-500 text-[9px]">${s.descanso || '-'}</div>
 														</div>
 													`).join('')}
 											</div>
-											${ex.comentario ? `<div class="mt-4 bg-red-600/5 p-3 rounded-xl border border-red-600/10 flex gap-3">
+
+											${ex.comentario ? `
+												<div class="mt-4 bg-white/2 p-3 rounded-xl border-l-2 border-red-600 flex gap-3">
 													<i data-lucide="message-square" class="w-3 h-3 text-red-600 mt-0.5 shrink-0"></i>
-													<p class="text-[9px] text-gray-400 italic font-medium leading-relaxed">${ex.comentario}</p>
-												</div>` : ''}
+													<p class="text-[9px] text-gray-400 italic leading-relaxed font-medium">${ex.comentario}</p>
+												</div>
+											` : ''}
 										</div>`;
 								}).join('')}
 							</div>
@@ -1246,15 +1250,15 @@
 
 					return `
 					<div class="col-span-2 mb-8">
-						<div class="bg-black/40 border border-white/10 rounded-[2.5rem] overflow-hidden shadow-2xl">
-							<div class="p-8 border-b border-white/5 flex flex-col md:flex-row md:items-center justify-between gap-6 bg-gradient-to-r from-red-600/5 to-transparent">
+						<div class="bg-white/2 border border-white/10 rounded-[2.5rem] overflow-hidden shadow-2xl">
+							<div class="p-8 border-b border-white/5 flex flex-col md:flex-row md:items-center justify-between gap-6 bg-gradient-to-r from-red-600/10 to-transparent">
 								<div class="flex items-center gap-5">
 									<div class="w-1.5 h-12 bg-red-600 rounded-full shadow-[0_0_15px_#dc2626]"></div>
 									<div>
-										<p class="text-[9px] text-gray-500 font-black uppercase tracking-[0.4em] mb-1">Misión Principal</p>
-										<h5 class="text-2xl font-black italic uppercase text-white leading-none">${rutina.objetivo || 'Entrenamiento General'}</h5>
-										<p class="text-[10px] text-gray-400 font-bold flex items-center gap-1.5 mt-3">
-											<i data-lucide="calendar" class="w-3 h-3 text-red-600"></i> Expira: ${rutina.fecha_vencimiento || 'Sin Límite'}
+										<p class="text-[9px] text-gray-500 font-black uppercase tracking-[0.4em] mb-1">Misión Táctica</p>
+										<h5 class="text-2xl font-black italic uppercase text-white leading-none">${rutina.objetivo || 'Plan de Combate'}</h5>
+										<p class="text-[10px] text-gray-400 font-bold flex items-center gap-2 mt-3 italic">
+											<i data-lucide="calendar" class="w-3 h-3 text-red-600"></i> Expira: ${rutina.fecha_vencimiento || 'Indefinido'}
 										</p>
 									</div>
 								</div>
@@ -1268,11 +1272,12 @@
 				rutinaContainer.innerHTML = mainHTML;
 			} else {
 				rutinaContainer.innerHTML = `
-					<div class="col-span-2 py-20 border-2 border-dashed border-white/5 rounded-[3rem] text-center bg-white/2">
-						<div class="w-20 h-20 bg-red-600/10 rounded-full flex items-center justify-center mx-auto mb-6">
-							<i data-lucide="alert-triangle" class="w-10 h-10 text-red-600 opacity-50"></i>
+					<div class="col-span-2 py-20 border-2 border-dashed border-white/5 rounded-[3.5rem] text-center bg-white/2">
+						<div class="w-20 h-20 bg-red-600/10 rounded-full flex items-center justify-center mx-auto mb-6 border border-red-600/20 shadow-2xl">
+							<i data-lucide="skull" class="w-10 h-10 text-red-600 opacity-60"></i>
 						</div>
 						<h4 class="text-[14px] text-white font-black uppercase italic tracking-[0.2em]">Sin Plan de Batalla</h4>
+						<p class="text-[10px] text-gray-500 mt-2 font-bold max-w-xs mx-auto italic">Asigna una rutina desde el gestor para movilizar al guerrero.</p>
 					</div>`;
 			}
 
