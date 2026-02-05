@@ -853,63 +853,82 @@
         </div>
     </main>
 
-    <!-- MODAL EDITAR RUTINA (OPTIMIZADO CON BUSCADOR Y ALINEACIÓN) -->
-    <div id="modal-rutina-editor" class="viking-modal">
-        <div class="glass-card p-10 rounded-[3rem] w-full max-w-5xl text-left overflow-y-auto max-h-[95vh] custom-scrollbar">
-            <div class="flex justify-between items-start mb-6">
-                <div>
-                    <h3 class="text-2xl font-black uppercase italic mb-1">Gestionar Rutina de Musculación</h3>
-                    <p id="rutina-editor-alumno" class="text-red-600 font-black uppercase italic text-sm"></p>
-                </div>
-                <button onclick="openModalNewExercise()" class="viking-bg-red text-black px-4 py-2 rounded-xl font-black uppercase italic text-[10px] shadow-lg">+ Crear Nuevo Ejercicio</button>
-            </div>
-            
-            <form id="form-rutina-editor" class="space-y-6">
-                <input type="hidden" id="rutina-editor-alumno-id">
-                
-                <div class="grid grid-cols-2 gap-6 mb-8">
-                    <div class="space-y-1">
-                        <label class="text-[10px] font-black uppercase text-white-500 italic">Objetivo del Plan</label>
-                        <input type="text" id="rutina-objetivo" placeholder="Ej: Hipertrofia, Fuerza, Definición" class="viking-input" required>
-                    </div>
-                    <div class="space-y-1">
-                        <label class="text-[10px] font-black uppercase text-white-500 italic">Vencimiento de Rutina</label>
-                        <input type="date" id="rutina-vencimiento" class="viking-input" required>
-                    </div>
-                </div>
+    <!-- MODAL EDITAR RUTINA (DISEÑO VIKINGO PREMIUM) -->
+	<div id="modal-rutina-editor" class="viking-modal">
+		<div class="glass-card p-8 md:p-12 rounded-[3rem] w-full max-w-6xl text-left overflow-y-auto max-h-[92vh] custom-scrollbar border-white/10">
+			
+			<!-- HEADER DEL EDITOR -->
+			<div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-10 pb-8 border-b border-white/5">
+				<div class="flex items-center gap-5">
+					<div class="w-12 h-12 bg-red-600 rounded-2xl flex items-center justify-center shadow-[0_0_20px_rgba(220,38,38,0.4)] rotate-3">
+						<i data-lucide="scroll-text" class="text-white w-6 h-6"></i>
+					</div>
+					<div>
+						<h3 class="text-3xl font-black uppercase italic leading-none tracking-tight text-white">Arquitectura de Combate</h3>
+						<div class="flex items-center gap-2 mt-2">
+							<span class="text-[8px] font-black uppercase bg-red-600 text-white px-2 py-0.5 rounded italic">Guerrero</span>
+							<p id="rutina-editor-alumno" class="text-gray-400 font-bold uppercase italic text-[11px]"></p>
+						</div>
+					</div>
+				</div>
+				
+				<button type="button" onclick="openModalNewExercise()" 
+					class="bg-white/5 hover:bg-white/10 border border-white/10 text-white px-6 py-3 rounded-2xl font-black uppercase italic text-[10px] transition-all flex items-center gap-2">
+					<i data-lucide="plus-circle" class="w-4 h-4 text-red-600"></i> Crear Nuevo Ejercicio
+				</button>
+			</div>
+			
+			<form id="form-rutina-editor" class="space-y-10">
+				<input type="hidden" id="rutina-editor-alumno-id">
+				
+				<!-- SECCIÓN: METADATOS DEL PLAN -->
+				<div class="grid grid-cols-1 md:grid-cols-2 gap-8 bg-black/20 p-8 rounded-[2rem] border border-white/5">
+					<div class="space-y-2">
+						<label class="text-[9px] font-black uppercase text-red-600 italic tracking-[0.2em] ml-2">Objetivo Estratégico</label>
+						<div class="relative">
+							<i data-lucide="target" class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500"></i>
+							<input type="text" id="rutina-objetivo" placeholder="Ej: Hipertrofia Absoluta" 
+								class="viking-input pl-12 h-14 bg-black/40 border-white/10 focus:border-red-600 rounded-2xl text-[12px]" required>
+						</div>
+					</div>
+					<div class="space-y-2">
+						<label class="text-[9px] font-black uppercase text-red-600 italic tracking-[0.2em] ml-2">Ciclo de Vencimiento</label>
+						<div class="relative">
+							<i data-lucide="calendar-clock" class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500"></i>
+							<input type="date" id="rutina-vencimiento" 
+								class="viking-input pl-12 h-14 bg-black/40 border-white/10 focus:border-red-600 rounded-2xl text-[12px]" required>
+						</div>
+					</div>
+				</div>
 
-                <div id="rutina-editor-container" class="space-y-10">
-                    <!-- Los días se agregan aquí dinámicamente -->
-                </div>
-                
-                <button type="button" onclick="addRoutineDay()" class="w-full py-4 border border-dashed border-white/20 rounded-2xl text-white-500 hover:text-red-600 hover:border-red-600 transition-all font-black uppercase italic text-[12px]">
-                    + Agregar Día de Entrenamiento (A, B, C...)
-                </button>
+				<!-- CONTENEDOR DINÁMICO DE DÍAS -->
+				<div id="rutina-editor-container" class="space-y-12">
+					<!-- Los días se inyectan aquí dinámicamente vía JS -->
+				</div>
+				
+				<!-- BOTÓN AÑADIR DÍA -->
+				<button type="button" onclick="addRoutineDay()" 
+					class="group w-full py-8 border-2 border-dashed border-white/5 hover:border-red-600/50 rounded-[2.5rem] bg-white/2 hover:bg-red-600/5 transition-all flex flex-col items-center justify-center gap-3">
+					<div class="w-10 h-10 rounded-full bg-white/5 group-hover:bg-red-600 flex items-center justify-center transition-all">
+						<i data-lucide="plus" class="w-5 h-5 text-gray-500 group-hover:text-white"></i>
+					</div>
+					<span class="font-black uppercase italic text-[11px] tracking-widest text-gray-500 group-hover:text-red-500">Programar Nuevo Día de Entrenamiento</span>
+				</button>
 
-                <div class="flex gap-4 pt-6 border-t border-white/5">
-                    <button type="button" onclick="closeModal('modal-rutina-editor')" class="flex-1 py-4 bg-white/5 rounded-2xl font-black uppercase italic text-[11px]">Cancelar</button>
-                    <button type="submit" class="flex-1 py-4 viking-bg-red text-black rounded-2xl font-black uppercase italic text-[11px] shadow-xl">Guardar Plan Completo</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- MODAL PARA CREAR NUEVO EJERCICIO EN LIBRERÍA -->
-    <div id="modal-nuevo-ejercicio" class="viking-modal">
-        <div class="glass-card p-10 rounded-[3rem] w-full max-w-md text-left">
-            <h3 class="text-xl font-black uppercase italic mb-6">Nuevo Ejercicio en Librería</h3>
-            <form id="form-nuevo-ejercicio-lib" class="space-y-4">
-                <input type="text" id="lib-ex-nombre" placeholder="Nombre del Ejercicio (ej: Sentadilla)" required class="viking-input">
-                <select id="lib-ex-grupo" required class="viking-input">
-                    <option value="">Seleccionar Grupo Muscular</option>
-                </select>
-                <div class="flex gap-4 pt-4">
-                    <button type="button" onclick="closeModal('modal-nuevo-ejercicio')" class="flex-1 py-3 bg-white/5 rounded-xl font-black uppercase italic text-[10px]">Cancelar</button>
-                    <button type="submit" class="flex-1 py-3 viking-bg-red text-black rounded-xl font-black uppercase italic text-[10px]">Crear Ejercicio</button>
-                </div>
-            </form>
-        </div>
-    </div>
+				<!-- FOOTER ACCIONES -->
+				<div class="flex flex-col md:flex-row gap-4 pt-10 border-t border-white/5">
+					<button type="button" onclick="closeModal('modal-rutina-editor')" 
+						class="flex-1 py-5 bg-white/5 hover:bg-white/10 rounded-2xl font-black uppercase italic text-[11px] transition-all border border-white/5">
+						Abortar Cambios
+					</button>
+					<button type="submit" 
+						class="flex-[2] py-5 bg-red-600 hover:bg-red-700 text-white rounded-2xl font-black uppercase italic text-[11px] shadow-[0_10px_30px_rgba(220,38,38,0.3)] transition-all transform hover:-translate-y-1">
+						Desplegar Plan Completo
+					</button>
+				</div>
+			</form>
+		</div>
+	</div>
 
     <!-- MODAL CLASE -->
 	<div id="modal-clase" class="viking-modal">
