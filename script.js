@@ -1136,16 +1136,19 @@
 		async function openFichaTecnica(alumnoId) {
 			const rutinaContainer = document.getElementById('ficha-rutina-container');
 
-			// Estado de carga visual premium
+			// Estado de carga visual Ultra-Premium
 			rutinaContainer.innerHTML = `
-				<div class="col-span-2 py-20 flex flex-col items-center justify-center space-y-6">
+				<div class="col-span-2 py-24 flex flex-col items-center justify-center space-y-8">
 					<div class="relative">
-						<div class="w-12 h-12 border-4 border-red-600/20 border-t-red-600 rounded-full animate-spin"></div>
+						<div class="w-16 h-16 border-[6px] border-red-600/10 border-t-red-600 rounded-full animate-spin"></div>
 						<div class="absolute inset-0 flex items-center justify-center">
-							<div class="w-2 h-2 bg-red-600 rounded-full animate-ping"></div>
+							<div class="w-3 h-3 bg-red-600 rounded-full animate-ping"></div>
 						</div>
 					</div>
-					<p class="text-[10px] text-gray-500 font-black uppercase italic tracking-[0.3em] animate-pulse">Sincronizando Archivos de Combate...</p>
+					<div class="text-center">
+						<p class="text-[11px] text-red-600 font-black uppercase italic tracking-[0.4em] animate-pulse mb-2">Sincronizando Archivos</p>
+						<p class="text-[9px] text-gray-600 font-bold uppercase tracking-widest">Accediendo a la base de datos Vikinga...</p>
+					</div>
 				</div>
 			`;
 
@@ -1156,27 +1159,59 @@
 				return;
 			}
 
-			// --- RELLENADO DE CABECERA ---
+			// --- RELLENADO DE CABECERA (ESTADÍSTICAS ESTRATÉGICAS) ---
 			if (document.getElementById('ficha-nombre')) document.getElementById('ficha-nombre').innerText = res.nombre_completo || 'Sin Nombre';
-			if (document.getElementById('ficha-dni')) document.getElementById('ficha-dni').innerText = "DNI: " + (res.dni || '---');
+			if (document.getElementById('ficha-dni')) document.getElementById('ficha-dni').innerText = "ID GUERRERO: " + (res.dni || '---');
 			if (document.getElementById('ficha-plan')) document.getElementById('ficha-plan').innerText = res.plan || 'Sin Plan Activo';
 			
-			// FIX DEL BADGE: Usamos max-w-fit y inline-flex para que no ocupe todo el ancho
+			// FIX DEL BADGE: Contenedor controlado para que no se estire
 			const elCuenta = document.getElementById('ficha-cuenta');
 			if (elCuenta) {
 				const esVencido = (res.estado_cuenta || '').toLowerCase().includes('vencido');
-				elCuenta.innerText = res.estado_cuenta || 'Inactivo';
-				elCuenta.className = `inline-flex items-center px-4 py-1.5 rounded-full text-[9px] font-black uppercase italic border whitespace-nowrap w-fit ${esVencido ? 'bg-red-600/20 text-red-500 border-red-500/30' : 'bg-green-600/20 text-green-500 border-green-500/30'}`;
+				elCuenta.innerHTML = `
+					<div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border text-[9px] font-black uppercase italic whitespace-nowrap ${esVencido ? 'bg-red-600/20 text-red-500 border-red-500/30' : 'bg-green-600/20 text-green-500 border-green-500/30'}">
+						<div class="w-1.5 h-1.5 rounded-full ${esVencido ? 'bg-red-500' : 'bg-green-500 animate-pulse'}"></div>
+						${res.estado_cuenta || 'Inactivo'}
+					</div>
+				`;
+				elCuenta.className = ""; // Limpiamos clases previas
 			}
 
-			// Stats Físicos con diseño de "Dashboard"
-			if (document.getElementById('ficha-peso')) document.getElementById('ficha-peso').innerHTML = `<span class="text-white font-black">${res.peso || 0}</span> <span class="text-[9px] text-gray-500">KG</span>`;
-			if (document.getElementById('ficha-altura')) document.getElementById('ficha-altura').innerHTML = `<span class="text-white font-black">${res.altura || 0}</span> <span class="text-[9px] text-gray-500">CM</span>`;
-			if (document.getElementById('ficha-imc')) document.getElementById('ficha-imc').innerHTML = `<span class="text-red-600 font-black">${res.imc || 0}</span>`;
+			// Dashboard de Biometría
+			const formatStat = (val, unit, label) => `
+				<div class="bg-white/5 border border-white/5 p-4 rounded-2xl hover:border-red-600/30 transition-all group">
+					<p class="text-[8px] text-gray-500 font-black uppercase tracking-widest mb-1 group-hover:text-red-500">${label}</p>
+					<p class="text-xl font-black italic text-white">${val} <span class="text-[10px] text-gray-600 font-bold uppercase">${unit}</span></p>
+				</div>
+			`;
+
+			if (document.getElementById('ficha-peso')) document.getElementById('ficha-peso').innerHTML = formatStat(res.peso || 0, 'KG', 'Masa Corporal');
+			if (document.getElementById('ficha-altura')) document.getElementById('ficha-altura').innerHTML = formatStat(res.altura || 0, 'CM', 'Estatura');
+			
+			// Lógica de color para el IMC
+			const imcVal = parseFloat(res.imc) || 0;
+			const imcColor = imcVal > 25 ? 'text-red-600' : (imcVal < 18 ? 'text-yellow-500' : 'text-green-500');
+			if (document.getElementById('ficha-imc')) {
+				document.getElementById('ficha-imc').innerHTML = `
+					<div class="bg-white/5 border border-white/5 p-4 rounded-2xl hover:border-red-600/30 transition-all group">
+						<p class="text-[8px] text-gray-500 font-black uppercase tracking-widest mb-1 group-hover:text-red-500">Índice IMC</p>
+						<p class="text-xl font-black italic ${imcColor}">${imcVal}</p>
+					</div>
+				`;
+			}
 
 			// 2. Obtener Rutina
 			let rutinaData = await apiFetch(`/rutinas/usuario/${alumnoId}`);
 			const rutinas = Array.isArray(rutinaData) ? rutinaData : (rutinaData && !rutinaData.error ? [rutinaData] : []);
+
+			// BOTÓN DE GESTIÓN RÁPIDA (Aparece siempre si hay rutina o no)
+			const btnGestion = `
+				<button onclick="openRutinaEditor(${alumnoId})" 
+						class="w-full mb-6 py-4 bg-red-600 hover:bg-red-700 text-white rounded-2xl font-black uppercase italic text-[11px] shadow-lg shadow-red-900/40 transition-all flex items-center justify-center gap-3 group">
+					<i data-lucide="edit-3" class="w-4 h-4 group-hover:rotate-12 transition-transform"></i>
+					Gestionar Plan de Entrenamiento
+				</button>
+			`;
 
 			if (rutinas.length > 0) {
 				const hoy = new Date();
@@ -1188,58 +1223,64 @@
 					const esActiva = fechaVenc ? hoy <= fechaVenc : true;
 
 					const statusBadge = esActiva 
-						? `<span class="bg-green-600 text-white px-3 py-1 rounded-lg text-[9px] font-black uppercase italic shadow-[0_0_15px_rgba(22,163,74,0.4)]">En Curso</span>`
-						: `<span class="bg-gray-800 text-gray-400 border border-white/5 px-3 py-1 rounded-lg text-[9px] font-black uppercase italic">Vencida</span>`;
+						? `<span class="bg-green-600 text-white px-4 py-1.5 rounded-xl text-[10px] font-black uppercase italic shadow-[0_0_20px_rgba(22,163,74,0.3)]">ACTIVA</span>`
+						: `<span class="bg-gray-800 text-gray-500 border border-white/5 px-4 py-1.5 rounded-xl text-[10px] font-black uppercase italic">EXPIRADA</span>`;
 
 					const diasHTML = (rutina.dias || []).map((d, dIdx) => {
 						const diaId = `ficha-dia-${rIdx}-${dIdx}`;
 						return `
 						<div class="mb-4">
 							<button onclick="toggleFichaElement('${diaId}')" 
-									class="w-full flex items-center justify-between p-5 bg-white/2 hover:bg-white/5 border border-white/5 rounded-2xl transition-all group">
-								<div class="flex items-center gap-4">
-									<div class="w-10 h-10 rounded-xl bg-black/40 border border-white/10 flex items-center justify-center text-red-600 font-black italic shadow-inner">
+									class="w-full flex items-center justify-between p-6 bg-white/2 hover:bg-white/5 border border-white/5 rounded-[1.5rem] transition-all group border-l-4 border-l-transparent hover:border-l-red-600">
+								<div class="flex items-center gap-5">
+									<div class="w-12 h-12 rounded-2xl bg-black flex items-center justify-center text-red-600 font-black italic text-lg shadow-xl">
 										${dIdx + 1}
 									</div>
-									<span class="text-[12px] font-black uppercase italic tracking-wider text-gray-200 group-hover:text-red-500 transition-colors">${d.nombre_dia}</span>
+									<div class="text-left">
+										<h6 class="text-[13px] font-black uppercase italic tracking-wider text-white">${d.nombre_dia}</h6>
+										<p class="text-[9px] text-gray-500 font-bold uppercase tracking-widest">${(d.ejercicios || []).length} TÉCNICAS ASIGNADAS</p>
+									</div>
 								</div>
-								<i data-lucide="chevron-down" class="w-5 h-5 text-gray-600 transition-transform duration-500" id="icon-${diaId}"></i>
+								<i data-lucide="chevron-down" class="w-6 h-6 text-gray-700 transition-transform duration-500" id="icon-${diaId}"></i>
 							</button>
 							
-							<div id="${diaId}" class="hidden mt-3 p-1 space-y-4">
+							<div id="${diaId}" class="hidden mt-4 space-y-4 px-2">
 								${(d.ejercicios || d.ejercicios_list || []).map(ex => {
-									const nombreEjercicio = ex.ejercicio_obj?.nombre || ex.nombre || ex.ejercicio?.nombre || "Ejercicio Sin Nombre";
+									const nombreEjercicio = ex.ejercicio_obj?.nombre || ex.nombre || ex.ejercicio?.nombre || "Técnica Desconocida";
 									const series = ex.series_detalle || ex.series || [];
 									
 									return `
-										<div class="bg-black/40 border border-white/5 rounded-3xl p-6 hover:border-red-600/20 transition-all">
-											<h6 class="text-[12px] font-black uppercase italic text-white tracking-tight mb-4 flex items-center gap-2">
-												<div class="w-1.5 h-1.5 bg-red-600 rounded-full animate-pulse"></div>
-												${nombreEjercicio}
-											</h6>
+										<div class="bg-black/40 border border-white/5 rounded-[2rem] p-7 hover:border-red-600/10 transition-all shadow-lg">
+											<div class="flex items-center justify-between mb-6">
+												<h6 class="text-[12px] font-black uppercase italic text-white tracking-tight flex items-center gap-3">
+													<div class="w-2 h-2 bg-red-600 rounded-full shadow-[0_0_8px_#dc2626]"></div>
+													${nombreEjercicio}
+												</h6>
+												<i data-lucide="dumbbell" class="w-4 h-4 text-white/10"></i>
+											</div>
 											
-											<div class="grid grid-cols-4 gap-2 mb-3 px-3 opacity-40">
-												<span class="text-[7px] font-black uppercase tracking-widest">Serie</span>
-												<span class="text-[7px] font-black uppercase tracking-widest text-center">Peso</span>
-												<span class="text-[7px] font-black uppercase tracking-widest text-center">Reps</span>
-												<span class="text-[7px] font-black uppercase tracking-widest text-right">Pausa</span>
+											<div class="grid grid-cols-4 gap-4 mb-4 px-4 opacity-30">
+												<span class="text-[8px] font-black uppercase tracking-[0.2em]">Fase</span>
+												<span class="text-[8px] font-black uppercase tracking-[0.2em] text-center">Carga</span>
+												<span class="text-[8px] font-black uppercase tracking-[0.2em] text-center">Objetivo</span>
+												<span class="text-[8px] font-black uppercase tracking-[0.2em] text-right">Pausa</span>
 											</div>
 
-											<div class="space-y-1.5">
+											<div class="space-y-2">
 												${series.sort((a, b) => (a.numero_serie || 0) - (b.numero_serie || 0)).map(s => `
-														<div class="grid grid-cols-4 items-center bg-white/5 px-4 py-3 rounded-xl border border-white/5">
-															<span class="text-[10px] font-black text-red-600/60">#0${s.numero_serie}</span>
-															<div class="text-center font-black text-white text-[11px]">${s.peso} <span class="text-[7px] text-gray-600">KG</span></div>
-															<div class="text-center font-black text-white text-[11px]">${s.repeticiones} <span class="text-[7px] text-gray-600">REPS</span></div>
-															<div class="text-right font-black italic text-red-500 text-[9px]">${s.descanso || '-'}</div>
+														<div class="grid grid-cols-4 items-center bg-white/5 px-5 py-4 rounded-2xl border border-white/5 hover:bg-white/10 transition-all">
+															<span class="text-[11px] font-black text-red-600">S${s.numero_serie}</span>
+															<div class="text-center font-black text-white text-[12px]">${s.peso} <span class="text-[8px] text-gray-500 italic">KG</span></div>
+															<div class="text-center font-black text-white text-[12px]">${s.repeticiones} <span class="text-[8px] text-gray-500 italic">REPS</span></div>
+															<div class="text-right font-black italic text-red-500 text-[10px]">${s.descanso || '-'}</div>
 														</div>
 													`).join('')}
 											</div>
 
 											${ex.comentario ? `
-												<div class="mt-4 bg-white/2 p-3 rounded-xl border-l-2 border-red-600 flex gap-3">
-													<i data-lucide="message-square" class="w-3 h-3 text-red-600 mt-0.5 shrink-0"></i>
-													<p class="text-[9px] text-gray-400 italic leading-relaxed font-medium">${ex.comentario}</p>
+												<div class="mt-5 bg-white/2 p-4 rounded-2xl border-l-2 border-red-600 flex gap-4">
+													<i data-lucide="info" class="w-4 h-4 text-red-600 mt-0.5 shrink-0"></i>
+													<p class="text-[10px] text-gray-400 italic leading-relaxed font-bold uppercase tracking-tight">${ex.comentario}</p>
 												</div>
 											` : ''}
 										</div>`;
@@ -1249,22 +1290,25 @@
 					}).join('');
 
 					return `
-					<div class="col-span-2 mb-8">
-						<div class="bg-white/2 border border-white/10 rounded-[2.5rem] overflow-hidden shadow-2xl">
-							<div class="p-8 border-b border-white/5 flex flex-col md:flex-row md:items-center justify-between gap-6 bg-gradient-to-r from-red-600/10 to-transparent">
-								<div class="flex items-center gap-5">
-									<div class="w-1.5 h-12 bg-red-600 rounded-full shadow-[0_0_15px_#dc2626]"></div>
+					<div class="col-span-2 mb-10">
+						${btnGestion}
+						<div class="bg-gradient-to-b from-white/5 to-transparent border border-white/10 rounded-[3rem] overflow-hidden shadow-2xl">
+							<div class="p-10 border-b border-white/5 flex flex-col md:flex-row md:items-center justify-between gap-8 bg-black/20">
+								<div class="flex items-center gap-6">
+									<div class="w-2 h-16 bg-red-600 rounded-full shadow-[0_0_20px_#dc2626]"></div>
 									<div>
-										<p class="text-[9px] text-gray-500 font-black uppercase tracking-[0.4em] mb-1">Misión Táctica</p>
-										<h5 class="text-2xl font-black italic uppercase text-white leading-none">${rutina.objetivo || 'Plan de Combate'}</h5>
-										<p class="text-[10px] text-gray-400 font-bold flex items-center gap-2 mt-3 italic">
-											<i data-lucide="calendar" class="w-3 h-3 text-red-600"></i> Expira: ${rutina.fecha_vencimiento || 'Indefinido'}
-										</p>
+										<p class="text-[10px] text-gray-500 font-black uppercase tracking-[0.5em] mb-2">Protocolo de Entrenamiento</p>
+										<h5 class="text-3xl font-black italic uppercase text-white leading-none tracking-tight">${rutina.objetivo || 'Fuerza Vikinga'}</h5>
+										<div class="flex items-center gap-4 mt-4">
+											<span class="text-[11px] text-gray-400 font-black flex items-center gap-2 italic uppercase">
+												<i data-lucide="calendar" class="w-4 h-4 text-red-600"></i> Caducidad: ${rutina.fecha_vencimiento || 'PERMANENTE'}
+											</span>
+										</div>
 									</div>
 								</div>
 								${statusBadge}
 							</div>
-							<div class="p-6 md:p-8">${diasHTML}</div>
+							<div class="p-8 md:p-10">${diasHTML}</div>
 						</div>
 					</div>`;
 				}).join('');
@@ -1272,12 +1316,17 @@
 				rutinaContainer.innerHTML = mainHTML;
 			} else {
 				rutinaContainer.innerHTML = `
-					<div class="col-span-2 py-20 border-2 border-dashed border-white/5 rounded-[3.5rem] text-center bg-white/2">
-						<div class="w-20 h-20 bg-red-600/10 rounded-full flex items-center justify-center mx-auto mb-6 border border-red-600/20 shadow-2xl">
-							<i data-lucide="skull" class="w-10 h-10 text-red-600 opacity-60"></i>
+					<div class="col-span-2 py-24 border-2 border-dashed border-white/5 rounded-[4rem] text-center bg-white/2 backdrop-blur-sm">
+						<div class="w-24 h-24 bg-red-600/10 rounded-full flex items-center justify-center mx-auto mb-8 border border-red-600/20 shadow-2xl">
+							<i data-lucide="skull" class="w-12 h-12 text-red-600 opacity-40"></i>
 						</div>
-						<h4 class="text-[14px] text-white font-black uppercase italic tracking-[0.2em]">Sin Plan de Batalla</h4>
-						<p class="text-[10px] text-gray-500 mt-2 font-bold max-w-xs mx-auto italic">Asigna una rutina desde el gestor para movilizar al guerrero.</p>
+						<h4 class="text-[16px] text-white font-black uppercase italic tracking-[0.3em] mb-2">Archivo Vacío</h4>
+						<p class="text-[11px] text-gray-500 mb-8 font-bold max-w-xs mx-auto italic uppercase tracking-wider">No se ha detectado un plan de batalla activo para este guerrero.</p>
+						
+						<button onclick="openRutinaEditor(${alumnoId})" 
+								class="px-10 py-5 bg-red-600 hover:bg-red-700 text-white rounded-2xl font-black uppercase italic text-[12px] shadow-xl shadow-red-900/40 transition-all transform hover:-translate-y-1">
+							Desplegar Nuevo Plan
+						</button>
 					</div>`;
 			}
 
