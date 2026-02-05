@@ -54,6 +54,10 @@ app.add_middleware(
 )
 
 # --- Funciones de Seguridad Auxiliares ---
+def get_argentina_time():
+    """Retorna la fecha y hora actual ajustada a Argentina (UTC-3)"""
+    return datetime.utcnow() - timedelta(hours=3)
+
 def verify_password(plain_password, hashed_password):
     """Verifica si la contraseña coincide (soporta múltiples algoritmos y texto plano)"""
     try:
@@ -545,8 +549,10 @@ def validar_acceso_qr(data: AccessCheck, db: Session = Depends(database.get_db))
     
     # Validación para Alumnos
     elif user.fecha_vencimiento:
-        if user.fecha_vencimiento >= date.today():
-            dias_rest = (user.fecha_vencimiento - date.today()).days
+        # Ajuste de hoy a Argentina
+        hoy_arg = get_argentina_time().date()
+        if user.fecha_vencimiento >= hoy_arg:
+            dias_rest = (user.fecha_vencimiento - hoy_arg).days
             final_response["status"] = "AUTHORIZED"
             
             # --- CORRECCIÓN DE COLORES ---
@@ -572,7 +578,7 @@ def validar_acceso_qr(data: AccessCheck, db: Session = Depends(database.get_db))
             metodo="QR SCAN",
             accion=final_response["status"],  # Campo 'accion' del modelo
             exitoso=(final_response["status"] == "AUTHORIZED"), # Campo 'exitoso'
-            fecha=models.get_local_time()  # <--- HORA LOCAL ARGENTINA
+            fecha=get_argentina_time() # <--- HORA ARGENTINA
         )
         db.add(nuevo_acceso)
         db.commit()
@@ -592,9 +598,6 @@ def get_historial_accesos(db: Session = Depends(database.get_db)):
     try:
         accesos = db.query(models.Acceso).order_by(models.Acceso.id.desc()).limit(50).all()
         
-        # PRIORIDAD 0: CORRECCIÓN HORARIA.
-        # Ya no hace falta restar horas aquí manualmente porque se guarda con la hora local.
-
         return [{
             "id": a.id,
             "nombre": a.nombre,
@@ -617,9 +620,10 @@ def get_alumnos(db: Session = Depends(database.get_db)):
         joinedload(models.Usuario.plan).joinedload(models.Plan.tipo)
     ).join(models.Perfil).filter(func.lower(models.Perfil.nombre) == "alumno").all()
     
+    hoy_arg = get_argentina_time().date()
     for al in alumnos:
         al.rol_nombre = al.perfil.nombre if al.perfil else "Alumno"
-        if al.fecha_vencimiento and al.fecha_vencimiento < date.today():
+        if al.fecha_vencimiento and al.fecha_vencimiento < hoy_arg:
             al.estado_cuenta = "Vencido"
         
     return alumnos
@@ -631,7 +635,8 @@ def get_ficha_tecnica(id: int, db: Session = Depends(database.get_db)):
         raise HTTPException(status_code=404, detail="Alumno no encontrado")
     
     estado = al.estado_cuenta
-    if al.fecha_vencimiento and al.fecha_vencimiento < date.today():
+    hoy_arg = get_argentina_time().date()
+    if al.fecha_vencimiento and al.fecha_vencimiento < hoy_arg:
         estado = "Vencido"
 
     return {
@@ -658,6 +663,7 @@ def create_alumno(alumno: AlumnoUpdate, db: Session = Depends(database.get_db)):
         raw_password = str(alumno.password).strip() if alumno.password else str(alumno.dni).strip()
         hashed_pass = get_password_hash(raw_password)
 
+        hoy_arg = get_argentina_time().date()
         new_al = models.Usuario(
             nombre_completo=alumno.nombre_completo, 
             dni=alumno.dni, 
@@ -665,7 +671,7 @@ def create_alumno(alumno: AlumnoUpdate, db: Session = Depends(database.get_db)):
             plan_id=alumno.plan_id, 
             perfil_id=perfil.id, 
             password_hash=hashed_pass,
-            fecha_ultima_renovacion=alumno.fecha_ultima_renovacion or date.today(), 
+            fecha_ultima_renovacion=alumno.fecha_ultima_renovacion or hoy_arg, 
             fecha_vencimiento=alumno.fecha_vencimiento,
             fecha_nacimiento=alumno.fecha_nacimiento,
             edad=alumno.edad,
@@ -737,11 +743,12 @@ def book_clase(data: ReservaCreate, db: Session = Depends(database.get_db)):
     if not user:
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
 
+    hoy_arg = get_argentina_time().date()
     if user.plan:
         limite_mensual = user.plan.clases_mensuales
         if limite_mensual < 999:
-            mes_actual = date.today().month
-            an_actual = date.today().year
+            mes_actual = hoy_arg.month
+            an_actual = hoy_arg.year
             
             count_reservas = db.query(models.Reserva).filter(
                 models.Reserva.usuario_id == user.id,
@@ -781,7 +788,7 @@ def book_clase(data: ReservaCreate, db: Session = Depends(database.get_db)):
     new_res = models.Reserva(
         usuario_id=data.usuario_id,
         clase_id=data.clase_id,
-        fecha_reserva=date.today(),
+        fecha_reserva=hoy_arg,
         horario=data.horario,       
         dia_semana=data.dia_semana 
     )
@@ -999,17 +1006,7 @@ def get_caja_resumen(db: Session = Depends(database.get_db)):
 
 @app.get("/api/caja/movimientos", tags=["Finanzas"])
 def get_movimientos(db: Session = Depends(database.get_db)):
-    """Trae movimientos de caja ordenados por fecha."""
-    movs = db.query(models.MovimientoCaja).order_by(models.MovimientoCaja.fecha.desc()).limit(20).all()
-    return [{
-        "id": m.id,
-        "tipo": m.tipo,
-        "monto": float(m.monto),
-        "descripcion": m.descripcion,
-        "metodo_pago": m.metodo_pago,
-        "cuotas": m.cuotas,
-        "fecha": m.fecha.strftime("%H:%M - %d/%m/%y") if m.fecha else "S/D"
-    } for m in movs]
+    return db.query(models.MovimientoCaja).order_by(models.MovimientoCaja.fecha.desc()).limit(20).all()
 
 @app.post("/api/caja/movimiento", tags=["Finanzas"])
 def create_movimiento(data: MovimientoCajaCreate, db: Session = Depends(database.get_db)):
@@ -1018,7 +1015,7 @@ def create_movimiento(data: MovimientoCajaCreate, db: Session = Depends(database
         monto=abs(data.monto), # Forzar positivo
         descripcion=data.descripcion,
         metodo_pago=data.metodo_pago,
-        fecha=models.get_local_time() # <--- HORA LOCAL ARGENTINA
+        fecha=get_argentina_time() # <--- HORA ARGENTINA
     )
     db.add(new_mov)
     db.commit()
@@ -1038,7 +1035,7 @@ def crear_movimiento_caja(mov: MovimientoCreate, db: Session = Depends(database.
         tipo=tipo_final,        # Aquí definimos si entró o salió plata
         metodo_pago=mov.metodo_pago,
         cuotas=mov.cuotas,      # <--- AGREGADO: Aquí se guarda el valor (3, 6, 12, etc.)
-        fecha=models.get_local_time() # <--- HORA LOCAL ARGENTINA
+        fecha=get_argentina_time() # <--- HORA ARGENTINA
     )
     
     db.add(nuevo_movimiento)
@@ -1067,13 +1064,16 @@ def procesar_cobro(data: TransactionCreate, db: Session = Depends(database.get_d
         if not detalle:
             detalle = f"Cobro: {data.tipo}"
 
+        # Hora Argentina para la transacción
+        ahora_arg = get_argentina_time()
+
         nueva_transaccion = models.MovimientoCaja(
             tipo="Ingreso",  # Siempre es ingreso
             monto=monto_positivo,
             descripcion=detalle,
             metodo_pago=data.metodo_pago,
             cuotas=data.cuotas,
-            fecha=models.get_local_time() # <--- HORA LOCAL ARGENTINA
+            fecha=ahora_arg
         )
         
         db.add(nueva_transaccion)
@@ -1095,7 +1095,7 @@ def procesar_cobro(data: TransactionCreate, db: Session = Depends(database.get_d
             plan = db.query(models.Plan).options(joinedload(models.Plan.tipo)).filter(models.Plan.id == data.producto_id).first()
 
             if alumno and plan:
-                hoy = date.today()
+                hoy_arg_date = ahora_arg.date()
                 
                 # Definir días de duración (por defecto 30 si el tipo de plan no lo tiene)
                 dias_duracion = 30
@@ -1105,11 +1105,11 @@ def procesar_cobro(data: TransactionCreate, db: Session = Depends(database.get_d
                 # LÓGICA DE RENOVACIÓN INTELIGENTE:
                 # Si el alumno ya venció (o vence hoy), empezamos a contar desde HOY.
                 # Si aún NO venció, sumamos los días a su fecha de vencimiento actual.
-                base_fecha = hoy
-                if alumno.fecha_vencimiento and alumno.fecha_vencimiento > hoy:
+                base_fecha = hoy_arg_date
+                if alumno.fecha_vencimiento and alumno.fecha_vencimiento > hoy_arg_date:
                     base_fecha = alumno.fecha_vencimiento
                 
-                alumno.fecha_ultima_renovacion = hoy
+                alumno.fecha_ultima_renovacion = hoy_arg_date
                 alumno.fecha_vencimiento = base_fecha + timedelta(days=dias_duracion)
                 alumno.estado_cuenta = "Al día"
                 alumno.plan_id = plan.id
@@ -1164,6 +1164,9 @@ def create_plan_rutina(data: PlanRutinaCreate, db: Session = Depends(database.ge
             models.PlanRutina.usuario_id == data.usuario_id
         ).update({"activo": False}, synchronize_session=False)
         
+        # Fecha de creación ajustada a Argentina
+        hoy_arg = get_argentina_time().date()
+
         nuevo_plan = models.PlanRutina(
             usuario_id=data.usuario_id,
             nombre_grupo=data.nombre_grupo,
@@ -1171,7 +1174,7 @@ def create_plan_rutina(data: PlanRutinaCreate, db: Session = Depends(database.ge
             objetivo=data.objetivo,
             fecha_vencimiento=data.fecha_vencimiento,
             activo=True,
-            fecha_creacion=date.today()
+            fecha_creacion=hoy_arg
         )
         db.add(nuevo_plan)
         db.flush() 

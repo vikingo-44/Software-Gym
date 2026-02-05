@@ -3,10 +3,6 @@ from sqlalchemy.orm import relationship
 from database import Base
 import datetime
 
-# Función para ajustar la hora del servidor (UTC) a Argentina (UTC-3)
-def get_local_time():
-    return datetime.datetime.now() - datetime.timedelta(hours=3)
-
 class Perfil(Base):
     __tablename__ = "perfiles"
     id = Column(Integer, primary_key=True)
@@ -104,7 +100,7 @@ class MovimientoCaja(Base):
     monto = Column(Float)
     descripcion = Column(String)
     metodo_pago = Column(String, default="Efectivo") # <-- Agregado para reportes
-    fecha = Column(DateTime, default=get_local_time) # <--- CAMBIO: Ahora usa hora local de Argentina
+    fecha = Column(DateTime, default=datetime.datetime.now)
     cuotas = Column(Integer, default=1)
 
 # =========================================
@@ -115,7 +111,7 @@ class Acceso(Base):
     __tablename__ = "historial_accesos"
     id = Column(Integer, primary_key=True)
     usuario_id = Column(Integer, ForeignKey("usuarios.id"), nullable=False)
-    fecha = Column(DateTime, default=get_local_time) # <--- CAMBIO: Ahora usa hora local de Argentina
+    fecha = Column(DateTime, default=datetime.datetime.now)
     accion = Column(String(50), nullable=False) # 'AUTHORIZED', 'DENIED'
     ip_address = Column(String(45), nullable=True)
     user_agent = Column(Text, nullable=True)
