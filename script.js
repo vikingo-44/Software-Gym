@@ -1136,11 +1136,16 @@
 		async function openFichaTecnica(alumnoId) {
 			const rutinaContainer = document.getElementById('ficha-rutina-container');
 
-			// Estado de carga visual
+			// Estado de carga visual mejorado
 			rutinaContainer.innerHTML = `
-				<div class="col-span-2 py-10 flex flex-col items-center justify-center space-y-4">
-					<div class="w-8 h-8 border-4 border-red-600 border-t-transparent rounded-full animate-spin"></div>
-					<p class="text-[10px] text-gray-500 italic uppercase tracking-widest animate-pulse text-center">Cargando datos del alumno...</p>
+				<div class="col-span-2 py-20 flex flex-col items-center justify-center space-y-6">
+					<div class="relative">
+						<div class="w-12 h-12 border-4 border-red-600/20 border-t-red-600 rounded-full animate-spin"></div>
+						<div class="absolute inset-0 flex items-center justify-center">
+							<div class="w-2 h-2 bg-red-600 rounded-full animate-ping"></div>
+						</div>
+					</div>
+					<p class="text-[10px] text-gray-500 font-black uppercase italic tracking-[0.3em] animate-pulse">Sincronizando datos de combate...</p>
 				</div>
 			`;
 
@@ -1151,14 +1156,23 @@
 				return;
 			}
 
-			// Llenar cabecera del modal
+			// --- RELLENADO DE CABECERA (ESTADÍSTICAS FÍSICAS REFORMATEADAS) ---
 			if (document.getElementById('ficha-nombre')) document.getElementById('ficha-nombre').innerText = res.nombre_completo || 'Sin Nombre';
 			if (document.getElementById('ficha-dni')) document.getElementById('ficha-dni').innerText = "DNI: " + (res.dni || '---');
-			if (document.getElementById('ficha-plan')) document.getElementById('ficha-plan').innerText = "Plan: " + (res.plan || 'Sin Plan Activo');
-			if (document.getElementById('ficha-cuenta')) document.getElementById('ficha-cuenta').innerText = "Estado: " + (res.estado_cuenta || 'Inactivo');
-			if (document.getElementById('ficha-peso')) document.getElementById('ficha-peso').innerText = (res.peso || 0) + " kg";
-			if (document.getElementById('ficha-altura')) document.getElementById('ficha-altura').innerText = (res.altura || 0) + " cm";
-			if (document.getElementById('ficha-imc')) document.getElementById('ficha-imc').innerText = res.imc || 0;
+			if (document.getElementById('ficha-plan')) document.getElementById('ficha-plan').innerText = res.plan || 'Sin Plan Activo';
+			if (document.getElementById('ficha-cuenta')) document.getElementById('ficha-cuenta').innerText = res.estado_cuenta || 'Inactivo';
+			
+			// Formato de "Badge" para el estado de cuenta
+			const elCuenta = document.getElementById('ficha-cuenta');
+			if (elCuenta) {
+				const esVencido = (res.estado_cuenta || '').toLowerCase().includes('vencido');
+				elCuenta.className = `px-3 py-1 rounded-full text-[9px] font-black uppercase italic border ${esVencido ? 'bg-red-600/20 text-red-500 border-red-500/30' : 'bg-green-600/20 text-green-500 border-green-500/30'}`;
+			}
+
+			// Datos físicos con diseño de "Dashboard"
+			if (document.getElementById('ficha-peso')) document.getElementById('ficha-peso').innerHTML = `<span class="text-white font-black">${res.peso || 0}</span> <span class="text-[10px] text-gray-500">KG</span>`;
+			if (document.getElementById('ficha-altura')) document.getElementById('ficha-altura').innerHTML = `<span class="text-white font-black">${res.altura || 0}</span> <span class="text-[10px] text-gray-500">CM</span>`;
+			if (document.getElementById('ficha-imc')) document.getElementById('ficha-imc').innerHTML = `<span class="text-red-500 font-black">${res.imc || 0}</span>`;
 
 			// 2. Obtener Rutina
 			let rutinaData = await apiFetch(`/rutinas/usuario/${alumnoId}`);
@@ -1174,71 +1188,73 @@
 					const esActiva = fechaVenc ? hoy <= fechaVenc : true;
 
 					const statusBadge = esActiva 
-						? `<span class="bg-green-600/20 text-green-500 border border-green-500/30 px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest animate-pulse">Activa</span>`
-						: `<span class="bg-red-600/20 text-red-500 border border-red-500/30 px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest">Vencida</span>`;
+						? `<span class="bg-green-600 text-white px-3 py-1 rounded-lg text-[9px] font-black uppercase italic shadow-[0_0_15px_rgba(22,163,74,0.4)]">En Curso</span>`
+						: `<span class="bg-gray-800 text-gray-500 border border-white/5 px-3 py-1 rounded-lg text-[9px] font-black uppercase italic">Finalizada</span>`;
 
 					const diasHTML = (rutina.dias || []).map((d, dIdx) => {
 						const diaId = `ficha-dia-${rIdx}-${dIdx}`;
 						return `
-						<div class="glass-card rounded-2xl border-white/5 overflow-hidden mb-2 transition-all">
-							<!-- Cabecera del Día (Acordeón) -->
-							<button onclick="toggleFichaElement('${diaId}')" class="w-full flex items-center justify-between p-4 bg-white/2 hover:bg-white/5 transition-colors group text-left">
-								<div class="flex items-center gap-3">
-									<div class="w-2 h-2 rounded-full ${esActiva ? 'bg-green-600 shadow-[0_0_8px_#16a34a]' : 'bg-red-600 shadow-[0_0_8px_#dc2626]'}"></div>
-									<span class="text-[11px] font-black italic uppercase tracking-wider text-gray-300 group-hover:text-red-500 transition-colors">${d.nombre_dia}</span>
+						<div class="mb-4 group">
+							<!-- Cabecera del Día (Diseño más robusto) -->
+							<button onclick="toggleFichaElement('${diaId}')" 
+									class="w-full flex items-center justify-between p-5 bg-white/2 hover:bg-white/5 border border-white/5 rounded-2xl transition-all group-hover:border-red-600/30">
+								<div class="flex items-center gap-4">
+									<div class="w-10 h-10 rounded-xl bg-black/40 border border-white/10 flex items-center justify-center text-red-600 font-black italic">
+										${dIdx + 1}
+									</div>
+									<div>
+										<h6 class="text-[12px] font-black uppercase italic tracking-wider text-white">${d.nombre_dia}</h6>
+										<p class="text-[8px] text-gray-500 font-bold uppercase">${(d.ejercicios || []).length} Ejercicios Programados</p>
+									</div>
 								</div>
-								<i data-lucide="chevron-down" class="w-4 h-4 text-gray-600 transition-transform duration-500" id="icon-${diaId}"></i>
+								<i data-lucide="chevron-down" class="w-5 h-5 text-gray-600 transition-transform duration-500" id="icon-${diaId}"></i>
 							</button>
 							
-							<!-- Contenido de Ejercicios del Día -->
-							<div id="${diaId}" class="hidden p-4 space-y-4 bg-black/20 border-t border-white/5">
+							<!-- Contenido de Ejercicios -->
+							<div id="${diaId}" class="hidden mt-2 p-2 space-y-3">
 								${(d.ejercicios || d.ejercicios_list || []).map(ex => {
 									const nombreEjercicio = ex.ejercicio_obj?.nombre || ex.nombre || ex.ejercicio?.nombre || "Ejercicio Sin Nombre";
 									const series = ex.series_detalle || ex.series || [];
 									
 									return `
-										<div class="flex flex-col border-l-2 border-red-600/40 pl-4 py-1.5 hover:bg-white/5 rounded-r-xl transition-all mb-4">
-											<p class="text-[11px] font-black uppercase italic text-white tracking-tight mb-3">${nombreEjercicio}</p>
+										<div class="bg-black/30 border border-white/5 rounded-2xl p-5 hover:border-white/10 transition-all">
+											<div class="flex items-center justify-between mb-4 pb-3 border-b border-white/5">
+												<h6 class="text-[11px] font-black uppercase italic text-red-500 tracking-tight">${nombreEjercicio}</h6>
+												<i data-lucide="dumbbell" class="w-3 h-3 text-white/20"></i>
+											</div>
 											
-											<!-- CAMBIO CLAVE: Cabecera de columnas para las series -->
-											<div class="grid grid-cols-4 gap-2 mb-2 px-2 opacity-50">
-												<span class="text-[8px] font-bold uppercase text-red-600 tracking-wider">Serie</span>
-												<span class="text-[8px] font-bold uppercase text-gray-400 text-center tracking-wider">Reps</span>
-												<span class="text-[8px] font-bold uppercase text-gray-400 text-center tracking-wider">Peso</span>
-												<span class="text-[8px] font-bold uppercase text-gray-400 text-right tracking-wider">Pausa</span>
+											<!-- Cabecera de Columnas -->
+											<div class="grid grid-cols-4 gap-2 mb-3 px-2">
+												<span class="text-[7px] font-black uppercase text-gray-500 tracking-widest">Nº Serie</span>
+												<span class="text-[7px] font-black uppercase text-gray-500 text-center tracking-widest">Carga</span>
+												<span class="text-[7px] font-black uppercase text-gray-500 text-center tracking-widest">Objetivo</span>
+												<span class="text-[7px] font-black uppercase text-gray-500 text-right tracking-widest">Pausa</span>
 											</div>
 
-											<!-- CAMBIO CLAVE: Lista de Series en Filas (Rows) -->
-											<div class="flex flex-col gap-1">
+											<!-- Filas de Series -->
+											<div class="space-y-1.5">
 												${series
 													.sort((a, b) => (a.numero_serie || 0) - (b.numero_serie || 0))
 													.map(s => `
-														<div class="grid grid-cols-4 items-center bg-white/5 px-3 py-2 rounded-lg border border-white/5 hover:border-red-600/30 transition-colors">
-															<!-- Nro Serie -->
-															<span class="text-[9px] font-black text-white uppercase">#${s.numero_serie}</span>
-															
-															<!-- Reps -->
+														<div class="grid grid-cols-4 items-center bg-white/2 px-3 py-2.5 rounded-xl border border-white/5">
+															<span class="text-[10px] font-black text-gray-400">#0${s.numero_serie}</span>
 															<div class="text-center">
-																<span class="text-[11px] font-black text-white">${s.repeticiones}</span>
+																<span class="text-[11px] font-black text-white">${s.peso}</span> <span class="text-[7px] text-gray-600 uppercase">kg</span>
 															</div>
-															
-															<!-- Peso -->
 															<div class="text-center">
-																<span class="text-[11px] font-black text-white">${s.peso}</span> <span class="text-[8px] text-gray-500">kg</span>
+																<span class="text-[11px] font-black text-white">${s.repeticiones}</span> <span class="text-[7px] text-gray-600 uppercase">reps</span>
 															</div>
-															
-															<!-- Descanso -->
 															<div class="text-right">
-																<span class="text-[9px] text-gray-400 italic">${s.descanso || '-'}</span>
+																<span class="text-[9px] text-red-500 font-bold italic">${s.descanso || '-'}</span>
 															</div>
 														</div>
 													`).join('')}
 											</div>
 
 											${ex.comentario ? `
-												<div class="mt-3 bg-black/40 p-2 rounded-lg border border-white/5 flex gap-2">
-													<i data-lucide="info" class="w-2.5 h-2.5 text-red-600 mt-0.5 shrink-0"></i>
-													<p class="text-[8px] text-gray-400 italic font-medium leading-tight">${ex.comentario}</p>
+												<div class="mt-4 bg-red-600/5 p-3 rounded-xl border border-red-600/10 flex gap-3">
+													<i data-lucide="message-square" class="w-3 h-3 text-red-600 mt-0.5 shrink-0"></i>
+													<p class="text-[9px] text-gray-400 italic font-medium leading-relaxed">${ex.comentario}</p>
 												</div>
 											` : ''}
 										</div>
@@ -1249,27 +1265,28 @@
 						`;
 					}).join('');
 
-					// Estructura general de la tarjeta de rutina
+					// Estructura de la rutina (Card Principal)
 					return `
-					<div class="col-span-2 mb-4">
-						<div class="bg-white/5 border border-white/10 rounded-[2rem] overflow-hidden shadow-xl">
-							<button onclick="toggleFichaElement('${objetivoId}')" class="w-full flex items-center justify-between p-6 hover:bg-white/5 transition-all text-left">
-								<div class="flex items-center gap-4">
-									<div class="w-1 h-10 bg-red-600 rounded-full"></div>
+					<div class="col-span-2 mb-8">
+						<div class="bg-black/40 border border-white/10 rounded-[2.5rem] overflow-hidden shadow-2xl">
+							<div class="p-8 border-b border-white/5 flex flex-col md:flex-row md:items-center justify-between gap-6 bg-gradient-to-r from-red-600/5 to-transparent">
+								<div class="flex items-center gap-5">
+									<div class="w-1.5 h-12 bg-red-600 rounded-full shadow-[0_0_15px_#dc2626]"></div>
 									<div>
-										<p class="text-[8px] text-gray-500 font-black uppercase tracking-[0.3em] mb-1">Plan de Entrenamiento</p>
-										<h5 class="text-lg font-black italic uppercase viking-red leading-none">${rutina.objetivo || 'Rutina de Musculación'}</h5>
-										<p class="text-[9px] text-gray-400 font-bold italic mt-1 flex items-center gap-1">
-											<i data-lucide="calendar" class="w-3 h-3"></i> Vence: ${rutina.fecha_vencimiento || 'Indefinido'}
-										</p>
+										<p class="text-[9px] text-gray-500 font-black uppercase tracking-[0.4em] mb-1">Misión Principal</p>
+										<h5 class="text-2xl font-black italic uppercase text-white leading-none">${rutina.objetivo || 'Entrenamiento General'}</h5>
+										<div class="flex items-center gap-3 mt-3">
+											<span class="text-[10px] text-gray-400 font-bold flex items-center gap-1.5">
+												<i data-lucide="calendar" class="w-3 h-3 text-red-600"></i> Expira: ${rutina.fecha_vencimiento || 'Sin Límite'}
+											</span>
+										</div>
 									</div>
 								</div>
 								<div class="flex items-center gap-4">
 									${statusBadge}
-									<i data-lucide="chevron-down" class="w-6 h-6 text-red-600 transition-transform duration-500" id="icon-${objetivoId}"></i>
 								</div>
-							</button>
-							<div id="${objetivoId}" class="hidden p-4 bg-black/30 border-t border-white/5">
+							</div>
+							<div class="p-6 md:p-8">
 								${diasHTML}
 							</div>
 						</div>
@@ -1280,12 +1297,12 @@
 				rutinaContainer.innerHTML = mainHTML;
 			} else {
 				rutinaContainer.innerHTML = `
-					<div class="col-span-2 p-16 border border-dashed border-white/10 rounded-[3rem] text-center bg-white/2">
-						<div class="w-16 h-16 viking-bg-red/10 rounded-full flex items-center justify-center mx-auto mb-6">
-							<i data-lucide="skull" class="w-8 h-8 opacity-40 text-red-600"></i>
+					<div class="col-span-2 py-20 border-2 border-dashed border-white/5 rounded-[3rem] text-center bg-white/2">
+						<div class="w-20 h-20 bg-red-600/10 rounded-full flex items-center justify-center mx-auto mb-6 border border-red-600/20">
+							<i data-lucide="alert-triangle" class="w-10 h-10 text-red-600 opacity-50"></i>
 						</div>
-						<p class="text-[12px] text-gray-600 font-black uppercase italic tracking-[0.2em]">No se ha detectado un plan de batalla activo</p>
-						<p class="text-[10px] text-gray-700 mt-2 font-bold">Asigna una rutina desde el gestor para ver los datos aquí.</p>
+						<h4 class="text-[14px] text-white font-black uppercase italic tracking-[0.2em]">Sin Plan de Batalla</h4>
+						<p class="text-[10px] text-gray-500 mt-2 font-bold max-w-xs mx-auto">Este alumno aún no tiene una rutina asignada. Dirígete al gestor para crear una.</p>
 					</div>
 				`;
 			}
