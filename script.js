@@ -1136,78 +1136,33 @@
 		async function openFichaTecnica(alumnoId) {
 			const rutinaContainer = document.getElementById('ficha-rutina-container');
 
-			// 1. Estado de carga visual (Estética Vikinga de Alto Impacto)
+			// Estado de carga visual
 			rutinaContainer.innerHTML = `
-				<div class="col-span-2 py-24 flex flex-col items-center justify-center space-y-6">
-					<div class="relative">
-						<div class="w-16 h-16 border-4 border-red-600/10 border-t-red-600 rounded-full animate-spin"></div>
-						<div class="absolute inset-0 flex items-center justify-center">
-							<div class="w-3 h-3 bg-red-600 rounded-full animate-ping"></div>
-						</div>
-					</div>
-					<div class="text-center">
-						<p class="text-[11px] text-red-600 font-black uppercase italic tracking-[0.4em] animate-pulse mb-2">Sincronizando Archivos</p>
-						<p class="text-[9px] text-gray-600 font-bold uppercase tracking-widest">Accediendo a la base de datos de combate...</p>
-					</div>
+				<div class="col-span-2 py-10 flex flex-col items-center justify-center space-y-4">
+					<div class="w-8 h-8 border-4 border-red-600 border-t-transparent rounded-full animate-spin"></div>
+					<p class="text-[10px] text-gray-500 italic uppercase tracking-widest animate-pulse text-center">Cargando datos del alumno...</p>
 				</div>
 			`;
 
-			// 2. Obtener datos del alumno
+			// 1. Obtener datos del alumno
 			const res = await apiFetch(`/alumnos/${alumnoId}/ficha`);
 			if (res.error) {
 				showVikingToast("Error al conectar con el servidor", true);
 				return;
 			}
 
-			// Cabecera Principal (Actualización Segura)
-			const updateText = (id, text) => { if (document.getElementById(id)) document.getElementById(id).innerText = text; };
-			updateText('ficha-nombre', res.nombre_completo || 'Sin Nombre');
-			updateText('ficha-dni', "ID GUERRERO: " + (res.dni || '---'));
-			updateText('ficha-plan', res.plan || 'Sin Plan Activo');
-			
-			// FIX DEL BADGE: Contenedor controlado para que no se estire
-			const elCuenta = document.getElementById('ficha-cuenta');
-			if (elCuenta) {
-				const esVencido = (res.estado_cuenta || '').toLowerCase().includes('vencido');
-				elCuenta.innerHTML = `
-					<div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border text-[9px] font-black uppercase italic whitespace-nowrap ${esVencido ? 'bg-red-600/20 text-red-500 border-red-500/30' : 'bg-green-600/20 text-green-500 border-green-500/30'}">
-						<div class="w-1.5 h-1.5 rounded-full ${esVencido ? 'bg-red-500' : 'bg-green-500 animate-pulse'}"></div>
-						${res.estado_cuenta || 'Inactivo'}
-					</div>
-				`;
-				elCuenta.className = "flex justify-start"; 
-			}
+			// Llenar cabecera del modal
+			if (document.getElementById('ficha-nombre')) document.getElementById('ficha-nombre').innerText = res.nombre_completo || 'Sin Nombre';
+			if (document.getElementById('ficha-dni')) document.getElementById('ficha-dni').innerText = "DNI: " + (res.dni || '---');
+			if (document.getElementById('ficha-plan')) document.getElementById('ficha-plan').innerText = "Plan: " + (res.plan || 'Sin Plan Activo');
+			if (document.getElementById('ficha-cuenta')) document.getElementById('ficha-cuenta').innerText = "Estado: " + (res.estado_cuenta || 'Inactivo');
+			if (document.getElementById('ficha-peso')) document.getElementById('ficha-peso').innerText = (res.peso || 0) + " kg";
+			if (document.getElementById('ficha-altura')) document.getElementById('ficha-altura').innerText = (res.altura || 0) + " cm";
+			if (document.getElementById('ficha-imc')) document.getElementById('ficha-imc').innerText = res.imc || 0;
 
-			// Dashboard Biométrico (Widgets de Dashboard)
-			const formatStat = (val, unit, label) => `
-				<div class="bg-white/5 border border-white/5 p-5 rounded-2xl hover:border-red-600/30 transition-all group relative overflow-hidden">
-					<div class="absolute top-0 left-0 w-1 h-full bg-red-600/20 group-hover:bg-red-600 transition-all"></div>
-					<p class="text-[8px] text-gray-500 font-black uppercase tracking-widest mb-1 group-hover:text-red-500 transition-colors">${label}</p>
-					<p class="text-xl font-black italic text-white">${val} <span class="text-[10px] text-gray-600 font-bold uppercase">${unit}</span></p>
-				</div>
-			`;
-
-			if (document.getElementById('ficha-peso')) document.getElementById('ficha-peso').innerHTML = formatStat(res.peso || 0, 'KG', 'Masa Corporal');
-			if (document.getElementById('ficha-altura')) document.getElementById('ficha-altura').innerHTML = formatStat(res.altura || 0, 'CM', 'Estatura');
-			
-			const imcVal = parseFloat(res.imc) || 0;
-			const imcColor = imcVal > 25 ? 'text-red-600' : (imcVal < 18 ? 'text-yellow-500' : 'text-green-500');
-			if (document.getElementById('ficha-imc')) {
-				document.getElementById('ficha-imc').innerHTML = formatStat(imcVal, 'IMC', 'Índice Corpóreo', imcColor);
-			}
-
-			// 3. Obtener Rutina
+			// 2. Obtener Rutina
 			let rutinaData = await apiFetch(`/rutinas/usuario/${alumnoId}`);
 			const rutinas = Array.isArray(rutinaData) ? rutinaData : (rutinaData && !rutinaData.error ? [rutinaData] : []);
-
-			// BOTÓN DE GESTIÓN RÁPIDA (Siempre presente para fluidez)
-			const btnGestion = `
-				<button onclick="openRutinaEditor(${alumnoId})" 
-						class="w-full mb-8 py-5 bg-red-600 hover:bg-red-700 text-white rounded-2xl font-black uppercase italic text-[11px] shadow-lg shadow-red-900/40 transition-all flex items-center justify-center gap-3 group active:scale-95">
-					<i data-lucide="edit-3" class="w-4 h-4 group-hover:rotate-12 transition-transform"></i>
-					Gestionar Plan de Entrenamiento
-				</button>
-			`;
 
 			if (rutinas.length > 0) {
 				const hoy = new Date();
@@ -1219,116 +1174,124 @@
 					const esActiva = fechaVenc ? hoy <= fechaVenc : true;
 
 					const statusBadge = esActiva 
-						? `<span class="bg-green-600 text-white px-4 py-1.5 rounded-xl text-[10px] font-black uppercase italic shadow-[0_0_20px_rgba(22,163,74,0.3)]">ACTIVA</span>`
-						: `<span class="bg-gray-800 text-gray-500 border border-white/5 px-4 py-1.5 rounded-xl text-[10px] font-black uppercase italic">VENCIDA</span>`;
+						? `<span class="bg-green-600/20 text-green-500 border border-green-500/30 px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest animate-pulse">Activa</span>`
+						: `<span class="bg-red-600/20 text-red-500 border border-red-500/30 px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest">Vencida</span>`;
 
 					const diasHTML = (rutina.dias || []).map((d, dIdx) => {
 						const diaId = `ficha-dia-${rIdx}-${dIdx}`;
 						return `
-						<div class="mb-4">
-							<button onclick="toggleFichaElement('${diaId}')" 
-									class="w-full flex items-center justify-between p-6 bg-white/2 hover:bg-white/5 border border-white/5 rounded-[1.5rem] transition-all group border-l-4 border-l-transparent hover:border-l-red-600">
-								<div class="flex items-center gap-5">
-									<div class="w-12 h-12 rounded-2xl bg-black flex items-center justify-center text-red-600 font-black italic text-lg shadow-xl">${dIdx + 1}</div>
-									<div class="text-left">
-										<h6 class="text-[13px] font-black uppercase italic tracking-wider text-white">${d.nombre_dia}</h6>
-										<p class="text-[9px] text-gray-500 font-bold uppercase tracking-widest">${(d.ejercicios || []).length} TÉCNICAS ASIGNADAS</p>
-									</div>
+						<div class="glass-card rounded-2xl border-white/5 overflow-hidden mb-2 transition-all">
+							<!-- Cabecera del Día (Acordeón) -->
+							<button onclick="toggleFichaElement('${diaId}')" class="w-full flex items-center justify-between p-4 bg-white/2 hover:bg-white/5 transition-colors group text-left">
+								<div class="flex items-center gap-3">
+									<div class="w-2 h-2 rounded-full ${esActiva ? 'bg-green-600 shadow-[0_0_8px_#16a34a]' : 'bg-red-600 shadow-[0_0_8px_#dc2626]'}"></div>
+									<span class="text-[11px] font-black italic uppercase tracking-wider text-gray-300 group-hover:text-red-500 transition-colors">${d.nombre_dia}</span>
 								</div>
-								<i data-lucide="chevron-down" class="w-6 h-6 text-gray-700 transition-transform duration-500" id="icon-${diaId}"></i>
+								<i data-lucide="chevron-down" class="w-4 h-4 text-gray-600 transition-transform duration-500" id="icon-${diaId}"></i>
 							</button>
 							
-							<div id="${diaId}" class="hidden mt-4 space-y-4 px-2">
+							<!-- Contenido de Ejercicios del Día -->
+							<div id="${diaId}" class="hidden p-4 space-y-4 bg-black/20 border-t border-white/5">
 								${(d.ejercicios || d.ejercicios_list || []).map(ex => {
-									const nombreEjercicio = ex.ejercicio_obj?.nombre || ex.nombre || ex.ejercicio?.nombre || "Técnica Vikinga";
+									const nombreEjercicio = ex.ejercicio_obj?.nombre || ex.nombre || ex.ejercicio?.nombre || "Ejercicio Sin Nombre";
 									const series = ex.series_detalle || ex.series || [];
 									
 									return `
-										<div class="bg-black/40 border border-white/5 rounded-[2rem] p-7 shadow-2xl relative overflow-hidden group">
-											<div class="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
-												<i data-lucide="dumbbell" class="w-12 h-12 text-white"></i>
-											</div>
-											<div class="flex items-center justify-between mb-6">
-												<h6 class="text-[12px] font-black uppercase italic text-white tracking-tight flex items-center gap-3">
-													<div class="w-2 h-2 bg-red-600 rounded-full shadow-[0_0_8px_#dc2626]"></div>
-													${nombreEjercicio}
-												</h6>
-											</div>
+										<div class="flex flex-col border-l-2 border-red-600/40 pl-4 py-1.5 hover:bg-white/5 rounded-r-xl transition-all mb-4">
+											<p class="text-[11px] font-black uppercase italic text-white tracking-tight mb-3">${nombreEjercicio}</p>
 											
-											<div class="grid grid-cols-4 gap-4 mb-4 px-4 opacity-30 text-[8px] font-black uppercase tracking-[0.2em]">
-												<span>Serie</span><span class="text-center">Carga</span><span class="text-center">Objetivo</span><span class="text-right">Pausa</span>
+											<!-- CAMBIO CLAVE: Cabecera de columnas para las series -->
+											<div class="grid grid-cols-4 gap-2 mb-2 px-2 opacity-50">
+												<span class="text-[8px] font-bold uppercase text-red-600 tracking-wider">Serie</span>
+												<span class="text-[8px] font-bold uppercase text-gray-400 text-center tracking-wider">Reps</span>
+												<span class="text-[8px] font-bold uppercase text-gray-400 text-center tracking-wider">Peso</span>
+												<span class="text-[8px] font-bold uppercase text-gray-400 text-right tracking-wider">Pausa</span>
 											</div>
 
-											<div class="space-y-2">
-												${series.sort((a, b) => (a.numero_serie || 0) - (b.numero_serie || 0)).map(s => `
-														<div class="grid grid-cols-4 items-center bg-white/5 px-5 py-4 rounded-2xl border border-white/5 hover:bg-white/10 transition-all">
-															<span class="text-[11px] font-black text-red-600">S${s.numero_serie}</span>
-															<div class="text-center font-black text-white text-[12px]">${s.peso} <span class="text-[8px] text-gray-500 italic">KG</span></div>
-															<div class="text-center font-black text-white text-[12px]">${s.repeticiones} <span class="text-[8px] text-gray-500 italic">REPS</span></div>
-															<div class="text-right font-black italic text-red-500 text-[10px]">${s.descanso || '-'}</div>
+											<!-- CAMBIO CLAVE: Lista de Series en Filas (Rows) -->
+											<div class="flex flex-col gap-1">
+												${series
+													.sort((a, b) => (a.numero_serie || 0) - (b.numero_serie || 0))
+													.map(s => `
+														<div class="grid grid-cols-4 items-center bg-white/5 px-3 py-2 rounded-lg border border-white/5 hover:border-red-600/30 transition-colors">
+															<!-- Nro Serie -->
+															<span class="text-[9px] font-black text-white uppercase">#${s.numero_serie}</span>
+															
+															<!-- Reps -->
+															<div class="text-center">
+																<span class="text-[11px] font-black text-white">${s.repeticiones}</span>
+															</div>
+															
+															<!-- Peso -->
+															<div class="text-center">
+																<span class="text-[11px] font-black text-white">${s.peso}</span> <span class="text-[8px] text-gray-500">kg</span>
+															</div>
+															
+															<!-- Descanso -->
+															<div class="text-right">
+																<span class="text-[9px] text-gray-400 italic">${s.descanso || '-'}</span>
+															</div>
 														</div>
 													`).join('')}
 											</div>
 
 											${ex.comentario ? `
-												<div class="mt-5 bg-white/2 p-4 rounded-2xl border-l-2 border-red-600 flex gap-4">
-													<i data-lucide="info" class="w-4 h-4 text-red-600 mt-0.5 shrink-0"></i>
-													<p class="text-[10px] text-gray-400 italic font-bold uppercase tracking-tight leading-relaxed">${ex.comentario}</p>
-												</div>` : ''}
-										</div>`;
+												<div class="mt-3 bg-black/40 p-2 rounded-lg border border-white/5 flex gap-2">
+													<i data-lucide="info" class="w-2.5 h-2.5 text-red-600 mt-0.5 shrink-0"></i>
+													<p class="text-[8px] text-gray-400 italic font-medium leading-tight">${ex.comentario}</p>
+												</div>
+											` : ''}
+										</div>
+									`;
 								}).join('')}
 							</div>
-						</div>`;
+						</div>
+						`;
 					}).join('');
 
+					// Estructura general de la tarjeta de rutina
 					return `
-					<div class="col-span-2 mb-10">
-						${btnGestion}
-						<div class="bg-gradient-to-b from-white/5 to-transparent border border-white/10 rounded-[3.5rem] overflow-hidden shadow-2xl">
-							<div class="p-10 border-b border-white/5 flex flex-col md:flex-row md:items-center justify-between gap-8 bg-black/20">
-								<div class="flex items-center gap-6">
-									<div class="w-2 h-16 bg-red-600 rounded-full shadow-[0_0_20px_#dc2626]"></div>
+					<div class="col-span-2 mb-4">
+						<div class="bg-white/5 border border-white/10 rounded-[2rem] overflow-hidden shadow-xl">
+							<button onclick="toggleFichaElement('${objetivoId}')" class="w-full flex items-center justify-between p-6 hover:bg-white/5 transition-all text-left">
+								<div class="flex items-center gap-4">
+									<div class="w-1 h-10 bg-red-600 rounded-full"></div>
 									<div>
-										<p class="text-[10px] text-gray-500 font-black uppercase tracking-[0.5em] mb-2">Protocolo de Combate</p>
-										<h5 class="text-3xl font-black italic uppercase text-white leading-none tracking-tight">${rutina.objetivo || 'Fuerza Vikinga'}</h5>
-										<div class="flex items-center gap-4 mt-4 text-[11px] text-gray-400 font-black italic uppercase">
-											<i data-lucide="calendar" class="w-4 h-4 text-red-600"></i> Expira: ${rutina.fecha_vencimiento || 'PERMANENTE'}
-										</div>
+										<p class="text-[8px] text-gray-500 font-black uppercase tracking-[0.3em] mb-1">Plan de Entrenamiento</p>
+										<h5 class="text-lg font-black italic uppercase viking-red leading-none">${rutina.objetivo || 'Rutina de Musculación'}</h5>
+										<p class="text-[9px] text-gray-400 font-bold italic mt-1 flex items-center gap-1">
+											<i data-lucide="calendar" class="w-3 h-3"></i> Vence: ${rutina.fecha_vencimiento || 'Indefinido'}
+										</p>
 									</div>
 								</div>
-								${statusBadge}
+								<div class="flex items-center gap-4">
+									${statusBadge}
+									<i data-lucide="chevron-down" class="w-6 h-6 text-red-600 transition-transform duration-500" id="icon-${objetivoId}"></i>
+								</div>
+							</button>
+							<div id="${objetivoId}" class="hidden p-4 bg-black/30 border-t border-white/5">
+								${diasHTML}
 							</div>
-							<div class="p-8 md:p-10">${diasHTML}</div>
 						</div>
-					</div>`;
+					</div>
+					`;
 				}).join('');
 
 				rutinaContainer.innerHTML = mainHTML;
 			} else {
-				// --- ESTADO VACÍO (ALTA DE RUTINA REINTEGRADA) ---
 				rutinaContainer.innerHTML = `
-					<div class="col-span-2 py-24 border-2 border-dashed border-white/5 rounded-[4.5rem] text-center bg-white/2 backdrop-blur-md shadow-inner">
-						<div class="w-24 h-24 bg-red-600/10 rounded-full flex items-center justify-center mx-auto mb-8 border border-red-600/20 shadow-2xl animate-bounce">
-							<i data-lucide="skull" class="w-12 h-12 text-red-600 opacity-50"></i>
+					<div class="col-span-2 p-16 border border-dashed border-white/10 rounded-[3rem] text-center bg-white/2">
+						<div class="w-16 h-16 viking-bg-red/10 rounded-full flex items-center justify-center mx-auto mb-6">
+							<i data-lucide="skull" class="w-8 h-8 opacity-40 text-red-600"></i>
 						</div>
-						<h4 class="text-[18px] text-white font-black uppercase italic tracking-[0.3em] mb-3">Expediente Vacío</h4>
-						<p class="text-[11px] text-gray-500 mb-10 font-bold max-w-xs mx-auto italic uppercase tracking-widest leading-relaxed">No se ha detectado un plan activo para este guerrero.</p>
-						<button onclick="openRutinaEditor(${alumnoId})" 
-								class="px-14 py-5 bg-red-600 hover:bg-red-700 text-white rounded-2xl font-black uppercase italic text-[12px] shadow-xl shadow-red-900/40 transition-all transform hover:-translate-y-1 active:scale-95">
-							Desplegar Primer Plan
-						</button>
-					</div>`;
+						<p class="text-[12px] text-gray-600 font-black uppercase italic tracking-[0.2em]">No se ha detectado un plan de batalla activo</p>
+						<p class="text-[10px] text-gray-700 mt-2 font-bold">Asigna una rutina desde el gestor para ver los datos aquí.</p>
+					</div>
+				`;
 			}
 
 			if (window.lucide) lucide.createIcons();
-			
-			// Abrimos el modal con seguridad contra errores de null
-			const modal = document.getElementById('modal-ficha-tecnica');
-			if (modal) {
-				modal.classList.remove('hidden');
-			} else {
-				console.error("Error: modal-ficha-tecnica no existe.");
-			}
+			openModal('modal-ficha-tecnica');
 		}
 
         function toggleFichaElement(id) {
@@ -2153,90 +2116,104 @@
         }
 
 		window.loadCaja = async function() {
-            const inputDesde = document.getElementById('caja-filtro-desde');
-            const inputHasta = document.getElementById('caja-filtro-hasta');
+			const inputDesde = document.getElementById('caja-filtro-desde');
+			const inputHasta = document.getElementById('caja-filtro-hasta');
 
-            const timezoneOffset = new Date().getTimezoneOffset() * 60000;
-            const hoyLocal = new Date(Date.now() - timezoneOffset).toISOString().split('T')[0];
-            
-            if (inputDesde && !inputDesde.value) inputDesde.value = hoyLocal;
-            if (inputHasta && !inputHasta.value) inputHasta.value = hoyLocal;
+			// 1. Seteo de HOY si está vacío (Manejo de zona horaria para precisión)
+			const timezoneOffset = new Date().getTimezoneOffset() * 60000;
+			const hoyLocal = new Date(Date.now() - timezoneOffset).toISOString().split('T')[0];
+			
+			if (inputDesde && !inputDesde.value) inputDesde.value = hoyLocal;
+			if (inputHasta && !inputHasta.value) inputHasta.value = hoyLocal;
 
-            const movs = await apiFetch('/caja/movimientos');
-            
-            let calcIngresos = 0;
-            let calcGastos = 0;
-            const table = document.getElementById('table-caja');
+			// 2. Traer los movimientos
+			const movs = await apiFetch('/caja/movimientos');
+			
+			let calcIngresos = 0;
+			let calcGastos = 0;
+			const table = document.getElementById('table-caja');
 
-            if (!Array.isArray(movs)) return;
+			if (!Array.isArray(movs)) return;
 
-            const filtrados = movs.filter(m => {
-                const fechaMov = m.fecha.split('T')[0]; 
-                return fechaMov >= inputDesde.value && fechaMov <= inputHasta.value;
-            });
+			// 3. FILTRADO: Comparamos las fechas
+			const filtrados = movs.filter(m => {
+				const fechaMov = m.fecha.split('T')[0]; 
+				return fechaMov >= inputDesde.value && fechaMov <= inputHasta.value;
+			});
 
-            if (table) {
-                if (filtrados.length > 0) {
-                    table.innerHTML = filtrados.map(m => {
-                        const tipoRaw = (m.tipo || '').toLowerCase();
-                        const monto = Math.abs(parseFloat(m.monto));
-                        const metodo = m.metodo_pago || 'Efectivo';
-                        const cuotas = parseInt(m.cuotas) || 1;
-                        
-                        const esPositivo = (tipoRaw.includes('mercaderia') || tipoRaw.includes('mercadería') || tipoRaw.includes('plan') || tipoRaw.includes('venta') || tipoRaw.includes('cobro') || tipoRaw.includes('ingreso')) && !tipoRaw.includes('compra');
-                        const esEgreso = !esPositivo && (tipoRaw === 'gasto' || tipoRaw === 'egreso' || tipoRaw === 'salida' || tipoRaw === 'compra');
+			// 4. Renderizado de Tabla
+			if (table) {
+				if (filtrados.length > 0) {
+					table.innerHTML = filtrados.map(m => {
+						const tipoRaw = (m.tipo || '').toLowerCase();
+						const monto = Math.abs(parseFloat(m.monto));
+						const metodo = m.metodo_pago || 'Efectivo';
+						const cuotas = parseInt(m.cuotas) || 1; // Leemos las cuotas (por defecto 1)
+						
+						// Lógica de Ingreso vs Egreso
+						const esPositivo = (tipoRaw.includes('mercaderia') || tipoRaw.includes('mercadería') || tipoRaw.includes('plan') || tipoRaw.includes('venta') || tipoRaw.includes('cobro') || tipoRaw.includes('ingreso')) && !tipoRaw.includes('compra');
+						const esEgreso = !esPositivo && (tipoRaw === 'gasto' || tipoRaw === 'egreso' || tipoRaw === 'salida' || tipoRaw === 'compra');
 
-                        if (esEgreso) calcGastos += monto;
-                        else calcIngresos += monto;
+						if (esEgreso) calcGastos += monto;
+						else calcIngresos += monto;
 
-                        const flujoTexto = esEgreso ? 'EGRESO' : 'INGRESO';
-                        const flujoColor = esEgreso ? 'bg-red-500/10 text-red-500 border-red-500/20' : 'bg-green-500/10 text-green-500 border-green-500/20';
+						const flujoTexto = esEgreso ? 'EGRESO' : 'INGRESO';
+						const flujoColor = esEgreso ? 'bg-red-500/10 text-red-500 border-red-500/20' : 'bg-green-500/10 text-green-500 border-green-500/20';
 
-                        // LÓGICA DE CUOTAS PARA LA NUEVA COLUMNA
-                        let infoPago = `<span class="text-white opacity-80">${metodo}</span>`;
-                        if ((metodo === 'T. Credito' || metodo.includes('Tarjeta')) && cuotas > 1) {
-                            const valorCuota = monto / cuotas;
-                            infoPago += `<span class="block text-[8px] text-red-500 font-black mt-1">
-                                            ${cuotas} CUOTAS DE $ ${valorCuota.toLocaleString()}
-                                         </span>`;
-                        }
+						// LÓGICA DE CUOTAS: Solo si es T. Credito y más de 1 cuota
+						let detalleCuotas = '';
+						if (metodo === 'T. Credito' && cuotas > 1) {
+							const valorCuota = monto / cuotas;
+							detalleCuotas = `<span class="block text-[8px] text-red-500 font-black mt-0.5">
+												PAGO EN ${cuotas} CUOTAS DE $ ${valorCuota.toLocaleString()}
+											</span>`;
+						}
 
-                        return `
-                        <tr class="viking-table-row border-b border-white/5 hover:bg-white/5 transition-colors">
-                            <td class="py-4 px-2">
-                                <span class="px-2 py-0.5 rounded border text-[8px] font-black uppercase tracking-wider ${flujoColor}">${flujoTexto}</span>
-                                <span class="block text-gray-500 text-[8px] mt-1">${new Date(m.fecha).toLocaleDateString()}</span>
-                            </td>
-                            <td class="py-4 px-2">
-                                <p class="text-[10px] font-bold text-white uppercase leading-tight">${m.descripcion}</p>
-                                <span class="text-gray-600 text-[8px] font-black uppercase italic">${m.tipo}</span>
-                            </td>
-                            <td class="py-4 px-2">
-                                <div class="text-[9px] font-black uppercase italic">
-                                    ${infoPago}
-                                </div>
-                            </td>
-                            <td class="py-4 px-2 text-right font-black italic text-white text-[11px] pr-2">
-                                $ ${monto.toLocaleString()}
-                            </td>
-                        </tr>`;
-                    }).join('');
-                    
-                    if (window.lucide) lucide.createIcons();
-                } else {
-                    table.innerHTML = '<tr><td colspan="4" class="text-center py-12 text-gray-600 italic text-[10px] uppercase tracking-widest">Sin movimientos en este rango</td></tr>';
-                }
-            }
+						return `
+						<tr class="viking-table-row border-b border-white/5 hover:bg-white/5 transition-colors">
+							<td class="py-3 px-2">
+								<span class="px-2 py-0.5 rounded border text-[8px] font-black uppercase tracking-wider ${flujoColor}">${flujoTexto}</span>
+							</td>
+							<td class="py-3 px-2">
+								<span class="text-white text-[9px] font-black uppercase italic opacity-60">${m.tipo}</span>
+							</td>
+							<td class="py-3 px-2">
+								<p class="text-[10px] font-bold text-white uppercase leading-tight">${m.descripcion}</p>
+								<p class="text-[8px] text-gray-500 uppercase">
+									${new Date(m.fecha).toLocaleDateString()} - ${metodo}
+								</p>
+								${detalleCuotas}
+							</td>
+							<td class="py-3 px-2 text-right font-black italic text-white text-[11px] pr-2">
+								$ ${monto.toLocaleString()}
+							</td>
+						</tr>`;
+					}).join('');
+					
+					if (window.lucide) lucide.createIcons();
+				} else {
+					table.innerHTML = '<tr><td colspan="4" class="text-center py-12 text-gray-600 italic text-[10px] uppercase tracking-widest">Sin movimientos en este rango</td></tr>';
+				}
+			}
 
-            const calcBalance = calcIngresos - calcGastos;
-            if(document.getElementById('caja-ingresos')) document.getElementById('caja-ingresos').innerText = `$ ${calcIngresos.toLocaleString()}`;
-            if(document.getElementById('caja-gastos')) document.getElementById('caja-gastos').innerText = `$ ${calcGastos.toLocaleString()}`;
-            if(document.getElementById('caja-balance')) {
-                const eb = document.getElementById('caja-balance');
-                eb.innerText = `$ ${calcBalance.toLocaleString()}`;
-                eb.className = `text-3xl font-black italic ${calcBalance >= 0 ? 'text-green-500' : 'text-red-500'}`;
-            }
-        };
+			// 5. Totales
+			const calcBalance = calcIngresos - calcGastos;
+			if(document.getElementById('caja-ingresos')) document.getElementById('caja-ingresos').innerText = `$ ${calcIngresos.toLocaleString()}`;
+			if(document.getElementById('caja-gastos')) document.getElementById('caja-gastos').innerText = `$ ${calcGastos.toLocaleString()}`;
+			if(document.getElementById('caja-balance')) {
+				const eb = document.getElementById('caja-balance');
+				eb.innerText = `$ ${calcBalance.toLocaleString()}`;
+				eb.className = `text-3xl font-black italic ${calcBalance >= 0 ? 'text-green-500' : 'text-red-500'}`;
+			}
+		};
+
+		window.resetFiltrosCaja = function() {
+			const timezoneOffset = new Date().getTimezoneOffset() * 60000;
+			const hoy = new Date(Date.now() - timezoneOffset).toISOString().split('T')[0];
+			document.getElementById('caja-filtro-desde').value = hoy;
+			document.getElementById('caja-filtro-hasta').value = hoy;
+			window.loadCaja();
+		};
 
 		// ESTA ES LA VERSIÓN DEFINITIVA PARA TU SCRIPT.JS
 		window.guardarMovimiento = async function(event) {
@@ -4796,4 +4773,4 @@
 
     // Dibujar iconos de Lucide
     if(window.lucide) lucide.createIcons();
-};				
+};
