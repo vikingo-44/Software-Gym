@@ -1138,9 +1138,9 @@
 
 			// Estado de carga visual
 			rutinaContainer.innerHTML = `
-				<div class="col-span-2 py-10 flex flex-col items-center justify-center space-y-4">
-					<div class="w-8 h-8 border-4 border-red-600 border-t-transparent rounded-full animate-spin"></div>
-					<p class="text-[10px] text-gray-500 italic uppercase tracking-widest animate-pulse text-center">Cargando datos del alumno...</p>
+				<div class="col-span-2 py-16 flex flex-col items-center justify-center space-y-4">
+					<div class="w-10 h-10 border-2 border-red-600 border-t-transparent rounded-full animate-spin"></div>
+					<p class="text-[10px] text-white/20 italic uppercase tracking-[0.3em] animate-pulse text-center">Sincronizando arsenal del alumno...</p>
 				</div>
 			`;
 
@@ -1174,71 +1174,68 @@
 					const esActiva = fechaVenc ? hoy <= fechaVenc : true;
 
 					const statusBadge = esActiva 
-						? `<span class="bg-green-600/20 text-green-500 border border-green-500/30 px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest animate-pulse">Activa</span>`
-						: `<span class="bg-red-600/20 text-red-500 border border-red-500/30 px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest">Vencida</span>`;
+						? `<span class="bg-green-600/10 text-green-500 border border-green-500/20 px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest animate-pulse">Estrategia Activa</span>`
+						: `<span class="bg-red-600/10 text-red-500 border border-red-500/20 px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest">Plan Vencido</span>`;
 
 					const diasHTML = (rutina.dias || []).map((d, dIdx) => {
 						const diaId = `ficha-dia-${rIdx}-${dIdx}`;
 						return `
-						<div class="glass-card rounded-2xl border-white/5 overflow-hidden mb-2 transition-all">
-							<!-- Cabecera del Día (Acordeón) -->
-							<button onclick="toggleFichaElement('${diaId}')" class="w-full flex items-center justify-between p-4 bg-white/2 hover:bg-white/5 transition-colors group text-left">
-								<div class="flex items-center gap-3">
-									<div class="w-2 h-2 rounded-full ${esActiva ? 'bg-green-600 shadow-[0_0_8px_#16a34a]' : 'bg-red-600 shadow-[0_0_8px_#dc2626]'}"></div>
-									<span class="text-[11px] font-black italic uppercase tracking-wider text-gray-300 group-hover:text-red-500 transition-colors">${d.nombre_dia}</span>
+						<div class="bg-white/2 rounded-[2rem] border border-white/5 overflow-hidden mb-3 transition-all hover:bg-white/[0.04]">
+							<!-- Cabecera del Día (Acordeón Rebranded) -->
+							<button onclick="toggleFichaElement('${diaId}')" class="w-full flex items-center justify-between p-5 group text-left">
+								<div class="flex items-center gap-4">
+									<div class="w-10 h-10 rounded-2xl bg-white/5 flex items-center justify-center border border-white/10 font-black italic text-red-600 group-hover:bg-red-600 group-hover:text-black transition-all">
+										${d.nombre_dia.charAt(0).toUpperCase()}
+									</div>
+									<div>
+										<span class="text-[12px] font-black italic uppercase tracking-wider text-white group-hover:text-red-500 transition-colors">${d.nombre_dia}</span>
+										<p class="text-[8px] text-white/30 font-bold uppercase tracking-widest">${(d.ejercicios || []).length} Ejercicios</p>
+									</div>
 								</div>
-								<i data-lucide="chevron-down" class="w-4 h-4 text-gray-600 transition-transform duration-500" id="icon-${diaId}"></i>
+								<i data-lucide="chevron-down" class="w-4 h-4 text-white/20 transition-transform duration-500" id="icon-${diaId}"></i>
 							</button>
 							
 							<!-- Contenido de Ejercicios del Día -->
-							<div id="${diaId}" class="hidden p-4 space-y-4 bg-black/20 border-t border-white/5">
+							<div id="${diaId}" class="hidden p-5 space-y-6 bg-black/40 border-t border-white/5">
 								${(d.ejercicios || d.ejercicios_list || []).map(ex => {
 									const nombreEjercicio = ex.ejercicio_obj?.nombre || ex.nombre || ex.ejercicio?.nombre || "Ejercicio Sin Nombre";
 									const series = ex.series_detalle || ex.series || [];
 									
 									return `
-										<div class="flex flex-col border-l-2 border-red-600/40 pl-4 py-1.5 hover:bg-white/5 rounded-r-xl transition-all mb-4">
-											<p class="text-[11px] font-black uppercase italic text-white tracking-tight mb-3">${nombreEjercicio}</p>
+										<div class="flex flex-col border-l-2 border-red-600/30 pl-5 relative group/item">
+											<p class="text-[12px] font-black uppercase italic text-white tracking-wide mb-4 group-hover/item:text-red-500 transition-colors">${nombreEjercicio}</p>
 											
 											<!-- CAMBIO CLAVE: Cabecera de columnas para las series -->
-											<div class="grid grid-cols-4 gap-2 mb-2 px-2 opacity-50">
-												<span class="text-[8px] font-bold uppercase text-red-600 tracking-wider">Serie</span>
-												<span class="text-[8px] font-bold uppercase text-gray-400 text-center tracking-wider">Reps</span>
-												<span class="text-[8px] font-bold uppercase text-gray-400 text-center tracking-wider">Peso</span>
-												<span class="text-[8px] font-bold uppercase text-gray-400 text-right tracking-wider">Pausa</span>
+											<div class="grid grid-cols-4 gap-2 mb-2 px-3 opacity-30">
+												<span class="text-[8px] font-black uppercase text-red-600 tracking-widest">Serie</span>
+												<span class="text-[8px] font-black uppercase text-center tracking-widest">Reps</span>
+												<span class="text-[8px] font-black uppercase text-center tracking-widest">Peso</span>
+												<span class="text-[8px] font-black uppercase text-right tracking-widest">Pausa</span>
 											</div>
 
 											<!-- CAMBIO CLAVE: Lista de Series en Filas (Rows) -->
-											<div class="flex flex-col gap-1">
-												${series
-													.sort((a, b) => (a.numero_serie || 0) - (b.numero_serie || 0))
-													.map(s => `
-														<div class="grid grid-cols-4 items-center bg-white/5 px-3 py-2 rounded-lg border border-white/5 hover:border-red-600/30 transition-colors">
-															<!-- Nro Serie -->
-															<span class="text-[9px] font-black text-white uppercase">#${s.numero_serie}</span>
-															
-															<!-- Reps -->
-															<div class="text-center">
-																<span class="text-[11px] font-black text-white">${s.repeticiones}</span>
-															</div>
-															
-															<!-- Peso -->
-															<div class="text-center">
-																<span class="text-[11px] font-black text-white">${s.peso}</span> <span class="text-[8px] text-gray-500">kg</span>
-															</div>
-															
-															<!-- Descanso -->
-															<div class="text-right">
-																<span class="text-[9px] text-gray-400 italic">${s.descanso || '-'}</span>
-															</div>
-														</div>
-													`).join('')}
+											<div class="flex flex-col gap-1.5">
+												${series.sort((a, b) => (a.numero_serie || 0) - (b.numero_serie || 0)).map(s => `
+													<div class="grid grid-cols-4 items-center bg-white/[0.03] px-4 py-2.5 rounded-xl border border-white/5 hover:border-red-600/30 transition-all">
+														<!-- Nro Serie -->
+														<span class="text-[10px] font-black text-red-600 italic">#${s.numero_serie}</span>
+														
+														<!-- Reps -->
+														<span class="text-[11px] font-black text-white text-center">${s.repeticiones}</span>
+														
+														<!-- Peso -->
+														<span class="text-[11px] font-black text-white text-center">${s.peso}<small class="text-[8px] text-white/40 ml-0.5">kg</small></span>
+														
+														<!-- Descanso -->
+														<span class="text-[9px] text-white/40 italic text-right">${s.descanso || '-'}</span>
+													</div>
+												`).join('')}
 											</div>
 
 											${ex.comentario ? `
-												<div class="mt-3 bg-black/40 p-2 rounded-lg border border-white/5 flex gap-2">
-													<i data-lucide="info" class="w-2.5 h-2.5 text-red-600 mt-0.5 shrink-0"></i>
-													<p class="text-[8px] text-gray-400 italic font-medium leading-tight">${ex.comentario}</p>
+												<div class="mt-4 bg-red-600/5 p-3 rounded-xl border border-red-600/10 flex gap-3">
+													<i data-lucide="info" class="w-3 h-3 text-red-600 shrink-0 mt-0.5"></i>
+													<p class="text-[9px] text-white/50 italic leading-relaxed">${ex.comentario}</p>
 												</div>
 											` : ''}
 										</div>
@@ -1251,25 +1248,25 @@
 
 					// Estructura general de la tarjeta de rutina
 					return `
-					<div class="col-span-2 mb-4">
-						<div class="bg-white/5 border border-white/10 rounded-[2rem] overflow-hidden shadow-xl">
-							<button onclick="toggleFichaElement('${objetivoId}')" class="w-full flex items-center justify-between p-6 hover:bg-white/5 transition-all text-left">
-								<div class="flex items-center gap-4">
-									<div class="w-1 h-10 bg-red-600 rounded-full"></div>
+					<div class="col-span-2 mb-6">
+						<div class="bg-gradient-to-b from-white/[0.05] to-transparent border border-white/10 rounded-[2.5rem] overflow-hidden shadow-2xl">
+							<button onclick="toggleFichaElement('${objetivoId}')" class="w-full flex items-center justify-between p-8 hover:bg-white/5 transition-all text-left">
+								<div class="flex items-center gap-5">
+									<div class="w-1.5 h-12 viking-bg-red rounded-full shadow-[0_0_15px_rgba(255,0,0,0.5)]"></div>
 									<div>
-										<p class="text-[8px] text-gray-500 font-black uppercase tracking-[0.3em] mb-1">Plan de Entrenamiento</p>
-										<h5 class="text-lg font-black italic uppercase viking-red leading-none">${rutina.objetivo || 'Rutina de Musculación'}</h5>
-										<p class="text-[9px] text-gray-400 font-bold italic mt-1 flex items-center gap-1">
-											<i data-lucide="calendar" class="w-3 h-3"></i> Vence: ${rutina.fecha_vencimiento || 'Indefinido'}
+										<p class="text-[8px] text-white/30 font-black uppercase tracking-[0.4em] mb-1">Estrategia de Entrenamiento</p>
+										<h5 class="text-xl font-black italic uppercase text-white leading-none tracking-tighter">${rutina.objetivo || 'Rutina de Musculación'}</h5>
+										<p class="text-[9px] text-white/40 font-bold italic mt-2 flex items-center gap-2">
+											<i data-lucide="calendar" class="w-3 h-3 text-red-600"></i> Vence: ${rutina.fecha_vencimiento || 'Indefinido'}
 										</p>
 									</div>
 								</div>
-								<div class="flex items-center gap-4">
+								<div class="flex items-center gap-6">
 									${statusBadge}
-									<i data-lucide="chevron-down" class="w-6 h-6 text-red-600 transition-transform duration-500" id="icon-${objetivoId}"></i>
+									<i data-lucide="chevron-down" class="w-6 h-6 text-white/20 transition-transform duration-500" id="icon-${objetivoId}"></i>
 								</div>
 							</button>
-							<div id="${objetivoId}" class="hidden p-4 bg-black/30 border-t border-white/5">
+							<div id="${objetivoId}" class="hidden p-6 bg-black/20 border-t border-white/5">
 								${diasHTML}
 							</div>
 						</div>
@@ -1280,12 +1277,12 @@
 				rutinaContainer.innerHTML = mainHTML;
 			} else {
 				rutinaContainer.innerHTML = `
-					<div class="col-span-2 p-16 border border-dashed border-white/10 rounded-[3rem] text-center bg-white/2">
-						<div class="w-16 h-16 viking-bg-red/10 rounded-full flex items-center justify-center mx-auto mb-6">
-							<i data-lucide="skull" class="w-8 h-8 opacity-40 text-red-600"></i>
+					<div class="col-span-2 p-20 border-2 border-dashed border-white/5 rounded-[3rem] text-center bg-white/[0.01]">
+						<div class="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-6">
+							<i data-lucide="skull" class="w-10 h-10 text-white/10"></i>
 						</div>
-						<p class="text-[12px] text-gray-600 font-black uppercase italic tracking-[0.2em]">No se ha detectado un plan de batalla activo</p>
-						<p class="text-[10px] text-gray-700 mt-2 font-bold">Asigna una rutina desde el gestor para ver los datos aquí.</p>
+						<p class="text-[13px] text-white/20 font-black uppercase italic tracking-[0.3em]">No se ha detectado un plan de batalla activo</p>
+						<p class="text-[10px] text-white/10 mt-2 font-bold uppercase tracking-widest">Asigna una rutina desde el gestor para ver los datos aquí.</p>
 					</div>
 				`;
 			}
@@ -1318,444 +1315,508 @@
         }
 
 		async function renderRutinas() {
-			const rol = state.user?.rol_nombre;
-			const list = document.getElementById('rutinas-lista'); // Contenedor lista profes
-			const studentView = document.getElementById('musculacion-student-view'); // Vista detalle alumno
-			
-			// 1. CONFIGURACIÓN DE VISTAS SEGÚN ROL
-			if (rol === "Alumno") {
-				// --- MODO ALUMNO ---
-				if(list) list.classList.add('hidden');
-				if(studentView) studentView.classList.remove('hidden');
-				document.getElementById('rutina-title').innerText = "Mi Rutina Musculación";
-				
-				// Lógica de carga de rutina de alumno (INTACTA)
-				let res = await apiFetch(`/rutinas/usuario/${state.user.id}`);
-				let rutina = null;
-				if (Array.isArray(res) && res.length > 0) {
-					const hoy = new Date(); hoy.setHours(0,0,0,0);
-					rutina = res.find(r => !r.fecha_vencimiento || new Date(r.fecha_vencimiento + 'T23:59:59') >= hoy) || res[0];
-				} else if (res && !res.error && res.id) {
-					rutina = res;
-				}
+            const rol = state.user?.rol_nombre;
+            const list = document.getElementById('rutinas-lista'); // Contenedor lista profes
+            const studentView = document.getElementById('musculacion-student-view'); // Vista detalle alumno
+            
+            // 1. CONFIGURACIÓN DE VISTAS SEGÚN ROL
+            if (rol === "Alumno") {
+                // --- MODO ALUMNO ---
+                if(list) list.classList.add('hidden');
+                if(studentView) studentView.classList.remove('hidden');
+                document.getElementById('rutina-title').innerText = "Mi Rutina Musculación";
+                
+                // Lógica de carga de rutina de alumno (INTACTA)
+                let res = await apiFetch(`/rutinas/usuario/${state.user.id}`);
+                let rutina = null;
+                if (Array.isArray(res) && res.length > 0) {
+                    const hoy = new Date(); hoy.setHours(0,0,0,0);
+                    rutina = res.find(r => !r.fecha_vencimiento || new Date(r.fecha_vencimiento + 'T23:59:59') >= hoy) || res[0];
+                } else if (res && !res.error && res.id) {
+                    rutina = res;
+                }
 
-				if (rutina) {
-					document.getElementById('al-rutina-objetivo').innerText = "OBJETIVO: " + (rutina.objetivo || "Entrenamiento").toUpperCase();
-					document.getElementById('student-routine-exercises').innerHTML = (rutina.dias || []).map(d => `
-						<div class="glass-card p-6 rounded-2xl border-red-600/10">
-							<h5 class="font-black italic uppercase viking-red mb-4 border-b border-white/5 pb-2">${d.nombre_dia}</h5>
-							<div class="space-y-4">
-								${(d.ejercicios || []).map(e => {
-									const exName = e.ejercicio_obj?.nombre || e.exercise_name || "Ejercicio";
-									return `
-									<div class="bg-white/5 p-4 rounded-xl border border-white/5">
-										<p class="text-[12px] font-black uppercase italic mb-2 text-white">${exName}</p>
-										<div class="space-y-1">
-											${(e.series_detalle || e.series || []).sort((a,b)=>a.numero_serie-b.numero_serie).map(s => `
-												<div class="flex justify-between items-center text-[10px] bg-black/20 p-2 rounded border border-white/5">
-													<span class="text-red-600 font-bold">Serie ${s.numero_serie}</span>
-													<span class="text-white font-bold">${s.repeticiones} Reps</span>
-													<span class="text-gray-400">${s.peso} Kg</span>
-													<span class="text-gray-500 italic text-[9px]">${s.descanso || '-'}</span>
-												</div>
-											`).join('')}
-										</div>
-										${e.comentario ? `<p class="text-[10px] text-gray-500 italic mt-2 border-t border-white/5 pt-1">* ${e.comentario}</p>` : ''}
-									</div>`;
-								}).join('')}
-							</div>
-						</div>
-					`).join('');
-				} else {
-					document.getElementById('al-rutina-objetivo').innerText = "SIN ASIGNAR";
-					document.getElementById('student-routine-exercises').innerHTML = '<div class="col-span-2 text-center py-10"><p class="text-gray-500 italic">No tienes una rutina de musculación activa.</p></div>';
-				}
+                if (rutina) {
+                    document.getElementById('al-rutina-objetivo').innerText = "OBJETIVO: " + (rutina.objetivo || "Entrenamiento").toUpperCase();
+                    document.getElementById('student-routine-exercises').innerHTML = (rutina.dias || []).map(d => `
+                        <div class="glass-card p-8 rounded-[2.5rem] border border-white/10 shadow-2xl mb-8 bg-gradient-to-b from-white/[0.03] to-transparent">
+                            <h5 class="text-xl font-black italic uppercase text-red-600 mb-6 border-b border-white/5 pb-4 flex items-center gap-3">
+                                <i data-lucide="zap" class="w-6 h-6 shadow-[0_0_10px_rgba(255,0,0,0.5)]"></i>
+                                ${d.nombre_dia}
+                            </h5>
+                            <div class="space-y-6">
+                                ${(d.ejercicios || []).map(e => {
+                                    const exName = e.ejercicio_obj?.nombre || e.exercise_name || "Ejercicio";
+                                    return `
+                                    <div class="bg-white/[0.02] p-6 rounded-[1.5rem] border border-white/5 hover:border-red-600/30 transition-all group">
+                                        <p class="text-[14px] font-black uppercase italic mb-4 text-white group-hover:text-red-500 transition-colors tracking-tight">${exName}</p>
+                                        <div class="space-y-1.5">
+                                            ${(e.series_detalle || e.series || []).sort((a,b)=>a.numero_serie-b.numero_serie).map(s => `
+                                                <div class="grid grid-cols-4 items-center text-[11px] bg-black/40 p-3.5 rounded-xl border border-white/5 hover:bg-white/[0.05] transition-colors">
+                                                    <span class="text-red-600 font-black italic uppercase tracking-tighter">Set ${s.numero_serie}</span>
+                                                    <span class="text-white font-black text-center">${s.repeticiones} Reps</span>
+                                                    <span class="text-white/60 font-black text-center">${s.peso} Kg</span>
+                                                    <span class="text-white/20 italic text-[10px] text-right">${s.descanso || '-'}</span>
+                                                </div>
+                                            `).join('')}
+                                        </div>
+                                        ${e.comentario ? `
+                                            <div class="mt-4 bg-red-600/5 p-3 rounded-xl border border-red-600/10 flex gap-2">
+                                                <i data-lucide="info" class="w-3 h-3 text-red-600 mt-0.5 shrink-0"></i>
+                                                <p class="text-[10px] text-white/40 italic leading-relaxed font-medium">${e.comentario}</p>
+                                            </div>
+                                        ` : ''}
+                                    </div>`;
+                                }).join('')}
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    document.getElementById('al-rutina-objetivo').innerText = "SIN ASIGNAR";
+                    document.getElementById('student-routine-exercises').innerHTML = `
+                        <div class="col-span-2 text-center py-20 bg-white/[0.01] border-2 border-dashed border-white/5 rounded-[3rem]">
+                            <i data-lucide="skull" class="w-16 h-16 text-white/5 mx-auto mb-4"></i>
+                            <p class="text-white/20 italic font-black uppercase tracking-[0.4em]">Sin estrategia de entrenamiento activa</p>
+                        </div>
+                    `;
+                }
 
-			} else {
-				// --- MODO PROFESOR (AQUÍ ESTÁ EL CAMBIO VISUAL) ---
-				if(studentView) studentView.classList.add('hidden');
-				if(list) {
-					list.classList.remove('hidden');
-					// Aseguramos estilo lista vertical
-					list.className = "space-y-3 min-h-[400px] overflow-y-auto custom-scrollbar flex-1 pr-2 pb-10"; 
-				}
-				document.getElementById('rutina-title').innerText = "Rutinas de Alumnos";
-				
-				// Filtro (Logica intacta)
-				const alRutinas = state.alumnos.filter(a => {
-					const planNombre = (a.plan?.nombre || "").toLowerCase();
-					const normalized = planNombre.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-					return normalized.includes('musculacion') || normalized.includes('completo') || normalized.includes('personalizado');
-				});
+            } else {
+                // --- MODO PROFESOR (AQUÍ ESTÁ EL CAMBIO VISUAL) ---
+                if(studentView) studentView.classList.add('hidden');
+                if(list) {
+                    list.classList.remove('hidden');
+                    // Aseguramos estilo lista vertical
+                    list.className = "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 min-h-[400px] overflow-y-auto custom-scrollbar flex-1 pr-2 pb-10"; 
+                }
+                document.getElementById('rutina-title').innerText = "Control de Rutinas";
+                
+                // Filtro (Logica intacta)
+                const alRutinas = state.alumnos.filter(a => {
+                    const planNombre = (a.plan?.nombre || "").toLowerCase();
+                    const normalized = planNombre.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                    return normalized.includes('musculacion') || normalized.includes('completo') || normalized.includes('personalizado');
+                });
 
-				if (alRutinas.length === 0) {
-					list.innerHTML = '<div class="p-10 glass-card rounded-3xl text-center"><i data-lucide="clipboard-x" class="w-12 h-12 text-gray-600 mx-auto mb-4"></i><p class="text-gray-500 italic">No se encontraron alumnos con planes de musculación.</p></div>';
-				} else {
-					const hoy = new Date().toISOString().split('T')[0];
+                if (alRutinas.length === 0) {
+                    list.innerHTML = `
+                        <div class="col-span-full p-20 glass-card rounded-[3rem] text-center border-2 border-dashed border-white/5">
+                            <i data-lucide="users" class="w-16 h-16 text-white/5 mx-auto mb-4"></i>
+                            <p class="text-white/20 italic font-black uppercase tracking-widest">No se encontraron alumnos con planes de musculación.</p>
+                        </div>
+                    `;
+                } else {
+                    const hoy = new Date().toISOString().split('T')[0];
 
-					list.innerHTML = alRutinas.map(a => {
-						// Lógica Visual de Estado (Igual a Alumnos)
-						const estaVencido = !a.fecha_vencimiento || a.fecha_vencimiento < hoy;
-						const colorEstado = estaVencido ? 'bg-red-600' : 'bg-green-600';
-						const textoEstado = estaVencido ? 'VENCIDO' : 'AL DÍA';
-						const colorBadge = estaVencido ? 'text-red-500 bg-red-500/10 border-red-500/20' : 'text-green-500 bg-green-500/10 border-green-500/20';
+                    list.innerHTML = alRutinas.map(a => {
+                        // Lógica Visual de Estado (Igual a Alumnos)
+                        const estaVencido = !a.fecha_vencimiento || a.fecha_vencimiento < hoy;
+                        const colorEstado = estaVencido ? 'bg-red-600' : 'bg-green-600';
+                        const textoEstado = estaVencido ? 'VENCIDA' : 'ACTIVA';
+                        const colorBadge = estaVencido ? 'text-red-500 bg-red-500/10 border-red-500/20' : 'text-green-500 bg-green-500/10 border-green-500/20';
 
-						const initials = a.nombre_completo ? a.nombre_completo.substring(0,2).toUpperCase() : "??";
-						const planNombre = a.plan ? a.plan.nombre : 'Sin Plan';
+                        const initials = a.nombre_completo ? a.nombre_completo.substring(0,2).toUpperCase() : "??";
+                        const planNombre = a.plan ? a.plan.nombre : 'Sin Plan';
 
-						// --- TARJETA NUEVA (VISUAL ALUMNOS) ---
-						return `
-						<div class="glass-card p-5 rounded-3xl border-white/5 flex flex-col md:flex-row md:items-center gap-6 hover:border-red-600/20 transition-all group relative overflow-hidden">
-							<!-- Barra lateral estado -->
-							<div class="absolute left-0 top-0 bottom-0 w-1.5 ${colorEstado} opacity-40 group-hover:opacity-100 transition-opacity"></div>
-							
-							<!-- COL 1: Identidad -->
-							<div class="flex items-center gap-4 w-full md:w-1/3">
-								<div class="w-14 h-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center font-black text-white text-lg italic shadow-lg group-hover:bg-red-600 group-hover:text-black transition-colors shrink-0">
-									${initials}
-								</div>
-								<div class="overflow-hidden">
-									<h4 class="text-sm font-black uppercase italic text-white group-hover:text-red-500 transition-colors truncate">${a.nombre_completo}</h4>
-									<p class="text-[10px] text-white-500 font-bold flex items-center gap-1.5 mt-1">
-										<i data-lucide="id-card" class="w-3 h-3"></i> DNI: ${a.dni}
-									</p>
-								</div>
-							</div>
+                        // --- TARJETA NUEVA (VISUAL ALUMNOS) ---
+                        return `
+                        <div class="glass-card p-6 rounded-[2.5rem] border border-white/10 flex flex-col justify-between hover:border-red-600/40 transition-all group relative overflow-hidden h-full shadow-lg bg-gradient-to-br from-white/[0.02] to-transparent">
+                            <!-- Barra lateral estado (Lógica visual respetada) -->
+                            <div class="absolute left-0 top-0 bottom-0 w-1.5 ${colorEstado} opacity-20 group-hover:opacity-100 transition-opacity"></div>
+                            
+                            <!-- Status Badge Superior -->
+                            <div class="absolute right-6 top-6">
+                                <span class="px-3 py-1 rounded-full text-[8px] font-black uppercase italic border ${colorBadge} tracking-widest shadow-sm">
+                                    ${textoEstado}
+                                </span>
+                            </div>
 
-							<!-- COL 2: Info Plan -->
-							<div class="flex-1 border-t md:border-t-0 md:border-l border-white/5 pt-4 md:pt-0 md:pl-8">
-								<div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
-									<div>
-										<p class="text-[9px] text-white-500 font-black uppercase tracking-widest mb-1 flex items-center gap-1.5">
-											<i data-lucide="ticket" class="w-3 h-3 text-red-600"></i> Plan Actual
-										</p>
-										<p class="text-sm font-black uppercase italic text-white truncate">${planNombre}</p>
-									</div>
-									<div class="flex flex-row md:flex-col items-center md:items-start justify-between gap-2">
-										<div class="flex items-center gap-2">
-											<span class="px-3 py-1 rounded-lg text-[9px] font-black uppercase border ${colorBadge}">
-												${textoEstado}
-											</span>
-										</div>
-									</div>
-								</div>
-							</div>
+                            <div>
+                                <!-- Identidad -->
+                                <div class="flex items-center gap-5 mb-6">
+                                    <div class="w-16 h-16 rounded-[1.2rem] bg-white/5 border border-white/10 flex items-center justify-center font-black text-white text-xl italic group-hover:bg-red-600 group-hover:text-black transition-all shadow-md shrink-0">
+                                        ${initials}
+                                    </div>
+                                    <div class="overflow-hidden">
+                                        <h4 class="text-[15px] font-black uppercase italic text-white group-hover:text-red-500 transition-colors truncate tracking-tighter">${a.nombre_completo}</h4>
+                                        <p class="text-[9px] text-white/30 font-bold uppercase tracking-[0.2em] mt-1 flex items-center gap-1.5">
+                                            <i data-lucide="id-card" class="w-3 h-3"></i> ${a.dni}
+                                        </p>
+                                    </div>
+                                </div>
 
-							<!-- COL 3: Acciones (BOTONES ESPECÍFICOS DE RUTINA) -->
-							<div class="flex items-center justify-end min-w-[100px] border-t md:border-t-0 border-white/5 pt-3 md:pt-0 gap-2">
-								<button onclick="openFichaTecnica(${a.id})" class="px-4 py-3 border border-white/10 text-white rounded-xl text-[9px] font-black uppercase italic hover:bg-white/10 transition-colors flex items-center gap-2">
-									<i data-lucide="clipboard-list" class="w-3.5 h-3.5"></i> 
-									<span class="hidden lg:inline">Ficha</span>
-								</button>
-								<button onclick="openRoutineEditor(${a.id})" class="px-4 py-3 bg-red-600 text-black rounded-xl text-[9px] font-black uppercase italic hover:scale-105 transition-transform shadow-lg flex items-center gap-2">
-									<i data-lucide="dumbbell" class="w-3.5 h-3.5"></i>
-									<span>Gestionar</span>
-								</button>
-							</div>
-						</div>
-						`;
-					}).join('');
-				}
-			}
-			if(window.lucide) lucide.createIcons();
-		}
+                                <!-- Info Plan -->
+                                <div class="bg-white/[0.03] p-4 rounded-2xl border border-white/5 mb-6 group-hover:bg-white/[0.05] transition-colors">
+                                    <p class="text-[8px] text-white/30 font-black uppercase italic tracking-[0.3em] mb-1.5 flex items-center gap-1.5">
+                                        <i data-lucide="ticket" class="w-3 h-3 text-red-600"></i> Plan Vigente
+                                    </p>
+                                    <p class="text-[12px] font-black uppercase italic text-white truncate tracking-tight">${planNombre}</p>
+                                </div>
+                            </div>
+
+                            <!-- Acciones (BOTONES ESPECÍFICOS DE RUTINA) -->
+                            <div class="grid grid-cols-2 gap-3 mt-auto">
+                                <button onclick="openFichaTecnica(${a.id})" class="py-3.5 bg-white/5 hover:bg-white/10 text-white rounded-xl text-[9px] font-black uppercase italic transition-all flex items-center justify-center gap-2 border border-white/10">
+                                    <i data-lucide="clipboard-list" class="w-3.5 h-3.5"></i> 
+                                    Ficha
+                                </button>
+                                <button onclick="openRoutineEditor(${a.id})" class="py-3.5 viking-bg-red text-black rounded-xl text-[9px] font-black uppercase italic hover:scale-[1.03] active:scale-95 transition-all shadow-[0_10px_20px_rgba(255,0,0,0.2)] flex items-center justify-center gap-2">
+                                    <i data-lucide="dumbbell" class="w-3.5 h-3.5"></i>
+                                    Gestionar
+                                </button>
+                            </div>
+                        </div>
+                        `;
+                    }).join('');
+                }
+            }
+            if(window.lucide) lucide.createIcons();
+        }
 
         async function loadMusculacionMetadata() {
-            const grupos = await apiFetch('/rutinas/grupos-musculares');
-            const ejercicios = await apiFetch('/rutinas/ejercicios');
-            state.gruposMusculares = Array.isArray(grupos) ? grupos : [];
-            state.ejerciciosLibreria = Array.isArray(ejercicios) ? ejercicios : [];
-            
-            const selectLib = document.getElementById('lib-ex-grupo');
-            if(selectLib) {
-                selectLib.innerHTML = '<option value="">Seleccionar Grupo Muscular</option>' + 
-                    state.gruposMusculares.map(g => `<option value="${g.id}">${g.nombre}</option>`).join('');
-            }
-        }
+			const grupos = await apiFetch('/rutinas/grupos-musculares');
+			const ejercicios = await apiFetch('/rutinas/ejercicios');
+			state.gruposMusculares = Array.isArray(grupos) ? grupos : [];
+			state.ejerciciosLibreria = Array.isArray(ejercicios) ? ejercicios : [];
+			
+			// Si tienes el select de creación de ejercicios fuera del modal de rutina:
+			const selectLib = document.getElementById('lib-ex-grupo');
+			if(selectLib) {
+				selectLib.innerHTML = '<option value="">Seleccionar Grupo Muscular</option>' + 
+					state.gruposMusculares.map(g => `<option value="${g.id}">${g.nombre}</option>`).join('');
+			}
+		}
 
         async function openRoutineEditor(alumnoId) {
-		// 1. Validar que state y alumnos existan
-		if (!state || !state.alumnos) {
-			console.error("Error: state.alumnos no está definido");
-			return;
-		}
-
-		const al = state.alumnos.find(a => a.id === alumnoId);
-		if (!al) return;
-		
-		// 2. Cargar metadatos asegurando que la función exista
-		if(typeof loadMusculacionMetadata === 'function') {
-			await loadMusculacionMetadata();
-		}
-		
-		// 3. Preparar DOM (Usando tus IDs originales)
-		const lblAlumno = document.getElementById('rutina-editor-alumno');
-		if(lblAlumno) lblAlumno.innerText = "Alumno: " + al.nombre_completo;
-
-		const inputId = document.getElementById('rutina-editor-alumno-id');
-		if(inputId) inputId.value = alumnoId;
-
-		const container = document.getElementById('rutina-editor-container');
-		if(container) container.innerHTML = "";
-
-		try {
-			const rutinaRes = await apiFetch(`/rutinas/usuario/${alumnoId}`);
-			
-			// CORRECCIÓN CLAVE: Verificamos que rutinaRes exista antes de leer .error
-			// Si rutinaRes es null/undefined, entramos al ELSE (Nueva Rutina)
-			if (rutinaRes && !rutinaRes.error && rutinaRes.id) {
-				// --- MODO EDICIÓN (Cargar existente) ---
-				const txtObj = document.getElementById('rutina-objetivo');
-				if(txtObj) txtObj.value = rutinaRes.objetivo || '';
-
-				const txtVenc = document.getElementById('rutina-vencimiento');
-				if(txtVenc) txtVenc.value = rutinaRes.fecha_vencimiento || '';
-				
-				if (rutinaRes.dias && Array.isArray(rutinaRes.dias)) {
-					rutinaRes.dias.forEach(d => {
-						const ejerciciosFormateados = d.ejercicios.map(e => {
-							return {
-								ejercicio_id: e.ejercicio_id,
-								exercise_name: e.ejercicio_obj?.nombre || "Ejercicio",
-								series: e.series_detalle || [], // Backend usa series_detalle
-								comentario: e.comentario
-							};
-						});
-						// Llamamos a tu función addRoutineDay
-						if(typeof addRoutineDay === 'function') {
-							addRoutineDay(d.nombre_dia, ejerciciosFormateados);
-						}
-					});
-				}
-			} else {
-				// --- MODO CREACIÓN (Nueva Rutina) ---
-				// Esto se ejecuta si no hay rutina o si el backend devuelve error (ej: "No hay rutina activa")
-				const txtObj = document.getElementById('rutina-objetivo');
-				if(txtObj) txtObj.value = "";
-
-				const defaultDate = new Date();
-				defaultDate.setDate(defaultDate.getDate() + 30);
-				
-				const txtVenc = document.getElementById('rutina-vencimiento');
-				if(txtVenc) txtVenc.value = defaultDate.toISOString().split('T')[0];
-				
-				if(typeof addRoutineDay === 'function') {
-					addRoutineDay("Día 1", []); 
-				}
-			}
-
-			// 4. Abrir Modal (Tu ID original)
-			if(typeof openModal === 'function') {
-				openModal('modal-rutina-editor');
-			} else {
-				// Fallback por si openModal no es global
-				const m = document.getElementById('modal-rutina-editor');
-				if(m) m.classList.remove('hidden');
-			}
-
-		} catch (e) {
-			console.error("Error crítico en openRoutineEditor:", e);
-			alert("Hubo un error al intentar abrir el editor.");
-		}
-	}
-
-        function addRoutineDay(nombre = "", ejercicios = []) {
-            const container = document.getElementById('rutina-editor-container');
-            const dayId = 'day-' + Math.random().toString(36).substr(2, 9);
-            const dayCard = document.createElement('div');
-            dayCard.className = "rutina-dia-card space-y-6";
-            dayCard.dataset.dayId = dayId;
-            
-            dayCard.innerHTML = `
-                <div class="flex justify-between items-center gap-4 border-b border-white/5 pb-4">
-                    <div class="flex-1">
-                        <p class="text-[9px] font-black text-gray-500 uppercase italic mb-1 tracking-widest">Nombre del Entrenamiento</p>
-                        <input type="text" placeholder="Ej: Rutina A - Piernas" value="${nombre}" class="viking-input py-2 text-[14px] day-title" required>
-                    </div>
-                    <button type="button" onclick="this.closest('.rutina-dia-card').remove()" class="text-red-900 hover:text-red-600 transition-colors mt-4"><i data-lucide="trash-2" class="w-6 h-6"></i></button>
-                </div>
-                
-                <div class="bg-black/40 p-5 rounded-[1.5rem] border border-red-600/10 shadow-inner">
-                    <p class="text-[10px] font-black text-red-600 uppercase italic mb-3 tracking-[0.2em]">Buscar y Añadir Ejercicio</p>
-                    <div class="flex gap-3">
-                        <select class="viking-input py-2 text-[11px] h-10 w-1/3 search-group-filter">
-                            <option value="all">Filtrar Grupo Muscular...</option>
-                            ${state.gruposMusculares.map(g => `<option value="${g.id}">${g.nombre}</option>`).join('')}
-                        </select>
-                        <div class="relative flex-1">
-                            <input type="text" placeholder="Escribe para buscar (ej: Sentadilla)..." class="viking-input py-2 text-[11px] h-10 w-full search-exercise-input" oninput="showExerciseResults(this, '${dayId}')">
-                            <div class="exercise-results-list hidden absolute top-full left-0 w-full bg-[#0a0a0a] border border-red-600/30 rounded-2xl mt-2 z-50 max-h-60 overflow-y-auto custom-scrollbar shadow-2xl"></div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="exercises-list space-y-4">
-                    <div class="exercise-grid gap-3 px-4 text-[10px] font-black text-gray-500 uppercase italic tracking-widest">
-                        <span>Ejercicio Seleccionado</span>
-                        <span class="text-center">Series</span>
-                        <span class="text-center">Reps</span>
-                        <span class="text-center">Peso</span>
-                        <span class="text-center">Descanso</span>
-                        <span></span>
-                    </div>
-                    <div class="day-exercises-container space-y-3"></div>
-                </div>
-            `;
-            container.appendChild(dayCard);
-            
-            if (ejercicios.length > 0) {
-                ejercicios.forEach(e => addExerciseToDay(dayId, e));
-            }
-            lucide.createIcons();
-        }
-
-        function showExerciseResults(input, dayId) {
-            const query = input.value.toLowerCase();
-            const groupFilter = input.closest('.flex').querySelector('.search-group-filter').value;
-            const resultsDiv = input.nextElementSibling;
-
-            if (query.length < 2 && groupFilter === "all") {
-                resultsDiv.classList.add('hidden');
+            // 1. Validar que state y alumnos existan
+            if (!state || !state.alumnos) {
+                console.error("Error: state.alumnos no está definido");
                 return;
             }
 
-            const filtered = state.ejerciciosLibreria.filter(ex => {
-                const matchSearch = ex.nombre.toLowerCase().includes(query);
-                const matchGroup = groupFilter === "all" || ex.grupo_muscular_id == groupFilter;
-                return matchSearch && matchGroup;
-            });
-
-            if (filtered.length === 0) {
-                resultsDiv.innerHTML = '<div class="p-4 text-[11px] text-gray-500 italic">No se encontraron resultados</div>';
-            } else {
-                resultsDiv.innerHTML = filtered.map(ex => `
-                    <div class="p-4 border-b border-white/5 text-[11px] font-black uppercase italic transition-colors" onclick="selectExerciseForDay('${dayId}', ${ex.id}, '${ex.nombre}')">
-                        ${ex.nombre}
-                    </div>
-                `).join('');
+            const al = state.alumnos.find(a => a.id === alumnoId);
+            if (!al) return;
+            
+            // 2. Cargar metadatos asegurando que la función exista
+            if(typeof loadMusculacionMetadata === 'function') {
+                await loadMusculacionMetadata();
             }
-            resultsDiv.classList.remove('hidden');
+            
+            // 3. Preparar DOM (Usando tus IDs originales)
+            const lblAlumno = document.getElementById('rutina-editor-alumno');
+            if(lblAlumno) lblAlumno.innerText = "Alumno: " + al.nombre_completo;
+
+            const inputId = document.getElementById('rutina-editor-alumno-id');
+            if(inputId) inputId.value = alumnoId;
+
+            const container = document.getElementById('rutina-editor-container');
+            if(container) container.innerHTML = "";
+
+            try {
+                const rutinaRes = await apiFetch(`/rutinas/usuario/${alumnoId}`);
+                
+                // CORRECCIÓN CLAVE: Verificamos que rutinaRes exista antes de leer .error
+                // Si rutinaRes es null/undefined, entramos al ELSE (Nueva Rutina)
+                if (rutinaRes && !rutinaRes.error && rutinaRes.id) {
+                    // --- MODO EDICIÓN (Cargar existente) ---
+                    const txtObj = document.getElementById('rutina-objetivo');
+                    if(txtObj) txtObj.value = rutinaRes.objetivo || '';
+
+                    const txtVenc = document.getElementById('rutina-vencimiento');
+                    if(txtVenc) txtVenc.value = rutinaRes.fecha_vencimiento || '';
+                    
+                    if (rutinaRes.dias && Array.isArray(rutinaRes.dias)) {
+                        rutinaRes.dias.forEach(d => {
+                            const ejerciciosFormateados = d.ejercicios.map(e => {
+                                return {
+                                    ejercicio_id: e.ejercicio_id,
+                                    exercise_name: e.ejercicio_obj?.nombre || "Ejercicio",
+                                    series: e.series_detalle || [], // Backend usa series_detalle
+                                    comentario: e.comentario
+                                };
+                            });
+                            // Llamamos a tu función addRoutineDay
+                            if(typeof addRoutineDay === 'function') {
+                                addRoutineDay(d.nombre_dia, ejerciciosFormateados);
+                            }
+                        });
+                    }
+                } else {
+                    // --- MODO CREACIÓN (Nueva Rutina) ---
+                    // Esto se ejecuta si no hay rutina o si el backend devuelve error (ej: "No hay rutina activa")
+                    const txtObj = document.getElementById('rutina-objetivo');
+                    if(txtObj) txtObj.value = "";
+
+                    const defaultDate = new Date();
+                    defaultDate.setDate(defaultDate.getDate() + 30);
+                    
+                    const txtVenc = document.getElementById('rutina-vencimiento');
+                    if(txtVenc) txtVenc.value = defaultDate.toISOString().split('T')[0];
+                    
+                    if(typeof addRoutineDay === 'function') {
+                        addRoutineDay("Día 1", []); 
+                    }
+                }
+
+                // 4. Abrir Modal (Tu ID original)
+                if(typeof openModal === 'function') {
+                    openModal('modal-rutina-editor');
+                } else {
+                    // Fallback por si openModal no es global
+                    const m = document.getElementById('modal-rutina-editor');
+                    if(m) m.classList.remove('hidden');
+                }
+
+            } catch (e) {
+                console.error("Error crítico en openRoutineEditor:", e);
+                alert("Hubo un error al intentar abrir el editor.");
+            }
         }
 
-        function selectExerciseForDay(dayId, exerciseId, exerciseName) {
-            const container = document.querySelector(`[data-day-id="${dayId}"]`);
-            const searchInput = container.querySelector('.search-exercise-input');
-            const resultsDiv = container.querySelector('.exercise-results-list');
-            
-            addExerciseToDay(dayId, { ejercicio_id: exerciseId, exercise_name: exerciseName });
-            
-            searchInput.value = "";
-            resultsDiv.classList.add('hidden');
-            showVikingToast("Añadido: " + exerciseName);
-        }
-
-			function addExerciseToDay(dayId, data = null) {
-				// 1. Configuración: Series por defecto en 0
-				const SERIES_POR_DEFECTO = 0; 
-
-				const container = document.querySelector(`[data-day-id="${dayId}"] .day-exercises-container`);
-				const div = document.createElement('div');
-				const exerciseUniqueId = 'ex-' + Math.random().toString(36).substr(2, 9);
-				
-				// CAMBIO VISUAL 1: Quitamos 'bg-white/5 p-4 rounded-2xl border' para eliminar el "recuadro".
-				// Usamos solo 'border-b' para separar ejercicios en filas limpias.
-				div.className = "exercise-row border-b border-white/10 pb-4 mb-4";
-				div.dataset.exerciseRowId = exerciseUniqueId;
-
-				let exName = data?.exercise_name || "";
-				if (!exName && data?.ejercicio_id) {
-					const found = state.ejerciciosLibreria.find(e => e.id == data.ejercicio_id);
-					exName = found ? found.nombre : "Ejercicio";
-				}
-
-				const initialNumSeries = (data && data.series) ? data.series.length : SERIES_POR_DEFECTO;
-
-				div.innerHTML = `
-					<div class="flex justify-between items-center mb-3">
-						<div class="flex flex-col text-left">
-							<input type="hidden" class="exercise-id" value="${data?.ejercicio_id}">
-							<!-- Nombre del ejercicio un poco más grande y limpio -->
-							<span class="text-[13px] font-black uppercase italic text-white tracking-wide">${exName}</span>
-						</div>
-						<div class="flex items-center gap-3">
-							<div class="flex items-center gap-2 bg-white/5 px-2 py-1 rounded-lg">
-								<label class="text-[9px] font-black text-gray-500 uppercase">Sets</label>
-								<select class="viking-input !py-0 !px-1 w-10 h-6 text-[11px] text-center font-black bg-[#1a1a1a] text-white border border-white/20 series-select cursor-pointer focus:border-red-600 rounded" 
-										onchange="updateSeriesCount('${exerciseUniqueId}', this.value)">
-									${[0,1,2,3,4,5,6,7,8,9,10].map(n => 
-										`<option value="${n}" class="bg-black text-white font-bold" ${n === initialNumSeries ? 'selected' : ''}>${n}</option>`
-									).join('')}
-								</select>
-							</div>
-							<button type="button" onclick="this.closest('.exercise-row').remove()" class="text-gray-500 hover:text-red-500 transition-colors">
-								<i data-lucide="trash-2" class="w-4 h-4"></i>
-							</button>
-						</div>
-					</div>
-
-					<!-- CAMBIO VISUAL 2: Cabecera de columnas para dar aspecto de tabla ordenada -->
-					<div class="grid grid-cols-4 gap-2 mb-1 px-1">
-						<span class="text-[8px] font-bold uppercase text-red-600 tracking-wider">Serie</span>
-						<span class="text-[8px] font-bold uppercase text-gray-500 text-center tracking-wider">Reps</span>
-						<span class="text-[8px] font-bold uppercase text-gray-500 text-center tracking-wider">Peso</span>
-						<span class="text-[8px] font-bold uppercase text-gray-500 text-center tracking-wider">Pausa</span>
-					</div>
-
-					<div id="series-container-${exerciseUniqueId}" class="space-y-1 mb-3"></div>
-					
-					<div class="mt-2 text-left pl-1">
-						<input type="text" placeholder="Añadir nota técnica o comentario..." 
-							value="${data?.comentario || ''}"
-							class="w-full bg-transparent text-[10px] text-gray-400 border-b border-dashed border-white/10 focus:border-red-600 focus:outline-none py-1 italic placeholder-gray-700 transition-colors exercise-comment">
-					</div>
-				`;
-				container.appendChild(div);
-				
-				generateSeriesRows(exerciseUniqueId, initialNumSeries, data ? data.series : null);
-				if(window.lucide) lucide.createIcons();
-			}
-        function updateSeriesCount(containerId, newCount) {
-            const container = document.getElementById(`series-container-${containerId}`);
-            const currentRows = container.querySelectorAll('.serie-row');
-            let savedData = [];
-            
-            currentRows.forEach(row => {
-                savedData.push({
-                    repeticiones: row.querySelector('.serie-reps').value,
-                    peso: row.querySelector('.serie-weight').value,
-                    descanso: row.querySelector('.serie-rest').value
-                });
-            });
-
-            generateSeriesRows(containerId, newCount, savedData);
-        }
-
-        function generateSeriesRows(containerId, numSeries, existingData = null) {
-			const container = document.getElementById(`series-container-${containerId}`); 
-			if (!container) return; 
-			container.innerHTML = "";
+        function addRoutineDay(nombre = "", ejercicios = []) {
+			const container = document.getElementById('rutina-editor-container');
+			const dayId = 'day-' + Math.random().toString(36).substr(2, 9);
+			const dayCard = document.createElement('div');
 			
-			for (let i = 1; i <= numSeries; i++) {
-				const rowData = (existingData && existingData[i - 1]) ? existingData[i - 1] : null;
+			dayCard.className = "rutina-dia-card bg-white/[0.02] p-8 rounded-[2.5rem] border border-white/5 space-y-8 shadow-inner relative group/day";
+			dayCard.dataset.dayId = dayId;
+			
+			dayCard.innerHTML = `
+				<div class="flex justify-between items-center gap-6 border-b border-white/5 pb-6">
+					<div class="flex-1">
+						<p class="text-[9px] font-black text-red-600 uppercase italic mb-1 tracking-widest ml-1">Fase de Entrenamiento</p>
+						<input type="text" placeholder="Ej: Fase A - Empuje" value="${nombre}" class="viking-input !bg-transparent !border-transparent !p-0 !text-2xl font-black italic day-title" required>
+					</div>
+					<button type="button" onclick="this.closest('.rutina-dia-card').remove()" class="text-white/10 hover:text-red-600 transition-all p-3 bg-white/5 rounded-2xl border border-white/5">
+						<i data-lucide="trash-2" class="w-5 h-5"></i>
+					</button>
+				</div>
 				
-				container.innerHTML += `
-					<div class="grid grid-cols-4 gap-2 items-center serie-row px-1 py-1 hover:bg-white/5 rounded transition-colors" data-serie-num="${i}">
-						<!-- Número de serie alineado a la izquierda -->
-						<span class="text-[10px] font-black text-white uppercase italic">#${i}</span>
-						
-						<!-- Inputs estilo "línea" (border-b) en lugar de caja completa -->
-						<input type="text" placeholder="0" value="${rowData?.repeticiones || ''}" 
-							class="bg-transparent border-b border-white/10 text-center text-[11px] text-white focus:border-red-600 focus:outline-none py-1 w-full font-bold serie-reps">
-						
-						<input type="text" placeholder="0" value="${rowData?.peso || ''}" 
-							class="bg-transparent border-b border-white/10 text-center text-[11px] text-white focus:border-red-600 focus:outline-none py-1 w-full font-bold serie-weight">
-						
-						<input type="text" placeholder="90s" value="${rowData?.descanso || '90s'}" 
-							class="bg-transparent border-b border-white/10 text-center text-[10px] text-gray-400 focus:border-red-600 focus:outline-none py-1 w-full italic serie-rest">
-					</div>`;
+				<div class="bg-black/40 p-6 rounded-[2rem] border border-white/5">
+					<p class="text-[9px] font-black text-white/40 uppercase italic mb-4 tracking-widest flex items-center gap-2">
+						<i data-lucide="search" class="w-3 h-3 text-red-600"></i> Localizar Ejercicio
+					</p>
+					<div class="flex flex-col md:flex-row gap-4">
+						<select class="viking-input py-2 text-[11px] h-12 w-full md:w-1/3 search-group-filter !bg-black/60">
+							<option value="all">Todos los grupos...</option>
+							${state.gruposMusculares.map(g => `<option value="${g.id}">${g.nombre}</option>`).join('')}
+						</select>
+						<div class="relative flex-1">
+							<input type="text" placeholder="Escribe el nombre del ejercicio..." class="viking-input py-2 text-[11px] h-12 w-full search-exercise-input !bg-black/60" oninput="showExerciseResults(this, '${dayId}')">
+							<div class="exercise-results-list hidden absolute top-full left-0 w-full bg-[#0a0a0a] border border-red-600/30 rounded-[1.5rem] mt-3 z-[100] max-h-64 overflow-y-auto custom-scrollbar shadow-2xl"></div>
+						</div>
+					</div>
+				</div>
+
+				<div class="exercises-list space-y-2">
+					<!-- Header Columnas -->
+					<div class="grid grid-cols-[1fr_repeat(4,70px)_40px] gap-3 px-6 text-[9px] font-black text-white/20 uppercase italic tracking-widest">
+						<span>Ejercicio Arsenal</span>
+						<span class="text-center">Sets</span>
+						<span class="text-center">Reps</span>
+						<span class="text-center">Peso</span>
+						<span class="text-center">Pausa</span>
+						<span></span>
+					</div>
+					<!-- Contenedor Draggable -->
+					<div class="day-exercises-container space-y-4 min-h-[50px] p-2" id="drag-container-${dayId}"></div>
+				</div>
+			`;
+			
+			container.appendChild(dayCard);
+
+			// Inicializar lógica de Drag and Drop para este contenedor de día
+			initDragAndDrop(`drag-container-${dayId}`);
+			
+			if (ejercicios.length > 0) {
+				ejercicios.forEach(e => addExerciseToDay(dayId, e));
 			}
+			
+			if(window.lucide) lucide.createIcons();
 		}
 
+		function initDragAndDrop(containerId) {
+			const container = document.getElementById(containerId);
+			
+			container.addEventListener('dragover', e => {
+				e.preventDefault();
+				const draggingItem = container.querySelector('.dragging');
+				const afterElement = getDragAfterElement(container, e.clientY);
+				if (afterElement == null) {
+					container.appendChild(draggingItem);
+				} else {
+					container.insertBefore(draggingItem, afterElement);
+				}
+			});
+		}
+
+		function getDragAfterElement(container, y) {
+			const draggableElements = [...container.querySelectorAll('.exercise-row:not(.dragging)')];
+			
+			return draggableElements.reduce((closest, child) => {
+				const box = child.getBoundingClientRect();
+				const offset = y - box.top - box.height / 2;
+				if (offset < 0 && offset > closest.offset) {
+					return { offset: offset, element: child };
+				} else {
+					return closest;
+				}
+			}, { offset: Number.NEGATIVE_INFINITY }).element;
+		}
+
+        function showExerciseResults(input, dayId) {
+			const query = input.value.toLowerCase();
+			const groupFilter = input.closest('.flex').querySelector('.search-group-filter').value;
+			const resultsDiv = input.nextElementSibling;
+
+			if (query.length < 2 && groupFilter === "all") {
+				resultsDiv.classList.add('hidden');
+				return;
+			}
+
+			const filtered = state.ejerciciosLibreria.filter(ex => {
+				const matchSearch = ex.nombre.toLowerCase().includes(query);
+				const matchGroup = groupFilter === "all" || ex.grupo_muscular_id == groupFilter;
+				return matchSearch && matchGroup;
+			});
+
+			if (filtered.length === 0) {
+				resultsDiv.innerHTML = '<div class="p-6 text-[11px] text-white/20 italic text-center">No hay registros en la armería</div>';
+			} else {
+				resultsDiv.innerHTML = filtered.map(ex => `
+					<div class="p-4 border-b border-white/5 text-[11px] font-black uppercase italic text-white/60 hover:text-red-600 hover:bg-white/5 cursor-pointer transition-all flex items-center gap-3" 
+						onclick="selectExerciseForDay('${dayId}', ${ex.id}, '${ex.nombre}')">
+						<i data-lucide="dumbbell" class="w-3 h-3"></i> ${ex.nombre}
+					</div>
+				`).join('');
+			}
+			resultsDiv.classList.remove('hidden');
+			if(window.lucide) lucide.createIcons();
+		}
+
+       	function selectExerciseForDay(dayId, exerciseId, exerciseName) {
+			const container = document.querySelector(`[data-day-id="${dayId}"]`);
+			const searchInput = container.querySelector('.search-exercise-input');
+			const resultsDiv = container.querySelector('.exercise-results-list');
+			
+			addExerciseToDay(dayId, { ejercicio_id: exerciseId, exercise_name: exerciseName });
+			
+			searchInput.value = "";
+			resultsDiv.classList.add('hidden');
+			showVikingToast("Ejercicio añadido al Arsenal");
+		}
+
+		function addExerciseToDay(dayId, data = null) {
+			const SERIES_POR_DEFECTO = 3; 
+			const container = document.querySelector(`[data-day-id="${dayId}"] .day-exercises-container`);
+			const div = document.createElement('div');
+			const exerciseUniqueId = 'ex-' + Math.random().toString(36).substr(2, 9);
+			
+			// Hacemos la fila DRAGGABLE
+			div.className = "exercise-row bg-white/[0.03] p-5 rounded-[1.5rem] border border-white/5 transition-all cursor-move hover:border-red-600/30 group/ex relative";
+			div.dataset.exerciseRowId = exerciseUniqueId;
+			div.draggable = true;
+
+			// Listeners de Drag
+			div.addEventListener('dragstart', () => div.classList.add('dragging', 'opacity-50', 'scale-95'));
+			div.addEventListener('dragend', () => div.classList.remove('dragging', 'opacity-50', 'scale-95'));
+
+			let exName = data?.exercise_name || "";
+			if (!exName && data?.ejercicio_id) {
+				const found = state.ejerciciosLibreria.find(e => e.id == data.ejercicio_id);
+				exName = found ? found.nombre : "Ejercicio Arsenal";
+			}
+
+			const initialNumSeries = (data && data.series) ? data.series.length : SERIES_POR_DEFECTO;
+
+			div.innerHTML = `
+				<div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
+					<div class="flex items-center gap-3">
+						<div class="w-8 h-8 rounded-lg bg-red-600/10 flex items-center justify-center text-red-600">
+							<i data-lucide="grip-vertical" class="w-4 h-4 opacity-40 group-hover/ex:opacity-100 transition-opacity"></i>
+						</div>
+						<div class="flex flex-col">
+							<input type="hidden" class="exercise-id" value="${data?.ejercicio_id}">
+							<span class="text-[13px] font-black uppercase italic text-white tracking-wide">${exName}</span>
+						</div>
+					</div>
+					
+					<div class="flex items-center gap-3 w-full md:w-auto">
+						<div class="flex items-center gap-2 bg-black/40 px-3 py-1.5 rounded-xl border border-white/5">
+							<label class="text-[9px] font-black text-white/30 uppercase italic">Sets</label>
+							<select class="viking-input !py-0 !px-1 w-12 h-7 text-[12px] text-center font-black bg-[#1a1a1a] text-red-600 border border-white/10 series-select cursor-pointer focus:border-red-600 rounded-lg" 
+									onchange="updateSeriesCount('${exerciseUniqueId}', this.value)">
+								${[0,1,2,3,4,5,6,7,8,9,10,12].map(n => 
+									`<option value="${n}" class="bg-black text-white font-bold" ${n == initialNumSeries ? 'selected' : ''}>${n}</option>`
+								).join('')}
+							</select>
+						</div>
+						<button type="button" onclick="this.closest('.exercise-row').remove()" class="text-white/10 hover:text-red-600 transition-colors p-2 bg-white/5 rounded-xl">
+							<i data-lucide="trash-2" class="w-4 h-4"></i>
+						</button>
+					</div>
+				</div>
+
+				<div id="series-container-${exerciseUniqueId}" class="space-y-1.5 mb-4"></div>
+				
+				<div class="mt-2 text-left pl-1">
+					<div class="flex items-center gap-2 mb-1">
+						<i data-lucide="message-square" class="w-3 h-3 text-red-600 opacity-40"></i>
+						<label class="text-[8px] font-black uppercase text-white/20 tracking-widest">Nota Táctica</label>
+					</div>
+					<input type="text" placeholder="Ej: Controlar fase negativa / Al fallo" 
+						value="${data?.comentario || ''}"
+						class="w-full bg-transparent text-[11px] text-white/60 border-b border-white/5 focus:border-red-600 focus:outline-none py-1.5 italic placeholder-white/5 transition-all exercise-comment">
+				</div>
+			`;
+			
+			container.appendChild(div);
+			generateSeriesRows(exerciseUniqueId, initialNumSeries, data ? data.series : null);
+			if(window.lucide) lucide.createIcons();
+		}
+
+        function updateSeriesCount(containerId, newCount) {
+			const container = document.getElementById(`series-container-${containerId}`);
+			const currentRows = container.querySelectorAll('.serie-row');
+			let savedData = [];
+			
+			currentRows.forEach(row => {
+				savedData.push({
+					repeticiones: row.querySelector('.serie-reps').value,
+					peso: row.querySelector('.serie-weight').value,
+					descanso: row.querySelector('.serie-rest').value
+				});
+			});
+
+			generateSeriesRows(containerId, newCount, savedData);
+		}
+
+        function generateSeriesRows(containerId, numSeries, existingData = null) {
+            const container = document.getElementById(`series-container-${containerId}`); 
+            if (!container) return; 
+            container.innerHTML = "";
+            
+            for (let i = 1; i <= numSeries; i++) {
+                const rowData = (existingData && existingData[i - 1]) ? existingData[i - 1] : null;
+                
+                container.innerHTML += `
+                    <div class="grid grid-cols-4 gap-2 items-center serie-row px-1 py-1 hover:bg-white/5 rounded transition-colors" data-serie-num="${i}">
+                        <!-- Número de serie alineado a la izquierda -->
+                        <span class="text-[10px] font-black text-white uppercase italic">#${i}</span>
+                        
+                        <!-- Inputs estilo "línea" (border-b) en lugar de caja completa -->
+                        <input type="text" placeholder="0" value="${rowData?.repeticiones || ''}" 
+                            class="bg-transparent border-b border-white/10 text-center text-[11px] text-white focus:border-red-600 focus:outline-none py-1 w-full font-bold serie-reps">
+                        
+                        <input type="text" placeholder="0" value="${rowData?.peso || ''}" 
+                            class="bg-transparent border-b border-white/10 text-center text-[11px] text-white focus:border-red-600 focus:outline-none py-1 w-full font-bold serie-weight">
+                        
+                        <input type="text" placeholder="90s" value="${rowData?.descanso || '90s'}" 
+                            class="bg-transparent border-b border-white/10 text-center text-[10px] text-gray-400 focus:border-red-600 focus:outline-none py-1 w-full italic serie-rest">
+                    </div>`;
+            }
+        }
+		
         async function apiFetch(endpoint, method = 'GET', body = null) {
 			const token = localStorage.getItem('viking_token');
 			const headers = { 'Content-Type': 'application/json' };
