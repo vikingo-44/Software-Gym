@@ -1561,10 +1561,19 @@
                 // 4. Abrir Modal (Tu ID original)
                 if(typeof openModal === 'function') {
                     openModal('modal-rutina-editor');
+                    
+                    // SOLUCIÓN AL SCROLL: Resetear la posición al abrir
+                    const scrollContainer = document.getElementById('rutina-editor-scroll-container');
+                    if(scrollContainer) scrollContainer.scrollTop = 0;
                 } else {
                     // Fallback por si openModal no es global
                     const m = document.getElementById('modal-rutina-editor');
-                    if(m) m.classList.remove('hidden');
+                    if(m) {
+                        m.classList.remove('hidden');
+                        // SOLUCIÓN AL SCROLL: Resetear la posición al abrir
+                        const scrollContainer = document.getElementById('rutina-editor-scroll-container');
+                        if(scrollContainer) scrollContainer.scrollTop = 0;
+                    }
                 }
 
             } catch (e) {
@@ -1816,7 +1825,7 @@
                     </div>`;
             }
         }
-		
+
         async function apiFetch(endpoint, method = 'GET', body = null) {
 			const token = localStorage.getItem('viking_token');
 			const headers = { 'Content-Type': 'application/json' };
