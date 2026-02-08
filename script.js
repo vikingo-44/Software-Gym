@@ -1386,8 +1386,8 @@
                 if(studentView) studentView.classList.add('hidden');
                 if(list) {
                     list.classList.remove('hidden');
-                    // Aseguramos estilo lista vertical
-                    list.className = "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 min-h-[400px] overflow-y-auto custom-scrollbar flex-1 pr-2 pb-10"; 
+                    // RESTAURADO: Estilo lista vertical "a lo largo"
+                    list.className = "space-y-4 min-h-[400px] overflow-y-auto custom-scrollbar flex-1 pr-2 pb-10"; 
                 }
                 document.getElementById('rutina-title').innerText = "Control de Rutinas";
                 
@@ -1418,51 +1418,53 @@
                         const initials = a.nombre_completo ? a.nombre_completo.substring(0,2).toUpperCase() : "??";
                         const planNombre = a.plan ? a.plan.nombre : 'Sin Plan';
 
-                        // --- TARJETA NUEVA (VISUAL ALUMNOS) ---
+                        // --- TARJETA NUEVA (VISUAL ALUMNOS - FORMADO LISTA LARGA) ---
                         return `
-                        <div class="glass-card p-6 rounded-[2.5rem] border border-white/10 flex flex-col justify-between hover:border-red-600/40 transition-all group relative overflow-hidden h-full shadow-lg bg-gradient-to-br from-white/[0.02] to-transparent">
-                            <!-- Barra lateral estado (Lógica visual respetada) -->
+                        <div class="glass-card p-5 rounded-[1.5rem] border border-white/5 flex flex-col md:flex-row md:items-center gap-6 hover:border-red-600/30 transition-all group relative overflow-hidden bg-gradient-to-r from-white/[0.02] to-transparent">
+                            <!-- Barra lateral estado -->
                             <div class="absolute left-0 top-0 bottom-0 w-1.5 ${colorEstado} opacity-20 group-hover:opacity-100 transition-opacity"></div>
                             
-                            <!-- Status Badge Superior -->
-                            <div class="absolute right-6 top-6">
-                                <span class="px-3 py-1 rounded-full text-[8px] font-black uppercase italic border ${colorBadge} tracking-widest shadow-sm">
-                                    ${textoEstado}
-                                </span>
-                            </div>
-
-                            <div>
-                                <!-- Identidad -->
-                                <div class="flex items-center gap-5 mb-6">
-                                    <div class="w-16 h-16 rounded-[1.2rem] bg-white/5 border border-white/10 flex items-center justify-center font-black text-white text-xl italic group-hover:bg-red-600 group-hover:text-black transition-all shadow-md shrink-0">
-                                        ${initials}
-                                    </div>
-                                    <div class="overflow-hidden">
-                                        <h4 class="text-[15px] font-black uppercase italic text-white group-hover:text-red-500 transition-colors truncate tracking-tighter">${a.nombre_completo}</h4>
-                                        <p class="text-[9px] text-white/30 font-bold uppercase tracking-[0.2em] mt-1 flex items-center gap-1.5">
-                                            <i data-lucide="id-card" class="w-3 h-3"></i> ${a.dni}
-                                        </p>
-                                    </div>
+                            <!-- COL 1: Identidad -->
+                            <div class="flex items-center gap-4 w-full md:w-1/3">
+                                <div class="w-14 h-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center font-black text-white text-lg italic shadow-lg group-hover:bg-red-600 group-hover:text-black transition-all shrink-0">
+                                    ${initials}
                                 </div>
-
-                                <!-- Info Plan -->
-                                <div class="bg-white/[0.03] p-4 rounded-2xl border border-white/5 mb-6 group-hover:bg-white/[0.05] transition-colors">
-                                    <p class="text-[8px] text-white/30 font-black uppercase italic tracking-[0.3em] mb-1.5 flex items-center gap-1.5">
-                                        <i data-lucide="ticket" class="w-3 h-3 text-red-600"></i> Plan Vigente
+                                <div class="overflow-hidden">
+                                    <h4 class="text-sm font-black uppercase italic text-white group-hover:text-red-500 transition-colors truncate tracking-tighter">${a.nombre_completo}</h4>
+                                    <p class="text-[10px] text-white/30 font-bold flex items-center gap-1.5 mt-1 uppercase tracking-widest">
+                                        <i data-lucide="id-card" class="w-3 h-3"></i> ${a.dni}
                                     </p>
-                                    <p class="text-[12px] font-black uppercase italic text-white truncate tracking-tight">${planNombre}</p>
                                 </div>
                             </div>
 
-                            <!-- Acciones (BOTONES ESPECÍFICOS DE RUTINA) -->
-                            <div class="grid grid-cols-2 gap-3 mt-auto">
-                                <button onclick="openFichaTecnica(${a.id})" class="py-3.5 bg-white/5 hover:bg-white/10 text-white rounded-xl text-[9px] font-black uppercase italic transition-all flex items-center justify-center gap-2 border border-white/10">
+                            <!-- COL 2: Info Plan -->
+                            <div class="flex-1 border-t md:border-t-0 md:border-l border-white/5 pt-4 md:pt-0 md:pl-8">
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
+                                    <div>
+                                        <p class="text-[9px] text-white/30 font-black uppercase tracking-[0.2em] mb-1 flex items-center gap-1.5">
+                                            <i data-lucide="ticket" class="w-3 h-3 text-red-600"></i> Plan Actual
+                                        </p>
+                                        <p class="text-sm font-black uppercase italic text-white truncate tracking-tight">${planNombre}</p>
+                                    </div>
+                                    <div class="flex flex-row md:flex-col items-center md:items-start justify-between gap-2">
+                                        <div class="flex items-center gap-2">
+                                            <span class="px-3 py-1 rounded-lg text-[9px] font-black uppercase border ${colorBadge} tracking-widest">
+                                                ${textoEstado}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- COL 3: Acciones -->
+                            <div class="flex items-center justify-end min-w-[100px] border-t md:border-t-0 border-white/5 pt-3 md:pt-0 gap-2">
+                                <button onclick="openFichaTecnica(${a.id})" class="px-4 py-3 bg-white/5 hover:bg-white/10 border border-white/10 text-white rounded-xl text-[9px] font-black uppercase italic transition-all flex items-center gap-2">
                                     <i data-lucide="clipboard-list" class="w-3.5 h-3.5"></i> 
-                                    Ficha
+                                    <span class="hidden lg:inline">Ficha</span>
                                 </button>
-                                <button onclick="openRoutineEditor(${a.id})" class="py-3.5 viking-bg-red text-black rounded-xl text-[9px] font-black uppercase italic hover:scale-[1.03] active:scale-95 transition-all shadow-[0_10px_20px_rgba(255,0,0,0.2)] flex items-center justify-center gap-2">
+                                <button onclick="openRoutineEditor(${a.id})" class="px-4 py-3 viking-bg-red text-black rounded-xl text-[9px] font-black uppercase italic hover:scale-105 transition-all shadow-lg flex items-center gap-2">
                                     <i data-lucide="dumbbell" class="w-3.5 h-3.5"></i>
-                                    Gestionar
+                                    <span>Gestionar</span>
                                 </button>
                             </div>
                         </div>
@@ -1504,7 +1506,7 @@
             
             // 3. Preparar DOM (Usando tus IDs originales)
             const lblAlumno = document.getElementById('rutina-editor-alumno');
-            if(lblAlumno) lblAlumno.innerText = "Alumno: " + al.nombre_completo;
+            if(lblAlumno) lblAlumno.innerText = "Guerrero: " + al.nombre_completo;
 
             const inputId = document.getElementById('rutina-editor-alumno-id');
             if(inputId) inputId.value = alumnoId;
@@ -1562,7 +1564,7 @@
                 if(typeof openModal === 'function') {
                     openModal('modal-rutina-editor');
                     
-                    // SOLUCIÓN AL SCROLL: Resetear la posición al abrir
+                    // SOLUCIÓN AL SCROLL: Resetear la posición al abrir (Canvas Fix)
                     const scrollContainer = document.getElementById('rutina-editor-scroll-container');
                     if(scrollContainer) scrollContainer.scrollTop = 0;
                 } else {
@@ -1570,7 +1572,7 @@
                     const m = document.getElementById('modal-rutina-editor');
                     if(m) {
                         m.classList.remove('hidden');
-                        // SOLUCIÓN AL SCROLL: Resetear la posición al abrir
+                        // SOLUCIÓN AL SCROLL: Resetear la posición al abrir (Canvas Fix)
                         const scrollContainer = document.getElementById('rutina-editor-scroll-container');
                         if(scrollContainer) scrollContainer.scrollTop = 0;
                     }
@@ -1695,7 +1697,7 @@
 				resultsDiv.innerHTML = filtered.map(ex => `
 					<div class="p-4 border-b border-white/5 text-[11px] font-black uppercase italic text-white/60 hover:text-red-600 hover:bg-white/5 cursor-pointer transition-all flex items-center gap-3" 
 						onclick="selectExerciseForDay('${dayId}', ${ex.id}, '${ex.nombre}')">
-						<i data-lucide="dumbbell" class="w-3 h-3"></i> ${ex.nombre}
+						<i data-lucide="dumbbell" class="w-3 h-3 text-red-600"></i> ${ex.nombre}
 					</div>
 				`).join('');
 			}
@@ -1811,7 +1813,7 @@
                 container.innerHTML += `
                     <div class="grid grid-cols-4 gap-2 items-center serie-row px-1 py-1 hover:bg-white/5 rounded transition-colors" data-serie-num="${i}">
                         <!-- Número de serie alineado a la izquierda -->
-                        <span class="text-[10px] font-black text-white uppercase italic">#${i}</span>
+                        <span class="text-[10px] font-black text-red-600 uppercase italic">#${i}</span>
                         
                         <!-- Inputs estilo "línea" (border-b) en lugar de caja completa -->
                         <input type="text" placeholder="0" value="${rowData?.repeticiones || ''}" 
