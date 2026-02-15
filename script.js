@@ -2191,14 +2191,15 @@
 			const inputDesde = document.getElementById('caja-filtro-desde');
 			const inputHasta = document.getElementById('caja-filtro-hasta');
 
-			// 1. Seteo de HOY si está vacío
+			// 1. Seteo de HOY en formato LOCAL YYYY-MM-DD
+			// Usamos el offset para obtener la fecha exacta del dispositivo del usuario
 			const timezoneOffset = new Date().getTimezoneOffset() * 60000;
 			const hoyLocal = new Date(Date.now() - timezoneOffset).toISOString().split('T')[0];
 			
 			if (inputDesde && !inputDesde.value) inputDesde.value = hoyLocal;
 			if (inputHasta && !inputHasta.value) inputHasta.value = hoyLocal;
 
-			// 2. Traer los movimientos
+			// 2. Traer los movimientos de la API
 			const movs = await apiFetch('/caja/movimientos');
 			
 			let calcIngresos = 0;
@@ -2207,24 +2208,46 @@
 
 			if (!Array.isArray(movs)) return;
 
-			// 3. FILTRADO
+			// 3. FILTRADO CORREGIDO E INTELIGENTE (Basado en Local Time)
 			const filtrados = movs.filter(m => {
-				const fechaMov = m.fecha.split('T')[0]; 
-				return fechaMov >= inputDesde.value && fechaMov <= inputHasta.value;
+				if (!m.fecha) return false;
+
+				// CRÍTICO: Si la fecha no termina en Z (UTC), se la agregamos para que el navegador 
+				// entienda que lo que viene de la DB es UTC y lo convierta a la hora local del usuario.
+				let fechaZ = m.fecha;
+				if (!fechaZ.endsWith('Z') && !fechaZ.includes('+')) {
+					fechaZ += 'Z';
+				}
+
+				const d = new Date(fechaZ);
+				
+				// Extraemos año, mes y día en formato LOCAL del usuario para comparar con el input
+				const yyyy = d.getFullYear();
+				const mm = String(d.getMonth() + 1).padStart(2, '0');
+				const dd = String(d.getDate()).padStart(2, '0');
+				const fechaMovLocal = `${yyyy}-${mm}-${dd}`;
+									
+				return fechaMovLocal >= inputDesde.value && fechaMovLocal <= inputHasta.value;
 			});
 
 			// 4. Renderizado de Tabla (7 Columnas: Fecha | Tipo | Desc | Detalle | Metodo | Cuotas | Monto)
 			if (table) {
 				if (filtrados.length > 0) {
+					// Ordenamos por fecha descendente (más nuevos primero)
+					filtrados.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+
 					table.innerHTML = filtrados.map(m => {
 						const tipoRaw = (m.tipo || '').toLowerCase();
 						const monto = Math.abs(parseFloat(m.monto));
 						const metodo = m.metodo_pago || 'Efectivo';
 						const cuotas = parseInt(m.cuotas) || 1;
 						
-						// Lógica de Ingreso vs Egreso
-						const esPositivo = (tipoRaw.includes('mercaderia') || tipoRaw.includes('mercadería') || tipoRaw.includes('plan') || tipoRaw.includes('venta') || tipoRaw.includes('cobro') || tipoRaw.includes('ingreso')) && !tipoRaw.includes('compra');
-						const esEgreso = !esPositivo && (tipoRaw === 'gasto' || tipoRaw === 'egreso' || tipoRaw === 'salida' || tipoRaw === 'compra');
+						// Lógica de Clasificación (Ingreso vs Egreso)
+						const esEgresoManual = tipoRaw === 'egreso' || tipoRaw === 'gasto' || tipoRaw === 'compra' || tipoRaw === 'salida';
+						const esIngresoManual = tipoRaw === 'ingreso' || tipoRaw === 'entrada';
+						
+						const esPositivo = esIngresoManual || ((tipoRaw.includes('mercaderia') || tipoRaw.includes('plan') || tipoRaw.includes('venta') || tipoRaw.includes('cobro')) && !tipoRaw.includes('compra'));
+						const esEgreso = !esPositivo && (esEgresoManual || tipoRaw.includes('compra') || tipoRaw.includes('pago'));
 
 						if (esEgreso) calcGastos += monto;
 						else calcIngresos += monto;
@@ -2232,11 +2255,14 @@
 						const flujoTexto = esEgreso ? 'EGRESO' : 'INGRESO';
 						const flujoColor = esEgreso ? 'bg-red-500/10 text-red-500 border-red-500/20' : 'bg-green-500/10 text-green-500 border-green-500/20';
 
-						// Formateo de Fecha para la columna 1
-						const fechaObj = new Date(m.fecha);
-						const fechaDisplay = fechaObj.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' });
+						// Formateo de Fecha y Hora Local
+						let fechaZ = m.fecha;
+						if (!fechaZ.endsWith('Z') && !fechaZ.includes('+')) fechaZ += 'Z';
+						const d = new Date(fechaZ);
+						
+						const fDisplay = String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0');
+						const hDisplay = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
 
-						// Lógica de Cuotas para la columna de Monto (info extra)
 						let infoCuotasMonto = '';
 						if (metodo === 'T. Credito' && cuotas > 1) {
 							const valorCuota = monto / cuotas;
@@ -2247,8 +2273,9 @@
 
 						return `
 						<tr class="viking-table-row border-b border-white/5 hover:bg-white/5 transition-colors">
-							<td class="py-4 pl-6 text-white/40 font-bold text-[10px]">
-								${fechaDisplay}
+							<td class="py-4 pl-6">
+								<span class="text-white text-[10px] font-black">${fDisplay}</span>
+								<span class="block text-white/20 text-[8px] font-bold">${hDisplay} HS</span>
 							</td>
 							<td class="py-4">
 								<span class="px-2 py-0.5 rounded border text-[8px] font-black uppercase tracking-wider ${flujoColor}">${flujoTexto}</span>
