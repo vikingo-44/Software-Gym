@@ -2381,15 +2381,12 @@
 				// 1. ACTUALIZAR STOCK EN EL SERVIDOR
 				try {
 					const nuevoStock = parseInt(producto.stock_actual) + cantidadAñadir;
-					// CORRECCIÓN: Se envían las opciones como objeto para evitar error de método HTTP
-					const resStock = await apiFetch(`/stock/${productoId}`, {
-						method: 'PUT',
-						body: JSON.stringify({
-							nombre_producto: producto.nombre_producto,
-							stock_actual: nuevoStock,
-							precio_venta: producto.precio_venta,
-							url_imagen: producto.url_imagen
-						})
+					// CORRECCIÓN: Se envían los argumentos en orden (url, metodo, cuerpo) para evitar error de método HTTP
+					const resStock = await apiFetch(`/stock/${productoId}`, 'PUT', {
+						nombre_producto: producto.nombre_producto,
+						stock_actual: nuevoStock,
+						precio_venta: producto.precio_venta,
+						url_imagen: producto.url_imagen
 					});
 					
 					// Verificamos si el servidor devolvió error o no tuvo éxito
@@ -2404,16 +2401,13 @@
 
 			// 2. REGISTRO EN CAJA
 			try {
-				// CORRECCIÓN: Se envían las opciones como objeto para que apiFetch procese correctamente el POST
-				const res = await apiFetch('/caja/movimientos', {
-					method: 'POST',
-					body: JSON.stringify({
-						tipo: tipoSeleccionado,
-						descripcion: descripcionFinal,
-						descripcion2: notaManual,
-						monto: monto,
-						metodo_pago: 'Efectivo'
-					})
+				// CORRECCIÓN: Se envían los argumentos en orden (url, metodo, cuerpo) para que apiFetch procese correctamente el POST
+				const res = await apiFetch('/caja/movimientos', 'POST', {
+					tipo: tipoSeleccionado,
+					descripcion: descripcionFinal,
+					descripcion2: notaManual,
+					monto: monto,
+					metodo_pago: 'Efectivo'
 				});
 
 				if (!res.error && res.status !== 'error') {
