@@ -2376,12 +2376,17 @@
 				const producto = currentStock.find(p => String(p.id) === String(productoId));
 				if (!producto) return alert("Producto no identificado.");
 
+				// LÓGICA VIKINGA: Si es compra, movemos tu "detalle" a notaManual para que no se pierda
+				if (descripcionFinal && descripcionFinal !== 'Varios') {
+					notaManual = descripcionFinal + (notaManual ? ' - ' + notaManual : '');
+				}
+
 				descripcionFinal = `COMPRA: ${producto.nombre_producto.toUpperCase()} (x${cantidadAñadir} UNID)`;
 
 				// 1. ACTUALIZAR STOCK EN EL SERVIDOR
 				try {
 					const nuevoStock = parseInt(producto.stock_actual) + cantidadAñadir;
-					// CORRECCIÓN: Se envían los argumentos en orden (url, metodo, cuerpo) para evitar error de método HTTP
+					// CORRECCIÓN FINAL: Argumentos posicionales (URL, MÉTODO, CUERPO)
 					const resStock = await apiFetch(`/stock/${productoId}`, 'PUT', {
 						nombre_producto: producto.nombre_producto,
 						stock_actual: nuevoStock,
@@ -2401,7 +2406,7 @@
 
 			// 2. REGISTRO EN CAJA
 			try {
-				// CORRECCIÓN: Se envían los argumentos en orden (url, metodo, cuerpo) para que apiFetch procese correctamente el POST
+				// CORRECCIÓN FINAL: Argumentos posicionales (URL, MÉTODO, CUERPO)
 				const res = await apiFetch('/caja/movimientos', 'POST', {
 					tipo: tipoSeleccionado,
 					descripcion: descripcionFinal,
