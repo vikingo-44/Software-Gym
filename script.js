@@ -2192,7 +2192,6 @@
 			const inputHasta = document.getElementById('caja-filtro-hasta');
 
 			// 1. Seteo de HOY en formato LOCAL YYYY-MM-DD
-			// Usamos el offset para obtener la fecha exacta del dispositivo del usuario
 			const timezoneOffset = new Date().getTimezoneOffset() * 60000;
 			const hoyLocal = new Date(Date.now() - timezoneOffset).toISOString().split('T')[0];
 			
@@ -2212,8 +2211,6 @@
 			const filtrados = movs.filter(m => {
 				if (!m.fecha) return false;
 
-				// CRÍTICO: Si la fecha no termina en Z (UTC), se la agregamos para que el navegador 
-				// entienda que lo que viene de la DB es UTC y lo convierta a la hora local del usuario.
 				let fechaZ = m.fecha;
 				if (!fechaZ.endsWith('Z') && !fechaZ.includes('+')) {
 					fechaZ += 'Z';
@@ -2221,7 +2218,6 @@
 
 				const d = new Date(fechaZ);
 				
-				// Extraemos año, mes y día en formato LOCAL del usuario para comparar con el input
 				const yyyy = d.getFullYear();
 				const mm = String(d.getMonth() + 1).padStart(2, '0');
 				const dd = String(d.getDate()).padStart(2, '0');
@@ -2242,7 +2238,7 @@
 						const metodo = m.metodo_pago || 'Efectivo';
 						const cuotas = parseInt(m.cuotas) || 1;
 						
-						// Lógica de Clasificación (Ingreso vs Egreso)
+						// Lógica de Clasificación (Ingreso vs Egreso) para totales y colores
 						const esEgresoManual = tipoRaw === 'egreso' || tipoRaw === 'gasto' || tipoRaw === 'compra' || tipoRaw === 'salida';
 						const esIngresoManual = tipoRaw === 'ingreso' || tipoRaw === 'entrada';
 						
@@ -2254,6 +2250,34 @@
 
 						const flujoTexto = esEgreso ? 'EGRESO' : 'INGRESO';
 						const flujoColor = esEgreso ? 'bg-red-500/10 text-red-500 border-red-500/20' : 'bg-green-500/10 text-green-500 border-green-500/20';
+
+						// --- LÓGICA DE ORGANIZACIÓN DE COLUMNAS ---
+						let categoriaDisplay = m.tipo || 'Movimiento';
+						let detalleDisplay = m.descripcion || '-';
+
+						// Si es un plan (Renovación o Nuevo), extraemos el nombre del Alumno
+						if (tipoRaw.includes('plan')) {
+							categoriaDisplay = "Plan GymFit";
+							// Limpiamos el texto para que quede: "Plan Nombre - Alumno Nombre"
+							detalleDisplay = (m.descripcion || '').replace(/Cobro Plan\s*/i, '').replace(/Renovación\s*/i, '').trim();
+						} 
+						// Si es venta de productos (Stock)
+						else if (tipoRaw.includes('mercaderia') || tipoRaw.includes('venta')) {
+							categoriaDisplay = "Venta Stock";
+							detalleDisplay = (m.descripcion || '').replace(/Venta Insumo:\s*/i, '').trim();
+						}
+						// Si es compra para reponer stock
+						else if (tipoRaw.includes('compra')) {
+							categoriaDisplay = "Reposición";
+							detalleDisplay = (m.descripcion || '').replace(/Compra Stock:\s*/i, '').trim();
+						}
+						// Si es un movimiento manual de caja (Gastos o ingresos manuales)
+						else if (esIngresoManual) {
+							categoriaDisplay = "Ingreso Manual";
+						}
+						else if (esEgresoManual) {
+							categoriaDisplay = "Gasto Extra";
+						}
 
 						// Formateo de Fecha y Hora Local
 						let fechaZ = m.fecha;
@@ -2281,10 +2305,10 @@
 								<span class="px-2 py-0.5 rounded border text-[8px] font-black uppercase tracking-wider ${flujoColor}">${flujoTexto}</span>
 							</td>
 							<td class="py-4 text-white text-[10px] font-black uppercase tracking-tight">
-								${m.descripcion || '-'}
+								${categoriaDisplay}
 							</td>
 							<td class="py-4 text-white/40 text-[9px] font-bold uppercase italic">
-								${m.tipo || '-'}
+								${detalleDisplay}
 							</td>
 							<td class="py-4 text-white/60 text-[10px] font-bold uppercase">
 								${metodo}
