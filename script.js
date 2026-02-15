@@ -2191,7 +2191,7 @@
 			const inputDesde = document.getElementById('caja-filtro-desde');
 			const inputHasta = document.getElementById('caja-filtro-hasta');
 
-			// 1. Seteo de HOY si está vacío (Manejo de zona horaria para precisión)
+			// 1. Seteo de HOY si está vacío
 			const timezoneOffset = new Date().getTimezoneOffset() * 60000;
 			const hoyLocal = new Date(Date.now() - timezoneOffset).toISOString().split('T')[0];
 			
@@ -2207,20 +2207,20 @@
 
 			if (!Array.isArray(movs)) return;
 
-			// 3. FILTRADO: Comparamos las fechas
+			// 3. FILTRADO
 			const filtrados = movs.filter(m => {
 				const fechaMov = m.fecha.split('T')[0]; 
 				return fechaMov >= inputDesde.value && fechaMov <= inputHasta.value;
 			});
 
-			// 4. Renderizado de Tabla
+			// 4. Renderizado de Tabla (7 Columnas: Fecha | Tipo | Desc | Detalle | Metodo | Cuotas | Monto)
 			if (table) {
 				if (filtrados.length > 0) {
 					table.innerHTML = filtrados.map(m => {
 						const tipoRaw = (m.tipo || '').toLowerCase();
 						const monto = Math.abs(parseFloat(m.monto));
 						const metodo = m.metodo_pago || 'Efectivo';
-						const cuotas = parseInt(m.cuotas) || 1; // Leemos las cuotas (por defecto 1)
+						const cuotas = parseInt(m.cuotas) || 1;
 						
 						// Lógica de Ingreso vs Egreso
 						const esPositivo = (tipoRaw.includes('mercaderia') || tipoRaw.includes('mercadería') || tipoRaw.includes('plan') || tipoRaw.includes('venta') || tipoRaw.includes('cobro') || tipoRaw.includes('ingreso')) && !tipoRaw.includes('compra');
@@ -2232,39 +2232,49 @@
 						const flujoTexto = esEgreso ? 'EGRESO' : 'INGRESO';
 						const flujoColor = esEgreso ? 'bg-red-500/10 text-red-500 border-red-500/20' : 'bg-green-500/10 text-green-500 border-green-500/20';
 
-						// LÓGICA DE CUOTAS: Solo si es T. Credito y más de 1 cuota
-						let detalleCuotas = '';
+						// Formateo de Fecha para la columna 1
+						const fechaObj = new Date(m.fecha);
+						const fechaDisplay = fechaObj.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' });
+
+						// Lógica de Cuotas para la columna de Monto (info extra)
+						let infoCuotasMonto = '';
 						if (metodo === 'T. Credito' && cuotas > 1) {
 							const valorCuota = monto / cuotas;
-							detalleCuotas = `<span class="block text-[8px] text-red-500 font-black mt-0.5">
-												PAGO EN ${cuotas} CUOTAS DE $ ${valorCuota.toLocaleString()}
-											</span>`;
+							infoCuotasMonto = `<span class="block text-[7px] text-red-500 font-black mt-0.5 tracking-tighter uppercase">
+													$ ${valorCuota.toLocaleString()} x ${cuotas}
+												</span>`;
 						}
 
 						return `
 						<tr class="viking-table-row border-b border-white/5 hover:bg-white/5 transition-colors">
-							<td class="py-3 px-2">
+							<td class="py-4 pl-6 text-white/40 font-bold text-[10px]">
+								${fechaDisplay}
+							</td>
+							<td class="py-4">
 								<span class="px-2 py-0.5 rounded border text-[8px] font-black uppercase tracking-wider ${flujoColor}">${flujoTexto}</span>
 							</td>
-							<td class="py-3 px-2">
-								<span class="text-white text-[9px] font-black uppercase italic opacity-60">${m.tipo}</span>
+							<td class="py-4 text-white text-[10px] font-black uppercase tracking-tight">
+								${m.descripcion || '-'}
 							</td>
-							<td class="py-3 px-2">
-								<p class="text-[10px] font-bold text-white uppercase leading-tight">${m.descripcion}</p>
-								<p class="text-[8px] text-gray-500 uppercase">
-									${new Date(m.fecha).toLocaleDateString()} - ${metodo}
-								</p>
-								${detalleCuotas}
+							<td class="py-4 text-white/40 text-[9px] font-bold uppercase italic">
+								${m.tipo || '-'}
 							</td>
-							<td class="py-3 px-2 text-right font-black italic text-white text-[11px] pr-2">
+							<td class="py-4 text-white/60 text-[10px] font-bold uppercase">
+								${metodo}
+							</td>
+							<td class="py-4 text-white/30 text-[10px] font-bold">
+								${cuotas} ${cuotas > 1 ? 'CUOTAS' : 'CUOTA'}
+							</td>
+							<td class="py-4 text-right pr-6 font-black italic text-white text-[12px]">
 								$ ${monto.toLocaleString()}
+								${infoCuotasMonto}
 							</td>
 						</tr>`;
 					}).join('');
 					
 					if (window.lucide) lucide.createIcons();
 				} else {
-					table.innerHTML = '<tr><td colspan="4" class="text-center py-12 text-gray-600 italic text-[10px] uppercase tracking-widest">Sin movimientos en este rango</td></tr>';
+					table.innerHTML = '<tr><td colspan="7" class="text-center py-20 text-white/10 italic text-[10px] font-black uppercase tracking-[0.4em]">Sin movimientos en este rango</td></tr>';
 				}
 			}
 
@@ -2275,7 +2285,7 @@
 			if(document.getElementById('caja-balance')) {
 				const eb = document.getElementById('caja-balance');
 				eb.innerText = `$ ${calcBalance.toLocaleString()}`;
-				eb.className = `text-3xl font-black italic ${calcBalance >= 0 ? 'text-green-500' : 'text-red-500'}`;
+				eb.className = `text-4xl font-black italic ${calcBalance >= 0 ? 'text-green-500' : 'text-red-500'}`;
 			}
 		};
 
