@@ -2381,6 +2381,7 @@
 				// 1. ACTUALIZAR STOCK EN EL SERVIDOR
 				try {
 					const nuevoStock = parseInt(producto.stock_actual) + cantidadAñadir;
+					// CORRECCIÓN: Se envían las opciones como objeto para evitar error de método HTTP
 					const resStock = await apiFetch(`/stock/${productoId}`, {
 						method: 'PUT',
 						body: JSON.stringify({
@@ -2403,6 +2404,7 @@
 
 			// 2. REGISTRO EN CAJA
 			try {
+				// CORRECCIÓN: Se envían las opciones como objeto para que apiFetch procese correctamente el POST
 				const res = await apiFetch('/caja/movimientos', {
 					method: 'POST',
 					body: JSON.stringify({
