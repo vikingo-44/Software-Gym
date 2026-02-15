@@ -2217,7 +2217,6 @@
 				}
 
 				const d = new Date(fechaZ);
-				
 				const yyyy = d.getFullYear();
 				const mm = String(d.getMonth() + 1).padStart(2, '0');
 				const dd = String(d.getDate()).padStart(2, '0');
@@ -2241,7 +2240,6 @@
 						// Lógica de Clasificación (Ingreso vs Egreso) para totales y colores
 						const esEgresoManual = tipoRaw === 'egreso' || tipoRaw === 'gasto' || tipoRaw === 'compra' || tipoRaw === 'salida';
 						const esIngresoManual = tipoRaw === 'ingreso' || tipoRaw === 'entrada';
-						
 						const esPositivo = esIngresoManual || ((tipoRaw.includes('mercaderia') || tipoRaw.includes('plan') || tipoRaw.includes('venta') || tipoRaw.includes('cobro')) && !tipoRaw.includes('compra'));
 						const esEgreso = !esPositivo && (esEgresoManual || tipoRaw.includes('compra') || tipoRaw.includes('pago'));
 
@@ -2254,6 +2252,7 @@
 						// --- LÓGICA DE ORGANIZACIÓN DE COLUMNAS (INTERCAMBIADAS) ---
 						let categoriaTag = m.tipo || 'Movimiento';
 						let infoPrincipal = m.descripcion || '-';
+						let notaManual = m.descripcion2 || ''; // Recibimos la nueva columna de notas manuales
 
 						// Si es un plan (Renovación o Nuevo)
 						if (tipoRaw.includes('plan')) {
@@ -2283,7 +2282,6 @@
 						let fechaZ = m.fecha;
 						if (!fechaZ.endsWith('Z') && !fechaZ.includes('+')) fechaZ += 'Z';
 						const d = new Date(fechaZ);
-						
 						const fDisplay = String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0');
 						const hDisplay = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
 
@@ -2304,11 +2302,14 @@
 							<td class="py-4">
 								<span class="px-2 py-0.5 rounded border text-[8px] font-black uppercase tracking-wider ${flujoColor}">${flujoTexto}</span>
 							</td>
+							<!-- DESCRIPCIÓN: Muestra el Alumno, Producto o Motivo -->
 							<td class="py-4 text-white text-[10px] font-black uppercase tracking-tight">
 								${infoPrincipal}
 							</td>
+							<!-- DETALLE: Muestra la Categoría y la Nota Manual (descripcion2) -->
 							<td class="py-4 text-white/40 text-[9px] font-bold uppercase italic">
-								${categoriaTag}
+								<span class="text-white/60 block mb-0.5">${categoriaTag}</span>
+								<span class="text-red-600/60">${notaManual}</span>
 							</td>
 							<td class="py-4 text-white/60 text-[10px] font-bold uppercase">
 								${metodo}
@@ -2348,11 +2349,12 @@
 			window.loadCaja();
 		};
 
-		// ESTA ES LA VERSIÓN DEFINITIVA PARA TU SCRIPT.JS
+		// FUNCTION GUARDARMOVIMIENTO ABAJO:
 		window.guardarMovimiento = async function(event) {
 			if (event && event.preventDefault) event.preventDefault();
 
 			const descInput = document.getElementById('input-desc-gasto');
+			const notaInput = document.getElementById('input-nota-gasto');
 			const montoInput = document.getElementById('input-monto-gasto');
 			const tipoInput = document.getElementById('input-tipo-movimiento');
 			const prodSelect = document.getElementById('input-producto-stock');
@@ -2361,6 +2363,7 @@
 			const monto = parseFloat(montoInput?.value) || 0;
 			const tipoSeleccionado = tipoInput ? tipoInput.value : 'Ingreso';
 			let descripcionFinal = descInput?.value || 'Varios';
+			let notaManual = notaInput?.value || '';
 
 			if (monto <= 0) return alert("El monto debe ser mayor a 0");
 
@@ -2371,7 +2374,6 @@
 				// Buscamos en el estado GLOBAL
 				const currentStock = window.state?.stock || [];
 				const producto = currentStock.find(p => String(p.id) === String(productoId));
-				
 				if (!producto) return alert("Producto no identificado.");
 
 				descripcionFinal = `COMPRA: ${producto.nombre_producto.toUpperCase()} (x${cantidadAñadir} UNID)`;
@@ -2379,11 +2381,14 @@
 				// 1. ACTUALIZAR STOCK EN EL SERVIDOR
 				try {
 					const nuevoStock = parseInt(producto.stock_actual) + cantidadAñadir;
-					const resStock = await apiFetch(`/stock/${productoId}`, 'PUT', {
-						nombre_producto: producto.nombre_producto,
-						stock_actual: nuevoStock,
-						precio_venta: producto.precio_venta,
-						url_imagen: producto.url_imagen
+					const resStock = await apiFetch(`/stock/${productoId}`, {
+						method: 'PUT',
+						body: JSON.stringify({
+							nombre_producto: producto.nombre_producto,
+							stock_actual: nuevoStock,
+							precio_venta: producto.precio_venta,
+							url_imagen: producto.url_imagen
+						})
 					});
 					
 					// Verificamos si el servidor devolvió error o no tuvo éxito
@@ -2398,19 +2403,23 @@
 
 			// 2. REGISTRO EN CAJA
 			try {
-				const res = await apiFetch('/caja/movimientos', 'POST', {
-					tipo: tipoSeleccionado, 
-					descripcion: descripcionFinal,
-					monto: monto,
-					metodo_pago: 'Efectivo' 
+				const res = await apiFetch('/caja/movimientos', {
+					method: 'POST',
+					body: JSON.stringify({
+						tipo: tipoSeleccionado,
+						descripcion: descripcionFinal,
+						descripcion2: notaManual,
+						monto: monto,
+						metodo_pago: 'Efectivo'
+					})
 				});
 
 				if (!res.error && res.status !== 'error') {
 					document.getElementById('modal-gasto').classList.add('hidden');
 					
 					// RECARGA GLOBAL
-					await window.loadCaja(); 
-					if (typeof window.loadStock === 'function') await window.loadStock(); 
+					await window.loadCaja();
+					if (typeof window.loadStock === 'function') await window.loadStock();
 					
 					if (typeof showVikingToast === 'function') showVikingToast('Caja y Stock actualizados');
 				} else {

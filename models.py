@@ -99,6 +99,7 @@ class MovimientoCaja(Base):
     tipo = Column(String) # Ingreso / Egreso
     monto = Column(Float)
     descripcion = Column(String)
+    descripcion2 = Column(String, nullable=True) # <-- Columna para notas manuales
     metodo_pago = Column(String, default="Efectivo") # <-- Agregado para reportes
     fecha = Column(DateTime, default=datetime.datetime.now)
     cuotas = Column(Integer, default=1)

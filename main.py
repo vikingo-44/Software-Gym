@@ -258,6 +258,7 @@ class MovimientoCajaCreate(BaseModel):
     tipo: str
     monto: float
     descripcion: str
+    descripcion2: Optional[str] = None
     metodo_pago: Optional[str] = "Efectivo"
 
 class MovimientoCreate(BaseModel):
@@ -266,6 +267,7 @@ class MovimientoCreate(BaseModel):
     tipo: str  
     metodo_pago: str = "Efectivo"
     cuotas: Optional[int] = 1
+    descripcion2: Optional[str] = None
 
 class TransactionCreate(BaseModel):
     tipo: str  # 'Plan' o 'Mercaderia'
@@ -276,6 +278,7 @@ class TransactionCreate(BaseModel):
     producto_id: Optional[int] = None
     cantidad: int = 1
     cuotas: Optional[int] = 1
+    descripcion2: Optional[str] = None
 
 # --- SCHEMAS RUTINAS ---
 class SerieResponse(BaseModel):
@@ -1009,6 +1012,7 @@ def create_movimiento(data: MovimientoCajaCreate, db: Session = Depends(database
         tipo=data.tipo,
         monto=abs(data.monto), # Forzar positivo
         descripcion=data.descripcion,
+        descripcion2=data.descripcion2,
         metodo_pago=data.metodo_pago,
         fecha=datetime.now()
     )
@@ -1026,6 +1030,7 @@ def crear_movimiento_caja(mov: MovimientoCreate, db: Session = Depends(database.
     # Creación del objeto para la DB incluyendo la nueva columna 'cuotas'
     nuevo_movimiento = models.MovimientoCaja(
         descripcion=mov.descripcion,
+        descripcion2=mov.descripcion2,
         monto=abs(mov.monto),   # Siempre guardamos el monto positivo
         tipo=tipo_final,        # Aquí definimos si entró o salió plata
         metodo_pago=mov.metodo_pago,
@@ -1063,6 +1068,7 @@ def procesar_cobro(data: TransactionCreate, db: Session = Depends(database.get_d
             tipo="Ingreso",  # Siempre es ingreso
             monto=monto_positivo,
             descripcion=detalle,
+            descripcion2=data.descripcion2,
             metodo_pago=data.metodo_pago,
             cuotas=data.cuotas,
             fecha=datetime.now()
