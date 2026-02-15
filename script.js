@@ -2188,158 +2188,158 @@
         }
 
 		window.loadCaja = async function() {
-			const inputDesde = document.getElementById('caja-filtro-desde');
-			const inputHasta = document.getElementById('caja-filtro-hasta');
+            const inputDesde = document.getElementById('caja-filtro-desde');
+            const inputHasta = document.getElementById('caja-filtro-hasta');
 
-			// 1. Seteo de HOY en formato LOCAL YYYY-MM-DD
-			const timezoneOffset = new Date().getTimezoneOffset() * 60000;
-			const hoyLocal = new Date(Date.now() - timezoneOffset).toISOString().split('T')[0];
-			
-			if (inputDesde && !inputDesde.value) inputDesde.value = hoyLocal;
-			if (inputHasta && !inputHasta.value) inputHasta.value = hoyLocal;
+            // 1. Seteo de HOY en formato LOCAL YYYY-MM-DD
+            const timezoneOffset = new Date().getTimezoneOffset() * 60000;
+            const hoyLocal = new Date(Date.now() - timezoneOffset).toISOString().split('T')[0];
+            
+            if (inputDesde && !inputDesde.value) inputDesde.value = hoyLocal;
+            if (inputHasta && !inputHasta.value) inputHasta.value = hoyLocal;
 
-			// 2. Traer los movimientos de la API
-			const movs = await apiFetch('/caja/movimientos');
-			
-			let calcIngresos = 0;
-			let calcGastos = 0;
-			const table = document.getElementById('table-caja');
+            // 2. Traer los movimientos de la API
+            const movs = await apiFetch('/caja/movimientos');
+            
+            let calcIngresos = 0;
+            let calcGastos = 0;
+            const table = document.getElementById('table-caja');
 
-			if (!Array.isArray(movs)) return;
+            if (!Array.isArray(movs)) return;
 
-			// 3. FILTRADO CORREGIDO E INTELIGENTE (Basado en Local Time)
-			const filtrados = movs.filter(m => {
-				if (!m.fecha) return false;
+            // 3. FILTRADO CORREGIDO E INTELIGENTE (Basado en Local Time)
+            const filtrados = movs.filter(m => {
+                if (!m.fecha) return false;
 
-				let fechaZ = m.fecha;
-				if (!fechaZ.endsWith('Z') && !fechaZ.includes('+')) {
-					fechaZ += 'Z';
-				}
+                let fechaZ = m.fecha;
+                if (!fechaZ.endsWith('Z') && !fechaZ.includes('+')) {
+                    fechaZ += 'Z';
+                }
 
-				const d = new Date(fechaZ);
-				const yyyy = d.getFullYear();
-				const mm = String(d.getMonth() + 1).padStart(2, '0');
-				const dd = String(d.getDate()).padStart(2, '0');
-				const fechaMovLocal = `${yyyy}-${mm}-${dd}`;
-									
-				return fechaMovLocal >= inputDesde.value && fechaMovLocal <= inputHasta.value;
-			});
+                const d = new Date(fechaZ);
+                const yyyy = d.getFullYear();
+                const mm = String(d.getMonth() + 1).padStart(2, '0');
+                const dd = String(d.getDate()).padStart(2, '0');
+                const fechaMovLocal = `${yyyy}-${mm}-${dd}`;
+                                    
+                return fechaMovLocal >= inputDesde.value && fechaMovLocal <= inputHasta.value;
+            });
 
-			// 4. Renderizado de Tabla (7 Columnas: Fecha | Tipo | Desc | Detalle | Metodo | Cuotas | Monto)
-			if (table) {
-				if (filtrados.length > 0) {
-					// Ordenamos por fecha descendente (más nuevos primero)
-					filtrados.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+            // 4. Renderizado de Tabla (7 Columnas: Fecha | Tipo | Desc | Detalle | Metodo | Cuotas | Monto)
+            if (table) {
+                if (filtrados.length > 0) {
+                    // Ordenamos por fecha descendente (más nuevos primero)
+                    filtrados.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
 
-					table.innerHTML = filtrados.map(m => {
-						const tipoRaw = (m.tipo || '').toLowerCase();
-						const monto = Math.abs(parseFloat(m.monto));
-						const metodo = m.metodo_pago || 'Efectivo';
-						const cuotas = parseInt(m.cuotas) || 1;
-						
-						// Lógica de Clasificación (Ingreso vs Egreso) para totales y colores
-						const esEgresoManual = tipoRaw === 'egreso' || tipoRaw === 'gasto' || tipoRaw === 'compra' || tipoRaw === 'salida';
-						const esIngresoManual = tipoRaw === 'ingreso' || tipoRaw === 'entrada';
-						const esPositivo = esIngresoManual || ((tipoRaw.includes('mercaderia') || tipoRaw.includes('plan') || tipoRaw.includes('venta') || tipoRaw.includes('cobro')) && !tipoRaw.includes('compra'));
-						const esEgreso = !esPositivo && (esEgresoManual || tipoRaw.includes('compra') || tipoRaw.includes('pago'));
+                    table.innerHTML = filtrados.map(m => {
+                        const tipoRaw = (m.tipo || '').toLowerCase();
+                        const monto = Math.abs(parseFloat(m.monto));
+                        const metodo = m.metodo_pago || 'Efectivo';
+                        const cuotas = parseInt(m.cuotas) || 1;
+                        
+                        // Lógica de Clasificación (Ingreso vs Egreso) para totales y colores
+                        const esEgresoManual = tipoRaw === 'egreso' || tipoRaw === 'gasto' || tipoRaw === 'compra' || tipoRaw === 'salida';
+                        const esIngresoManual = tipoRaw === 'ingreso' || tipoRaw === 'entrada';
+                        const esPositivo = esIngresoManual || ((tipoRaw.includes('mercaderia') || tipoRaw.includes('plan') || tipoRaw.includes('venta') || tipoRaw.includes('cobro')) && !tipoRaw.includes('compra'));
+                        const esEgreso = !esPositivo && (esEgresoManual || tipoRaw.includes('compra') || tipoRaw.includes('pago'));
 
-						if (esEgreso) calcGastos += monto;
-						else calcIngresos += monto;
+                        if (esEgreso) calcGastos += monto;
+                        else calcIngresos += monto;
 
-						const flujoTexto = esEgreso ? 'EGRESO' : 'INGRESO';
-						const flujoColor = esEgreso ? 'bg-red-500/10 text-red-500 border-red-500/20' : 'bg-green-500/10 text-green-500 border-green-500/20';
+                        const flujoTexto = esEgreso ? 'EGRESO' : 'INGRESO';
+                        const flujoColor = esEgreso ? 'bg-red-500/10 text-red-500 border-red-500/20' : 'bg-green-500/10 text-green-500 border-green-500/20';
 
-						// --- LÓGICA DE ORGANIZACIÓN DE COLUMNAS (INTERCAMBIADAS) ---
-						let categoriaTag = m.tipo || 'Movimiento';
-						let infoPrincipal = m.descripcion || '-';
-						let notaManual = m.descripcion2 || ''; // Recibimos la nueva columna de notas manuales
+                        // --- LÓGICA DE ORGANIZACIÓN DE COLUMNAS (INTERCAMBIADAS) ---
+                        let categoriaTag = m.tipo || 'Movimiento';
+                        let infoPrincipal = m.descripcion || '-';
+                        let notaManual = m.descripcion2 || ''; // Recibimos la nueva columna de notas manuales
 
-						// Si es un plan (Renovación o Nuevo)
-						if (tipoRaw.includes('plan')) {
-							categoriaTag = "Plan GymFit";
-							// En infoPrincipal (Columna Descripción) ponemos el Alumno/Plan
-							infoPrincipal = (m.descripcion || '').replace(/Cobro Plan\s*/i, '').replace(/Renovación\s*/i, '').trim();
-						} 
-						// Si es venta de productos (Stock)
-						else if (tipoRaw.includes('mercaderia') || tipoRaw.includes('venta')) {
-							categoriaTag = "Venta Stock";
-							infoPrincipal = (m.descripcion || '').replace(/Venta Insumo:\s*/i, '').trim();
-						}
-						// Si es compra para reponer stock
-						else if (tipoRaw.includes('compra')) {
-							categoriaTag = "Reposición";
-							infoPrincipal = (m.descripcion || '').replace(/Compra Stock:\s*/i, '').trim();
-						}
-						// Si es un movimiento manual de caja
-						else if (esIngresoManual) {
-							categoriaTag = "Ingreso Manual";
-						}
-						else if (esEgresoManual) {
-							categoriaTag = "Gasto Extra";
-						}
+                        // Si es un plan (Renovación o Nuevo)
+                        if (tipoRaw.includes('plan')) {
+                            categoriaTag = "Plan GymFit";
+                            // En infoPrincipal (Columna Descripción) ponemos el Alumno/Plan
+                            infoPrincipal = (m.descripcion || '').replace(/Cobro Plan\s*/i, '').replace(/Renovación\s*/i, '').trim();
+                        } 
+                        // Si es venta de productos (Stock)
+                        else if (tipoRaw.includes('mercaderia') || tipoRaw.includes('venta')) {
+                            categoriaTag = "Venta Stock";
+                            infoPrincipal = (m.descripcion || '').replace(/Venta Insumo:\s*/i, '').trim();
+                        }
+                        // Si es compra para reponer stock
+                        else if (tipoRaw.includes('compra')) {
+                            categoriaTag = "Reposición";
+                            infoPrincipal = (m.descripcion || '').replace(/Compra Stock:\s*/i, '').trim();
+                        }
+                        // Si es un movimiento manual de caja
+                        else if (esIngresoManual) {
+                            categoriaTag = "Ingreso Manual";
+                        }
+                        else if (esEgresoManual) {
+                            categoriaTag = "Gasto Extra";
+                        }
 
-						// Formateo de Fecha y Hora Local
-						let fechaZ = m.fecha;
-						if (!fechaZ.endsWith('Z') && !fechaZ.includes('+')) fechaZ += 'Z';
-						const d = new Date(fechaZ);
-						const fDisplay = String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0');
-						const hDisplay = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+                        // Formateo de Fecha y Hora Local
+                        let fechaZ = m.fecha;
+                        if (!fechaZ.endsWith('Z') && !fechaZ.includes('+')) fechaZ += 'Z';
+                        const d = new Date(fechaZ);
+                        const fDisplay = String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0');
+                        const hDisplay = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
 
-						let infoCuotasMonto = '';
-						if (metodo === 'T. Credito' && cuotas > 1) {
-							const valorCuota = monto / cuotas;
-							infoCuotasMonto = `<span class="block text-[7px] text-red-500 font-black mt-0.5 tracking-tighter uppercase">
-													$ ${valorCuota.toLocaleString()} x ${cuotas}
-												</span>`;
-						}
+                        let infoCuotasMonto = '';
+                        if (metodo === 'T. Credito' && cuotas > 1) {
+                            const valorCuota = monto / cuotas;
+                            infoCuotasMonto = `<span class="block text-[7px] text-red-500 font-black mt-0.5 tracking-tighter uppercase">
+                                                    $ ${valorCuota.toLocaleString()} x ${cuotas}
+                                                </span>`;
+                        }
 
-						return `
-						<tr class="viking-table-row border-b border-white/5 hover:bg-white/5 transition-colors">
-							<td class="py-4 pl-6">
-								<span class="text-white text-[10px] font-black">${fDisplay}</span>
-								<span class="block text-white/20 text-[8px] font-bold">${hDisplay} HS</span>
-							</td>
-							<td class="py-4">
-								<span class="px-2 py-0.5 rounded border text-[8px] font-black uppercase tracking-wider ${flujoColor}">${flujoTexto}</span>
-							</td>
-							<!-- DESCRIPCIÓN: Muestra el Alumno, Producto o Motivo -->
-							<td class="py-4 text-white text-[10px] font-black uppercase tracking-tight">
-								${infoPrincipal}
-							</td>
-							<!-- DETALLE: Muestra la Categoría y la Nota Manual (descripcion2) -->
-							<td class="py-4 text-white/40 text-[9px] font-bold uppercase italic">
-								<span class="text-white/60 block mb-0.5">${categoriaTag}</span>
-								<span class="text-red-600/60">${notaManual}</span>
-							</td>
-							<td class="py-4 text-white/60 text-[10px] font-bold uppercase">
-								${metodo}
-							</td>
-							<td class="py-4 text-white/30 text-[10px] font-bold">
-								${cuotas} ${cuotas > 1 ? 'CUOTAS' : 'CUOTA'}
-							</td>
-							<td class="py-4 text-right pr-6 font-black italic text-white text-[12px]">
-								$ ${monto.toLocaleString()}
-								${infoCuotasMonto}
-							</td>
-						</tr>`;
-					}).join('');
-					
-					if (window.lucide) lucide.createIcons();
-				} else {
-					table.innerHTML = '<tr><td colspan="7" class="text-center py-20 text-white/10 italic text-[10px] font-black uppercase tracking-[0.4em]">Sin movimientos en este rango</td></tr>';
-				}
-			}
+                        return `
+                        <tr class="viking-table-row border-b border-white/5 hover:bg-white/5 transition-colors">
+                            <td class="py-4 pl-6">
+                                <span class="text-white text-[10px] font-black">${fDisplay}</span>
+                                <span class="block text-white/20 text-[8px] font-bold">${hDisplay} HS</span>
+                            </td>
+                            <td class="py-4">
+                                <span class="px-2 py-0.5 rounded border text-[8px] font-black uppercase tracking-wider ${flujoColor}">${flujoTexto}</span>
+                            </td>
+                            <!-- DESCRIPCIÓN: Muestra el Alumno, Producto o Motivo -->
+                            <td class="py-4 text-white text-[10px] font-black uppercase tracking-tight">
+                                ${infoPrincipal}
+                            </td>
+                            <!-- DETALLE: Muestra la Categoría y la Nota Manual (descripcion2) -->
+                            <td class="py-4 text-white/40 text-[9px] font-bold uppercase italic">
+                                <span class="text-white/60 block mb-0.5">${categoriaTag}</span>
+                                <span class="text-red-600/60">${notaManual}</span>
+                            </td>
+                            <td class="py-4 text-white/60 text-[10px] font-bold uppercase">
+                                ${metodo}
+                            </td>
+                            <td class="py-4 text-white/30 text-[10px] font-bold">
+                                ${cuotas} ${cuotas > 1 ? 'CUOTAS' : 'CUOTA'}
+                            </td>
+                            <td class="py-4 text-right pr-6 font-black italic text-white text-[12px]">
+                                $ ${monto.toLocaleString()}
+                                ${infoCuotasMonto}
+                            </td>
+                        </tr>`;
+                    }).join('');
+                    
+                    if (window.lucide) lucide.createIcons();
+                } else {
+                    table.innerHTML = '<tr><td colspan="7" class="text-center py-20 text-white/10 italic text-[10px] font-black uppercase tracking-[0.4em]">Sin movimientos en este rango</td></tr>';
+                }
+            }
 
-			// 5. Totales
-			const calcBalance = calcIngresos - calcGastos;
-			if(document.getElementById('caja-ingresos')) document.getElementById('caja-ingresos').innerText = `$ ${calcIngresos.toLocaleString()}`;
-			if(document.getElementById('caja-gastos')) document.getElementById('caja-gastos').innerText = `$ ${calcGastos.toLocaleString()}`;
-			if(document.getElementById('caja-balance')) {
-				const eb = document.getElementById('caja-balance');
-				eb.innerText = `$ ${calcBalance.toLocaleString()}`;
-				eb.className = `text-4xl font-black italic ${calcBalance >= 0 ? 'text-green-500' : 'text-red-500'}`;
-			}
-		};
+            // 5. Totales
+            const calcBalance = calcIngresos - calcGastos;
+            if(document.getElementById('caja-ingresos')) document.getElementById('caja-ingresos').innerText = `$ ${calcIngresos.toLocaleString()}`;
+            if(document.getElementById('caja-gastos')) document.getElementById('caja-gastos').innerText = `$ ${calcGastos.toLocaleString()}`;
+            if(document.getElementById('caja-balance')) {
+                const eb = document.getElementById('caja-balance');
+                eb.innerText = `$ ${calcBalance.toLocaleString()}`;
+                eb.className = `text-4xl font-black italic ${calcBalance >= 0 ? 'text-green-500' : 'text-red-500'}`;
+            }
+        };
 
 		window.resetFiltrosCaja = function() {
 			const timezoneOffset = new Date().getTimezoneOffset() * 60000;
@@ -2351,85 +2351,84 @@
 
 		// FUNCTION GUARDARMOVIMIENTO ABAJO:
 		window.guardarMovimiento = async function(event) {
-			if (event && event.preventDefault) event.preventDefault();
+            if (event && event.preventDefault) event.preventDefault();
 
-			const descInput = document.getElementById('input-desc-gasto');
-			const notaInput = document.getElementById('input-nota-gasto');
-			const montoInput = document.getElementById('input-monto-gasto');
-			const tipoInput = document.getElementById('input-tipo-movimiento');
-			const prodSelect = document.getElementById('input-producto-stock');
-			const cantInput = document.getElementById('input-cantidad-compra');
+            const descInput = document.getElementById('input-desc-gasto');
+            const notaInput = document.getElementById('input-nota-gasto');
+            const montoInput = document.getElementById('input-monto-gasto');
+            const tipoInput = document.getElementById('input-tipo-movimiento');
+            const prodSelect = document.getElementById('input-producto-stock');
+            const cantInput = document.getElementById('input-cantidad-compra');
 
-			const monto = parseFloat(montoInput?.value) || 0;
-			const tipoSeleccionado = tipoInput ? tipoInput.value : 'Ingreso';
-			let descripcionFinal = descInput?.value || 'Varios';
-			let notaManual = notaInput?.value || '';
+            const monto = parseFloat(montoInput?.value) || 0;
+            const tipoSeleccionado = tipoInput ? tipoInput.value : 'Ingreso';
+            let descripcionFinal = descInput?.value || 'Varios';
+            let notaManual = notaInput?.value || '';
 
-			if (monto <= 0) return alert("El monto debe ser mayor a 0");
+            if (monto <= 0) return alert("El monto debe ser mayor a 0");
 
-			if (tipoSeleccionado === 'Compra') {
-				const productoId = prodSelect.value;
-				const cantidadAñadir = parseInt(cantInput.value) || 0;
+            if (tipoSeleccionado === 'Compra') {
+                const productoId = prodSelect.value;
+                const cantidadAñadir = parseInt(cantInput.value) || 0;
 
-				// Buscamos en el estado GLOBAL
-				const currentStock = window.state?.stock || [];
-				const producto = currentStock.find(p => String(p.id) === String(productoId));
-				if (!producto) return alert("Producto no identificado.");
+                // Buscamos en el estado GLOBAL
+                const currentStock = window.state?.stock || [];
+                const producto = currentStock.find(p => String(p.id) === String(productoId));
+                if (!producto) return alert("Producto no identificado.");
 
-				// LÓGICA VIKINGA: Si es compra, movemos tu "detalle" a notaManual para que no se pierda
-				if (descripcionFinal && descripcionFinal !== 'Varios') {
-					notaManual = descripcionFinal + (notaManual ? ' - ' + notaManual : '');
-				}
+                // LÓGICA VIKINGA: Si es compra, el texto manual va a descripcion2
+                if (descripcionFinal && descripcionFinal !== 'Varios') {
+                    notaManual = descripcionFinal + (notaManual ? ' - ' + notaManual : '');
+                }
 
-				descripcionFinal = `COMPRA: ${producto.nombre_producto.toUpperCase()} (x${cantidadAñadir} UNID)`;
+                descripcionFinal = `COMPRA: ${producto.nombre_producto.toUpperCase()} (x${cantidadAñadir} UNID)`;
 
-				// 1. ACTUALIZAR STOCK EN EL SERVIDOR
-				try {
-					const nuevoStock = parseInt(producto.stock_actual) + cantidadAñadir;
-					// CORRECCIÓN FINAL: Argumentos posicionales (URL, MÉTODO, CUERPO)
-					const resStock = await apiFetch(`/stock/${productoId}`, 'PUT', {
-						nombre_producto: producto.nombre_producto,
-						stock_actual: nuevoStock,
-						precio_venta: producto.precio_venta,
-						url_imagen: producto.url_imagen
-					});
-					
-					// Verificamos si el servidor devolvió error o no tuvo éxito
-					if (resStock.error || resStock.status === 'error') {
-						throw new Error(resStock.message || resStock.error || "Error desconocido");
-					}
-				} catch (err) {
-					console.error("Falla en Stock:", err);
-					return alert("No se pudo actualizar el stock: " + err.message);
-				}
-			}
+                // 1. ACTUALIZAR STOCK EN EL SERVIDOR
+                try {
+                    const nuevoStock = parseInt(producto.stock_actual) + cantidadAñadir;
+                    // LLAMADA POSICIONAL CORREGIDA: apiFetch(url, metodo, data)
+                    const resStock = await apiFetch(`/stock/${productoId}`, 'PUT', {
+                        nombre_producto: producto.nombre_producto,
+                        stock_actual: nuevoStock,
+                        precio_venta: producto.precio_venta,
+                        url_imagen: producto.url_imagen
+                    });
+                    
+                    if (resStock.error || resStock.status === 'error') {
+                        throw new Error(resStock.message || resStock.error || "Error desconocido");
+                    }
+                } catch (err) {
+                    console.error("Falla en Stock:", err);
+                    return alert("No se pudo actualizar el stock: " + err.message);
+                }
+            }
 
-			// 2. REGISTRO EN CAJA
-			try {
-				// CORRECCIÓN FINAL: Argumentos posicionales (URL, MÉTODO, CUERPO)
-				const res = await apiFetch('/caja/movimientos', 'POST', {
-					tipo: tipoSeleccionado,
-					descripcion: descripcionFinal,
-					descripcion2: notaManual,
-					monto: monto,
-					metodo_pago: 'Efectivo'
-				});
+            // 2. REGISTRO EN CAJA
+            try {
+                // LLAMADA POSICIONAL CORREGIDA: apiFetch(url, metodo, data)
+                const res = await apiFetch('/caja/movimientos', 'POST', {
+                    tipo: tipoSeleccionado,
+                    descripcion: descripcionFinal,
+                    descripcion2: notaManual,
+                    monto: monto,
+                    metodo_pago: 'Efectivo'
+                });
 
-				if (!res.error && res.status !== 'error') {
-					document.getElementById('modal-gasto').classList.add('hidden');
-					
-					// RECARGA GLOBAL
-					await window.loadCaja();
-					if (typeof window.loadStock === 'function') await window.loadStock();
-					
-					if (typeof showVikingToast === 'function') showVikingToast('Caja y Stock actualizados');
-				} else {
-					alert("Error en Caja: " + (res.message || res.error));
-				}
-			} catch (e) {
-				alert("Error de conexión al guardar.");
-			}
-		};
+                if (!res.error && res.status !== 'error') {
+                    document.getElementById('modal-gasto').classList.add('hidden');
+                    
+                    // RECARGA GLOBAL
+                    await window.loadCaja();
+                    if (typeof window.loadStock === 'function') await window.loadStock();
+                    
+                    if (typeof showVikingToast === 'function') showVikingToast('Caja y Stock actualizados');
+                } else {
+                    alert("Error en Caja: " + (res.message || res.error));
+                }
+            } catch (e) {
+                alert("Error de conexión al guardar.");
+            }
+        };
 		
         async function initApp() {
             await Promise.all([fetchAlumnos(), loadStaff(), loadPlanes(), loadStock(), loadClases(), fetchReservas(), loadDashboard(), loadMusculacionMetadata(), loadCaja()]);

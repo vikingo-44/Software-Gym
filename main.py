@@ -107,6 +107,14 @@ def startup_event():
     """
     db = database.SessionLocal()
     try:
+        # PARCHE PARA LA COLUMNA descripcion2
+        try:
+            db.execute(text("ALTER TABLE caja ADD COLUMN IF NOT EXISTS descripcion2 VARCHAR"))
+            db.commit()
+            logger.info("Columna descripcion2 verificada.")
+        except Exception as e:
+            db.rollback()
+
         constraints_to_drop = [
             "reservas_usuario_id_clase_id_key",             # Nombre default común
             "reservas_usuario_id_clase_id_fecha_reserva_key", # Variante con fecha
@@ -1004,7 +1012,7 @@ def get_caja_resumen(db: Session = Depends(database.get_db)):
 
 @app.get("/api/caja/movimientos", tags=["Finanzas"])
 def get_movimientos(db: Session = Depends(database.get_db)):
-    return db.query(models.MovimientoCaja).order_by(models.MovimientoCaja.fecha.desc()).limit(20).all()
+    return db.query(models.MovimientoCaja).order_by(models.MovimientoCaja.fecha.desc()).limit(50).all()
 
 @app.post("/api/caja/movimiento", tags=["Finanzas"])
 def create_movimiento(data: MovimientoCajaCreate, db: Session = Depends(database.get_db)):
