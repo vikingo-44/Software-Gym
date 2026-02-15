@@ -2251,32 +2251,32 @@
 						const flujoTexto = esEgreso ? 'EGRESO' : 'INGRESO';
 						const flujoColor = esEgreso ? 'bg-red-500/10 text-red-500 border-red-500/20' : 'bg-green-500/10 text-green-500 border-green-500/20';
 
-						// --- LÓGICA DE ORGANIZACIÓN DE COLUMNAS ---
-						let categoriaDisplay = m.tipo || 'Movimiento';
-						let detalleDisplay = m.descripcion || '-';
+						// --- LÓGICA DE ORGANIZACIÓN DE COLUMNAS (INTERCAMBIADAS) ---
+						let categoriaTag = m.tipo || 'Movimiento';
+						let infoPrincipal = m.descripcion || '-';
 
-						// Si es un plan (Renovación o Nuevo), extraemos el nombre del Alumno
+						// Si es un plan (Renovación o Nuevo)
 						if (tipoRaw.includes('plan')) {
-							categoriaDisplay = "Plan GymFit";
-							// Limpiamos el texto para que quede: "Plan Nombre - Alumno Nombre"
-							detalleDisplay = (m.descripcion || '').replace(/Cobro Plan\s*/i, '').replace(/Renovación\s*/i, '').trim();
+							categoriaTag = "Plan GymFit";
+							// En infoPrincipal (Columna Descripción) ponemos el Alumno/Plan
+							infoPrincipal = (m.descripcion || '').replace(/Cobro Plan\s*/i, '').replace(/Renovación\s*/i, '').trim();
 						} 
 						// Si es venta de productos (Stock)
 						else if (tipoRaw.includes('mercaderia') || tipoRaw.includes('venta')) {
-							categoriaDisplay = "Venta Stock";
-							detalleDisplay = (m.descripcion || '').replace(/Venta Insumo:\s*/i, '').trim();
+							categoriaTag = "Venta Stock";
+							infoPrincipal = (m.descripcion || '').replace(/Venta Insumo:\s*/i, '').trim();
 						}
 						// Si es compra para reponer stock
 						else if (tipoRaw.includes('compra')) {
-							categoriaDisplay = "Reposición";
-							detalleDisplay = (m.descripcion || '').replace(/Compra Stock:\s*/i, '').trim();
+							categoriaTag = "Reposición";
+							infoPrincipal = (m.descripcion || '').replace(/Compra Stock:\s*/i, '').trim();
 						}
-						// Si es un movimiento manual de caja (Gastos o ingresos manuales)
+						// Si es un movimiento manual de caja
 						else if (esIngresoManual) {
-							categoriaDisplay = "Ingreso Manual";
+							categoriaTag = "Ingreso Manual";
 						}
 						else if (esEgresoManual) {
-							categoriaDisplay = "Gasto Extra";
+							categoriaTag = "Gasto Extra";
 						}
 
 						// Formateo de Fecha y Hora Local
@@ -2305,10 +2305,10 @@
 								<span class="px-2 py-0.5 rounded border text-[8px] font-black uppercase tracking-wider ${flujoColor}">${flujoTexto}</span>
 							</td>
 							<td class="py-4 text-white text-[10px] font-black uppercase tracking-tight">
-								${categoriaDisplay}
+								${infoPrincipal}
 							</td>
 							<td class="py-4 text-white/40 text-[9px] font-bold uppercase italic">
-								${detalleDisplay}
+								${categoriaTag}
 							</td>
 							<td class="py-4 text-white/60 text-[10px] font-bold uppercase">
 								${metodo}
