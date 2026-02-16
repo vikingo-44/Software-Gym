@@ -2320,7 +2320,7 @@
                         <tr class="viking-table-row border-b border-white/5 hover:bg-white/5 transition-colors">
                             <td class="py-4 pl-6">
                                 <span class="text-white text-[10px] font-black">${fDisplay}</span>
-                                <span class="block text-white/20 text-[8px] font-bold">${hDisplay} HS</span>
+                                <span class="block text-red text-[8px] font-bold">${hDisplay} HS</span>
                             </td>
                             <td class="py-4">
                                 <span class="px-2 py-0.5 rounded border text-[8px] font-black uppercase tracking-wider ${flujoColor}">${flujoTexto}</span>
