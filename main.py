@@ -107,13 +107,15 @@ def startup_event():
     """
     db = database.SessionLocal()
     try:
-        # PARCHE PARA LA COLUMNA descripcion2
+        # PARCHE PARA LA COLUMNA descripcion2 (FIX ROBUSTO)
         try:
-            db.execute(text("ALTER TABLE caja ADD COLUMN IF NOT EXISTS descripcion2 VARCHAR"))
+            # Intentamos agregar la columna. Si ya existe, fallará y el 'except' lo manejará.
+            db.execute(text("ALTER TABLE caja ADD COLUMN descripcion2 VARCHAR"))
             db.commit()
-            logger.info("Columna descripcion2 verificada.")
-        except Exception as e:
+            logger.info("Columna descripcion2 agregada correctamente.")
+        except Exception:
             db.rollback()
+            logger.info("Columna descripcion2 ya existente, omitiendo parche.")
 
         constraints_to_drop = [
             "reservas_usuario_id_clase_id_key",             # Nombre default común
