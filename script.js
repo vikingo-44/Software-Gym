@@ -2249,7 +2249,7 @@
                         const flujoTexto = esEgreso ? 'EGRESO' : 'INGRESO';
                         const flujoColor = esEgreso ? 'bg-red-500/10 text-red-500 border-red-500/20' : 'bg-green-500/10 text-green-500 border-green-500/20';
 
-                        // --- LÓGICA DE ORGANIZACIÓN DE COLUMNAS (INTERCAMBIADAS) ---
+                        // --- LÓGICA DE ORGANIZACIÓN DE COLUMNAS (MANTENIDA SEGUN TU BASE) ---
                         let categoriaTag = m.tipo || 'Movimiento';
                         let infoPrincipal = m.descripcion || '-';
                         let notaManual = m.descripcion2 || ''; // Recibimos la nueva columna de notas manuales
@@ -2257,7 +2257,6 @@
                         // Si es un plan (Renovación o Nuevo)
                         if (tipoRaw.includes('plan')) {
                             categoriaTag = "Plan GymFit";
-                            // En infoPrincipal (Columna Descripción) ponemos el Alumno/Plan
                             infoPrincipal = (m.descripcion || '').replace(/Cobro Plan\s*/i, '').replace(/Renovación\s*/i, '').trim();
                         } 
                         // Si es venta de productos (Stock)
@@ -2361,8 +2360,8 @@
             const cantInput = document.getElementById('input-cantidad-compra');
 
             const monto = parseFloat(montoInput?.value) || 0;
-            const tipoSeleccionado = tipoInput ? tipoInput.value : 'Ingreso';
-            let descripcionFinal = descInput?.value || 'Varios';
+            const tipoSeleccionado = tipoInput ? tipoInput.value : 'Gasto';
+            let descripcionFinal = descInput?.value || '';
             let notaManual = notaInput?.value || '';
 
             if (monto <= 0) return alert("El monto debe ser mayor a 0");
@@ -2376,12 +2375,10 @@
                 const producto = currentStock.find(p => String(p.id) === String(productoId));
                 if (!producto) return alert("Producto no identificado.");
 
-                // LÓGICA VIKINGA: Si es compra, el texto manual va a descripcion2
-                if (descripcionFinal && descripcionFinal !== 'Varios') {
-                    notaManual = descripcionFinal + (notaManual ? ' - ' + notaManual : '');
-                }
-
+                // LÓGICA DE COMPRA: El nombre del producto es la descripción principal (descripcion1)
                 descripcionFinal = `COMPRA: ${producto.nombre_producto.toUpperCase()} (x${cantidadAñadir} UNID)`;
+                // La nota manual queda como detalle (descripcion2)
+                notaManual = notaInput?.value || '';
 
                 // 1. ACTUALIZAR STOCK EN EL SERVIDOR
                 try {
@@ -2402,6 +2399,7 @@
                     return alert("No se pudo actualizar el stock: " + err.message);
                 }
             }
+            // Si es Egreso Manual, ya tenemos descripcionFinal de descInput y notaManual de notaInput
 
             // 2. REGISTRO EN CAJA
             try {
@@ -2417,6 +2415,11 @@
                 if (!res.error && res.status !== 'error') {
                     document.getElementById('modal-gasto').classList.add('hidden');
                     
+                    // Limpieza de campos
+                    if(descInput) descInput.value = "";
+                    if(notaInput) notaInput.value = "";
+                    if(montoInput) montoInput.value = "";
+
                     // RECARGA GLOBAL
                     await window.loadCaja();
                     if (typeof window.loadStock === 'function') await window.loadStock();
@@ -2429,7 +2432,35 @@
                 alert("Error de conexión al guardar.");
             }
         };
-		
+
+		// Función para alternar campos según si es Egreso o Compra de Stock
+		window.toggleCamposGasto = function(tipo) {
+			const groupCompra = document.getElementById('campos-compra-mercaderia');
+			const containerDesc = document.getElementById('container-desc-gasto');
+			const inputDesc = document.getElementById('input-desc-gasto');
+			const labelDetalle = document.getElementById('label-detalle');
+
+			if (tipo === 'Compra') {
+				// Si es compra, ocultamos la descripción manual (se genera sola) y mostramos los campos de stock
+				groupCompra.classList.remove('hidden');
+				containerDesc.classList.add('hidden'); 
+				inputDesc.required = false;
+				labelDetalle.innerText = "Nota / Detalle de Compra";
+				
+				// Cargar productos en el select desde el estado global
+				const select = document.getElementById('input-producto-stock');
+				if(window.state && window.state.stock) {
+					select.innerHTML = window.state.stock.map(p => `<option value="${p.id}">${p.nombre_producto}</option>`).join('');
+				}
+			} else {
+				// Si es Egreso, mostramos descripción y detalle por separado
+				groupCompra.classList.add('hidden');
+				containerDesc.classList.remove('hidden');
+				inputDesc.required = true;
+				labelDetalle.innerText = "Detalle";
+			}
+		};
+			
         async function initApp() {
             await Promise.all([fetchAlumnos(), loadStaff(), loadPlanes(), loadStock(), loadClases(), fetchReservas(), loadDashboard(), loadMusculacionMetadata(), loadCaja()]);
         }

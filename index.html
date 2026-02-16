@@ -1119,14 +1119,13 @@
 				<form onsubmit="window.guardarMovimiento(event)">
 					<div class="space-y-4">
 						
-						<!-- Selector Tipo -->
+						<!-- Selector Tipo (Ingreso eliminado por requerimiento) -->
 						<div>
 							<label class="block text-[10px] font-bold uppercase text-white-400 mb-1">Tipo de Movimiento</label>
 							<select id="input-tipo-movimiento" 
 									onchange="window.toggleCamposCompra(this.value)"
 									class="viking-input w-full p-3 rounded text-xs font-bold text-white bg-black/50 border border-white/10 focus:border-red-600 transition-colors">
-								<option value="Ingreso" selected>INGRESO (Venta, Cuota, etc.)</option>
-								<option value="Gasto">EGRESO (Gasto General, Pago)</option>
+								<option value="Gasto" selected>EGRESO (Gasto General, Pago)</option>
 								<option value="Compra">COMPRA DE MERCADERÍA (Actualiza Stock)</option>
 							</select>
 						</div>
@@ -1145,12 +1144,20 @@
 							</div>
 						</div>
 
-						<!-- Input Descripción -->
+						<!-- Input Descripción (Se oculta en Compra porque es automática) -->
 						<div id="container-desc-gasto">
 							<label class="block text-[10px] font-bold uppercase text-white-400 mb-1">Descripción</label>
 							<input type="text" id="input-desc-gasto" 
 								class="viking-input w-full p-3 rounded text-xs font-bold text-white bg-black/50 border border-white/10 focus:border-red-600 transition-colors" 
-								placeholder="Ej: Gatorade, Cuota Mensual..." required>
+								placeholder="Ej: Pago de Alquiler, Luz..." required>
+						</div>
+
+						<!-- Input Detalle (Equivale a descripcion2 en la DB) -->
+						<div id="container-detalle-gasto">
+							<label id="label-detalle" class="block text-[10px] font-bold uppercase text-white-400 mb-1">Detalle</label>
+							<input type="text" id="input-nota-gasto" 
+								class="viking-input w-full p-3 rounded text-xs font-bold text-white bg-black/50 border border-white/10 focus:border-red-600 transition-colors" 
+								placeholder="Ej: Mes de Marzo, Factura A...">
 						</div>
 
 						<!-- Input Monto -->
