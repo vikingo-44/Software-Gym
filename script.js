@@ -2233,9 +2233,9 @@
 
 			if (!Array.isArray(movs)) return;
 
-			// Valores de filtros de búsqueda avanzados
-			const valDesc = (inputDescFiltro?.value || "").toLowerCase();
-			const valDetalle = (inputDetalleFiltro?.value || "").toLowerCase();
+			// Valores de filtros de búsqueda avanzados (normalizados a minúsculas)
+			const valDesc = (inputDescFiltro?.value || "").toLowerCase().trim();
+			const valDetalle = (inputDetalleFiltro?.value || "").toLowerCase().trim();
 
 			// 3. FILTRADO CORREGIDO E INTELIGENTE (Basado en Local Time + Filtros avanzados)
 			const filtrados = movs.filter(m => {
@@ -2255,16 +2255,18 @@
 				// Filtro de rango de fechas
 				if (fechaMovLocal < inputDesde.value || fechaMovLocal > inputHasta.value) return false;
 
-				// Filtro Búsqueda en Descripción (Columna 3)
-				if (valDesc && !m.descripcion.toLowerCase().includes(valDesc)) return false;
+				// Filtro Búsqueda en Descripción (Columna 3) - Verificación robusta de nulos
+				const descMov = (m.descripcion || "").toLowerCase();
+				if (valDesc && !descMov.includes(valDesc)) return false;
 
-				// Filtro Búsqueda en Detalle (Columna 4 - descripcion2)
-				const det = (m.descripcion2 || "").toLowerCase();
-				if (valDetalle && !det.includes(valDetalle)) return false;
+				// Filtro Búsqueda en Detalle (Columna 4 - descripcion2) - Verificación robusta de nulos
+				const detMov = (m.descripcion2 || "").toLowerCase();
+				if (valDetalle && !detMov.includes(valDetalle)) return false;
 
 				// Filtro Método de Pago (Chips múltiples)
 				if (window.filtrosCaja.metodos.length > 0) {
-					if (!window.filtrosCaja.metodos.includes(m.metodo_pago)) return false;
+					const metodoActual = m.metodo_pago || 'Efectivo';
+					if (!window.filtrosCaja.metodos.includes(metodoActual)) return false;
 				}
 
 				return true;
