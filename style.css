@@ -176,6 +176,13 @@
         padding: 20px;
     }
 
+    .metodo-chip.active {
+        background: rgba(255, 0, 0, 0.1);
+        border-color: rgba(255, 0, 0, 0.4);
+        color: #ff0000;
+        box-shadow: 0 0 15px rgba(255, 0, 0, 0.1);
+    }
+
     /* BADGE DE CLASE REFINADO - ESTÉTICA PREMIUM MEJORADA (COMPACTO) */
     .class-badge {
         color: white !important; 
