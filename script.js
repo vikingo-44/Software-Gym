@@ -2187,6 +2187,30 @@
             }
         }
 
+		window.toggleCamposGasto = function(tipo) {
+    const groupCompra = document.getElementById('campos-compra-mercaderia');
+    const containerDesc = document.getElementById('container-desc-gasto');
+    const inputDesc = document.getElementById('input-desc-gasto');
+
+    if (tipo === 'Compra') {
+        // En compra ocultamos el campo de descripción manual
+        if (groupCompra) groupCompra.classList.remove('hidden');
+        if (containerDesc) containerDesc.classList.add('hidden');
+        if (inputDesc) inputDesc.required = false;
+        
+        // Llenar productos en el select si existen en el estado
+        const select = document.getElementById('input-producto-stock');
+        if(select && window.state && window.state.stock) {
+            select.innerHTML = window.state.stock.map(p => `<option value="${p.id}">${p.nombre_producto}</option>`).join('');
+        }
+    } else {
+        // En egreso manual mostramos la descripción
+        if (groupCompra) groupCompra.classList.add('hidden');
+        if (containerDesc) containerDesc.classList.remove('hidden');
+        if (inputDesc) inputDesc.required = true;
+    }
+};
+
 		window.loadCaja = async function() {
             const inputDesde = document.getElementById('caja-filtro-desde');
             const inputHasta = document.getElementById('caja-filtro-hasta');
@@ -2361,7 +2385,9 @@
 
             const monto = parseFloat(montoInput?.value) || 0;
             const tipoSeleccionado = tipoInput ? tipoInput.value : 'Gasto';
-            let descripcionFinal = descInput?.value || '';
+            
+            // Inicializamos variables de contenido
+            let descripcionFinal = "";
             let notaManual = notaInput?.value || '';
 
             if (monto <= 0) return alert("El monto debe ser mayor a 0");
@@ -2375,9 +2401,11 @@
                 const producto = currentStock.find(p => String(p.id) === String(productoId));
                 if (!producto) return alert("Producto no identificado.");
 
-                // LÓGICA DE COMPRA: El nombre del producto es la descripción principal (descripcion1)
+                // LÓGICA DE COMPRA: Ignoramos el campo "Descripción" del HTML (que ya está oculto).
+                // La descripción principal (columna descripcion1) se genera solo con el producto y cantidad.
                 descripcionFinal = `COMPRA: ${producto.nombre_producto.toUpperCase()} (x${cantidadAñadir} UNID)`;
-                // La nota manual queda como detalle (descripcion2)
+                
+                // La nota manual (columna descripcion2) se toma del campo Detalle/Nota.
                 notaManual = notaInput?.value || '';
 
                 // 1. ACTUALIZAR STOCK EN EL SERVIDOR
@@ -2398,8 +2426,11 @@
                     console.error("Falla en Stock:", err);
                     return alert("No se pudo actualizar el stock: " + err.message);
                 }
+            } else {
+                // LÓGICA DE EGRESO MANUAL: Aquí sí usamos el campo Descripción del formulario.
+                descripcionFinal = descInput?.value || 'Gasto General';
+                notaManual = notaInput?.value || '';
             }
-            // Si es Egreso Manual, ya tenemos descripcionFinal de descInput y notaManual de notaInput
 
             // 2. REGISTRO EN CAJA
             try {
