@@ -2419,16 +2419,18 @@
 			const hoy = new Date(Date.now() - timezoneOffset).toISOString().split('T')[0];
 			
 			// Limpieza de Fechas (Tu base original)
-			document.getElementById('caja-filtro-desde').value = hoy;
-			document.getElementById('caja-filtro-hasta').value = hoy;
+			const inputDesde = document.getElementById('caja-filtro-desde');
+			const inputHasta = document.getElementById('caja-filtro-hasta');
+			if (inputDesde) inputDesde.value = hoy;
+			if (inputHasta) inputHasta.value = hoy;
 			
-			// Agregados: Limpieza de Buscadores de Texto
+			// Limpieza de Buscadores de Texto
 			const inputDesc = document.getElementById('caja-filtro-desc');
 			const inputDetalle = document.getElementById('caja-filtro-detalle');
-			if(inputDesc) inputDesc.value = "";
-			if(inputDetalle) inputDetalle.value = "";
+			if (inputDesc) inputDesc.value = "";
+			if (inputDetalle) inputDetalle.value = "";
 			
-			// Agregados: Limpieza de Filtros de Método
+			// Limpieza de Filtros de Método
 			window.filtrosCaja.metodos = [];
 			document.querySelectorAll('.metodo-chip').forEach(btn => btn.classList.remove('active'));
 			
@@ -2537,30 +2539,23 @@
 			const inputNota = document.getElementById('input-nota-gasto');
 
 			if (tipo === 'Compra') {
-				// Si es compra, ocultamos la descripción manual (se genera sola) y mostramos los campos de stock
 				if (groupCompra) groupCompra.classList.remove('hidden');
 				if (containerDesc) containerDesc.classList.add('hidden'); 
 				if (inputDesc) inputDesc.required = false;
-				
-				// Ajustamos la etiqueta de Detalle para que sea más clara
 				if (labelDetalle) labelDetalle.innerText = "Nota / Detalle de Compra";
 				if (inputNota) inputNota.placeholder = "Ej: Proveedor Central - Factura 123";
 				
-				// Cargar productos en el select desde el estado global
 				const select = document.getElementById('input-producto-stock');
-				if(select && window.state && window.state.stock) {
+				if (select && window.state && window.state.stock) {
 					select.innerHTML = window.state.stock.map(p => `<option value="${p.id}">${p.nombre_producto}</option>`).join('');
 				}
 			} else {
-				// Si es Egreso, mostramos descripción y detalle por separado
 				if (groupCompra) groupCompra.classList.add('hidden');
 				if (containerDesc) containerDesc.classList.remove('hidden');
 				if (inputDesc) {
 					inputDesc.required = true;
 					inputDesc.placeholder = "Ej: Pago de Alquiler, Luz...";
 				}
-				
-				// Volvemos la etiqueta de Detalle a su estado original
 				if (labelDetalle) labelDetalle.innerText = "Detalle / Nota";
 				if (inputNota) inputNota.placeholder = "Ej: Mes de Marzo, Factura A...";
 			}
