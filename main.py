@@ -976,8 +976,19 @@ def update_clase(id: int, data: ClaseUpdate, db: Session = Depends(database.get_
         return {"status": "success"}
     return {"status": "error", "message": "Clase no encontrada"}
 
+# --- MEJORA 3: RESTRICCIÓN DE MOVIMIENTO DE CLASES ---
 @app.put("/api/clases/{id}/move", tags=["Clases"])
-def move_clase(id: int, data: ClaseMove, db: Session = Depends(database.get_db)):
+def move_clase(id: int, data: ClaseMove, db: Session = Depends(database.get_db), current_user: models.Usuario = Depends(get_current_user)):
+    """Solo administradores o supervisores pueden reorganizar el calendario."""
+    roles_permitidos = ["admin", "administrador", "supervisor", "dueño"]
+    user_rol = current_user.perfil.nombre.lower() if current_user.perfil else ""
+    
+    if user_rol not in roles_permitidos:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, 
+            detail="No tienes permiso para reorganizar el calendario. Contacta a un supervisor."
+        )
+
     c = db.query(models.Clase).filter(models.Clase.id == id).first()
     if not c:
         raise HTTPException(status_code=404, detail="Clase no encontrada")
@@ -1094,12 +1105,12 @@ def procesar_cobro(data: TransactionCreate, db: Session = Depends(database.get_d
             
             producto.stock_actual -= data.cantidad
             
-        # 3. Lógica de Planes (Actualización de Vencimiento Automatizada)
+        # --- MEJORA 2: ACTUALIZACIÓN DE CRÉDITOS ---
+        # Lógica de Planes (Actualización de Vencimiento Automatizada)
         if (data.tipo == "Plan" or "plan" in data.tipo.lower()) and data.alumno_id:
             alumno = db.query(models.Usuario).filter(models.Usuario.id == data.alumno_id).first()
             
             # Buscamos el plan para saber la duración de días. 
-            # El producto_id en el cobro de planes se refiere al ID del Plan.
             plan = db.query(models.Plan).options(joinedload(models.Plan.tipo)).filter(models.Plan.id == data.producto_id).first()
 
             if alumno and plan:
@@ -1111,8 +1122,6 @@ def procesar_cobro(data: TransactionCreate, db: Session = Depends(database.get_d
                     dias_duracion = plan.tipo.duracion_dias
                 
                 # LÓGICA DE RENOVACIÓN INTELIGENTE:
-                # Si el alumno ya venció (o vence hoy), empezamos a contar desde HOY.
-                # Si aún NO venció, sumamos los días a su fecha de vencimiento actual.
                 base_fecha = hoy
                 if alumno.fecha_vencimiento and alumno.fecha_vencimiento > hoy:
                     base_fecha = alumno.fecha_vencimiento
@@ -1122,9 +1131,8 @@ def procesar_cobro(data: TransactionCreate, db: Session = Depends(database.get_d
                 alumno.estado_cuenta = "Al día"
                 alumno.plan_id = plan.id
                 
-                # Actualizar cupos de clases si el plan los define
-                if plan.clases_mensuales:
-                    alumno.clases_restantes = plan.clases_mensuales
+                # MEJORA: Siempre actualizamos los créditos del alumno al nuevo valor del plan
+                alumno.clases_restantes = plan.clases_mensuales
 
         db.commit()
         return {"status": "success", "message": "Cobro procesado correctamente"}
@@ -1219,8 +1227,16 @@ def create_plan_rutina(data: PlanRutinaCreate, db: Session = Depends(database.ge
         logger.error(f"Error Grave en Rutinas: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
+# --- MEJORA 1: VALIDACIÓN DE ACCESO EN OBTENCIÓN DE RUTINA ---
 @app.get("/api/rutinas/usuario/{id}", response_model=Optional[PlanRutinaResponse], tags=["Musculación"])
 def get_rutina_activa(id: int, db: Session = Depends(database.get_db)):
+    # Verificamos primero si el alumno tiene plan activo y vigente
+    user = db.query(models.Usuario).filter(models.Usuario.id == id).first()
+    
+    if not user or not user.fecha_vencimiento or user.fecha_vencimiento < date.today():
+        # Si el plan venció, devolvemos None para que el frontend bloquee la vista
+        return None
+
     return db.query(models.PlanRutina).filter(
         models.PlanRutina.usuario_id == id, 
         models.PlanRutina.activo == True
