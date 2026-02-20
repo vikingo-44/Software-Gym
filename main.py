@@ -107,6 +107,14 @@ def startup_event():
     """
     db = database.SessionLocal()
     try:
+        # PARCHE PARA LA COLUMNA clases_restantes EN USUARIOS
+        try:
+            db.execute(text("ALTER TABLE usuarios ADD COLUMN clases_restantes INTEGER DEFAULT 0"))
+            db.commit()
+            logger.info("Columna clases_restantes agregada correctamente.")
+        except Exception:
+            db.rollback()
+
         # PARCHE PARA LA COLUMNA descripcion2 (FIX ROBUSTO)
         try:
             # Intentamos agregar la columna. Si ya existe, fallará y el 'except' lo manejará.
@@ -163,6 +171,7 @@ class TokenResponse(BaseModel):
     rol_nombre: str
     plan: Optional[dict] = None
     plan_id: Optional[int] = None
+    clases_restantes: Optional[int] = 0 # <--- MOSTRAR SALDO ACTUAL
     fecha_vencimiento: Optional[str] = None
     fecha_ultima_renovacion: Optional[str] = None
     # --- NUEVOS CAMPOS EN RESPUESTA ---
@@ -202,6 +211,7 @@ class UsuarioResponse(BaseModel):
     plan: Optional[PlanSchema] = None
     plan_id: Optional[int] = None
     estado_cuenta: Optional[str] = "Al día"
+    clases_restantes: Optional[int] = 0 # <--- AGREGADO PARA LISTADOS
     fecha_vencimiento: Optional[date] = None
     fecha_ultima_renovacion: Optional[date] = None
     especialidad: Optional[str] = None
@@ -221,6 +231,7 @@ class AlumnoUpdate(BaseModel):
     email: Optional[str] = None
     plan_id: Optional[int] = None
     password: Optional[str] = None
+    clases_restantes: Optional[int] = None # <--- AGREGADO PARA EDICIÓN MANUAL
     fecha_nacimiento: Optional[date] = None
     edad: Optional[int] = None
     peso: Optional[float] = None
@@ -475,6 +486,7 @@ def login(data: UsuarioLogin, db: Session = Depends(database.get_db)):
             "clases_mensuales": user.plan.clases_mensuales 
         } if user.plan else None,
         "plan_id": user.plan_id,
+        "clases_restantes": user.clases_restantes, # <--- SE ENVÍA EL SALDO REAL
         "fecha_vencimiento": user.fecha_vencimiento.isoformat() if user.fecha_vencimiento else None,
         "fecha_ultima_renovacion": user.fecha_ultima_renovacion.isoformat() if user.fecha_ultima_renovacion else None,
         "peso": user.peso,
@@ -556,19 +568,25 @@ def validar_acceso_qr(data: AccessCheck, db: Session = Depends(database.get_db))
         final_response["message"] = "Bienvenido Staff"
         final_response["color"] = "blue"
     
-    # Validación para Alumnos
+    # Validación para Alumnos (MEMBRESÍA + CRÉDITOS)
     elif user.fecha_vencimiento:
         if user.fecha_vencimiento >= date.today():
-            dias_rest = (user.fecha_vencimiento - date.today()).days
-            final_response["status"] = "AUTHORIZED"
-            
-            # --- CORRECCIÓN DE COLORES ---
-            if dias_rest <= 3:
-                final_response["message"] = "¡Atención: Próximo a vencer!"
-                final_response["color"] = "yellow"  # <--- Ahora sí avisamos que es amarillo
+            # VALIDACIÓN ADICIONAL DE CRÉDITOS PARA EL ACCESO QR
+            if user.clases_restantes <= 0:
+                final_response["status"] = "DENIED"
+                final_response["message"] = "Sin créditos disponibles"
+                final_response["color"] = "red"
             else:
-                final_response["message"] = f"Pase Válido ({dias_rest} días rest.)"
-                final_response["color"] = "green"
+                dias_rest = (user.fecha_vencimiento - date.today()).days
+                final_response["status"] = "AUTHORIZED"
+                
+                # --- CORRECCIÓN DE COLORES ---
+                if dias_rest <= 3:
+                    final_response["message"] = "¡Atención: Próximo a vencer!"
+                    final_response["color"] = "yellow"  # <--- Ahora sí avisamos que es amarillo
+                else:
+                    final_response["message"] = f"Pase Válido ({user.clases_restantes} clases rest.)"
+                    final_response["color"] = "green"
         else:
             final_response["status"] = "DENIED"
             final_response["message"] = f"Plan Vencido el {user.fecha_vencimiento}"
@@ -656,6 +674,7 @@ def get_ficha_tecnica(id: int, db: Session = Depends(database.get_db)):
         "peso": al.peso,
         "altura": al.altura,
         "imc": al.imc,
+        "clases_restantes": al.clases_restantes, # <--- ENVIADO A LA FICHA
         "estado_cuenta": estado,
         "fecha_nacimiento": al.fecha_nacimiento,
         "edad": al.edad,
@@ -688,7 +707,8 @@ def create_alumno(alumno: AlumnoUpdate, db: Session = Depends(database.get_db)):
             altura=alumno.altura,
             imc=alumno.imc,
             certificado_entregado=alumno.certificado_entregado or False,
-            fecha_certificado=alumno.fecha_certificado
+            fecha_certificado=alumno.fecha_certificado,
+            clases_restantes=alumno.clases_restantes or 0 # <--- INICIALIZADO
         )
         
         db.add(new_al)
@@ -713,7 +733,7 @@ def delete_alumno(id: int, db: Session = Depends(database.get_db)):
     db.commit()
     return {"status": "success"}
 
-# --- RESERVAS ---
+# --- RESERVAS (CONTROL DE CRÉDITOS) ---
 @app.get("/api/reservas", tags=["Reservas"])
 def get_reservas(fecha: Optional[str] = None, db: Session = Depends(database.get_db)):
     """
@@ -752,33 +772,23 @@ def book_clase(data: ReservaCreate, db: Session = Depends(database.get_db)):
     if not user:
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
 
-    if user.plan:
-        limite_mensual = user.plan.clases_mensuales
-        if limite_mensual < 999:
-            mes_actual = date.today().month
-            an_actual = date.today().year
-            
-            count_reservas = db.query(models.Reserva).filter(
-                models.Reserva.usuario_id == user.id,
-                extract('month', models.Reserva.fecha_reserva) == mes_actual,
-                extract('year', models.Reserva.fecha_reserva) == an_actual
-            ).count()
-            
-            if count_reservas >= limite_mensual:
-                raise HTTPException(
-                    status_code=400, 
-                    detail=f"Has alcanzado tu límite de {limite_mensual} clases mensuales."
-                )
+    # --- VALIDACIÓN DE SALDO INDIVIDUAL (CREDITOS) ---
+    if user.clases_restantes <= 0:
+        raise HTTPException(
+            status_code=400, 
+            detail="No tienes clases disponibles en tu saldo. Por favor, renueva tu plan."
+        )
 
     exists = db.query(models.Reserva).filter(
         models.Reserva.usuario_id == data.usuario_id,
         models.Reserva.clase_id == data.clase_id,
         models.Reserva.horario == data.horario,
-        models.Reserva.dia_semana == data.dia_semana
+        models.Reserva.dia_semana == data.dia_semana,
+        models.Reserva.fecha_reserva == date.today() # Misma fecha
     ).first()
     
     if exists:
-        raise HTTPException(status_code=400, detail="Ya tienes reservado este turno específico.")
+        raise HTTPException(status_code=400, detail="Ya tienes reservado este turno para hoy.")
     
     clase = db.query(models.Clase).filter(models.Clase.id == data.clase_id).first()
     if not clase:
@@ -787,12 +797,14 @@ def book_clase(data: ReservaCreate, db: Session = Depends(database.get_db)):
     cupo_actual = db.query(models.Reserva).filter(
         models.Reserva.clase_id == data.clase_id,
         models.Reserva.horario == data.horario,
-        models.Reserva.dia_semana == data.dia_semana
+        models.Reserva.dia_semana == data.dia_semana,
+        models.Reserva.fecha_reserva == date.today()
     ).count()
     
     if cupo_actual >= clase.capacidad_max:
-        raise HTTPException(status_code=400, detail="Este horario no tiene cupos disponibles")
+        raise HTTPException(status_code=400, detail="Este horario no tiene cupos disponibles.")
 
+    # REGISTRO Y DESCUENTO AUTOMÁTICO
     new_res = models.Reserva(
         usuario_id=data.usuario_id,
         clase_id=data.clase_id,
@@ -803,11 +815,11 @@ def book_clase(data: ReservaCreate, db: Session = Depends(database.get_db)):
     
     try:
         db.add(new_res)
+        # RESTAMOS UN CRÉDITO DEL SALDO DEL ALUMNO
+        user.clases_restantes -= 1
+        
         db.commit()
-        return {"status": "success"}
-    except IntegrityError:
-        db.rollback()
-        raise HTTPException(status_code=400, detail="Error de base de datos.")
+        return {"status": "success", "clases_restantes": user.clases_restantes}
     except Exception as e:
         db.rollback()
         logger.error(f"Error general al reservar: {e}")
@@ -818,6 +830,12 @@ def cancel_reserva(id: int, db: Session = Depends(database.get_db)):
     reserva = db.query(models.Reserva).filter(models.Reserva.id == id).first()
     if not reserva:
         raise HTTPException(status_code=404, detail="Reserva no encontrada")
+    
+    user = db.query(models.Usuario).filter(models.Usuario.id == reserva.usuario_id).first()
+    if user:
+        # DEVOLUCIÓN DE CRÉDITO AL CANCELAR
+        user.clases_restantes += 1
+        
     db.delete(reserva)
     db.commit()
     return {"status": "success"}
@@ -838,7 +856,7 @@ def list_admins(db: Session = Depends(database.get_db)):
 @app.post("/api/staff", tags=["Staff"])
 def create_staff(data: dict, db: Session = Depends(database.get_db)):
     perfil = db.query(models.Perfil).filter(models.Perfil.nombre == data['perfil_nombre']).first()
-    if not perfil:
+    if perfil is None:
         raise HTTPException(status_code=400, detail="Perfil no válido")
 
     raw_password = str(data.get('password', data['dni'])).strip()
@@ -928,7 +946,7 @@ def update_plan(id: int, data: PlanUpdate, db: Session = Depends(database.get_db
         p.nombre = data.nombre
         p.precio = data.precio
         p.tipo_plan_id = data.tipo_plan_id
-        p.clases_mensuales = data.clases_mensuales # <--- Actualizamos el valor
+        p.clases_mensuales = data.clases_mensuales 
         db.commit()
         return {"status": "success"}
     return {"status": "error", "message": "Plan no encontrado"}
@@ -967,7 +985,7 @@ def update_clase(id: int, data: ClaseUpdate, db: Session = Depends(database.get_
     c = db.query(models.Clase).filter(models.Clase.id == id).first()
     if c:
         c.nombre = data.nombre
-        c.profesor_id = data.coach # <--- Cambiado de c.coach a c.profesor_id
+        c.coach = data.coach
         c.color = data.color
         c.capacidad_max = data.capacidad_max
         c.horarios_detalle = data.horarios_detalle 
@@ -976,19 +994,8 @@ def update_clase(id: int, data: ClaseUpdate, db: Session = Depends(database.get_
         return {"status": "success"}
     return {"status": "error", "message": "Clase no encontrada"}
 
-# --- MEJORA 3: RESTRICCIÓN DE MOVIMIENTO DE CLASES ---
 @app.put("/api/clases/{id}/move", tags=["Clases"])
-def move_clase(id: int, data: ClaseMove, db: Session = Depends(database.get_db), current_user: models.Usuario = Depends(get_current_user)):
-    """Solo administradores o supervisores pueden reorganizar el calendario."""
-    roles_permitidos = ["admin", "administrador", "supervisor", "dueño"]
-    user_rol = current_user.perfil.nombre.lower() if current_user.perfil else ""
-    
-    if user_rol not in roles_permitidos:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, 
-            detail="No tienes permiso para reorganizar el calendario. Contacta a un supervisor."
-        )
-
+def move_clase(id: int, data: ClaseMove, db: Session = Depends(database.get_db)):
     c = db.query(models.Clase).filter(models.Clase.id == id).first()
     if not c:
         raise HTTPException(status_code=404, detail="Clase no encontrada")
@@ -1074,7 +1081,7 @@ def crear_movimiento_caja(mov: MovimientoCreate, db: Session = Depends(database.
 def procesar_cobro(data: TransactionCreate, db: Session = Depends(database.get_db)):
     """
     PRIORIDAD 3: Lógica de cobros con actualización de vencimiento automática.
-    Actualiza la membresía sumando días del plan a la fecha de vencimiento actual (si existe) o desde hoy.
+    Actualiza la membresía y SOBREESCRIBE los créditos del alumno según el nuevo plan.
     """
     try:
         # 1. Registro automático en Caja
@@ -1105,8 +1112,7 @@ def procesar_cobro(data: TransactionCreate, db: Session = Depends(database.get_d
             
             producto.stock_actual -= data.cantidad
             
-        # --- MEJORA 2: ACTUALIZACIÓN DE CRÉDITOS ---
-        # Lógica de Planes (Actualización de Vencimiento Automatizada)
+        # 3. Lógica de Planes (Actualización de Vencimiento Automatizada)
         if (data.tipo == "Plan" or "plan" in data.tipo.lower()) and data.alumno_id:
             alumno = db.query(models.Usuario).filter(models.Usuario.id == data.alumno_id).first()
             
@@ -1131,7 +1137,7 @@ def procesar_cobro(data: TransactionCreate, db: Session = Depends(database.get_d
                 alumno.estado_cuenta = "Al día"
                 alumno.plan_id = plan.id
                 
-                # MEJORA: Siempre actualizamos los créditos del alumno al nuevo valor del plan
+                # REEMPLAZO TOTAL DE CRÉDITOS: Siempre actualizamos los créditos del alumno al nuevo valor del plan
                 alumno.clases_restantes = plan.clases_mensuales
 
         db.commit()
