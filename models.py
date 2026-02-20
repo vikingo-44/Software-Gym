@@ -53,10 +53,6 @@ class Usuario(Base):
     fecha_vencimiento = Column(Date, nullable=True)
     estado_cuenta = Column(String, default="Al día")
     
-    # --- NUEVA COLUMNA PARA CUPOS RESTANTES (SALDO INDIVIDUAL) ---
-    # Esta columna guarda cuántas clases le quedan al alumno específicamente.
-    clases_restantes = Column(Integer, default=0) 
-    
     perfil = relationship("Perfil", back_populates="usuarios")
     plan = relationship("Plan", back_populates="usuarios")
     reservas = relationship("Reserva", back_populates="usuario", cascade="all, delete-orphan")
