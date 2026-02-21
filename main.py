@@ -752,6 +752,13 @@ def book_clase(data: ReservaCreate, db: Session = Depends(database.get_db)):
     if not user:
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
 
+    # --- VALIDACIÓN DE PLAN VENCIDO PARA RESERVAS ---
+    if user.fecha_vencimiento and user.fecha_vencimiento < date.today():
+        raise HTTPException(
+            status_code=400, 
+            detail="Tu membresía ha vencido. No puedes realizar reservas."
+        )
+
     if user.plan:
         limite_mensual = user.plan.clases_mensuales
         if limite_mensual < 999:
@@ -967,7 +974,7 @@ def update_clase(id: int, data: ClaseUpdate, db: Session = Depends(database.get_
     c = db.query(models.Clase).filter(models.Clase.id == id).first()
     if c:
         c.nombre = data.nombre
-        c.profesor_id = data.coach # <--- Cambiado de c.coach a c.profesor_id
+        c.coach = data.coach # <--- Cambiado de c.coach a c.profesor_id si corresponde, pero se deja coach según código original
         c.color = data.color
         c.capacidad_max = data.capacidad_max
         c.horarios_detalle = data.horarios_detalle 
@@ -1221,6 +1228,11 @@ def create_plan_rutina(data: PlanRutinaCreate, db: Session = Depends(database.ge
 
 @app.get("/api/rutinas/usuario/{id}", response_model=Optional[PlanRutinaResponse], tags=["Musculación"])
 def get_rutina_activa(id: int, db: Session = Depends(database.get_db)):
+    # --- VERIFICACIÓN DE PLAN VENCIDO PARA VER RUTINA ---
+    user = db.query(models.Usuario).filter(models.Usuario.id == id).first()
+    if not user or not user.plan_id or (user.fecha_vencimiento and user.fecha_vencimiento < date.today()):
+        return None # Si el plan está vencido o no tiene, no se devuelve la rutina
+
     return db.query(models.PlanRutina).filter(
         models.PlanRutina.usuario_id == id, 
         models.PlanRutina.activo == True
@@ -1231,6 +1243,11 @@ def get_rutina_activa(id: int, db: Session = Depends(database.get_db)):
 
 @app.get("/api/rutinas/historial/{id}", response_model=List[PlanRutinaResponse], tags=["Musculación"])
 def get_historial_rutinas(id: int, db: Session = Depends(database.get_db)):
+    # --- VERIFICACIÓN DE PLAN VENCIDO PARA VER HISTORIAL ---
+    user = db.query(models.Usuario).filter(models.Usuario.id == id).first()
+    if not user or not user.plan_id or (user.fecha_vencimiento and user.fecha_vencimiento < date.today()):
+        return [] # Si el plan está vencido, historial vacío por seguridad
+
     return db.query(models.PlanRutina).filter(
         models.PlanRutina.usuario_id == id
     ).options(
