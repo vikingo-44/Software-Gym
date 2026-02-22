@@ -1135,6 +1135,7 @@
 		// --- REEMPLAZA TU FUNCIÓN openFichaTecnica POR ESTA VERSIÓN CON DISEÑO DE FILAS ---
 		async function openFichaTecnica(alumnoId) {
             const rutinaContainer = document.getElementById('ficha-rutina-container');
+            const isStaff = ["Profesor", "Administrador", "Supervisor"].includes(state.user?.rol_nombre);
 
             // Estado de carga visual
             rutinaContainer.innerHTML = `
@@ -1163,15 +1164,18 @@
             // 2. Obtener Rutina (Filtro corregido para permitir ver datos históricos si no hay activa)
             let rutinaData = await apiFetch(`/rutinas/usuario/${alumnoId}`);
             
-            // CORRECCIÓN STAFF: Si eres Staff, procesamos la rutina aunque el backend devuelva error por plan vencido
-            // Aceptamos el objeto siempre que tenga id o objetivo, o si es un array (historial)
-            const rutinas = Array.isArray(rutinaData) ? rutinaData : (rutinaData && (rutinaData.id || rutinaData.objetivo || !rutinaData.error) ? [rutinaData] : []);
+            // CORRECCIÓN: Si eres Staff, mostramos la rutina aunque el backend devuelva error por plan vencido
+            // Aceptamos el objeto si tiene ID o objetivo, o si es Staff incluso si hay error (bypass)
+            const rutinas = Array.isArray(rutinaData) ? rutinaData : (rutinaData && (rutinaData.id || rutinaData.objetivo || (isStaff && rutinaData.error)) ? [rutinaData] : []);
 
             if (rutinas.length > 0) {
                 const hoy = new Date();
                 hoy.setHours(0, 0, 0, 0);
 
                 const mainHTML = rutinas.map((rutina, rIdx) => {
+                    // Si el objeto no tiene ID ni objetivo ni días, es un error vacío y no lo renderizamos
+                    if (!rutina.id && !rutina.objetivo && (!rutina.dias || rutina.dias.length === 0)) return '';
+
                     const objetivoId = `obj-group-${rIdx}`;
                     const fechaVenc = rutina.fecha_vencimiento ? new Date(rutina.fecha_vencimiento + 'T23:59:59') : null;
                     const esActiva = fechaVenc ? hoy <= fechaVenc : true;
@@ -1180,7 +1184,7 @@
                         ? `<span class="bg-green-600/10 text-green-500 border border-green-500/20 px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest animate-pulse">Estrategia Activa</span>`
                         : `<span class="bg-red-600/10 text-red-500 border border-red-500/20 px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest">Plan Vencido</span>`;
 
-                    // BOTÓN EDITAR (Amarillo Oscuro / Naranja): Siempre visible en la ficha técnica para el Staff
+                    // BOTÓN EDITAR (Amarillo Oscuro / Naranja)
                     const editBtn = `
                         <button onclick="closeModal('modal-ficha-tecnica'); openRoutineEditor(${alumnoId}, true)" class="bg-amber-700 hover:bg-amber-800 text-white px-4 py-2 rounded-xl text-[9px] font-black uppercase italic transition-all flex items-center gap-2">
                             <i data-lucide="edit-3" class="w-3.5 h-3.5"></i> Editar Arsenal
@@ -1285,7 +1289,11 @@
                     `;
                 }).join('');
 
-                rutinaContainer.innerHTML = mainHTML;
+                rutinaContainer.innerHTML = mainHTML || `
+                    <div class="col-span-2 p-20 border-2 border-dashed border-white/5 rounded-[3rem] text-center bg-white/[0.01]">
+                        <p class="text-[13px] text-white/20 font-black uppercase italic tracking-[0.3em]">No hay datos de arsenal disponibles</p>
+                    </div>
+                `;
             } else {
                 rutinaContainer.innerHTML = `
                     <div class="col-span-2 p-20 border-2 border-dashed border-white/5 rounded-[3rem] text-center bg-white/[0.01]">
@@ -1491,6 +1499,7 @@
 
         async function openHistorialRutinas(alumnoId) {
             const al = state.alumnos.find(a => a.id === alumnoId);
+            const isStaff = ["Profesor", "Administrador", "Supervisor"].includes(state.user?.rol_nombre);
             if (!al) return;
 
             const modalHistorial = document.getElementById('ficha-rutina-container'); 
@@ -1510,23 +1519,28 @@
             let res = await apiFetch(`/rutinas/usuario/${alumnoId}`);
             
             // Si el backend devuelve un error por plan vencido pero estamos como staff, procesamos lo que venga
-            const rutinas = Array.isArray(res) ? res : (res && (res.id || res.objetivo || !res.error) ? [res] : []);
+            const rutinas = Array.isArray(res) ? res : (res && (res.id || res.objetivo || (isStaff && res.error)) ? [res] : []);
 
-            if (rutinas.length === 0) {
+            if (rutinas.length === 0 || (rutinas.length === 1 && !rutinas[0].id && !rutinas[0].objetivo && (!rutinas[0].dias || rutinas[0].dias.length === 0))) {
                 modalHistorial.innerHTML = `<div class="col-span-2 p-20 border-2 border-dashed border-white/5 rounded-[3rem] text-center"><p class="text-[13px] text-white/20 font-black uppercase italic">Sin registros históricos</p></div>`;
             } else {
                 rutinas.sort((a,b) => new Date(b.fecha_vencimiento) - new Date(a.fecha_vencimiento));
-                modalHistorial.innerHTML = rutinas.map((r, idx) => `
-                    <div class="col-span-2 mb-4 bg-white/[0.03] border border-white/5 p-6 rounded-[2rem] flex justify-between items-center group hover:border-blue-600/30 transition-all">
-                        <div>
-                            <p class="text-[8px] text-blue-400 font-black uppercase tracking-widest mb-1 italic">Arsenal - ${r.fecha_vencimiento || 'Fecha desconocida'}</p>
-                            <h5 class="text-sm font-black italic uppercase text-white">${r.objetivo || 'Rutina de Musculación'}</h5>
+                modalHistorial.innerHTML = rutinas.map((r, idx) => {
+                    // Filtrar objetos de error puros sin contenido
+                    if (!r.id && !r.objetivo && (!r.dias || r.dias.length === 0)) return '';
+                    
+                    return `
+                        <div class="col-span-2 mb-4 bg-white/[0.03] border border-white/5 p-6 rounded-[2rem] flex justify-between items-center group hover:border-blue-600/30 transition-all">
+                            <div>
+                                <p class="text-[8px] text-blue-400 font-black uppercase tracking-widest mb-1 italic">Arsenal - ${r.fecha_vencimiento || 'Fecha desconocida'}</p>
+                                <h5 class="text-sm font-black italic uppercase text-white">${r.objetivo || 'Rutina de Musculación'}</h5>
+                            </div>
+                            <button onclick="closeModal('modal-ficha-tecnica'); openRoutineEditor(${alumnoId}, true, ${r.id})" class="px-6 py-3 bg-blue-600 text-white rounded-xl text-[9px] font-black uppercase italic hover:scale-105 transition-all shadow-lg flex items-center gap-2">
+                                <i data-lucide="zap" class="w-3.5 h-3.5"></i> Reactivar
+                            </button>
                         </div>
-                        <button onclick="closeModal('modal-ficha-tecnica'); openRoutineEditor(${alumnoId}, true, ${r.id})" class="px-6 py-3 bg-blue-600 text-white rounded-xl text-[9px] font-black uppercase italic hover:scale-105 transition-all shadow-lg flex items-center gap-2">
-                            <i data-lucide="zap" class="w-3.5 h-3.5"></i> Reactivar
-                        </button>
-                    </div>
-                `).join('');
+                    `;
+                }).join('');
             }
 
             if (window.lucide) lucide.createIcons();
@@ -1553,6 +1567,7 @@
             }
 
             const al = state.alumnos.find(a => a.id === alumnoId);
+            const isStaff = ["Profesor", "Administrador", "Supervisor"].includes(state.user?.rol_nombre);
             if (!al) return;
             
             const hoy = new Date().toISOString().split('T')[0];
@@ -1583,8 +1598,7 @@
                     const url = specificRoutineId ? `/rutinas/${specificRoutineId}` : `/rutinas/usuario/${alumnoId}`;
                     const rutinaRes = await apiFetch(url);
                     
-                    // CORRECCIÓN STAFF: Procesamos la rutina ignorando el flag de error si es edición de staff
-                    if (rutinaRes && (rutinaRes.id || rutinaRes.objetivo || !rutinaRes.error)) {
+                    if (rutinaRes && (rutinaRes.id || rutinaRes.objetivo || (isStaff && rutinaRes.error))) {
                         const txtObj = document.getElementById('rutina-objetivo');
                         if(txtObj) txtObj.value = rutinaRes.objetivo || '';
 
