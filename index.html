@@ -167,6 +167,23 @@
     </aside>
 
     <main id="main-content" class="flex-1 h-full overflow-y-auto hidden relative">
+
+		<!-- BLOQUEO POR VENCIMIENTO (SOLO ALUMNOS) -->
+		<div id="bloqueo-vencimiento" class="bloqueo-overlay absolute inset-0 hidden flex items-center justify-center p-6 text-center z-[1001]">
+            <div class="glass-card p-12 rounded-[4rem] max-w-lg border-red-600/40 viking-shadow-red animate-in fade-in zoom-in duration-500">
+                <div class="w-24 h-24 bg-red-600/20 rounded-full flex items-center justify-center mx-auto mb-8">
+                    <i data-lucide="lock" class="w-12 h-12 text-red-600"></i>
+                </div>
+                <h2 class="text-4xl font-black italic uppercase text-white mb-4 tracking-tighter">PLAN <span class="text-red-600">VENCIDO</span></h2>
+                <p class="text-zinc-400 text-sm leading-relaxed mb-10 font-medium">Lo sentimos, guerrero. Tu acceso a clases y rutinas ha sido suspendido temporalmente. Por favor, acércate a recepción para renovar tu membresía y continuar con tu entrenamiento.</p>
+                <div class="flex flex-col gap-4">
+                    <button onclick="switchView('perfil')" class="w-full py-4 bg-white/10 hover:bg-white/20 rounded-2xl font-black uppercase italic text-xs tracking-widest transition-all">Ver Mis Datos</button>
+                    <button onclick="cerrarSesionVikinga()" class="w-full py-4 border border-red-600/30 text-red-600 rounded-2xl font-black uppercase italic text-xs tracking-widest">Cerrar Sesión</button>
+                </div>
+            </div>
+        </div>
+		<!-- FIN DEL BLOQUEO POR VENCIMIENTO (SOLO ALUMNOS) -->
+
         <header class="h-28 border-b border-white/5 px-12 flex items-center justify-between sticky top-0 bg-black/80 backdrop-blur-2xl z-40">
 			<!-- Gatillo Menú Móvil -->
 			<button class="mobile-menu-trigger lg:hidden" onclick="toggleMobileMenu()">
@@ -898,6 +915,20 @@
 			</div>
         </div>
     </main>
+
+	<!-- ========================================== -->
+    <!-- MODAL AVISO VENCIMIENTO PRÓXIMO -->
+    <!-- ========================================== -->
+    <div id="modal-aviso-vencimiento" class="viking-modal hidden fixed inset-0 z-[1500] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md">
+        <div class="glass-card p-10 rounded-[3rem] w-full max-w-md text-center border-yellow-500/20 shadow-[0_0_40px_rgba(234,179,8,0.1)]">
+            <div class="w-20 h-20 bg-yellow-500/10 rounded-full flex items-center justify-center mx-auto mb-6">
+                <i data-lucide="calendar-clock" class="w-10 h-10 text-yellow-500"></i>
+            </div>
+            <h3 class="text-2xl font-black italic uppercase text-white mb-2 tracking-tight">¡AVISO DE <span class="text-yellow-500">RENOVACIÓN</span>!</h3>
+            <p class="text-zinc-400 text-sm font-medium mb-8">Guerrero, tu plan está próximo a vencer en <span id="aviso-vencimiento-dias" class="text-white font-black">X</span> días. No detengas tu progreso y renueva hoy mismo en recepción.</p>
+            <button onclick="closeModal('modal-aviso-vencimiento')" class="w-full py-4 bg-yellow-500 text-black rounded-2xl font-black uppercase italic text-xs tracking-widest shadow-xl hover:scale-[1.02] transition-all">Entendido</button>
+        </div>
+    </div>
 
     <!-- MODAL EDITAR RUTINA (VERSION FINAL: HEADER FIJO Y ACCIONES SUPERIORES) -->
 		<div id="modal-rutina-editor" class="viking-modal hidden fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md">

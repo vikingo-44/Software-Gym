@@ -1872,6 +1872,49 @@
 			}
 		}
 
+		// 3. LÓGICA DE BLOQUEO Y VENCIMIENTO (NUEVAS FUNCIONES)
+		/**
+		* Controla si se muestra el bloqueo total o el aviso preventivo.
+		*/
+		function checkUserMembresia(currentView = 'dashboard') {
+			const user = state.user;
+			if (!user || user.rol_nombre.toLowerCase() !== 'alumno') {
+				const overlay = document.getElementById('bloqueo-vencimiento');
+				if (overlay) overlay.classList.add('hidden');
+				return;
+			}
+
+			const isExpired = user.is_expired;
+			const diasRestantes = user.dias_restantes;
+			const overlay = document.getElementById('bloqueo-vencimiento');
+
+			// CASO A: PLAN VENCIDO (BLOQUEO TOTAL)
+			if (isExpired) {
+				// Solo permitimos ver el PERFIL para que el alumno vea sus datos
+				if (currentView === 'perfil') {
+					if (overlay) overlay.classList.add('hidden');
+				} else {
+					if (overlay) overlay.classList.remove('hidden');
+				}
+			} else {
+				// Si no está vencido, ocultamos el bloqueo
+				if (overlay) overlay.classList.add('hidden');
+
+				// CASO B: PLAN POR VENCER (AVISO PREVENTIVO)
+				// Si quedan 3 días o menos, mostramos el modal amarillo una vez por sesión
+				if (diasRestantes >= 0 && diasRestantes <= 3) {
+					if (!sessionStorage.getItem('aviso_vencimiento_mostrado')) {
+						const labelDias = document.getElementById('aviso-vencimiento-dias');
+						if (labelDias) labelDias.innerText = diasRestantes === 0 ? "HOY MISMO" : diasRestantes;
+						
+						// Pequeño delay para que no choque con la carga del dashboard
+						setTimeout(() => openModal('modal-aviso-vencimiento'), 1200);
+						sessionStorage.setItem('aviso_vencimiento_mostrado', 'true');
+					}
+				}
+			}
+		}
+
         function calculateIMC() {
             const peso = parseFloat(document.getElementById('al-peso').value);
             const alturaCm = parseFloat(document.getElementById('al-altura').value);
@@ -1985,7 +2028,10 @@
 			const titleEl = document.getElementById('view-title');
 			if (titleEl) titleEl.innerText = view.replace('-', ' ').toUpperCase();
 
-			// 8. CORRECCIÓN: Carga de datos en "Mi Perfil"
+			// 8. LÓGICA DE BLOQUEO POR VENCIMIENTO (CRÍTICO)
+			checkUserMembresia(view);
+
+			// 9. CORRECCIÓN: Carga de datos en "Mi Perfil"
 			if (view === 'perfil' && state.user) {
 				const u = state.user;
 				const initials = u.nombre_completo ? u.nombre_completo.split(' ').filter(n => n).map(n => n[0]).join('').toUpperCase() : "??";
@@ -2015,177 +2061,177 @@
 				if (fisicos) {
 					if (rol === "alumno") {
 						fisicos.classList.remove('hidden');
-						fisicos.style.display = 'grid';
+						fisicos.style.setProperty('display', 'grid', 'important');
 						document.getElementById('prof-input-peso').value = u.peso || "";
 						document.getElementById('prof-input-altura').value = u.altura || "";
 						document.getElementById('prof-input-imc').value = u.imc || "";
 					} else {
 						fisicos.classList.add('hidden');
-						fisicos.style.display = 'none';
+						fisicos.style.setProperty('display', 'none', 'important');
 					}
 				}
 			}
 
-			// 9. Cargas de datos adicionales según sección
-			if (view === 'calendario') renderCalendar();
-			if (view === 'cobrar') renderCobrar();
-			if (view === 'rutinas') renderRutinas();
-			if (view === 'acceso-virtual') renderAccesos();
+			// 10. Cargas de datos adicionales según sección
+			if (view === 'calendario') if (typeof renderCalendar === 'function') renderCalendar();
+			if (view === 'cobrar') if (typeof renderCobrar === 'function') renderCobrar();
+			if (view === 'rutinas') if (typeof renderRutinas === 'function') renderRutinas();
+			if (view === 'acceso-virtual') if (typeof renderAccesos === 'function') renderAccesos();
 			if (view === 'alumnos') {
 				if (typeof renderAlumnosSection === 'function') renderAlumnosSection();
 			}
 
-			// 10. Aplicar permisos de visibilidad final
+			// 11. Aplicar permisos de visibilidad final
 			applyPermissions();
 			
 			if (window.lucide) lucide.createIcons();
 		}
 
 		async function handleLogin(e) {
-            // 1. Detener el refresco automático del formulario
-            if (e && e.preventDefault) e.preventDefault();
+			// 1. Detener el refresco automático del formulario
+			if (e && e.preventDefault) e.preventDefault();
 
-            const dniInput = document.getElementById('login-dni');
-            const passInput = document.getElementById('login-pass');
-            const errorDiv = document.getElementById('login-error');
-            const loginBtn = document.getElementById('login-button');
+			const dniInput = document.getElementById('login-dni');
+			const passInput = document.getElementById('login-pass');
+			const errorDiv = document.getElementById('login-error');
+			const loginBtn = document.getElementById('login-button');
 
-            if (!dniInput || !passInput) return;
+			if (!dniInput || !passInput) return;
 
-            // Feedback visual de carga
-            if (loginBtn) {
-                loginBtn.disabled = true;
-                loginBtn.innerText = "VERIFICANDO...";
-            }
+			// Feedback visual de carga
+			if (loginBtn) {
+				loginBtn.disabled = true;
+				loginBtn.innerText = "VERIFICANDO...";
+			}
 
-            const data = {
-                dni: dniInput.value,
-                password: passInput.value
-            };
+			const data = {
+				dni: dniInput.value,
+				password: passInput.value
+			};
 
 			// --- BLOQUE DE USUARIO LOCAL (BYPASS) ---
 			// ---if (dni === "admin" && password === "1234") {
 				// ---console.log("🛡️ Acceso de emergencia local activado");
 				
 				// ---const mockUser = {
-				// ---	id: 999,
-				// ---	nombre_completo: "ADMINISTRADOR LOCAL",
-				// ---	dni: "admin",
-			// ---		rol_nombre: "Administrador",
-			// ---		access_token: "viking-bypass-token-local"
-			// ---	};
+				// ---  id: 999,
+				// ---  nombre_completo: "ADMINISTRADOR LOCAL",
+				// ---  dni: "admin",
+			// ---      rol_nombre: "Administrador",
+			// ---      access_token: "viking-bypass-token-local"
+			// ---  };
 
 				// Guardamos en memoria para que no se cierre con F5
-			// ---	localStorage.setItem('viking_token', mockUser.access_token);
-			// ---	localStorage.setItem('viking_user', JSON.stringify(mockUser));
+			// ---  localStorage.setItem('viking_token', mockUser.access_token);
+			// ---  localStorage.setItem('viking_user', JSON.stringify(mockUser));
 				
-			// ---	state.user = mockUser;
+			// ---  state.user = mockUser;
 
 				// Limpiamos y ocultamos el login
-			// ---	document.getElementById('login-overlay').style.display = 'none';
-			// ---	document.getElementById('sidebar').classList.remove('hidden');
-			// ---	document.getElementById('main-content').classList.remove('hidden');
+			// ---  document.getElementById('login-overlay').style.display = 'none';
+			// ---  document.getElementById('sidebar').classList.remove('hidden');
+			// ---  document.getElementById('main-content').classList.remove('hidden');
 				
 				// Actualizamos la UI
-			// ---	if (document.getElementById('side-user-name')) document.getElementById('side-user-name').innerText = mockUser.nombre_completo;
-			// ---	if (document.getElementById('side-user-role')) document.getElementById('side-user-role').innerText = mockUser.rol_nombre;
-			// ---	if (document.getElementById('user-initials')) document.getElementById('user-initials').innerText = "AL";
+			// ---  if (document.getElementById('side-user-name')) document.getElementById('side-user-name').innerText = mockUser.nombre_completo;
+			// ---  if (document.getElementById('side-user-role')) document.getElementById('side-user-role').innerText = mockUser.rol_nombre;
+			// ---  if (document.getElementById('user-initials')) document.getElementById('user-initials').innerText = "AL";
 
-			// ---	switchView('dashboard');
-			// ---	if (window.lucide) lucide.createIcons();
+			// ---  switchView('dashboard');
+			// ---  if (window.lucide) lucide.createIcons();
 				
-			// ---	showVikingToast("MODO LOCAL ACTIVADO ⚔️");
-			// ---	return; // Detenemos aquí para que no intente ir a Render
+			// ---  showVikingToast("MODO LOCAL ACTIVADO ⚔️");
+			// ---  return; // Detenemos aquí para que no intente ir a Render
 			// ---}
 			// --- FIN DEL BLOQUE LOCAL ---
 
-            try {
-                const res = await apiFetch('/login', 'POST', data);
+			try {
+				const res = await apiFetch('/login', 'POST', data);
 
-                if (res && !res.error) {
-                    // --- NUEVO: GUARDAR TOKEN JWT ---
-                    if (res.access_token) {
-                        localStorage.setItem('viking_token', res.access_token);
-                    }
+				if (res && !res.error) {
+					// --- NUEVO: GUARDAR TOKEN JWT ---
+					if (res.access_token) {
+						localStorage.setItem('viking_token', res.access_token);
+					}
 
-                    // --- NUEVO: GUARDAR SESIÓN PARA F5 ---
-                    localStorage.setItem('viking_user', JSON.stringify(res));
+					// --- NUEVO: GUARDAR SESIÓN PARA F5 ---
+					localStorage.setItem('viking_user', JSON.stringify(res));
 
-                    // Guardamos al usuario en el estado global
-                    state.user = res;
+					// Guardamos al usuario en el estado global
+					state.user = res;
 
-                    // 2. Ocultar Login y mostrar App
-                    document.getElementById('login-overlay').style.display = 'none';
-                    document.getElementById('sidebar').classList.remove('hidden');
-                    document.getElementById('main-content').classList.remove('hidden');
+					// 2. Ocultar Login y mostrar App
+					document.getElementById('login-overlay').style.display = 'none';
+					document.getElementById('sidebar').classList.remove('hidden');
+					document.getElementById('main-content').classList.remove('hidden');
 
-                    // 3. Cargar datos del usuario en la barra lateral
-                    const elName = document.getElementById('side-user-name');
-                    if (elName) elName.innerText = res.nombre_completo || "Usuario";
+					// 3. Cargar datos del usuario en la barra lateral
+					const elName = document.getElementById('side-user-name');
+					if (elName) elName.innerText = res.nombre_completo || "Usuario";
 
-                    const elRole = document.getElementById('side-user-role');
-                    if (elRole) elRole.innerText = res.rol_nombre || 'Staff';
+					const elRole = document.getElementById('side-user-role');
+					if (elRole) elRole.innerText = res.rol_nombre || 'Staff';
 
-                    // --- LÓGICA DE INICIALES ---
-                    const name = res.nombre_completo || "Usuario Vikingo";
-                    const initials = name.split(' ')
-                        .filter(n => n)
-                        .map(n => n[0])
-                        .join('')
-                        .toUpperCase()
-                        .substring(0, 2);
+					// --- LÓGICA DE INICIALES ---
+					const name = res.nombre_completo || "Usuario Vikingo";
+					const initials = name.split(' ')
+						.filter(n => n)
+						.map(n => n[0])
+						.join('')
+						.toUpperCase()
+						.substring(0, 2);
 
-                    const elInitials = document.getElementById('user-initials');
-                    if (elInitials) elInitials.innerText = initials;
+					const elInitials = document.getElementById('user-initials');
+					if (elInitials) elInitials.innerText = initials;
 
-                    // 4. Cargar datos maestros (Profesores, Clases, etc.)
-                    await loadProfesores();
+					// 4. Cargar datos maestros (Profesores, Clases, etc.)
+					await loadProfesores();
 
-                    if (typeof initApp === 'function') {
-                        await initApp();
-                    } else {
-                        if (typeof loadClases === 'function') loadClases();
-                        if (typeof loadStock === 'function') loadStock();
-                    }
+					if (typeof initApp === 'function') {
+						await initApp();
+					} else {
+						if (typeof loadClases === 'function') loadClases();
+						if (typeof loadStock === 'function') loadStock();
+					}
 
-                    // 5. Cambiar a la vista principal
-                    switchView('dashboard');
+					// 5. Cambiar a la vista principal
+					switchView('dashboard');
 
-                    // --- Renderizar Dashboard específico si es Alumno ---
-                    if (res.rol_nombre === "Alumno" && typeof renderStudentDashboard === 'function') {
-                        await renderStudentDashboard();
-                    }
-                    
-                    // --- MEJORA: Precarga de datos si es Profesor ---
-                    if (res.rol_nombre === "Profesor" && typeof loadProfessorDashboard === 'function') {
-                        await loadProfessorDashboard();
-                    }
+					// --- Renderizar Dashboard específico si es Alumno ---
+					if (res.rol_nombre === "Alumno" && typeof renderStudentDashboard === 'function') {
+						await renderStudentDashboard();
+					}
+					
+					// --- MEJORA: Precarga de datos si es Profesor ---
+					if (res.rol_nombre === "Profesor" && typeof loadProfessorDashboard === 'function') {
+						await loadProfessorDashboard();
+					}
 
-                    // Refrescar iconos
-                    if (window.lucide) lucide.createIcons();
+					// Refrescar iconos
+					if (window.lucide) lucide.createIcons();
 
-                    showVikingToast(`¡Bienvenido, ${res.nombre_completo.split(' ')[0]}!`);
+					showVikingToast(`¡Bienvenido, ${res.nombre_completo.split(' ')[0]}!`);
 
-                } else {
-                    // Mostrar error si las credenciales fallan
-                    if (errorDiv) {
-                        errorDiv.innerText = res.error || "Credenciales incorrectas";
-                        errorDiv.classList.remove('hidden');
-                    }
-                    if (loginBtn) {
-                        loginBtn.disabled = false;
-                        loginBtn.innerText = "Ingresar";
-                    }
-                }
-            } catch (err) {
-                console.error("Error en el proceso de login:", err);
-                showVikingToast("Error de conexión con el servidor", true);
-                if (loginBtn) {
-                    loginBtn.disabled = false;
-                    loginBtn.innerText = "Ingresar";
-                }
-            }
-        }
+				} else {
+					// Mostrar error si las credenciales fallan
+					if (errorDiv) {
+						errorDiv.innerText = res.error || "Credenciales incorrectas";
+						errorDiv.classList.remove('hidden');
+					}
+					if (loginBtn) {
+						loginBtn.disabled = false;
+						loginBtn.innerText = "Ingresar";
+					}
+				}
+			} catch (err) {
+				console.error("Error en el proceso de login:", err);
+				showVikingToast("Error de conexión con el servidor", true);
+				if (loginBtn) {
+					loginBtn.disabled = false;
+					loginBtn.innerText = "Ingresar";
+				}
+			}
+		}
 
 		window.toggleCamposGasto = function(tipo) {
 			const groupCompra = document.getElementById('campos-compra-mercaderia');

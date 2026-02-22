@@ -165,7 +165,10 @@ class TokenResponse(BaseModel):
     plan_id: Optional[int] = None
     fecha_vencimiento: Optional[str] = None
     fecha_ultima_renovacion: Optional[str] = None
-    # --- NUEVOS CAMPOS EN RESPUESTA ---
+    # --- NUEVOS CAMPOS PARA BLOQUEO Y AVISO ---
+    is_expired: bool = False
+    dias_restantes: int = 0
+    # ------------------------------------------
     peso: Optional[float] = None
     altura: Optional[float] = None
     imc: Optional[float] = None
@@ -444,7 +447,7 @@ async def serve_file(filename: str):
     # Si piden algo raro (como main.py o .env), damos error 404
     raise HTTPException(status_code=404)
 
-# --- LOGIN (RESTAURADO COMPLETO) ---
+# --- LOGIN (ACTUALIZADO CON METADATA DE VENCIMIENTO) ---
 @app.post("/api/login", response_model=TokenResponse, tags=["Autenticacion"])
 def login(data: UsuarioLogin, db: Session = Depends(database.get_db)):
     # Query completa con joinedload para traer el plan y el perfil
@@ -458,6 +461,16 @@ def login(data: UsuarioLogin, db: Session = Depends(database.get_db)):
     
     # Generar Token de Acceso
     token = create_access_token(data={"sub": user.dni})
+
+    # --- CÁLCULO DE ESTADO DE VENCIMIENTO ---
+    expired = False
+    days_left = 0
+    hoy = date.today()
+
+    if user.fecha_vencimiento:
+        expired = user.fecha_vencimiento < hoy
+        days_left = (user.fecha_vencimiento - hoy).days
+    # ----------------------------------------
     
     # Devolver el payload completo que el frontend necesita para el QR y el perfil
     return {
@@ -477,6 +490,8 @@ def login(data: UsuarioLogin, db: Session = Depends(database.get_db)):
         "plan_id": user.plan_id,
         "fecha_vencimiento": user.fecha_vencimiento.isoformat() if user.fecha_vencimiento else None,
         "fecha_ultima_renovacion": user.fecha_ultima_renovacion.isoformat() if user.fecha_ultima_renovacion else None,
+        "is_expired": expired,
+        "dias_restantes": days_left,
         "peso": user.peso,
         "altura": user.altura,
         "imc": user.imc,
