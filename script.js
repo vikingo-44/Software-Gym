@@ -760,23 +760,28 @@
             renderCobrar();
 			window.updatePaymentButtons();
         }
-		
-		
 
         function renderCobrar() {
-            const displayArea = document.getElementById('cobrar-display-area');
-            const searchVal = document.getElementById('cobrar-search').value.toLowerCase();
-            if (state.cobrarTab === 'mercaderia') {
-                const filtered = state.stock.filter(s => s.nombre_producto.toLowerCase().includes(searchVal));
-                displayArea.innerHTML = `<div class="grid grid-cols-2 md:grid-cols-4 gap-4 overflow-y-auto max-h-[600px] pr-2 custom-scrollbar" id="cobrar-catalogo"></div>`;
-                const catalog = document.getElementById('cobrar-catalogo');
-                catalog.innerHTML = filtered.map(s => `
-                    <div class="glass-card p-4 rounded-3xl relative group cursor-pointer hover:border-red-600/50" onclick="addToCart(${s.id}, 'stock')">
-                        <div class="w-full h-20 viking-bg-red/10 rounded-2xl mb-3 flex items-center justify-center"><i data-lucide="package" class="w-6 h-6 opacity-20 text-white"></i></div>
-                        <h4 class="text-[10px] font-black uppercase italic mb-1 truncate">${s.nombre_producto}</h4>
-                        <div class="flex items-center justify-between"><p class="text-[12px] font-black italic">$ ${s.precio_venta.toLocaleString()}</p><span class="text-[9px] font-bold ${s.stock_actual < 5 ? 'text-red-500' : 'text-gray-500'}">S: ${s.stock_actual}</span></div>
-                    </div>`).join('');
-            } else {
+			const displayArea = document.getElementById('cobrar-display-area');
+			if (!displayArea) return; 
+
+			// FIX: Inicializar la pestaña por defecto si no existe y forzar el dibujo de botones de pago
+			if (!state.cobrarTab) state.cobrarTab = 'mercaderia';
+			if (window.updatePaymentButtons) window.updatePaymentButtons();
+
+			const searchVal = document.getElementById('cobrar-search').value.toLowerCase();
+			
+			if (state.cobrarTab === 'mercaderia') {
+				const filtered = state.stock.filter(s => s.nombre_producto.toLowerCase().includes(searchVal));
+				displayArea.innerHTML = `<div class="grid grid-cols-2 md:grid-cols-4 gap-4 overflow-y-auto max-h-[600px] pr-2 custom-scrollbar" id="cobrar-catalogo"></div>`;
+				const catalog = document.getElementById('cobrar-catalogo');
+				catalog.innerHTML = filtered.map(s => `
+					<div class="glass-card p-4 rounded-3xl relative group cursor-pointer hover:border-red-600/50" onclick="addToCart(${s.id}, 'stock')">
+						<div class="w-full h-20 viking-bg-red/10 rounded-2xl mb-3 flex items-center justify-center"><i data-lucide="package" class="w-6 h-6 opacity-20 text-white"></i></div>
+						<h4 class="text-[10px] font-black uppercase italic mb-1 truncate">${s.nombre_producto}</h4>
+						<div class="flex items-center justify-between"><p class="text-[12px] font-black italic">$ ${s.precio_venta.toLocaleString()}</p><span class="text-[9px] font-bold ${s.stock_actual < 5 ? 'text-red-500' : 'text-gray-500'}">S: ${s.stock_actual}</span></div>
+					</div>`).join('');
+			} else {
 				const hoy = new Date().toISOString().split('T')[0];
 				const filteredAl = state.alumnos.filter(a => 
 					a.nombre_completo.toLowerCase().includes(searchVal) || a.dni.includes(searchVal)
@@ -831,9 +836,9 @@
 						</div>
 					</div>`;
 			}
-            lucide.createIcons();
-            updateCartUI();
-        }
+			if (window.lucide) lucide.createIcons();
+			updateCartUI();
+		}
 
         document.getElementById('cobrar-search').oninput = renderCobrar;
 
