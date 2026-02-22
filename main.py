@@ -1190,6 +1190,14 @@ def create_plan_rutina(data: PlanRutinaCreate, db: Session = Depends(database.ge
         if not user:
             raise HTTPException(status_code=404, detail="Usuario no encontrado")
 
+        # --- BLOQUEO DE SEGURIDAD VIKINGA: NO SE CREAN RUTINAS SI EL PLAN ESTÁ VENCIDO ---
+        if user.fecha_vencimiento and user.fecha_vencimiento < date.today():
+            raise HTTPException(
+                status_code=400, 
+                detail="No se puede asignar una rutina a un alumno con el plan vencido. Debe renovar primero."
+            )
+
+        # Desactivar rutinas anteriores
         db.query(models.PlanRutina).filter(
             models.PlanRutina.usuario_id == data.usuario_id
         ).update({"activo": False}, synchronize_session=False)
@@ -1236,6 +1244,9 @@ def create_plan_rutina(data: PlanRutinaCreate, db: Session = Depends(database.ge
         db.commit()
         return {"status": "success", "id": nuevo_plan.id}
 
+    except HTTPException as he:
+        db.rollback()
+        raise he
     except Exception as e:
         db.rollback()
         logger.error(f"Error Grave en Rutinas: {str(e)}")
