@@ -1173,7 +1173,7 @@
                 hoy.setHours(0, 0, 0, 0);
 
                 const mainHTML = rutinas.map((rutina, rIdx) => {
-                    // Si el objeto no tiene ID ni objetivo ni días, es un error vacío y no lo renderizamos
+                    // Si el objeto no tiene ID ni objetivo ni días, y no somos Staff viendo un error con posible data, no renderizamos
                     if (!rutina.id && !rutina.objetivo && (!rutina.dias || rutina.dias.length === 0)) return '';
 
                     const objetivoId = `obj-group-${rIdx}`;
@@ -1261,6 +1261,8 @@
                     }).join('');
 
                     // Estructura general de la tarjeta de rutina
+                    if (mainHTML.trim() === '') return '';
+
                     return `
                     <div class="col-span-2 mb-6">
                         <div class="bg-gradient-to-b from-white/[0.05] to-transparent border border-white/10 rounded-[2.5rem] overflow-hidden shadow-2xl">
@@ -1291,7 +1293,11 @@
 
                 rutinaContainer.innerHTML = mainHTML || `
                     <div class="col-span-2 p-20 border-2 border-dashed border-white/5 rounded-[3rem] text-center bg-white/[0.01]">
-                        <p class="text-[13px] text-white/20 font-black uppercase italic tracking-[0.3em]">No hay datos de arsenal disponibles</p>
+                        <div class="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-6">
+                            <i data-lucide="skull" class="w-10 h-10 text-white/10"></i>
+                        </div>
+                        <p class="text-[13px] text-white/20 font-black uppercase italic tracking-[0.3em]">No hay arsenal activo asignado</p>
+                        <p class="text-[10px] text-white/10 mt-2 font-bold uppercase tracking-widest">El historial podría contener registros anteriores.</p>
                     </div>
                 `;
             } else {
@@ -1521,15 +1527,14 @@
             // Si el backend devuelve un error por plan vencido pero estamos como staff, procesamos lo que venga
             const rutinas = Array.isArray(res) ? res : (res && (res.id || res.objetivo || (isStaff && res.error)) ? [res] : []);
 
-            if (rutinas.length === 0 || (rutinas.length === 1 && !rutinas[0].id && !rutinas[0].objetivo && (!rutinas[0].dias || rutinas[0].dias.length === 0))) {
-                modalHistorial.innerHTML = `<div class="col-span-2 p-20 border-2 border-dashed border-white/5 rounded-[3rem] text-center"><p class="text-[13px] text-white/20 font-black uppercase italic">Sin registros históricos</p></div>`;
+            // Filtramos aquellos objetos que no tienen datos reales
+            const rutinasValidas = rutinas.filter(r => r.id || r.objetivo || (r.dias && r.dias.length > 0));
+
+            if (rutinasValidas.length === 0) {
+                modalHistorial.innerHTML = `<div class="col-span-2 p-20 border-2 border-dashed border-white/5 rounded-[3rem] text-center"><p class="text-[13px] text-white/20 font-black uppercase italic">Sin registros históricos disponibles</p></div>`;
             } else {
-                rutinas.sort((a,b) => new Date(b.fecha_vencimiento) - new Date(a.fecha_vencimiento));
-                modalHistorial.innerHTML = rutinas.map((r, idx) => {
-                    // Filtrar objetos de error puros sin contenido
-                    if (!r.id && !r.objetivo && (!r.dias || r.dias.length === 0)) return '';
-                    
-                    return `
+                rutinasValidas.sort((a,b) => new Date(b.fecha_vencimiento) - new Date(a.fecha_vencimiento));
+                modalHistorial.innerHTML = rutinasValidas.map((r, idx) => `
                         <div class="col-span-2 mb-4 bg-white/[0.03] border border-white/5 p-6 rounded-[2rem] flex justify-between items-center group hover:border-blue-600/30 transition-all">
                             <div>
                                 <p class="text-[8px] text-blue-400 font-black uppercase tracking-widest mb-1 italic">Arsenal - ${r.fecha_vencimiento || 'Fecha desconocida'}</p>
@@ -1539,8 +1544,7 @@
                                 <i data-lucide="zap" class="w-3.5 h-3.5"></i> Reactivar
                             </button>
                         </div>
-                    `;
-                }).join('');
+                    `).join('');
             }
 
             if (window.lucide) lucide.createIcons();
