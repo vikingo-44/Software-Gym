@@ -1163,9 +1163,9 @@
             // 2. Obtener Rutina (Filtro corregido para permitir ver datos históricos si no hay activa)
             let rutinaData = await apiFetch(`/rutinas/usuario/${alumnoId}`);
             
-            // CORRECCIÓN: Si eres Staff, mostramos la rutina aunque el backend devuelva error por plan vencido
-            // Aceptamos el objeto si tiene ID o objetivo, ignorando el campo "error" para visualización de staff
-            const rutinas = Array.isArray(rutinaData) ? rutinaData : (rutinaData && (rutinaData.id || rutinaData.objetivo) ? [rutinaData] : []);
+            // CORRECCIÓN STAFF: Si eres Staff, procesamos la rutina aunque el backend devuelva error por plan vencido
+            // Aceptamos el objeto siempre que tenga id o objetivo, o si es un array (historial)
+            const rutinas = Array.isArray(rutinaData) ? rutinaData : (rutinaData && (rutinaData.id || rutinaData.objetivo || !rutinaData.error) ? [rutinaData] : []);
 
             if (rutinas.length > 0) {
                 const hoy = new Date();
@@ -1180,7 +1180,7 @@
                         ? `<span class="bg-green-600/10 text-green-500 border border-green-500/20 px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest animate-pulse">Estrategia Activa</span>`
                         : `<span class="bg-red-600/10 text-red-500 border border-red-500/20 px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest">Plan Vencido</span>`;
 
-                    // BOTÓN EDITAR (Amarillo Oscuro / Naranja)
+                    // BOTÓN EDITAR (Amarillo Oscuro / Naranja): Siempre visible en la ficha técnica para el Staff
                     const editBtn = `
                         <button onclick="closeModal('modal-ficha-tecnica'); openRoutineEditor(${alumnoId}, true)" class="bg-amber-700 hover:bg-amber-800 text-white px-4 py-2 rounded-xl text-[9px] font-black uppercase italic transition-all flex items-center gap-2">
                             <i data-lucide="edit-3" class="w-3.5 h-3.5"></i> Editar Arsenal
@@ -1510,7 +1510,7 @@
             let res = await apiFetch(`/rutinas/usuario/${alumnoId}`);
             
             // Si el backend devuelve un error por plan vencido pero estamos como staff, procesamos lo que venga
-            const rutinas = Array.isArray(res) ? res : (res && (res.id || res.objetivo) ? [res] : []);
+            const rutinas = Array.isArray(res) ? res : (res && (res.id || res.objetivo || !res.error) ? [res] : []);
 
             if (rutinas.length === 0) {
                 modalHistorial.innerHTML = `<div class="col-span-2 p-20 border-2 border-dashed border-white/5 rounded-[3rem] text-center"><p class="text-[13px] text-white/20 font-black uppercase italic">Sin registros históricos</p></div>`;
@@ -1583,7 +1583,8 @@
                     const url = specificRoutineId ? `/rutinas/${specificRoutineId}` : `/rutinas/usuario/${alumnoId}`;
                     const rutinaRes = await apiFetch(url);
                     
-                    if (rutinaRes && (rutinaRes.id || rutinaRes.objetivo)) {
+                    // CORRECCIÓN STAFF: Procesamos la rutina ignorando el flag de error si es edición de staff
+                    if (rutinaRes && (rutinaRes.id || rutinaRes.objetivo || !rutinaRes.error)) {
                         const txtObj = document.getElementById('rutina-objetivo');
                         if(txtObj) txtObj.value = rutinaRes.objetivo || '';
 
