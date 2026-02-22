@@ -977,7 +977,7 @@
 			
 			// Botones base (Siempre presentes)
 			let html = `
-				<button onclick="setPaymentMethod('MercadoPago')" data-method="MercadoPago" class="btn-pago w-full py-3 rounded-xl text-[10px] font-black uppercase italic transition-all bg-white/5 text-white-400 hover:text-white border border-transparent hover:border-red-600/30">MercadoLibre</button>
+				<button onclick="setPaymentMethod('Mercado Pago')" data-method="MercadoPago" class="btn-pago w-full py-3 rounded-xl text-[10px] font-black uppercase italic transition-all bg-white/5 text-white-400 hover:text-white border border-transparent hover:border-red-600/30">MercadoPago</button>
 				<button onclick="setPaymentMethod('Transferencia')" data-method="Transferencia" class="btn-pago w-full py-3 rounded-xl text-[10px] font-black uppercase italic transition-all bg-white/5 text-white-400 hover:text-white border border-transparent hover:border-red-600/30">Transf.</button>
 				<button onclick="setPaymentMethod('Efectivo')" data-method="Efectivo" class="btn-pago w-full py-3 rounded-xl text-[10px] font-black uppercase italic transition-all bg-red-600 text-black shadow-lg shadow-red-600/20 transform scale-105">Efectivo</button>
 				<button onclick="setPaymentMethod('T. Debito')" data-method="T. Debito" class="btn-pago w-full py-3 rounded-xl text-[10px] font-black uppercase italic transition-all bg-white/5 text-white-400 hover:text-white border border-transparent hover:border-red-600/30">T. Debito</button>
