@@ -1388,7 +1388,7 @@
                 }
 
             } else {
-                // --- MODO PROFESOR ---
+                // --- MODO PROFESOR / ADMIN / SUPERVISOR ---
                 if(studentView) studentView.classList.add('hidden');
                 if(list) {
                     list.classList.remove('hidden');
@@ -1421,7 +1421,7 @@
                         const initials = a.nombre_completo ? a.nombre_completo.substring(0,2).toUpperCase() : "??";
                         const planNombre = a.plan ? a.plan.nombre : 'Sin Plan';
 
-                        // Lógica del botón Nueva Rutina (Bloqueado si está vencido)
+                        // Lógica del botón Nueva Rutina (Bloqueado si está vencido el plan)
                         const btnNuevaRutina = estaVencido 
                             ? `<button class="px-4 py-3 bg-white/5 text-white/20 rounded-xl text-[9px] font-black uppercase italic cursor-not-allowed flex items-center gap-2 border border-white/5 opacity-50">
                                     <i data-lucide="lock" class="w-3.5 h-3.5"></i>
@@ -1471,7 +1471,8 @@
                                     <i data-lucide="clipboard-list" class="w-3.5 h-3.5"></i> 
                                     <span class="hidden lg:inline">Ficha</span>
                                 </button>
-                                <button onclick="openHistorialRutinas(${a.id})" class="px-4 py-3 bg-indigo-600/10 hover:bg-indigo-600/20 border border-indigo-600/30 text-indigo-400 rounded-xl text-[9px] font-black uppercase italic transition-all flex items-center gap-2">
+                                <!-- BOTÓN HISTORIAL: Azul Sólido solicitado -->
+                                <button onclick="openHistorialRutinas(${a.id})" class="px-4 py-3 bg-blue-700 hover:bg-blue-800 text-white rounded-xl text-[9px] font-black uppercase italic transition-all flex items-center gap-2 shadow-lg">
                                     <i data-lucide="history" class="w-3.5 h-3.5"></i> 
                                     <span>Historial</span>
                                 </button>
