@@ -1322,7 +1322,7 @@
             }
         }
 
-		async function renderRutinas() {
+        async function renderRutinas() {
             const rol = state.user?.rol_nombre;
             const list = document.getElementById('rutinas-lista'); 
             const studentView = document.getElementById('musculacion-student-view'); 
@@ -1529,49 +1529,56 @@
             if(container) container.innerHTML = "";
 
             try {
-                const rutinaRes = await apiFetch(`/rutinas/usuario/${alumnoId}`);
-                
-                // CORRECCIÓN CLAVE: Verificamos que rutinaRes exista antes de leer .error
-                // Si rutinaRes es null/undefined, entramos al ELSE (Nueva Rutina)
-                if (rutinaRes && !rutinaRes.error && rutinaRes.id) {
-                    // --- MODO EDICIÓN (Cargar existente) ---
-                    const txtObj = document.getElementById('rutina-objetivo');
-                    if(txtObj) txtObj.value = rutinaRes.objetivo || '';
-
-                    const txtVenc = document.getElementById('rutina-vencimiento');
-                    if(txtVenc) txtVenc.value = rutinaRes.fecha_vencimiento || '';
+                // CORRECCIÓN CLAVE: Solo consultamos al servidor si el modo es EDICIÓN (isEdit = true)
+                if (isEdit) {
+                    const rutinaRes = await apiFetch(`/rutinas/usuario/${alumnoId}`);
                     
-                    if (rutinaRes.dias && Array.isArray(rutinaRes.dias)) {
-                        rutinaRes.dias.forEach(d => {
-                            const ejerciciosFormateados = d.ejercicios.map(e => {
-                                return {
-                                    ejercicio_id: e.ejercicio_id,
-                                    exercise_name: e.ejercicio_obj?.nombre || "Ejercicio",
-                                    series: e.series_detalle || [], // Backend usa series_detalle
-                                    comentario: e.comentario
-                                };
+                    if (rutinaRes && !rutinaRes.error && rutinaRes.id) {
+                        // --- MODO EDICIÓN (Cargar existente) ---
+                        const txtObj = document.getElementById('rutina-objetivo');
+                        if(txtObj) txtObj.value = rutinaRes.objetivo || '';
+
+                        const txtVenc = document.getElementById('rutina-vencimiento');
+                        if(txtVenc) txtVenc.value = rutinaRes.fecha_vencimiento || '';
+                        
+                        if (rutinaRes.dias && Array.isArray(rutinaRes.dias)) {
+                            rutinaRes.dias.forEach(d => {
+                                const ejerciciosFormateados = d.ejercicios.map(e => {
+                                    return {
+                                        ejercicio_id: e.ejercicio_id,
+                                        exercise_name: e.ejercicio_obj?.nombre || "Ejercicio",
+                                        series: e.series_detalle || [], // Backend usa series_detalle
+                                        comentario: e.comentario
+                                    };
+                                });
+                                // Llamamos a tu función addRoutineDay
+                                if(typeof addRoutineDay === 'function') {
+                                    addRoutineDay(d.nombre_dia, ejerciciosFormateados);
+                                }
                             });
-                            // Llamamos a tu función addRoutineDay
-                            if(typeof addRoutineDay === 'function') {
-                                addRoutineDay(d.nombre_dia, ejerciciosFormateados);
-                            }
-                        });
+                        }
+                        // Si ya cargamos la edición, salimos de la función
+                        if(typeof openModal === 'function') {
+                            openModal('modal-rutina-editor');
+                            const scrollContainer = document.getElementById('rutina-editor-scroll-container');
+                            if(scrollContainer) scrollContainer.scrollTop = 0;
+                        }
+                        return;
                     }
-                } else {
-                    // --- MODO CREACIÓN (Nueva Rutina) ---
-                    // Esto se ejecuta si no hay rutina o si el backend devuelve error (ej: "No hay rutina activa")
-                    const txtObj = document.getElementById('rutina-objetivo');
-                    if(txtObj) txtObj.value = "";
+                }
 
-                    const defaultDate = new Date();
-                    defaultDate.setDate(defaultDate.getDate() + 30);
-                    
-                    const txtVenc = document.getElementById('rutina-vencimiento');
-                    if(txtVenc) txtVenc.value = defaultDate.toISOString().split('T')[0];
-                    
-                    if(typeof addRoutineDay === 'function') {
-                        addRoutineDay("Día 1", []); 
-                    }
+                // --- MODO CREACIÓN (Nueva Rutina) o Fallback si no hay rutina para editar ---
+                const txtObj = document.getElementById('rutina-objetivo');
+                if(txtObj) txtObj.value = "";
+
+                const defaultDate = new Date();
+                defaultDate.setDate(defaultDate.getDate() + 30);
+                
+                const txtVenc = document.getElementById('rutina-vencimiento');
+                if(txtVenc) txtVenc.value = defaultDate.toISOString().split('T')[0];
+                
+                if(typeof addRoutineDay === 'function') {
+                    addRoutineDay("Día 1", []); 
                 }
 
                 // 4. Abrir Modal (Tu ID original)
@@ -1599,222 +1606,222 @@
         }
 
         function addRoutineDay(nombre = "", ejercicios = []) {
-			const container = document.getElementById('rutina-editor-container');
-			const dayId = 'day-' + Math.random().toString(36).substr(2, 9);
-			const dayCard = document.createElement('div');
-			
-			dayCard.className = "rutina-dia-card bg-white/[0.02] p-8 rounded-[2.5rem] border border-white/5 space-y-8 shadow-inner relative group/day";
-			dayCard.dataset.dayId = dayId;
-			
-			dayCard.innerHTML = `
-				<div class="flex justify-between items-center gap-6 border-b border-white/5 pb-6">
-					<div class="flex-1">
-						<p class="text-[9px] font-black text-red-600 uppercase italic mb-1 tracking-widest ml-1">Fase de Entrenamiento</p>
-						<input type="text" placeholder="Ej: Fase A - Empuje" value="${nombre}" class="viking-input !bg-transparent !border-transparent !p-0 !text-2xl font-black italic day-title" required>
-					</div>
-					<button type="button" onclick="this.closest('.rutina-dia-card').remove()" class="text-white/10 hover:text-red-600 transition-all p-3 bg-white/5 rounded-2xl border border-white/5">
-						<i data-lucide="trash-2" class="w-5 h-5"></i>
-					</button>
-				</div>
-				
-				<div class="bg-black/40 p-6 rounded-[2rem] border border-white/5">
-					<p class="text-[9px] font-black text-white/40 uppercase italic mb-4 tracking-widest flex items-center gap-2">
-						<i data-lucide="search" class="w-3 h-3 text-red-600"></i> Localizar Ejercicio
-					</p>
-					<div class="flex flex-col md:flex-row gap-4">
-						<select class="viking-input py-2 text-[11px] h-12 w-full md:w-1/3 search-group-filter !bg-black/60">
-							<option value="all">Todos los grupos...</option>
-							${state.gruposMusculares.map(g => `<option value="${g.id}">${g.nombre}</option>`).join('')}
-						</select>
-						<div class="relative flex-1">
-							<input type="text" placeholder="Escribe el nombre del ejercicio..." class="viking-input py-2 text-[11px] h-12 w-full search-exercise-input !bg-black/60" oninput="showExerciseResults(this, '${dayId}')">
-							<div class="exercise-results-list hidden absolute top-full left-0 w-full bg-[#0a0a0a] border border-red-600/30 rounded-[1.5rem] mt-3 z-[100] max-h-64 overflow-y-auto custom-scrollbar shadow-2xl"></div>
-						</div>
-					</div>
-				</div>
+            const container = document.getElementById('rutina-editor-container');
+            const dayId = 'day-' + Math.random().toString(36).substr(2, 9);
+            const dayCard = document.createElement('div');
+            
+            dayCard.className = "rutina-dia-card bg-white/[0.02] p-8 rounded-[2.5rem] border border-white/5 space-y-8 shadow-inner relative group/day";
+            dayCard.dataset.dayId = dayId;
+            
+            dayCard.innerHTML = `
+                <div class="flex justify-between items-center gap-6 border-b border-white/5 pb-6">
+                    <div class="flex-1">
+                        <p class="text-[9px] font-black text-red-600 uppercase italic mb-1 tracking-widest ml-1">Fase de Entrenamiento</p>
+                        <input type="text" placeholder="Ej: Fase A - Empuje" value="${nombre}" class="viking-input !bg-transparent !border-transparent !p-0 !text-2xl font-black italic day-title" required>
+                    </div>
+                    <button type="button" onclick="this.closest('.rutina-dia-card').remove()" class="text-white/10 hover:text-red-600 transition-all p-3 bg-white/5 rounded-2xl border border-white/5">
+                        <i data-lucide="trash-2" class="w-5 h-5"></i>
+                    </button>
+                </div>
+                
+                <div class="bg-black/40 p-6 rounded-[2rem] border border-white/5">
+                    <p class="text-[9px] font-black text-white/40 uppercase italic mb-4 tracking-widest flex items-center gap-2">
+                        <i data-lucide="search" class="w-3 h-3 text-red-600"></i> Localizar Ejercicio
+                    </p>
+                    <div class="flex flex-col md:flex-row gap-4">
+                        <select class="viking-input py-2 text-[11px] h-12 w-full md:w-1/3 search-group-filter !bg-black/60">
+                            <option value="all">Todos los grupos...</option>
+                            ${state.gruposMusculares.map(g => `<option value="${g.id}">${g.nombre}</option>`).join('')}
+                        </select>
+                        <div class="relative flex-1">
+                            <input type="text" placeholder="Escribe el nombre del ejercicio..." class="viking-input py-2 text-[11px] h-12 w-full search-exercise-input !bg-black/60" oninput="showExerciseResults(this, '${dayId}')">
+                            <div class="exercise-results-list hidden absolute top-full left-0 w-full bg-[#0a0a0a] border border-red-600/30 rounded-[1.5rem] mt-3 z-[100] max-h-64 overflow-y-auto custom-scrollbar shadow-2xl"></div>
+                        </div>
+                    </div>
+                </div>
 
-				<div class="exercises-list space-y-2">
-					<!-- Header Columnas -->
-					<div class="grid grid-cols-[1fr_repeat(4,70px)_40px] gap-3 px-6 text-[9px] font-black text-white/20 uppercase italic tracking-widest">
-						<span>Ejercicio Arsenal</span>
-						<span class="text-center">Sets</span>
-						<span class="text-center">Reps</span>
-						<span class="text-center">Peso</span>
-						<span class="text-center">Pausa</span>
-						<span></span>
-					</div>
-					<!-- Contenedor Draggable -->
-					<div class="day-exercises-container space-y-4 min-h-[50px] p-2" id="drag-container-${dayId}"></div>
-				</div>
-			`;
-			
-			container.appendChild(dayCard);
+                <div class="exercises-list space-y-2">
+                    <!-- Header Columnas -->
+                    <div class="grid grid-cols-[1fr_repeat(4,70px)_40px] gap-3 px-6 text-[9px] font-black text-white/20 uppercase italic tracking-widest">
+                        <span>Ejercicio Arsenal</span>
+                        <span class="text-center">Sets</span>
+                        <span class="text-center">Reps</span>
+                        <span class="text-center">Peso</span>
+                        <span class="text-center">Pausa</span>
+                        <span></span>
+                    </div>
+                    <!-- Contenedor Draggable -->
+                    <div class="day-exercises-container space-y-4 min-h-[50px] p-2" id="drag-container-${dayId}"></div>
+                </div>
+            `;
+            
+            container.appendChild(dayCard);
 
-			// Inicializar lógica de Drag and Drop para este contenedor de día
-			initDragAndDrop(`drag-container-${dayId}`);
-			
-			if (ejercicios.length > 0) {
-				ejercicios.forEach(e => addExerciseToDay(dayId, e));
-			}
-			
-			if(window.lucide) lucide.createIcons();
-		}
+            // Inicializar lógica de Drag and Drop para este contenedor de día
+            initDragAndDrop(`drag-container-${dayId}`);
+            
+            if (ejercicios.length > 0) {
+                ejercicios.forEach(e => addExerciseToDay(dayId, e));
+            }
+            
+            if(window.lucide) lucide.createIcons();
+        }
 
-		function initDragAndDrop(containerId) {
-			const container = document.getElementById(containerId);
-			
-			container.addEventListener('dragover', e => {
-				e.preventDefault();
-				const draggingItem = container.querySelector('.dragging');
-				const afterElement = getDragAfterElement(container, e.clientY);
-				if (afterElement == null) {
-					container.appendChild(draggingItem);
-				} else {
-					container.insertBefore(draggingItem, afterElement);
-				}
-			});
-		}
+        function initDragAndDrop(containerId) {
+            const container = document.getElementById(containerId);
+            
+            container.addEventListener('dragover', e => {
+                e.preventDefault();
+                const draggingItem = container.querySelector('.dragging');
+                const afterElement = getDragAfterElement(container, e.clientY);
+                if (afterElement == null) {
+                    container.appendChild(draggingItem);
+                } else {
+                    container.insertBefore(draggingItem, afterElement);
+                }
+            });
+        }
 
-		function getDragAfterElement(container, y) {
-			const draggableElements = [...container.querySelectorAll('.exercise-row:not(.dragging)')];
-			
-			return draggableElements.reduce((closest, child) => {
-				const box = child.getBoundingClientRect();
-				const offset = y - box.top - box.height / 2;
-				if (offset < 0 && offset > closest.offset) {
-					return { offset: offset, element: child };
-				} else {
-					return closest;
-				}
-			}, { offset: Number.NEGATIVE_INFINITY }).element;
-		}
+        function getDragAfterElement(container, y) {
+            const draggableElements = [...container.querySelectorAll('.exercise-row:not(.dragging)')];
+            
+            return draggableElements.reduce((closest, child) => {
+                const box = child.getBoundingClientRect();
+                const offset = y - box.top - box.height / 2;
+                if (offset < 0 && offset > closest.offset) {
+                    return { offset: offset, element: child };
+                } else {
+                    return closest;
+                }
+            }, { offset: Number.NEGATIVE_INFINITY }).element;
+        }
 
         function showExerciseResults(input, dayId) {
-			const query = input.value.toLowerCase();
-			const groupFilter = input.closest('.flex').querySelector('.search-group-filter').value;
-			const resultsDiv = input.nextElementSibling;
+            const query = input.value.toLowerCase();
+            const groupFilter = input.closest('.flex').querySelector('.search-group-filter').value;
+            const resultsDiv = input.nextElementSibling;
 
-			if (query.length < 2 && groupFilter === "all") {
-				resultsDiv.classList.add('hidden');
-				return;
-			}
+            if (query.length < 2 && groupFilter === "all") {
+                resultsDiv.classList.add('hidden');
+                return;
+            }
 
-			const filtered = state.ejerciciosLibreria.filter(ex => {
-				const matchSearch = ex.nombre.toLowerCase().includes(query);
-				const matchGroup = groupFilter === "all" || ex.grupo_muscular_id == groupFilter;
-				return matchSearch && matchGroup;
-			});
+            const filtered = state.ejerciciosLibreria.filter(ex => {
+                const matchSearch = ex.nombre.toLowerCase().includes(query);
+                const matchGroup = groupFilter === "all" || ex.grupo_muscular_id == groupFilter;
+                return matchSearch && matchGroup;
+            });
 
-			if (filtered.length === 0) {
-				resultsDiv.innerHTML = '<div class="p-6 text-[11px] text-white/20 italic text-center">No hay registros en la armería</div>';
-			} else {
-				resultsDiv.innerHTML = filtered.map(ex => `
-					<div class="p-4 border-b border-white/5 text-[11px] font-black uppercase italic text-white/60 hover:text-red-600 hover:bg-white/5 cursor-pointer transition-all flex items-center gap-3" 
-						onclick="selectExerciseForDay('${dayId}', ${ex.id}, '${ex.nombre}')">
-						<i data-lucide="dumbbell" class="w-3 h-3 text-red-600"></i> ${ex.nombre}
-					</div>
-				`).join('');
-			}
-			resultsDiv.classList.remove('hidden');
-			if(window.lucide) lucide.createIcons();
-		}
+            if (filtered.length === 0) {
+                resultsDiv.innerHTML = '<div class="p-6 text-[11px] text-white/20 italic text-center">No hay registros en la armería</div>';
+            } else {
+                resultsDiv.innerHTML = filtered.map(ex => `
+                    <div class="p-4 border-b border-white/5 text-[11px] font-black uppercase italic text-white/60 hover:text-red-600 hover:bg-white/5 cursor-pointer transition-all flex items-center gap-3" 
+                        onclick="selectExerciseForDay('${dayId}', ${ex.id}, '${ex.nombre}')">
+                        <i data-lucide="dumbbell" class="w-3 h-3 text-red-600"></i> ${ex.nombre}
+                    </div>
+                `).join('');
+            }
+            resultsDiv.classList.remove('hidden');
+            if(window.lucide) lucide.createIcons();
+        }
 
-       	function selectExerciseForDay(dayId, exerciseId, exerciseName) {
-			const container = document.querySelector(`[data-day-id="${dayId}"]`);
-			const searchInput = container.querySelector('.search-exercise-input');
-			const resultsDiv = container.querySelector('.exercise-results-list');
-			
-			addExerciseToDay(dayId, { ejercicio_id: exerciseId, exercise_name: exerciseName });
-			
-			searchInput.value = "";
-			resultsDiv.classList.add('hidden');
-			showVikingToast("Ejercicio añadido al Arsenal");
-		}
+        function selectExerciseForDay(dayId, exerciseId, exerciseName) {
+            const container = document.querySelector(`[data-day-id="${dayId}"]`);
+            const searchInput = container.querySelector('.search-exercise-input');
+            const resultsDiv = container.querySelector('.exercise-results-list');
+            
+            addExerciseToDay(dayId, { ejercicio_id: exerciseId, exercise_name: exerciseName });
+            
+            searchInput.value = "";
+            resultsDiv.classList.add('hidden');
+            showVikingToast("Ejercicio añadido al Arsenal");
+        }
 
-		function addExerciseToDay(dayId, data = null) {
-			const SERIES_POR_DEFECTO = 3; 
-			const container = document.querySelector(`[data-day-id="${dayId}"] .day-exercises-container`);
-			const div = document.createElement('div');
-			const exerciseUniqueId = 'ex-' + Math.random().toString(36).substr(2, 9);
-			
-			// Hacemos la fila DRAGGABLE
-			div.className = "exercise-row bg-white/[0.03] p-5 rounded-[1.5rem] border border-white/5 transition-all cursor-move hover:border-red-600/30 group/ex relative";
-			div.dataset.exerciseRowId = exerciseUniqueId;
-			div.draggable = true;
+        function addExerciseToDay(dayId, data = null) {
+            const SERIES_POR_DEFECTO = 3; 
+            const container = document.querySelector(`[data-day-id="${dayId}"] .day-exercises-container`);
+            const div = document.createElement('div');
+            const exerciseUniqueId = 'ex-' + Math.random().toString(36).substr(2, 9);
+            
+            // Hacemos la fila DRAGGABLE
+            div.className = "exercise-row bg-white/[0.03] p-5 rounded-[1.5rem] border border-white/5 transition-all cursor-move hover:border-red-600/30 group/ex relative";
+            div.dataset.exerciseRowId = exerciseUniqueId;
+            div.draggable = true;
 
-			// Listeners de Drag
-			div.addEventListener('dragstart', () => div.classList.add('dragging', 'opacity-50', 'scale-95'));
-			div.addEventListener('dragend', () => div.classList.remove('dragging', 'opacity-50', 'scale-95'));
+            // Listeners de Drag
+            div.addEventListener('dragstart', () => div.classList.add('dragging', 'opacity-50', 'scale-95'));
+            div.addEventListener('dragend', () => div.classList.remove('dragging', 'opacity-50', 'scale-95'));
 
-			let exName = data?.exercise_name || "";
-			if (!exName && data?.ejercicio_id) {
-				const found = state.ejerciciosLibreria.find(e => e.id == data.ejercicio_id);
-				exName = found ? found.nombre : "Ejercicio Arsenal";
-			}
+            let exName = data?.exercise_name || "";
+            if (!exName && data?.ejercicio_id) {
+                const found = state.ejerciciosLibreria.find(e => e.id == data.ejercicio_id);
+                exName = found ? found.nombre : "Ejercicio Arsenal";
+            }
 
-			const initialNumSeries = (data && data.series) ? data.series.length : SERIES_POR_DEFECTO;
+            const initialNumSeries = (data && data.series) ? data.series.length : SERIES_POR_DEFECTO;
 
-			div.innerHTML = `
-				<div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
-					<div class="flex items-center gap-3">
-						<div class="w-8 h-8 rounded-lg bg-red-600/10 flex items-center justify-center text-red-600">
-							<i data-lucide="grip-vertical" class="w-4 h-4 opacity-40 group-hover/ex:opacity-100 transition-opacity"></i>
-						</div>
-						<div class="flex flex-col">
-							<input type="hidden" class="exercise-id" value="${data?.ejercicio_id}">
-							<span class="text-[13px] font-black uppercase italic text-white tracking-wide">${exName}</span>
-						</div>
-					</div>
-					
-					<div class="flex items-center gap-3 w-full md:w-auto">
-						<div class="flex items-center gap-2 bg-black/40 px-3 py-1.5 rounded-xl border border-white/5">
-							<label class="text-[9px] font-black text-white/30 uppercase italic">Sets</label>
-							<select class="viking-input !py-0 !px-1 w-12 h-7 text-[12px] text-center font-black bg-[#1a1a1a] text-red-600 border border-white/10 series-select cursor-pointer focus:border-red-600 rounded-lg" 
-									onchange="updateSeriesCount('${exerciseUniqueId}', this.value)">
-								${[0,1,2,3,4,5,6,7,8,9,10,12].map(n => 
-									`<option value="${n}" class="bg-black text-white font-bold" ${n == initialNumSeries ? 'selected' : ''}>${n}</option>`
-								).join('')}
-							</select>
-						</div>
-						<button type="button" onclick="this.closest('.exercise-row').remove()" class="text-white/10 hover:text-red-600 transition-colors p-2 bg-white/5 rounded-xl">
-							<i data-lucide="trash-2" class="w-4 h-4"></i>
-						</button>
-					</div>
-				</div>
+            div.innerHTML = `
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-lg bg-red-600/10 flex items-center justify-center text-red-600">
+                            <i data-lucide="grip-vertical" class="w-4 h-4 opacity-40 group-hover/ex:opacity-100 transition-opacity"></i>
+                        </div>
+                        <div class="flex flex-col">
+                            <input type="hidden" class="exercise-id" value="${data?.ejercicio_id}">
+                            <span class="text-[13px] font-black uppercase italic text-white tracking-wide">${exName}</span>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-center gap-3 w-full md:w-auto">
+                        <div class="flex items-center gap-2 bg-black/40 px-3 py-1.5 rounded-xl border border-white/5">
+                            <label class="text-[9px] font-black text-white/30 uppercase italic">Sets</label>
+                            <select class="viking-input !py-0 !px-1 w-12 h-7 text-[12px] text-center font-black bg-[#1a1a1a] text-red-600 border border-white/10 series-select cursor-pointer focus:border-red-600 rounded-lg" 
+                                    onchange="updateSeriesCount('${exerciseUniqueId}', this.value)">
+                                ${[0,1,2,3,4,5,6,7,8,9,10,12].map(n => 
+                                    `<option value="${n}" class="bg-black text-white font-bold" ${n == initialNumSeries ? 'selected' : ''}>${n}</option>`
+                                ).join('')}
+                            </select>
+                        </div>
+                        <button type="button" onclick="this.closest('.exercise-row').remove()" class="text-white/10 hover:text-red-600 transition-colors p-2 bg-white/5 rounded-xl">
+                            <i data-lucide="trash-2" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+                </div>
 
-				<div id="series-container-${exerciseUniqueId}" class="space-y-1.5 mb-4"></div>
-				
-				<div class="mt-2 text-left pl-1">
-					<div class="flex items-center gap-2 mb-1">
-						<i data-lucide="message-square" class="w-3 h-3 text-red-600 opacity-40"></i>
-						<label class="text-[8px] font-black uppercase text-white/20 tracking-widest">Nota Táctica</label>
-					</div>
-					<input type="text" placeholder="Ej: Controlar fase negativa / Al fallo" 
-						value="${data?.comentario || ''}"
-						class="w-full bg-transparent text-[11px] text-white/60 border-b border-white/5 focus:border-red-600 focus:outline-none py-1.5 italic placeholder-white/5 transition-all exercise-comment">
-				</div>
-			`;
-			
-			container.appendChild(div);
-			generateSeriesRows(exerciseUniqueId, initialNumSeries, data ? data.series : null);
-			if(window.lucide) lucide.createIcons();
-		}
+                <div id="series-container-${exerciseUniqueId}" class="space-y-1.5 mb-4"></div>
+                
+                <div class="mt-2 text-left pl-1">
+                    <div class="flex items-center gap-2 mb-1">
+                        <i data-lucide="message-square" class="w-3 h-3 text-red-600 opacity-40"></i>
+                        <label class="text-[8px] font-black uppercase text-white/20 tracking-widest">Nota Táctica</label>
+                    </div>
+                    <input type="text" placeholder="Ej: Controlar fase negativa / Al fallo" 
+                        value="${data?.comentario || ''}"
+                        class="w-full bg-transparent text-[11px] text-white/60 border-b border-white/5 focus:border-red-600 focus:outline-none py-1.5 italic placeholder-white/5 transition-all exercise-comment">
+                </div>
+            `;
+            
+            container.appendChild(div);
+            generateSeriesRows(exerciseUniqueId, initialNumSeries, data ? data.series : null);
+            if(window.lucide) lucide.createIcons();
+        }
 
         function updateSeriesCount(containerId, newCount) {
-			const container = document.getElementById(`series-container-${containerId}`);
-			const currentRows = container.querySelectorAll('.serie-row');
-			let savedData = [];
-			
-			currentRows.forEach(row => {
-				savedData.push({
-					repeticiones: row.querySelector('.serie-reps').value,
-					peso: row.querySelector('.serie-weight').value,
-					descanso: row.querySelector('.serie-rest').value
-				});
-			});
+            const container = document.getElementById(`series-container-${containerId}`);
+            const currentRows = container.querySelectorAll('.serie-row');
+            let savedData = [];
+            
+            currentRows.forEach(row => {
+                savedData.push({
+                    repeticiones: row.querySelector('.serie-reps').value,
+                    peso: row.querySelector('.serie-weight').value,
+                    descanso: row.querySelector('.serie-rest').value
+                });
+            });
 
-			generateSeriesRows(containerId, newCount, savedData);
-		}
+            generateSeriesRows(containerId, newCount, savedData);
+        }
 
         function generateSeriesRows(containerId, numSeries, existingData = null) {
             const container = document.getElementById(`series-container-${containerId}`); 
