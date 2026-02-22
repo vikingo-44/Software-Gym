@@ -1160,9 +1160,11 @@
             if (document.getElementById('ficha-altura')) document.getElementById('ficha-altura').innerText = (res.altura || 0) + " cm";
             if (document.getElementById('ficha-imc')) document.getElementById('ficha-imc').innerText = res.imc || 0;
 
-            // 2. Obtener Rutina
+            // 2. Obtener Rutina (Filtro corregido para permitir ver datos históricos si no hay activa)
             let rutinaData = await apiFetch(`/rutinas/usuario/${alumnoId}`);
-            const rutinas = Array.isArray(rutinaData) ? rutinaData : (rutinaData && !rutinaData.error ? [rutinaData] : []);
+            
+            // CORRECCIÓN: Si eres Staff, mostramos la rutina aunque el backend devuelva error por plan vencido
+            const rutinas = Array.isArray(rutinaData) ? rutinaData : (rutinaData && (rutinaData.id || rutinaData.objetivo) ? [rutinaData] : []);
 
             if (rutinas.length > 0) {
                 const hoy = new Date();
@@ -1495,7 +1497,7 @@
 
             modalHistorial.innerHTML = `
                 <div class="col-span-2 py-16 flex flex-col items-center justify-center space-y-4">
-                    <div class="w-10 h-10 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+                    <div class="w-10 h-10 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
                     <p class="text-[10px] text-white/20 italic uppercase tracking-[0.3em] animate-pulse text-center">Recuperando memorias de combate...</p>
                 </div>
             `;
@@ -1503,26 +1505,21 @@
             if (document.getElementById('ficha-nombre')) document.getElementById('ficha-nombre').innerText = "Historial: " + al.nombre_completo;
             if (document.getElementById('ficha-dni')) document.getElementById('ficha-dni').innerText = "DNI: " + al.dni;
             
-            let rutinas = await apiFetch(`/rutinas/usuario/${alumnoId}`);
-            if (!Array.isArray(rutinas)) rutinas = rutinas && !rutinas.error ? [rutinas] : [];
+            // CORRECCIÓN: Quitamos el check de !error para que el staff vea la data siempre
+            let res = await apiFetch(`/rutinas/usuario/${alumnoId}`);
+            let rutinas = Array.isArray(res) ? res : (res && (res.id || res.objetivo) ? [res] : []);
 
             if (rutinas.length === 0) {
-                modalHistorial.innerHTML = `
-                    <div class="col-span-2 p-20 border-2 border-dashed border-white/5 rounded-[3rem] text-center">
-                        <p class="text-[13px] text-white/20 font-black uppercase italic tracking-widest">No hay registros históricos</p>
-                    </div>
-                `;
+                modalHistorial.innerHTML = `<div class="col-span-2 p-20 border-2 border-dashed border-white/5 rounded-[3rem] text-center"><p class="text-[13px] text-white/20 font-black uppercase italic">Sin registros históricos</p></div>`;
             } else {
                 rutinas.sort((a,b) => new Date(b.fecha_vencimiento) - new Date(a.fecha_vencimiento));
-
                 modalHistorial.innerHTML = rutinas.map((r, idx) => `
-                    <div class="col-span-2 mb-4 bg-white/[0.03] border border-white/5 p-6 rounded-[2rem] flex justify-between items-center group hover:border-indigo-600/30 transition-all">
+                    <div class="col-span-2 mb-4 bg-white/[0.03] border border-white/5 p-6 rounded-[2rem] flex justify-between items-center group hover:border-blue-600/30 transition-all">
                         <div>
-                            <p class="text-[8px] text-indigo-400 font-black uppercase tracking-widest mb-1 italic">Arsenal - ${r.fecha_vencimiento || 'Fecha desconocida'}</p>
+                            <p class="text-[8px] text-blue-400 font-black uppercase tracking-widest mb-1 italic">Arsenal - ${r.fecha_vencimiento || 'Fecha desconocida'}</p>
                             <h5 class="text-sm font-black italic uppercase text-white">${r.objetivo || 'Rutina de Musculación'}</h5>
-                            <p class="text-[9px] text-white/20 font-bold uppercase mt-1 tracking-tighter">${(r.dias || []).length} Días de Entrenamiento</p>
                         </div>
-                        <button onclick="closeModal('modal-ficha-tecnica'); openRoutineEditor(${alumnoId}, true, ${r.id})" class="px-6 py-3 bg-indigo-600 text-white rounded-xl text-[9px] font-black uppercase italic hover:scale-105 transition-all shadow-lg flex items-center gap-2">
+                        <button onclick="closeModal('modal-ficha-tecnica'); openRoutineEditor(${alumnoId}, true, ${r.id})" class="px-6 py-3 bg-blue-600 text-white rounded-xl text-[9px] font-black uppercase italic hover:scale-105 transition-all shadow-lg flex items-center gap-2">
                             <i data-lucide="zap" class="w-3.5 h-3.5"></i> Reactivar
                         </button>
                     </div>
@@ -1547,7 +1544,6 @@
         }
 
         async function openRoutineEditor(alumnoId, isEdit = false, specificRoutineId = null) {
-            // 1. Validar que state y alumnos existan
             if (!state || !state.alumnos) {
                 console.error("Error: state.alumnos no está definido");
                 return;
@@ -1556,21 +1552,19 @@
             const al = state.alumnos.find(a => a.id === alumnoId);
             if (!al) return;
             
-            // VALIDACIÓN: Si es NUEVA RUTINA y el plan está vencido, bloqueamos.
             const hoy = new Date().toISOString().split('T')[0];
             const estaVencido = !al.fecha_vencimiento || al.fecha_vencimiento < hoy;
 
+            // Solo bloqueamos si es una NUEVA rutina para un alumno con PLAN VENCIDO.
             if (!isEdit && estaVencido) {
                 showVikingToast("⚠️ BLOQUEO: El alumno tiene el plan vencido. No se puede generar una rutina nueva.", true);
                 return;
             }
 
-            // 2. Cargar metadatos asegurando que la función exista
             if(typeof loadMusculacionMetadata === 'function') {
                 await loadMusculacionMetadata();
             }
             
-            // 3. Preparar DOM (Usando tus IDs originales)
             const lblAlumno = document.getElementById('rutina-editor-alumno');
             if(lblAlumno) lblAlumno.innerText = (specificRoutineId ? "Reactivando Arsenal: " : (isEdit ? "Editando Arsenal: " : "Nueva Rutina: ")) + al.nombre_completo;
 
@@ -1581,12 +1575,11 @@
             if(container) container.innerHTML = "";
 
             try {
-                // MODO EDICIÓN O REACTIVACIÓN DESDE HISTORIAL
                 if (isEdit || specificRoutineId) {
                     const url = specificRoutineId ? `/rutinas/${specificRoutineId}` : `/rutinas/usuario/${alumnoId}`;
                     const rutinaRes = await apiFetch(url);
                     
-                    if (rutinaRes && !rutinaRes.error && rutinaRes.id) {
+                    if (rutinaRes && (rutinaRes.id || rutinaRes.objetivo)) {
                         const txtObj = document.getElementById('rutina-objetivo');
                         if(txtObj) txtObj.value = rutinaRes.objetivo || '';
 
@@ -1625,7 +1618,6 @@
                     }
                 }
 
-                // --- MODO CREACIÓN (Nueva Rutina) ---
                 const txtObj = document.getElementById('rutina-objetivo');
                 if(txtObj) txtObj.value = "";
 
