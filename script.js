@@ -1471,6 +1471,10 @@
                                     <i data-lucide="clipboard-list" class="w-3.5 h-3.5"></i> 
                                     <span class="hidden lg:inline">Ficha</span>
                                 </button>
+                                <button onclick="openHistorialRutinas(${a.id})" class="px-4 py-3 bg-indigo-600/10 hover:bg-indigo-600/20 border border-indigo-600/30 text-indigo-400 rounded-xl text-[9px] font-black uppercase italic transition-all flex items-center gap-2">
+                                    <i data-lucide="history" class="w-3.5 h-3.5"></i> 
+                                    <span>Historial</span>
+                                </button>
                                 ${btnNuevaRutina}
                             </div>
                         </div>
@@ -1479,6 +1483,53 @@
                 }
             }
             if(window.lucide) lucide.createIcons();
+        }
+
+		async function openHistorialRutinas(alumnoId) {
+            const al = state.alumnos.find(a => a.id === alumnoId);
+            if (!al) return;
+
+            const modalHistorial = document.getElementById('ficha-rutina-container'); 
+            if (!modalHistorial) return;
+
+            modalHistorial.innerHTML = `
+                <div class="col-span-2 py-16 flex flex-col items-center justify-center space-y-4">
+                    <div class="w-10 h-10 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+                    <p class="text-[10px] text-white/20 italic uppercase tracking-[0.3em] animate-pulse text-center">Recuperando memorias de combate...</p>
+                </div>
+            `;
+
+            if (document.getElementById('ficha-nombre')) document.getElementById('ficha-nombre').innerText = "Historial: " + al.nombre_completo;
+            if (document.getElementById('ficha-dni')) document.getElementById('ficha-dni').innerText = "DNI: " + al.dni;
+            
+            let rutinas = await apiFetch(`/rutinas/usuario/${alumnoId}`);
+            if (!Array.isArray(rutinas)) rutinas = rutinas && !rutinas.error ? [rutinas] : [];
+
+            if (rutinas.length === 0) {
+                modalHistorial.innerHTML = `
+                    <div class="col-span-2 p-20 border-2 border-dashed border-white/5 rounded-[3rem] text-center">
+                        <p class="text-[13px] text-white/20 font-black uppercase italic tracking-widest">No hay registros históricos</p>
+                    </div>
+                `;
+            } else {
+                rutinas.sort((a,b) => new Date(b.fecha_vencimiento) - new Date(a.fecha_vencimiento));
+
+                modalHistorial.innerHTML = rutinas.map((r, idx) => `
+                    <div class="col-span-2 mb-4 bg-white/[0.03] border border-white/5 p-6 rounded-[2rem] flex justify-between items-center group hover:border-indigo-600/30 transition-all">
+                        <div>
+                            <p class="text-[8px] text-indigo-400 font-black uppercase tracking-widest mb-1 italic">Arsenal - ${r.fecha_vencimiento || 'Fecha desconocida'}</p>
+                            <h5 class="text-sm font-black italic uppercase text-white">${r.objetivo || 'Rutina de Musculación'}</h5>
+                            <p class="text-[9px] text-white/20 font-bold uppercase mt-1 tracking-tighter">${(r.dias || []).length} Días de Entrenamiento</p>
+                        </div>
+                        <button onclick="closeModal('modal-ficha-tecnica'); openRoutineEditor(${alumnoId}, true, ${r.id})" class="px-6 py-3 bg-indigo-600 text-white rounded-xl text-[9px] font-black uppercase italic hover:scale-105 transition-all shadow-lg flex items-center gap-2">
+                            <i data-lucide="zap" class="w-3.5 h-3.5"></i> Reactivar
+                        </button>
+                    </div>
+                `).join('');
+            }
+
+            if (window.lucide) lucide.createIcons();
+            openModal('modal-ficha-tecnica');
         }
 
         async function loadMusculacionMetadata() {
@@ -1494,7 +1545,7 @@
             }
         }
 
-        async function openRoutineEditor(alumnoId, isEdit = false) {
+        async function openRoutineEditor(alumnoId, isEdit = false, specificRoutineId = null) {
             // 1. Validar que state y alumnos existan
             if (!state || !state.alumnos) {
                 console.error("Error: state.alumnos no está definido");
@@ -1520,7 +1571,7 @@
             
             // 3. Preparar DOM (Usando tus IDs originales)
             const lblAlumno = document.getElementById('rutina-editor-alumno');
-            if(lblAlumno) lblAlumno.innerText = (isEdit ? "Editando Arsenal: " : "Nueva Rutina: ") + al.nombre_completo;
+            if(lblAlumno) lblAlumno.innerText = (specificRoutineId ? "Reactivando Arsenal: " : (isEdit ? "Editando Arsenal: " : "Nueva Rutina: ")) + al.nombre_completo;
 
             const inputId = document.getElementById('rutina-editor-alumno-id');
             if(inputId) inputId.value = alumnoId;
@@ -1529,17 +1580,25 @@
             if(container) container.innerHTML = "";
 
             try {
-                // CORRECCIÓN CLAVE: Solo consultamos al servidor si el modo es EDICIÓN (isEdit = true)
-                if (isEdit) {
-                    const rutinaRes = await apiFetch(`/rutinas/usuario/${alumnoId}`);
+                // MODO EDICIÓN O REACTIVACIÓN DESDE HISTORIAL
+                if (isEdit || specificRoutineId) {
+                    const url = specificRoutineId ? `/rutinas/${specificRoutineId}` : `/rutinas/usuario/${alumnoId}`;
+                    const rutinaRes = await apiFetch(url);
                     
                     if (rutinaRes && !rutinaRes.error && rutinaRes.id) {
-                        // --- MODO EDICIÓN (Cargar existente) ---
                         const txtObj = document.getElementById('rutina-objetivo');
                         if(txtObj) txtObj.value = rutinaRes.objetivo || '';
 
                         const txtVenc = document.getElementById('rutina-vencimiento');
-                        if(txtVenc) txtVenc.value = rutinaRes.fecha_vencimiento || '';
+                        if(txtVenc) {
+                            if (specificRoutineId) {
+                                const nextVenc = new Date();
+                                nextVenc.setDate(nextVenc.getDate() + 30);
+                                txtVenc.value = nextVenc.toISOString().split('T')[0];
+                            } else {
+                                txtVenc.value = rutinaRes.fecha_vencimiento || '';
+                            }
+                        }
                         
                         if (rutinaRes.dias && Array.isArray(rutinaRes.dias)) {
                             rutinaRes.dias.forEach(d => {
@@ -1547,17 +1606,15 @@
                                     return {
                                         ejercicio_id: e.ejercicio_id,
                                         exercise_name: e.ejercicio_obj?.nombre || "Ejercicio",
-                                        series: e.series_detalle || [], // Backend usa series_detalle
+                                        series: e.series_detalle || [], 
                                         comentario: e.comentario
                                     };
                                 });
-                                // Llamamos a tu función addRoutineDay
                                 if(typeof addRoutineDay === 'function') {
                                     addRoutineDay(d.nombre_dia, ejerciciosFormateados);
                                 }
                             });
                         }
-                        // Si ya cargamos la edición, salimos de la función
                         if(typeof openModal === 'function') {
                             openModal('modal-rutina-editor');
                             const scrollContainer = document.getElementById('rutina-editor-scroll-container');
@@ -1567,7 +1624,7 @@
                     }
                 }
 
-                // --- MODO CREACIÓN (Nueva Rutina) o Fallback si no hay rutina para editar ---
+                // --- MODO CREACIÓN (Nueva Rutina) ---
                 const txtObj = document.getElementById('rutina-objetivo');
                 if(txtObj) txtObj.value = "";
 
@@ -1581,22 +1638,10 @@
                     addRoutineDay("Día 1", []); 
                 }
 
-                // 4. Abrir Modal (Tu ID original)
                 if(typeof openModal === 'function') {
                     openModal('modal-rutina-editor');
-                    
-                    // SOLUCIÓN AL SCROLL: Resetear la posición al abrir (Canvas Fix)
                     const scrollContainer = document.getElementById('rutina-editor-scroll-container');
                     if(scrollContainer) scrollContainer.scrollTop = 0;
-                } else {
-                    // Fallback por si openModal no es global
-                    const m = document.getElementById('modal-rutina-editor');
-                    if(m) {
-                        m.classList.remove('hidden');
-                        // SOLUCIÓN AL SCROLL: Resetear la posición al abrir (Canvas Fix)
-                        const scrollContainer = document.getElementById('rutina-editor-scroll-container');
-                        if(scrollContainer) scrollContainer.scrollTop = 0;
-                    }
                 }
 
             } catch (e) {
