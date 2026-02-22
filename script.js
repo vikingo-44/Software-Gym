@@ -763,9 +763,10 @@
 
         function renderCobrar() {
 			const displayArea = document.getElementById('cobrar-display-area');
-			if (!displayArea) return; 
+			if (!displayArea) return;
 
 			// FIX: Inicializar la pestaña por defecto si no existe y forzar el dibujo de botones de pago
+			// Esto resuelve el bug donde no aparecían los métodos de pago al cargar mercadería por primera vez
 			if (!state.cobrarTab) state.cobrarTab = 'mercaderia';
 			if (window.updatePaymentButtons) window.updatePaymentButtons();
 
@@ -816,9 +817,10 @@
 										</span>
 									</div>
 
-									<div class="flex gap-2 items-center mt-2 pt-3 border-t border-white/5">
-										<div class="flex-1">
-											<p class="text-[8px] text-white-600 font-black uppercase italic mb-1 px-2">Seleccionar Plan</p>
+									<div class="grid grid-cols-1 md:grid-cols-2 gap-3 items-end mt-2 pt-3 border-t border-white/5">
+										<!-- Selección de Plan -->
+										<div class="space-y-1">
+											<p class="text-[8px] text-white-600 font-black uppercase italic px-2">Elegir Plan</p>
 											<select id="plan-select-${a.id}" class="viking-input !py-2 !text-[10px] h-10 bg-black/60 border-white/10">
 												${state.planes.map(p => `
 													<option value="${p.id}" ${p.id === a.plan_id ? 'selected' : ''}>
@@ -827,10 +829,18 @@
 												`).join('')}
 											</select>
 										</div>
-										<button onclick="preparePlanCharge(${a.id})" class="mt-4 px-6 h-10 rounded-xl text-[10px] font-black italic bg-green-600/20 text-green-500 border border-green-500/20 hover:bg-green-600 hover:text-black transition-all flex items-center gap-2 shadow-lg">
-											<i data-lucide="shopping-cart" class="w-3 h-3"></i> COBRAR
-										</button>
+										
+										<!-- NUEVO: Campo de Comentario (Ticket/Factura) -->
+										<div class="space-y-1">
+											<p class="text-[8px] text-white-600 font-black uppercase italic px-2">Ticket / Factura / Nota</p>
+											<input type="text" id="plan-comment-${a.id}" placeholder="Ej: Ticket #1234" 
+												class="viking-input !py-2 !text-[10px] h-10 bg-black/60 border-white/10 focus:border-red-600">
+										</div>
 									</div>
+
+									<button onclick="preparePlanCharge(${a.id})" class="mt-2 w-full h-10 rounded-xl text-[10px] font-black italic bg-green-600/20 text-green-500 border border-green-500/20 hover:bg-green-600 hover:text-black transition-all flex items-center justify-center gap-2 shadow-lg">
+										<i data-lucide="shopping-cart" class="w-3 h-3"></i> CONFIRMAR COBRO
+									</button>
 								</div>`;
 							}).join('')}
 						</div>
@@ -839,7 +849,6 @@
 			if (window.lucide) lucide.createIcons();
 			updateCartUI();
 		}
-
         document.getElementById('cobrar-search').oninput = renderCobrar;
 
 		/**
@@ -977,7 +986,7 @@
 			
 			// Botones base (Siempre presentes)
 			let html = `
-				<button onclick="setPaymentMethod('Mercado Pago')" data-method="Mercado Pago" class="btn-pago w-full py-3 rounded-xl text-[10px] font-black uppercase italic transition-all bg-white/5 text-white-400 hover:text-white border border-transparent hover:border-red-600/30">Mercado Pago</button>
+				<button onclick="setPaymentMethod('MercadoPago')" data-method="MercadoPago" class="btn-pago w-full py-3 rounded-xl text-[10px] font-black uppercase italic transition-all bg-white/5 text-white-400 hover:text-white border border-transparent hover:border-red-600/30">MercadoLibre</button>
 				<button onclick="setPaymentMethod('Transferencia')" data-method="Transferencia" class="btn-pago w-full py-3 rounded-xl text-[10px] font-black uppercase italic transition-all bg-white/5 text-white-400 hover:text-white border border-transparent hover:border-red-600/30">Transf.</button>
 				<button onclick="setPaymentMethod('Efectivo')" data-method="Efectivo" class="btn-pago w-full py-3 rounded-xl text-[10px] font-black uppercase italic transition-all bg-red-600 text-black shadow-lg shadow-red-600/20 transform scale-105">Efectivo</button>
 				<button onclick="setPaymentMethod('T. Debito')" data-method="T. Debito" class="btn-pago w-full py-3 rounded-xl text-[10px] font-black uppercase italic transition-all bg-white/5 text-white-400 hover:text-white border border-transparent hover:border-red-600/30">T. Debito</button>
@@ -1058,6 +1067,10 @@
 			if (!alumno) return;
 
 			const planSelect = document.getElementById(`plan-select-${alumnoId}`);
+			const commentInput = document.getElementById(`plan-comment-${alumnoId}`);
+			
+			if (!planSelect) return;
+
 			const planId = parseInt(planSelect.value);
 			const plan = state.planes.find(p => p.id === planId);
 
@@ -1067,18 +1080,22 @@
 			const existe = state.cart.find(c => c.alumno_id === alumnoId && c.tipo === 'Plan');
 			if(existe) return showVikingToast("Este alumno ya tiene un plan en el carrito", true);
 
-			// Lo sumamos al estado del carrito
+			// Capturamos el comentario (Ticket / Factura)
+			const comentario = commentInput ? commentInput.value.trim() : "";
+
+			// Lo sumamos al estado del carrito con el campo descripcion2
 			state.cart.push({
 				tipo: 'Plan',
-				producto_id: planId, // ID del Plan
-				alumno_id: alumnoId,  // ID del Alumno (Crucial para el vencimiento)
+				producto_id: planId,
+				alumno_id: alumnoId,
 				nombre: `${plan.nombre} (${alumno.nombre_completo})`,
 				precio: plan.precio,
-				cantidad: 1
+				cantidad: 1,
+				descripcion2: comentario // <-- AQUÍ SE GUARDA EL TICKET
 			});
 
 			showVikingToast("Plan sumado al carrito");
-			updateCartUI(); // Actualizamos la lista visual
+			updateCartUI();
 		}
 
 		/**
@@ -1113,22 +1130,23 @@
 						tipo: item.tipo, // 'Mercaderia' o 'Plan'
 						monto: item.precio * item.cantidad,
 						descripcion: item.tipo === 'Plan' ? item.nombre : `Venta: ${item.nombre} (x${item.cantidad})`,
+						descripcion2: item.descripcion2 || "", // <--- ENVIAMOS EL TICKET (COLUMNA DETALLE EN CAJA)
 						metodo_pago: metodoPago,
-						cuotas: cuotas, // <--- AHORA SÍ ENVIAMOS LAS CUOTAS REALES A LA DB
-						producto_id: item.producto_id, // ID del producto o ID del Plan
-						alumno_id: item.alumno_id,     // Si es Plan, esto viaja al servidor
+						cuotas: cuotas,
+						producto_id: item.producto_id,
+						alumno_id: item.alumno_id,
 						cantidad: item.cantidad
-					}, false); // false para que no tire mil toasts seguidos
+					}, false);
 
 					if (!exito) errores++;
 				}
 
 				if (errores === 0) {
-					showVikingToast("¡Cobro exitoso! Vencimientos actualizados.");
+					showVikingToast("¡Cobro exitoso! Datos actualizados.");
 					state.cart = []; 
 					updateCartUI();
 					
-					// Recargamos todo para ver los cambios reflejados (Caja ahora mostrará la leyenda)
+					// Recargamos todo para ver los cambios reflejados
 					await Promise.all([loadStock(), loadCaja(), fetchAlumnos()]);
 					renderCobrar();
 				} else {
