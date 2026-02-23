@@ -1109,7 +1109,7 @@ def procesar_cobro(data: TransactionCreate, db: Session = Depends(database.get_d
         db.add(nueva_transaccion)
 
         # 2. Lógica de Stock (Si es mercadería)
-        if (data.tipo == "Mercaderia" or "ercader" in data.tipo) and data.producto_id:
+        if (data.tipo == "Mercaderia" or "ercader" in data.tipo.lower()) and data.producto_id:
             producto = db.query(models.Stock).filter(models.Stock.id == data.producto_id).first()
             if not producto:
                 raise HTTPException(status_code=404, detail="Producto no encontrado")
