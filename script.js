@@ -3529,22 +3529,54 @@
 			state.profesores = (!res.error && Array.isArray(res)) ? res : [];
 		}
 
-        function openModalAlumno() { document.getElementById('modal-alumno-title').innerText = "Nuevo Alumno"; document.getElementById('al-id').value = ""; document.getElementById('al-fecha-renovacion').value = new Date().toISOString().split('T')[0]; openModal('modal-alumno'); }
+        function openModalAlumno() { 
+			document.getElementById('modal-alumno-title').innerText = "Nuevo Alumno"; 
+			document.getElementById('al-id').value = ""; 
+			
+			// Resetear el campo de sucursal
+			if(document.getElementById('al-sucursal')) document.getElementById('al-sucursal').value = "";
+			
+			document.getElementById('al-fecha-renovacion').value = new Date().toISOString().split('T')[0]; 
+			
+			// Cargamos sucursales para que el select esté actualizado
+			loadSucursales(); 
+			
+			openModal('modal-alumno'); 
+		}
         function openEditAlumno(id) {
-            const al = state.alumnos.find(x => x.id == id); if(!al) return;
-            document.getElementById('modal-alumno-title').innerText = "Editar Alumno";
-            document.getElementById('al-id').value = al.id; document.getElementById('al-nombre').value = al.nombre_completo; document.getElementById('al-dni').value = al.dni;
-            document.getElementById('al-email').value = al.email || ""; document.getElementById('al-plan').value = al.plan_id || ""; document.getElementById('al-peso').value = al.peso || "";
-            document.getElementById('al-altura').value = al.altura || ""; document.getElementById('al-imc').value = al.imc || ""; document.getElementById('al-fecha-renovacion').value = al.fecha_ultima_renovacion || "";
-            document.getElementById('al-fecha-vencimiento').value = al.fecha_vencimiento || "";
-			// Carga de nuevos campos de salud
+			const al = state.alumnos.find(x => x.id == id); 
+			if(!al) return;
+			
+			document.getElementById('modal-alumno-title').innerText = "Editar Alumno";
+			document.getElementById('al-id').value = al.id; 
+			document.getElementById('al-nombre').value = al.nombre_completo; 
+			document.getElementById('al-dni').value = al.dni;
+			document.getElementById('al-email').value = al.email || ""; 
+			document.getElementById('al-plan').value = al.plan_id || ""; 
+			
+			// NUEVO: Asignamos la sucursal del alumno al selector
+			if(document.getElementById('al-sucursal')) document.getElementById('al-sucursal').value = al.sucursal_id || "";
+			
+			document.getElementById('al-peso').value = al.peso || "";
+			document.getElementById('al-altura').value = al.altura || ""; 
+			document.getElementById('al-imc').value = al.imc || ""; 
+			document.getElementById('al-fecha-renovacion').value = al.fecha_ultima_renovacion || "";
+			document.getElementById('al-fecha-vencimiento').value = al.fecha_vencimiento || "";
+			
 			document.getElementById('al-fecha-nacimiento').value = al.fecha_nacimiento || "";
 			document.getElementById('al-fecha-certificado').value = al.fecha_certificado || "";
 			document.getElementById('al-certificado-entregado').checked = al.certificado_entregado || false;
-            const delBtn = document.getElementById('btn-delete-alumno'); if(state.user.rol_nombre === "Administrador" || state.user.rol_nombre === "Supervisor") delBtn.classList.remove('hidden');
-            delBtn.onclick = () => deleteRecord('alumnos', id, 'modal-alumno', fetchAlumnos);
-            openModal('modal-alumno');
-        }
+			
+			const delBtn = document.getElementById('btn-delete-alumno'); 
+			if(state.user.rol_nombre === "Administrador" || state.user.rol_nombre === "Supervisor") delBtn.classList.remove('hidden');
+			
+			delBtn.onclick = () => deleteRecord('alumnos', id, 'modal-alumno', fetchAlumnos);
+			
+			// Aseguramos que las sucursales estén cargadas en el select antes de abrir
+			loadSucursales(); 
+			
+			openModal('modal-alumno');
+		}
 
         document.getElementById('form-alumno').onsubmit = async (e) => {
             e.preventDefault(); const id = document.getElementById('al-id').value;
@@ -3970,7 +4002,46 @@
 			} catch (err) {
 				showVikingToast("Fallo en la conexión", true);
 			}
-		}  
+		}
+		
+		// --- GESTIÓN DE SUCURSALES ---
+		async function loadSucursales() {
+			try {
+				const response = await fetch(`${API_BASE}/sucursales`, {
+					headers: { 'Authorization': `Bearer ${localStorage.getItem('viking_token')}` }
+				});
+				const sucursales = await response.json();
+				
+				// 1. Llenar el contenedor de la vista de sucursales
+				const container = document.getElementById('sucursales-container');
+				if (container) {
+					container.innerHTML = sucursales.map(s => `
+						<div class="glass-card p-6 rounded-[2rem] border border-white/5 hover:border-red-600/30 transition-all group">
+							<div class="flex justify-between items-start mb-4">
+								<div class="p-3 bg-red-600/10 rounded-2xl text-red-500">
+									<i data-lucide="map-pin" class="w-6 h-6"></i>
+								</div>
+								<button onclick="deleteSucursal(${s.id})" class="text-white/20 hover:text-red-600 transition-colors">
+									<i data-lucide="trash-2" class="w-4 h-4"></i>
+								</button>
+							</div>
+							<h4 class="text-xl font-black italic uppercase text-white mb-1">${s.sucursal}</h4>
+							<p class="text-[10px] text-white-500 font-bold uppercase tracking-widest">${s.direccion}</p>
+						</div>
+					`).join('');
+					lucide.createIcons();
+				}
+
+				// 2. Llenar los Selects (en el modal de alumnos)
+				const selectAl = document.getElementById('al-sucursal');
+				if (selectAl) {
+					selectAl.innerHTML = '<option value="">Seleccionar Sucursal...</option>' + 
+						sucursales.map(s => `<option value="${s.id}">${s.sucursal.toUpperCase()}</option>`).join('');
+				}
+			} catch (error) {
+				console.error("Error cargando sucursales:", error);
+			}
+		}
 
         async function handleDrop(e, dia, horario) { e.preventDefault(); const id = e.dataTransfer.getData("clase_id"); if (!id) return; const res = await apiFetch(`/clases/${id}/move`, 'PUT', { dia, horario }); if (!res.error) { loadClases(); showVikingToast("Clase Reubicada"); } }
         
@@ -5126,6 +5197,53 @@
 		 * Esto permite que tu HTML viejo llame a funciones con nombres
 		 * antiguos y sean redirigidos automáticamente a las nuevas.
 		 */
+
+		window.openModalSucursal = function() {
+			document.getElementById('form-sucursal').reset();
+			document.getElementById('suc-id').value = '';
+			document.getElementById('modal-sucursal').classList.remove('hidden');
+		};
+
+		window.handleSaveSucursal = async function(e) {
+			e.preventDefault();
+			const data = {
+				sucursal: document.getElementById('suc-nombre').value,
+				direccion: document.getElementById('suc-direccion').value
+			};
+
+			try {
+				const response = await fetch(`${API_BASE}/sucursales`, {
+					method: 'POST',
+					headers: { 
+						'Content-Type': 'application/json',
+						'Authorization': `Bearer ${localStorage.getItem('viking_token')}`
+					},
+					body: JSON.stringify(data)
+				});
+
+				if (response.ok) {
+					showToast("Sucursal creada con éxito");
+					closeModal('modal-sucursal');
+					loadSucursales();
+				}
+			} catch (error) {
+				showToast("Error al guardar sucursal", "error");
+			}
+		};
+
+		window.deleteSucursal = async function(id) {
+			if (!confirm("¿Eliminar esta sucursal permanentemente?")) return;
+			try {
+				await fetch(`${API_BASE}/sucursales/${id}`, {
+					method: 'DELETE',
+					headers: { 'Authorization': `Bearer ${localStorage.getItem('viking_token')}` }
+				});
+				loadSucursales();
+				showToast("Sucursal eliminada");
+			} catch (error) {
+				showToast("No se pudo eliminar", "error");
+			}
+		};
 
 		// Si el botón dice onclick="finalizarVenta()", ejecuta finalizarVentaMercaderia()
 		window.finalizarVenta = finalizarVentaMercaderia; 
