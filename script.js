@@ -2527,21 +2527,20 @@
 				}
 			}
 
-			// 5. Totales (Con bloqueo de seguridad por Rol)
+			// 5. Totales (Con restricción para Perfil Administracion)
             const calcBalance = calcIngresos - calcGastos;
-            const uData = JSON.parse(localStorage.getItem('vikingo_user') || '{}');
-            const rol = (uData.rol_nombre || "").toLowerCase().trim();
+            
+            // Leemos el usuario de la sesión (clave 'viking_user' según tu handleLogin)
+            const datosUsuario = JSON.parse(localStorage.getItem('viking_user') || '{}');
+            const nombreRol = (datosUsuario.rol_nombre || "").toLowerCase().trim();
+            const divTotales = document.getElementById('contenedor-totales-caja');
 
-            // Identificamos el contenedor (el grid que envuelve los 3 cuadros de totales)
-            const elIng = document.getElementById('caja-ingresos');
-            const containerTotales = elIng ? elIng.closest('.grid') : null;
-
-            if (rol === "administracion") {
-                // Si es staff de recepción, desaparece el bloque completo
-                if (containerTotales) containerTotales.style.setProperty('display', 'none', 'important');
+            if (nombreRol === "administracion") {
+                // Si es el staff de recepción, ocultamos el bloque de saldos por completo
+                if (divTotales) divTotales.style.setProperty('display', 'none', 'important');
             } else {
-                // Si es Administrador o Supervisor, se muestra y se actualizan los números
-                if (containerTotales) containerTotales.style.setProperty('display', 'grid', 'important');
+                // Si es Administrador o Supervisor, mostramos los saldos normalmente
+                if (divTotales) divTotales.style.setProperty('display', 'grid', 'important');
                 
                 if(document.getElementById('caja-ingresos')) document.getElementById('caja-ingresos').innerText = `$ ${calcIngresos.toLocaleString()}`;
                 if(document.getElementById('caja-gastos')) document.getElementById('caja-gastos').innerText = `$ ${calcGastos.toLocaleString()}`;
