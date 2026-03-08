@@ -2528,14 +2528,34 @@
 			}
 
 			// 5. Totales
-			const calcBalance = calcIngresos - calcGastos;
-			if(document.getElementById('caja-ingresos')) document.getElementById('caja-ingresos').innerText = `$ ${calcIngresos.toLocaleString()}`;
-			if(document.getElementById('caja-gastos')) document.getElementById('caja-gastos').innerText = `$ ${calcGastos.toLocaleString()}`;
-			if(document.getElementById('caja-balance')) {
-				const eb = document.getElementById('caja-balance');
-				eb.innerText = `$ ${calcBalance.toLocaleString()}`;
-				eb.className = `text-4xl font-black italic ${calcBalance >= 0 ? 'text-green-500' : 'text-red-500'}`;
-			}
+            // Recuperamos el usuario actual del localStorage para saber su rol
+            const userActual = JSON.parse(localStorage.getItem('vikingo_user') || '{}');
+            const esAdministrativo = userActual.rol_nombre === "Administrativo";
+            
+            // CORRECCIÓN: Quitamos el acento para que coincida con "Administracion" de la BD
+            const esAdminTotal = userActual.rol_nombre === "Administracion" || userActual.rol_nombre === "Admin";
+
+            const calcBalance = calcIngresos - calcGastos;
+
+            // Si es Administrativo (Staff de recepción), ocultamos los totales por privacidad
+            if (esAdministrativo && !esAdminTotal) {
+                if(document.getElementById('caja-ingresos')) document.getElementById('caja-ingresos').innerText = `$ ****`;
+                if(document.getElementById('caja-gastos')) document.getElementById('caja-gastos').innerText = `$ ****`;
+                if(document.getElementById('caja-balance')) {
+                    const eb = document.getElementById('caja-balance');
+                    eb.innerText = `ACCESO RESTRINGIDO`;
+                    eb.className = `text-xl font-black italic text-white/20`; 
+                }
+            } else {
+                // Si es el Dueño o Administrador, mostramos los totales normalmente
+                if(document.getElementById('caja-ingresos')) document.getElementById('caja-ingresos').innerText = `$ ${calcIngresos.toLocaleString()}`;
+                if(document.getElementById('caja-gastos')) document.getElementById('caja-gastos').innerText = `$ ${calcGastos.toLocaleString()}`;
+                if(document.getElementById('caja-balance')) {
+                    const eb = document.getElementById('caja-balance');
+                    eb.innerText = `$ ${calcBalance.toLocaleString()}`;
+                    eb.className = `text-4xl font-black italic ${calcBalance >= 0 ? 'text-green-500' : 'text-red-500'}`;
+                }
+            }
 		};
 
 		/**
