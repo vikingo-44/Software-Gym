@@ -3532,17 +3532,15 @@
         function openModalAlumno() { 
 			document.getElementById('modal-alumno-title').innerText = "Nuevo Alumno"; 
 			document.getElementById('al-id').value = ""; 
-			
-			// Resetear el campo de sucursal
-			if(document.getElementById('al-sucursal')) document.getElementById('al-sucursal').value = "";
-			
 			document.getElementById('al-fecha-renovacion').value = new Date().toISOString().split('T')[0]; 
 			
-			// Cargamos sucursales para que el select esté actualizado
-			loadSucursales(); 
+			// Resetear sucursal
+			if(document.getElementById('al-sucursal')) document.getElementById('al-sucursal').value = "";
 			
+			loadSucursales();
 			openModal('modal-alumno'); 
 		}
+
         function openEditAlumno(id) {
 			const al = state.alumnos.find(x => x.id == id); 
 			if(!al) return;
@@ -4010,21 +4008,27 @@
 				const response = await fetch(`${API_BASE}/sucursales`, {
 					headers: { 'Authorization': `Bearer ${localStorage.getItem('viking_token')}` }
 				});
+				
+				if (!response.ok) throw new Error("Error en API");
 				const sucursales = await response.json();
 				
-				// Actualizar el contenedor de la vista de sucursales
+				// --- 1. Renderizar Tarjetas en la vista de Sucursales ---
 				const container = document.getElementById('sucursales-container');
 				if (container) {
 					if (sucursales.length === 0) {
-						container.innerHTML = '<p class="text-center text-white/20 col-span-3 py-10 italic">No hay sucursales registradas.</p>';
+						container.innerHTML = `
+							<div class="col-span-full py-20 text-center opacity-30">
+								<i data-lucide="map-pin-off" class="w-12 h-12 mx-auto mb-4"></i>
+								<p class="font-black uppercase italic">No hay sedes registradas en el arsenal</p>
+							</div>`;
 					} else {
 						container.innerHTML = sucursales.map(s => `
-							<div class="glass-card p-8 rounded-[2.5rem] border border-white/5 hover:border-red-600/30 transition-all group">
+							<div class="glass-card p-8 rounded-[2.5rem] border border-white/5 hover:border-red-600/30 transition-all group relative overflow-hidden">
 								<div class="flex justify-between items-start mb-6">
 									<div class="p-4 bg-red-600/10 rounded-2xl text-red-500 group-hover:bg-red-600 group-hover:text-black transition-all">
 										<i data-lucide="map-pin" class="w-6 h-6"></i>
 									</div>
-									<button onclick="window.deleteSucursal(${s.id})" class="text-white/10 hover:text-red-600 transition-colors">
+									<button onclick="window.deleteSucursal(${s.id})" class="text-white/10 hover:text-red-600 transition-colors z-10">
 										<i data-lucide="trash-2" class="w-5 h-5"></i>
 									</button>
 								</div>
@@ -4032,11 +4036,10 @@
 								<p class="text-[10px] text-white-500 font-bold uppercase tracking-[0.2em] italic">${s.direccion}</p>
 							</div>
 						`).join('');
-						lucide.createIcons();
 					}
 				}
 
-				// Actualizar el selector en el modal de alumnos
+				// --- 2. Actualizar el Selector (Select) en el modal de alumnos ---
 				const selectAl = document.getElementById('al-sucursal');
 				if (selectAl) {
 					const currentVal = selectAl.value;
@@ -4044,8 +4047,11 @@
 						sucursales.map(s => `<option value="${s.id}">${s.sucursal.toUpperCase()}</option>`).join('');
 					if(currentVal) selectAl.value = currentVal;
 				}
+
+				if(window.lucide) lucide.createIcons();
+
 			} catch (error) {
-				console.error("Error cargando sucursales:", error);
+				console.error("❌ Error cargando sucursales:", error);
 			}
 		}
 
@@ -4752,6 +4758,10 @@
 					originalSwitchView(view);
 				} else {
 					console.warn("⚠️ originalSwitchView no definida. Solo se ejecutará lógica de carga.");
+					// Fallback para ocultar/mostrar vistas si no existe la original
+					document.querySelectorAll('.view-content').forEach(v => v.classList.add('hidden'));
+					const target = document.getElementById(`view-${view}`);
+					if(target) target.classList.remove('hidden');
 				}
 				
 				// 3. Lógica específica por vista (Carga de datos)
@@ -5207,15 +5217,27 @@
 		 */
 
 		window.openModalSucursal = function() {
-			document.getElementById('form-sucursal').reset();
-			document.getElementById('suc-id').value = '';
-			document.getElementById('modal-sucursal-title').innerText = "Nueva Sucursal";
-			document.getElementById('modal-sucursal').classList.remove('hidden');
+			console.log("📂 Abriendo modal de sucursal...");
+			const form = document.getElementById('form-sucursal');
+			if (form) form.reset();
+			
+			const idInput = document.getElementById('suc-id');
+			if (idInput) idInput.value = '';
+			
+			const title = document.getElementById('modal-sucursal-title');
+			if (title) title.innerText = "Nueva Sucursal";
+			
+			const modal = document.getElementById('modal-sucursal');
+			if (modal) {
+				modal.classList.remove('hidden');
+				modal.style.display = 'flex'; 
+			}
 		};
 
 
 		window.handleSaveSucursal = async function(e) {
-			e.preventDefault();
+			if(e) e.preventDefault();
+			
 			const data = {
 				sucursal: document.getElementById('suc-nombre').value,
 				direccion: document.getElementById('suc-direccion').value
@@ -5245,7 +5267,7 @@
 		};
 
 		window.deleteSucursal = async function(id) {
-			if (!confirm("¿Deseas eliminar esta sede? Esto no borrará los alumnos, pero quedarán sin sucursal asignada.")) return;
+			if (!confirm("¿Deseas eliminar esta sede? Los alumnos asignados quedarán sin sucursal.")) return;
 			try {
 				const response = await fetch(`${API_BASE}/sucursales/${id}`, {
 					method: 'DELETE',
@@ -5259,6 +5281,7 @@
 				showToast("No se pudo eliminar la sucursal", "error");
 			}
 		};
+				
 		// Si el botón dice onclick="finalizarVenta()", ejecuta finalizarVentaMercaderia()
 		window.finalizarVenta = finalizarVentaMercaderia; 
 
