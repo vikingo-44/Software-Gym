@@ -5233,124 +5233,223 @@ if (editorForm) {
 					location.reload();
 				}
 
-			// 2. Función de Filtrado
-			window.filterAlumnos = function(filtro) {
-				if(!state.alumnos) return;
-				
-				// Actualizar botones visualmente
-				document.querySelectorAll('.filter-btn').forEach(btn => {
-					btn.classList.remove('bg-red-600', 'text-black');
-					btn.classList.add('text-gray-500', 'hover:text-white');
-				});
-				const activeBtn = document.getElementById('filter-' + filtro);
-				if(activeBtn) {
-					activeBtn.classList.remove('text-gray-500', 'hover:text-white');
-					activeBtn.classList.add('bg-red-600', 'text-black');
-				}
+			if (!state.currentPageAlumnos) state.currentPageAlumnos = 1;
+            state.itemsPerPage = 15;
+            state.filteredAlumnos = []; // Almacena el resultado de filtros/búsqueda para paginar
 
-				const hoy = new Date().toISOString().split('T')[0];
-				let filtrados = state.alumnos;
-				
-				if(filtro === 'activos') filtrados = state.alumnos.filter(a => a.fecha_vencimiento && a.fecha_vencimiento >= hoy);
-				if(filtro === 'inactivos') filtrados = state.alumnos.filter(a => !a.fecha_vencimiento || a.fecha_vencimiento < hoy);
-				
-				renderAlumnosList(filtrados);
-			}
+			// 2. Función de Filtrado
+			function filterAlumnos(filtro) {
+                state.currentPageAlumnos = 1; // Siempre volvemos a la página 1 al filtrar
+                if(!state.alumnos) return;
+                
+                // Actualizar botones visualmente
+                document.querySelectorAll('.filter-btn').forEach(btn => {
+                    btn.classList.remove('bg-red-600', 'text-black');
+                    btn.classList.add('text-gray-500', 'hover:text-white');
+                });
+                const activeBtn = document.getElementById('filter-' + filtro);
+                if(activeBtn) {
+                    activeBtn.classList.remove('text-gray-500', 'hover:text-white');
+                    activeBtn.classList.add('bg-red-600', 'text-black');
+                }
+
+                const hoy = new Date().toISOString().split('T')[0];
+                let filtrados = state.alumnos;
+                
+                if(filtro === 'activos') filtrados = state.alumnos.filter(a => a.fecha_vencimiento && a.fecha_vencimiento >= hoy);
+                if(filtro === 'inactivos') filtrados = state.alumnos.filter(a => !a.fecha_vencimiento || a.fecha_vencimiento < hoy);
+                
+                renderAlumnosList(filtrados);
+            }
+
 
 			// 3. Función de Búsqueda
-			window.searchAlumno = function(query) {
-				if(!query) { filterAlumnos('todos'); return; }
-				
-				document.querySelectorAll('.filter-btn').forEach(btn => {
-					btn.classList.remove('bg-red-600', 'text-black');
-					btn.classList.add('text-gray-500');
-				});
+            function searchAlumno(query) {
+                state.currentPageAlumnos = 1; // Siempre volvemos a la página 1 al buscar
+                if(!query) { filterAlumnos('todos'); return; }
+                
+                document.querySelectorAll('.filter-btn').forEach(btn => {
+                    btn.classList.remove('bg-red-600', 'text-black');
+                    btn.classList.add('text-gray-500');
+                });
 
-				const q = query.toLowerCase();
-				const filtrados = state.alumnos.filter(a => a.nombre_completo.toLowerCase().includes(q) || a.dni.includes(q));
-				renderAlumnosList(filtrados);
-			}
-			// 4. Renderizado de la Lista (AQUÍ ESTÁ EL CAMBIO DE DISEÑO "STAFF")
-			window.renderAlumnosList = function(listaDatos) {
-				const contenedor = document.getElementById('lista-alumnos-container');
-				if(!contenedor) return;
+                const q = query.toLowerCase();
+                const filtrados = state.alumnos.filter(a => a.nombre_completo.toLowerCase().includes(q) || a.dni.includes(q));
+                renderAlumnosList(filtrados);
+            }
 
-				if(listaDatos.length === 0) {
-					contenedor.innerHTML = `<div class="h-full flex flex-col items-center justify-center text-gray-600 opacity-50 py-10"><i data-lucide="users" class="w-12 h-12 mb-2"></i><p class="text-xs font-black uppercase italic">Sin resultados</p></div>`;
-					if(window.lucide) lucide.createIcons();
-					return;
-				}
+			// 4. Renderizado de la Lista (AQUÍ ESTÁ EL CAMBIO DE DISEÑO "STAFF" + PAGINACIÓN + STATS)
+            function renderAlumnosList(listaDatos) {
+                const contenedor = document.getElementById('lista-alumnos-container');
+                if(!contenedor) return;
 
-				const hoy = new Date().toISOString().split('T')[0];
+                // Guardamos la lista actual para que la paginación sepa sobre qué trabajar
+                state.filteredAlumnos = listaDatos;
 
-				contenedor.innerHTML = listaDatos.map(a => {
-					// Lógica de Estado
-					const estaVencido = !a.fecha_vencimiento || a.fecha_vencimiento < hoy;
-					const colorEstado = estaVencido ? 'bg-red-600' : 'bg-green-600'; 
-					const textoEstado = estaVencido ? 'VENCIDO' : 'AL DÍA';
-					const colorBadge = estaVencido ? 'text-red-500 bg-red-500/10 border-red-500/20' : 'text-green-500 bg-green-500/10 border-green-500/20';
+                // --- ACTUALIZACIÓN DE ESTADÍSTICAS VIKINGAS ---
+                const hoy = new Date().toISOString().split('T')[0];
+                const total = state.alumnos.length;
+                const activos = state.alumnos.filter(a => a.fecha_vencimiento && a.fecha_vencimiento >= hoy).length;
+                const vencidos = total - activos;
 
-					const initials = a.nombre_completo ? a.nombre_completo.substring(0,2).toUpperCase() : "??";
-					const planNombre = a.plan ? a.plan.nombre : 'Sin Plan';
+                if (document.getElementById('stats-total')) document.getElementById('stats-total').innerText = total;
+                if (document.getElementById('stats-activos')) document.getElementById('stats-activos').innerText = activos;
+                if (document.getElementById('stats-vencidos')) document.getElementById('stats-vencidos').innerText = vencidos;
+                if (document.getElementById('stats-pagina')) document.getElementById('stats-pagina').innerText = state.currentPageAlumnos;
 
-					return `
-					<div class="glass-card p-5 rounded-3xl border-white/5 flex flex-col md:flex-row md:items-center gap-6 hover:border-red-600/20 transition-all group relative overflow-hidden">
-						<!-- Barra lateral decorativa -->
-						<div class="absolute left-0 top-0 bottom-0 w-1.5 ${colorEstado} opacity-40 group-hover:opacity-100 transition-opacity"></div>
-						
-						<!-- COLUMNA 1: IDENTIDAD (Ancho fijo para que no robe espacio a la info) -->
-						<div class="flex items-center gap-4 w-full md:w-1/3">
-							<div class="w-14 h-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center font-black text-white text-lg italic shadow-lg group-hover:bg-red-600 group-hover:text-black transition-colors shrink-0">
-								${initials}
-							</div>
-							<div class="overflow-hidden">
-								<h4 class="text-sm font-black uppercase italic text-white group-hover:text-red-500 transition-colors truncate">${a.nombre_completo}</h4>
-								<div class="flex flex-col mt-1">
-									<p class="text-[10px] text-white-500 font-bold flex items-center gap-1.5"><i data-lucide="id-card" class="w-3 h-3"></i> ${a.dni}</p>
-									${a.email ? `<p class="text-[10px] text-white-500 font-bold flex items-center gap-1.5 truncate"><i data-lucide="mail" class="w-3 h-3"></i> ${a.email}</p>` : ''}
-								</div>
-							</div>
-						</div>
+                // --- LÓGICA DE PAGINACIÓN ---
+                const totalItems = listaDatos.length;
+                const totalPages = Math.ceil(totalItems / state.itemsPerPage);
+                
+                // Recorte de la lista según la página
+                const inicio = (state.currentPageAlumnos - 1) * state.itemsPerPage;
+                const fin = inicio + state.itemsPerPage;
+                const listaPaginada = listaDatos.slice(inicio, fin);
 
-						<!-- COLUMNA 2: PLAN Y ESTADO (EXPANDIDA: flex-1 para ocupar el resto) -->
-						<div class="flex-1 border-t md:border-t-0 md:border-l border-white/5 pt-4 md:pt-0 md:pl-8">
-							<div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
-								
-								<!-- Info Plan (Más grande) -->
-								<div>
-									<p class="text-[9px] text-white-500 font-black uppercase tracking-widest mb-1 flex items-center gap-1.5">
-										<i data-lucide="ticket" class="w-3 h-3 text-red-600"></i> Plan Actual
-									</p>
-									<p class="text-sm font-black uppercase italic text-white truncate">${planNombre}</p>
-								</div>
+                if(listaPaginada.length === 0) {
+                    contenedor.innerHTML = `<div class="h-full flex flex-col items-center justify-center text-gray-600 opacity-50 py-10"><i data-lucide="users" class="w-12 h-12 mb-2"></i><p class="text-xs font-black uppercase italic">Sin resultados</p></div>`;
+                    renderPaginationControls(0); // Limpiar paginación si no hay datos
+                    if(window.lucide) lucide.createIcons();
+                    return;
+                }
 
-								<!-- Estado y Fechas (Alineado y destacado) -->
-								<div class="flex flex-row md:flex-col items-center md:items-start justify-between gap-2">
-									<div class="flex items-center gap-2">
-										<span class="px-3 py-1 rounded-lg text-[9px] font-black uppercase border ${colorBadge}">
-											${textoEstado}
-										</span>
-									</div>
-									<p class="text-[10px] text-white-500 font-bold italic flex items-center gap-1">
-										Vence: <span class="text-white">${a.fecha_vencimiento || 'N/A'}</span>
-									</p>
-								</div>
-							</div>
-						</div>
+                contenedor.innerHTML = listaPaginada.map(a => {
+                    // Lógica de Estado
+                    const estaVencido = !a.fecha_vencimiento || a.fecha_vencimiento < hoy;
+                    const colorEstado = estaVencido ? 'bg-red-600' : 'bg-green-600'; 
+                    const textoEstado = estaVencido ? 'VENCIDO' : 'AL DÍA';
+                    const colorBadge = estaVencido ? 'text-red-500 bg-red-500/10 border-red-500/20' : 'text-green-500 bg-green-500/10 border-green-500/20';
 
-						<!-- COLUMNA 3: ACCIONES (Botón Editar) -->
-						<div class="flex items-center justify-end min-w-[100px] border-t md:border-t-0 border-white/5 pt-3 md:pt-0">
-							<button onclick="openEditAlumno(${a.id})" class="px-6 py-3 bg-white/5 text-white rounded-xl text-[10px] font-black uppercase italic hover:bg-white/10 hover:text-red-500 transition-all flex items-center gap-2 shadow-lg w-full md:w-auto justify-center">
-								<i data-lucide="settings-2" class="w-3.5 h-3.5"></i>
-								<span>Editar</span>
-							</button>
-						</div>
-					</div>
-					`;
-				}).join('');
-				
-				if(window.lucide) lucide.createIcons();
-			}
+                    const initials = a.nombre_completo ? a.nombre_completo.substring(0,2).toUpperCase() : "??";
+                    const planNombre = a.plan ? a.plan.nombre : 'Sin Plan';
+
+                    return `
+                    <div class="glass-card p-5 rounded-3xl border-white/5 flex flex-col md:flex-row md:items-center gap-6 hover:border-red-600/20 transition-all group relative overflow-hidden">
+                        <!-- Barra lateral decorativa -->
+                        <div class="absolute left-0 top-0 bottom-0 w-1.5 ${colorEstado} opacity-40 group-hover:opacity-100 transition-opacity"></div>
+                        
+                        <!-- COLUMNA 1: IDENTIDAD -->
+                        <div class="flex items-center gap-4 w-full md:w-1/3">
+                            <div class="w-14 h-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center font-black text-white text-lg italic shadow-lg group-hover:bg-red-600 group-hover:text-black transition-colors shrink-0">
+                                ${initials}
+                            </div>
+                            <div class="overflow-hidden">
+                                <h4 class="text-sm font-black uppercase italic text-white group-hover:text-red-500 transition-colors truncate">${a.nombre_completo}</h4>
+                                <div class="flex flex-col mt-1">
+                                    <p class="text-[10px] text-white-500 font-bold flex items-center gap-1.5"><i data-lucide="id-card" class="w-3 h-3"></i> ${a.dni}</p>
+                                    ${a.email ? `<p class="text-[10px] text-white-500 font-bold flex items-center gap-1.5 truncate"><i data-lucide="mail" class="w-3 h-3"></i> ${a.email}</p>` : ''}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- COLUMNA 2: PLAN Y ESTADO -->
+                        <div class="flex-1 border-t md:border-t-0 md:border-l border-white/5 pt-4 md:pt-0 md:pl-8">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
+                                
+                                <!-- Info Plan -->
+                                <div>
+                                    <p class="text-[9px] text-white-500 font-black uppercase tracking-widest mb-1 flex items-center gap-1.5">
+                                        <i data-lucide="ticket" class="w-3 h-3 text-red-600"></i> Plan Actual
+                                    </p>
+                                    <p class="text-sm font-black uppercase italic text-white truncate">${planNombre}</p>
+                                </div>
+
+                                <!-- Estado y Fechas -->
+                                <div class="flex flex-row md:flex-col items-center md:items-start justify-between gap-2">
+                                    <div class="flex items-center gap-2">
+                                        <span class="px-3 py-1 rounded-lg text-[9px] font-black uppercase border ${colorBadge}">
+                                            ${textoEstado}
+                                        </span>
+                                    </div>
+                                    <p class="text-[10px] text-white-500 font-bold italic flex items-center gap-1">
+                                        Vence: <span class="text-white">${a.fecha_vencimiento || 'N/A'}</span>
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- COLUMNA 3: ACCIONES -->
+                        <div class="flex items-center justify-end min-w-[100px] border-t md:border-t-0 border-white/5 pt-3 md:pt-0">
+                            <button onclick="openEditAlumno(${a.id})" class="px-6 py-3 bg-white/5 text-white rounded-xl text-[10px] font-black uppercase italic hover:bg-white/10 hover:text-red-500 transition-all flex items-center gap-2 shadow-lg w-full md:w-auto justify-center">
+                                <i data-lucide="settings-2" class="w-3.5 h-3.5"></i>
+                                <span>Editar</span>
+                            </button>
+                        </div>
+                    </div>
+                    `;
+                }).join('');
+                
+                renderPaginationControls(totalPages);
+                if(window.lucide) lucide.createIcons();
+            }
+
+			/**
+             * Genera los botones de la paginación
+             */
+            function renderPaginationControls(totalPages) {
+                const paginator = document.getElementById('alumnos-pagination');
+                if (!paginator) return;
+                
+                if (totalPages <= 1) {
+                    paginator.innerHTML = "";
+                    return;
+                }
+
+                let html = `
+                    <button onclick="window.changePageAlumnos(${state.currentPageAlumnos - 1})" 
+                            class="p-3 rounded-xl bg-white/5 border border-white/10 text-white hover:bg-red-600 hover:text-black transition-all ${state.currentPageAlumnos === 1 ? 'opacity-20 cursor-not-allowed' : ''}"
+                            ${state.currentPageAlumnos === 1 ? 'disabled' : ''}>
+                        <i data-lucide="chevron-left" class="w-4 h-4"></i>
+                    </button>
+                `;
+
+                for (let i = 1; i <= totalPages; i++) {
+                    // Lógica para mostrar solo páginas cercanas a la actual para no saturar
+                    if (i === 1 || i === totalPages || (i >= state.currentPageAlumnos - 1 && i <= state.currentPageAlumnos + 1)) {
+                        html += `
+                            <button onclick="window.changePageAlumnos(${i})" 
+                                    class="w-10 h-10 rounded-xl font-black italic text-[11px] transition-all ${state.currentPageAlumnos === i ? 'bg-red-600 text-black shadow-lg shadow-red-600/20' : 'bg-white/5 text-white/40 hover:text-white border border-white/10'}">
+                                ${i}
+                            </button>
+                        `;
+                    } else if (i === state.currentPageAlumnos - 2 || i === state.currentPageAlumnos + 2) {
+                        html += `<span class="text-white/20">...</span>`;
+                    }
+                }
+
+                html += `
+                    <button onclick="window.changePageAlumnos(${state.currentPageAlumnos + 1})" 
+                            class="p-3 rounded-xl bg-white/5 border border-white/10 text-white hover:bg-red-600 hover:text-black transition-all ${state.currentPageAlumnos === totalPages ? 'opacity-20 cursor-not-allowed' : ''}"
+                            ${state.currentPageAlumnos === totalPages ? 'disabled' : ''}>
+                        <i data-lucide="chevron-right" class="w-4 h-4"></i>
+                    </button>
+                `;
+
+                paginator.innerHTML = html;
+                if(window.lucide) lucide.createIcons();
+            }
+
+            /**
+             * 5. Cambia la página y refresca la lista
+             */
+            function changePageAlumnos(newPage) {
+                const totalPages = Math.ceil(state.filteredAlumnos.length / state.itemsPerPage);
+                if (newPage < 1 || newPage > totalPages) return;
+                
+                state.currentPageAlumnos = newPage;
+                renderAlumnosList(state.filteredAlumnos);
+                
+                // Scroll arriba suave del contenedor
+                const contenedor = document.getElementById('lista-alumnos-container');
+                if(contenedor) contenedor.scrollTop = 0;
+            }
+
+			// --- VINCULACIÓN CON WINDOW (Para acceso desde el HTML) ---
+            window.filterAlumnos = filterAlumnos;
+            window.searchAlumno = searchAlumno;
+            window.renderAlumnosList = renderAlumnosList;
+            window.changePageAlumnos = changePageAlumnos;
+            window.renderPaginationControls = renderPaginationControls;
 
         document.getElementById('form-nuevo-ejercicio-lib').onsubmit = async (e) => {
             e.preventDefault();

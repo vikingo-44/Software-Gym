@@ -622,44 +622,69 @@
             </div>
 
 			<div id="view-alumnos" class="view-content">
-			<!-- CABECERA PRINCIPAL -->
-			<div class="flex justify-between items-center mb-8">
-				<div>
-					<h3 class="text-3xl font-black italic uppercase">Gestión de Alumnos</h3>
-					<p class="text-[10px] text-white-500 font-bold uppercase tracking-[0.2em] mt-1 italic">Control de accesos y membresías</p>
-				</div>
-				<button id="btn-nuevo-alumno" onclick="openModalAlumno()" class="viking-bg-red text-black px-8 py-4 rounded-2xl font-black uppercase italic text-[12px] shadow-xl flex items-center gap-3 hover:scale-105 transition-all">
-					<i data-lucide="user-plus" class="w-4 h-4"></i> Nuevo Alumno
-				</button>
-			</div>
+                <!-- CABECERA PRINCIPAL -->
+                <div class="flex justify-between items-center mb-8">
+                    <div>
+                        <h3 class="text-3xl font-black italic uppercase">Gestión de Alumnos</h3>
+                        <p class="text-[10px] text-white-500 font-bold uppercase tracking-[0.2em] mt-1 italic">Control de accesos y membresías</p>
+                    </div>
+                    <button id="btn-nuevo-alumno" onclick="openModalAlumno()" class="viking-bg-red text-black px-8 py-4 rounded-2xl font-black uppercase italic text-[12px] shadow-xl flex items-center gap-3 hover:scale-105 transition-all">
+                        <i data-lucide="user-plus" class="w-4 h-4"></i> Nuevo Alumno
+                    </button>
+                </div>
 
-			<!-- BARRA DE HERRAMIENTAS (BUSCADOR Y FILTROS) -->
-			<div class="flex flex-col md:flex-row gap-4 mb-4">
-					<!-- BUSCADOR -->
-					<div class="flex-1 relative">
-						<i data-lucide="search" class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white-500"></i>
-						<input type="text" 
-							placeholder="Buscar Alumno por nombre o DNI..." 
-							oninput="searchAlumno(this.value)"
-							class="viking-input pl-12 bg-white/5 border-white/10 text-white rounded-2xl focus:border-red-600 transition-all">
-					</div>
+                <!-- CONTADORES RÁPIDOS (Stats Vikingas) -->
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                    <div class="bg-white/5 border border-white/5 p-4 rounded-3xl">
+                        <p class="text-[8px] font-black text-white/30 uppercase tracking-widest mb-1">Total Alumnos</p>
+                        <p id="stats-total" class="text-2xl font-black italic text-white leading-none">0</p>
+                    </div>
+                    <div class="bg-white/5 border border-white/5 p-4 rounded-3xl">
+                        <p class="text-[8px] font-black text-green-500 uppercase tracking-widest mb-1">Activos</p>
+                        <p id="stats-activos" class="text-2xl font-black italic text-green-500 leading-none">0</p>
+                    </div>
+                    <div class="bg-white/5 border border-white/5 p-4 rounded-3xl">
+                        <p class="text-[8px] font-black text-red-600 uppercase tracking-widest mb-1">Vencidos</p>
+                        <p id="stats-vencidos" class="text-2xl font-black italic text-red-600 leading-none">0</p>
+                    </div>
+                    <div class="bg-white/5 border border-white/5 p-4 rounded-3xl">
+                        <p class="text-[8px] font-black text-amber-500 uppercase tracking-widest mb-1">Página</p>
+                        <p id="stats-pagina" class="text-2xl font-black italic text-amber-500 leading-none">1</p>
+                    </div>
+                </div>
 
-					<!-- FILTRO DE ESTADO VIKINGO -->
-					<div class="flex bg-white/5 p-1 rounded-2xl border border-white/5 h-[52px]">
-						<button onclick="filterAlumnos('todos')" id="filter-todos" class="filter-btn px-6 rounded-xl text-[10px] font-black uppercase italic transition-all bg-red-600 text-black">Todos</button>
-						<button onclick="filterAlumnos('activos')" id="filter-activos" class="filter-btn px-6 rounded-xl text-[10px] font-black uppercase italic transition-all text-white-500 hover:text-white">Activos</button>
-						<button onclick="filterAlumnos('inactivos')" id="filter-inactivos" class="filter-btn px-6 rounded-xl text-[10px] font-black uppercase italic transition-all text-white-500 hover:text-white">Vencidos</button>
-					</div>
-				</div>
+                <!-- BARRA DE HERRAMIENTAS (BUSCADOR Y FILTROS) -->
+                <div class="flex flex-col md:flex-row gap-4 mb-4">
+                    <!-- BUSCADOR -->
+                    <div class="flex-1 relative">
+                        <i data-lucide="search" class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white-500"></i>
+                        <input type="text" 
+                            id="search-alumno-input"
+                            placeholder="Buscar Alumno por nombre o DNI..." 
+                            oninput="searchAlumno(this.value)"
+                            class="viking-input pl-12 bg-white/5 border-white/10 text-white rounded-2xl focus:border-red-600 transition-all">
+                    </div>
 
-				<!-- LISTADO DE ALUMNOS (CONTENEDOR DONDE EL JS INYECTARÁ LOS DATOS) -->
-				<!-- Nota: Le puse space-y-3 para separar las tarjetas igual que en Staff -->
-				<div class="glass-card p-8 rounded-[3rem] border border-white/5 mb-10">
-					<div id="lista-alumnos-container" class="space-y-3 h-[600px] overflow-y-auto custom-scrollbar pr-2">
-						<!-- El JS llenará esto -->
-					</div>
-				</div>
-			</div>
+                    <!-- FILTRO DE ESTADO VIKINGO -->
+                    <div class="flex bg-white/5 p-1 rounded-2xl border border-white/5 h-[52px]">
+                        <button onclick="filterAlumnos('todos')" id="filter-todos" class="filter-btn-alumno px-6 rounded-xl text-[10px] font-black uppercase italic transition-all bg-red-600 text-black">Todos</button>
+                        <button onclick="filterAlumnos('activos')" id="filter-activos" class="filter-btn-alumno px-6 rounded-xl text-[10px] font-black uppercase italic transition-all text-white-500 hover:text-white">Activos</button>
+                        <button onclick="filterAlumnos('inactivos')" id="filter-inactivos" class="filter-btn-alumno px-6 rounded-xl text-[10px] font-black uppercase italic transition-all text-white-500 hover:text-white">Vencidos</button>
+                    </div>
+                </div>
+
+                <!-- LISTADO DE ALUMNOS -->
+                <div class="glass-card p-8 rounded-[3rem] border border-white/5 mb-6">
+                    <div id="lista-alumnos-container" class="space-y-3 h-[600px] overflow-y-auto custom-scrollbar pr-2">
+                        <!-- El JS llenará esto -->
+                    </div>
+                </div>
+
+                <!-- PAGINACIÓN -->
+                <div id="alumnos-pagination" class="flex justify-center items-center gap-4 mb-10">
+                    <!-- Botones de paginación generados por JS -->
+                </div>
+            </div>
 
             <div id="view-profesores" class="view-content">
                 <div class="flex justify-between items-center mb-8">
