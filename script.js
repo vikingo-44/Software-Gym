@@ -5233,59 +5233,14 @@ if (editorForm) {
 					location.reload();
 				}
 
-			if (!state.currentPageAlumnos) state.currentPageAlumnos = 1;
+			// --- VARIABLES DE ESTADO PARA PAGINACIÓN ---
+            if (!state.currentPageAlumnos) state.currentPageAlumnos = 1;
             state.itemsPerPage = 15;
             state.filteredAlumnos = []; // Almacena el resultado de filtros/búsqueda para paginar
 
-			// 2. Función de Filtrado
-			function filterAlumnos(filtro) {
-                state.currentPageAlumnos = 1; // Siempre volvemos a la página 1 al filtrar
-                if(!state.alumnos) return;
-                
-                // Limpiar el input de búsqueda al filtrar para evitar confusión
-                const searchInput = document.querySelector('input[oninput*="searchAlumno"]');
-                if(searchInput) searchInput.value = "";
-
-                // Actualizar botones visualmente (Limpiamos todos primero)
-                document.querySelectorAll('.filter-btn').forEach(btn => {
-                    btn.classList.remove('bg-red-600', 'text-black');
-                    btn.classList.add('text-white-500', 'hover:text-white'); // Clases originales de tu HTML
-                });
-
-                // Marcamos solo el activo
-                const activeBtn = document.getElementById('filter-' + filtro);
-                if(activeBtn) {
-                    activeBtn.classList.remove('text-white-500', 'hover:text-white');
-                    activeBtn.classList.add('bg-red-600', 'text-black');
-                }
-
-                const hoy = new Date().toISOString().split('T')[0];
-                let filtrados = state.alumnos;
-                
-                if(filtro === 'activos') filtrados = state.alumnos.filter(a => a.fecha_vencimiento && a.fecha_vencimiento >= hoy);
-                if(filtro === 'inactivos') filtrados = state.alumnos.filter(a => !a.fecha_vencimiento || a.fecha_vencimiento < hoy);
-                
-                renderAlumnosList(filtrados);
-            }
-
-
-			// 3. Función de Búsqueda
-            function searchAlumno(query) {
-                state.currentPageAlumnos = 1; // Siempre volvemos a la página 1 al buscar
-                if(!query) { filterAlumnos('todos'); return; }
-                
-                // Al buscar, quitamos el estado "activo" de los botones de filtro
-                document.querySelectorAll('.filter-btn').forEach(btn => {
-                    btn.classList.remove('bg-red-600', 'text-black');
-                    btn.classList.add('text-white-500');
-                });
-
-                const q = query.toLowerCase();
-                const filtrados = state.alumnos.filter(a => a.nombre_completo.toLowerCase().includes(q) || a.dni.includes(q));
-                renderAlumnosList(filtrados);
-            }
-
-			// 4. Renderizado de la Lista (AQUÍ ESTÁ EL CAMBIO DE DISEÑO "STAFF" + PAGINACIÓN + STATS)
+            /**
+             * 1. Renderizado de la Lista (DISEÑO STAFF + PAGINACIÓN + STATS)
+             */
             function renderAlumnosList(listaDatos) {
                 const contenedor = document.getElementById('lista-alumnos-container');
                 if(!contenedor) return;
@@ -5394,51 +5349,103 @@ if (editorForm) {
                 if(window.lucide) lucide.createIcons();
             }
 
-			/**
-             * Genera los botones de la paginación
+            /**
+             * 2. Función de Filtrado
+             * SOLUCIÓN: Reinicio total de clases para evitar que los botones se queden rojos (marcados).
+             */
+            function filterAlumnos(filtro) {
+                state.currentPageAlumnos = 1; // Siempre volvemos a la página 1 al filtrar
+                if(!state.alumnos) return;
+                
+                // Limpiar el input de búsqueda al filtrar para evitar confusión
+                const searchInput = document.getElementById('search-alumno-input');
+                if(searchInput) searchInput.value = "";
+
+                // REINICIAR BOTONES: Limpiamos absolutamente todos los botones con la clase 'filter-btn'
+                document.querySelectorAll('.filter-btn').forEach(btn => {
+                    btn.classList.remove('bg-red-600', 'text-black');
+                    btn.classList.add('text-white-500', 'hover:text-white');
+                });
+
+                // MARCAR EL ACTIVO
+                const activeBtn = document.getElementById('filter-' + filtro);
+                if(activeBtn) {
+                    activeBtn.classList.remove('text-white-500', 'hover:text-white');
+                    activeBtn.classList.add('bg-red-600', 'text-black');
+                }
+
+                const hoy = new Date().toISOString().split('T')[0];
+                let filtrados = state.alumnos;
+                
+                if(filtro === 'activos') filtrados = state.alumnos.filter(a => a.fecha_vencimiento && a.fecha_vencimiento >= hoy);
+                if(filtro === 'inactivos') filtrados = state.alumnos.filter(a => !a.fecha_vencimiento || a.fecha_vencimiento < hoy);
+                
+                renderAlumnosList(filtrados);
+            }
+
+
+            // 3. Función de Búsqueda
+            function searchAlumno(query) {
+                state.currentPageAlumnos = 1; // Siempre volvemos a la página 1 al buscar
+                if(!query) { filterAlumnos('todos'); return; }
+                
+                // Al buscar, reseteamos todos los botones de filtro a su estado normal (gris)
+                document.querySelectorAll('.filter-btn').forEach(btn => {
+                    btn.classList.remove('bg-red-600', 'text-black');
+                    btn.classList.add('text-white-500', 'hover:text-white');
+                });
+
+                const q = query.toLowerCase();
+                const filtrados = state.alumnos.filter(a => a.nombre_completo.toLowerCase().includes(q) || a.dni.includes(q));
+                renderAlumnosList(filtrados);
+            }
+
+            /**
+             * 4. Genera los botones de la paginación
+             * MEJORA: Los botones de Anterior/Siguiente ahora se "grisan" (desactivan) si no hay más páginas.
              */
             function renderPaginationControls(totalPages) {
                 const paginator = document.getElementById('alumnos-pagination');
                 if (!paginator) return;
                 
-                // Si no hay resultados, ocultamos paginador
-                if (totalPages === 0) {
+                // Si no hay resultados o solo hay una página, ocultamos paginador para una interfaz más limpia
+                if (totalPages <= 1) {
                     paginator.innerHTML = "";
+                    if (totalPages === 1) {
+                        // Opcional: Podríamos mostrar un indicador de página 1 única, pero mejor nada.
+                    }
                     return;
                 }
 
                 const isFirstPage = state.currentPageAlumnos === 1;
                 const isLastPage = state.currentPageAlumnos === totalPages;
 
+                // Botón Anterior
                 let html = `
-                    <button onclick="window.changePageAlumnos(${state.currentPageAlumnos - 1})" 
+                    <button onclick="${isFirstPage ? '' : 'window.changePageAlumnos(' + (state.currentPageAlumnos - 1) + ')'}" 
                             class="p-3 rounded-xl bg-white/5 border border-white/10 text-white transition-all ${isFirstPage ? 'opacity-20 cursor-not-allowed' : 'hover:bg-red-600 hover:text-black'}"
                             ${isFirstPage ? 'disabled' : ''}>
                         <i data-lucide="chevron-left" class="w-4 h-4"></i>
                     </button>
                 `;
 
-                // Solo generamos números si hay más de 1 página
-                if (totalPages > 1) {
-                    for (let i = 1; i <= totalPages; i++) {
-                        if (i === 1 || i === totalPages || (i >= state.currentPageAlumnos - 1 && i <= state.currentPageAlumnos + 1)) {
-                            html += `
-                                <button onclick="window.changePageAlumnos(${i})" 
-                                        class="w-10 h-10 rounded-xl font-black italic text-[11px] transition-all ${state.currentPageAlumnos === i ? 'bg-red-600 text-black shadow-lg shadow-red-600/20' : 'bg-white/5 text-white/40 hover:text-white border border-white/10'}">
-                                    ${i}
-                                </button>
-                            `;
-                        } else if (i === state.currentPageAlumnos - 2 || i === state.currentPageAlumnos + 2) {
-                            html += `<span class="text-white/20">...</span>`;
-                        }
+                // Números de página inteligentes
+                for (let i = 1; i <= totalPages; i++) {
+                    if (i === 1 || i === totalPages || (i >= state.currentPageAlumnos - 1 && i <= state.currentPageAlumnos + 1)) {
+                        html += `
+                            <button onclick="window.changePageAlumnos(${i})" 
+                                    class="w-10 h-10 rounded-xl font-black italic text-[11px] transition-all ${state.currentPageAlumnos === i ? 'bg-red-600 text-black shadow-lg shadow-red-600/20' : 'bg-white/5 text-white/40 hover:text-white border border-white/10'}">
+                                ${i}
+                            </button>
+                        `;
+                    } else if (i === state.currentPageAlumnos - 2 || i === state.currentPageAlumnos + 2) {
+                        html += `<span class="text-white/20">...</span>`;
                     }
-                } else {
-                    // Si solo hay una página, mostramos el número 1 estático
-                    html += `<span class="w-10 h-10 flex items-center justify-center rounded-xl bg-red-600 text-black font-black italic text-[11px]">1</span>`;
                 }
 
+                // Botón Siguiente
                 html += `
-                    <button onclick="window.changePageAlumnos(${state.currentPageAlumnos + 1})" 
+                    <button onclick="${isLastPage ? '' : 'window.changePageAlumnos(' + (state.currentPageAlumnos + 1) + ')'}" 
                             class="p-3 rounded-xl bg-white/5 border border-white/10 text-white transition-all ${isLastPage ? 'opacity-20 cursor-not-allowed' : 'hover:bg-red-600 hover:text-black'}"
                             ${isLastPage ? 'disabled' : ''}>
                         <i data-lucide="chevron-right" class="w-4 h-4"></i>
