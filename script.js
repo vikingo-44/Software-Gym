@@ -1195,7 +1195,7 @@
                 const hoy = new Date();
                 hoy.setHours(0, 0, 0, 0);
 
-                // CORRECCIÓN: Generamos el HTML y lo unimos en un string para evitar el ReferenceError de mainHTML
+                // CORRECCIÓN: Generamos el HTML y lo unimos en un string para evitar el ReferenceError
                 const generatedHTML = rutinas.map((rutina, rIdx) => {
                     // Si el objeto no tiene ID ni objetivo ni días, y no somos Staff viendo un error con posible data, no renderizamos
                     if (!rutina.id && !rutina.objetivo && (!rutina.dias || rutina.dias.length === 0)) return '';
@@ -1480,12 +1480,12 @@
 
             let filtrados = baseMusculacion;
             
-            // LÓGICA DE FILTRADO (Aseguramos que detecte correctamente la rutina)
-            // Usamos a.rutina_id || a.id_rutina para cubrir ambas posibilidades del backend
+            // CORRECCIÓN LÓGICA DE FILTRADO
+            // Revisamos planes_rutina (array), rutina_id o id_rutina para asegurar que detecte la existencia de la rutina
             if(filtro === 'con') {
-                filtrados = baseMusculacion.filter(a => (a.rutina_id || a.id_rutina));
+                filtrados = baseMusculacion.filter(a => (a.rutina_id || a.id_rutina || (a.planes_rutina && a.planes_rutina.length > 0)));
             } else if(filtro === 'sin') {
-                filtrados = baseMusculacion.filter(a => !(a.rutina_id || a.id_rutina));
+                filtrados = baseMusculacion.filter(a => !(a.rutina_id || a.id_rutina || (a.planes_rutina && a.planes_rutina.length > 0)));
             } else if(filtro === 'vencidas') {
                 filtrados = baseMusculacion.filter(a => a.rutina_vencimiento && a.rutina_vencimiento < hoy);
             }
@@ -1989,63 +1989,63 @@
             }
         }
 
-		// =========================================================
-		// 4. GUARDADO DE RUTINA (FIX: ACTIVACIÓN Y PERSISTENCIA)
-		// =========================================================
-		const editorForm = document.getElementById('form-rutina-editor');
-		if (editorForm) {
-			editorForm.onsubmit = async (e) => {
-				e.preventDefault();
-				const alumnoId = document.getElementById('rutina-editor-alumno-id').value;
-				
-				const dias = [];
-				document.querySelectorAll('.rutina-dia-card').forEach(dayCard => {
-					const ejercicios = [];
-					dayCard.querySelectorAll('.exercise-row').forEach(exRow => {
-						const series = [];
-						exRow.querySelectorAll('.serie-row').forEach(sRow => {
-							series.push({
-								numero_serie: parseInt(sRow.dataset.serieNum),
-								repeticiones: sRow.querySelector('.serie-reps').value,
-								peso: sRow.querySelector('.serie-weight').value,
-								descanso: sRow.querySelector('.serie-rest').value
-							});
-						});
+// =========================================================
+// 4. GUARDADO DE RUTINA (FIX: ACTIVACIÓN Y PERSISTENCIA)
+// =========================================================
+const editorForm = document.getElementById('form-rutina-editor');
+if (editorForm) {
+    editorForm.onsubmit = async (e) => {
+        e.preventDefault();
+        const alumnoId = document.getElementById('rutina-editor-alumno-id').value;
+        
+        const dias = [];
+        document.querySelectorAll('.rutina-dia-card').forEach(dayCard => {
+            const ejercicios = [];
+            dayCard.querySelectorAll('.exercise-row').forEach(exRow => {
+                const series = [];
+                exRow.querySelectorAll('.serie-row').forEach(sRow => {
+                    series.push({
+                        numero_serie: parseInt(sRow.dataset.serieNum),
+                        repeticiones: sRow.querySelector('.serie-reps').value,
+                        peso: sRow.querySelector('.serie-weight').value,
+                        descanso: sRow.querySelector('.serie-rest').value
+                    });
+                });
 
-						ejercicios.push({
-							ejercicio_id: parseInt(exRow.querySelector('.exercise-id').value) || null,
-							exercise_name: exRow.querySelector('.text-[13px]')?.innerText || "Ejercicio", 
-							series_detalle: series,
-							comentario: exRow.querySelector('.exercise-comment')?.value || ""
-						});
-					});
+                ejercicios.push({
+                    ejercicio_id: parseInt(exRow.querySelector('.exercise-id').value) || null,
+                    exercise_name: exRow.querySelector('.text-[13px]')?.innerText || "Ejercicio", 
+                    series_detalle: series,
+                    comentario: exRow.querySelector('.exercise-comment')?.value || ""
+                });
+            });
 
-					dias.push({
-						nombre_dia: dayCard.querySelector('.day-title').value,
-						ejercicios: ejercicios
-					});
-				});
+            dias.push({
+                nombre_dia: dayCard.querySelector('.day-title').value,
+                ejercicios: ejercicios
+            });
+        });
 
-				const payload = {
-					usuario_id: parseInt(alumnoId),
-					objetivo: document.getElementById('rutina-objetivo').value,
-					fecha_vencimiento: document.getElementById('rutina-vencimiento').value,
-					activo: true, // <--- INDISPENSABLE PARA QUE QUEDE ACTIVA
-					dias: dias
-				};
+        const payload = {
+            usuario_id: parseInt(alumnoId),
+            objetivo: document.getElementById('rutina-objetivo').value,
+            fecha_vencimiento: document.getElementById('rutina-vencimiento').value,
+            activo: true, // <--- INDISPENSABLE PARA QUE QUEDE ACTIVA
+            dias: dias
+        };
 
-				const res = await apiFetch('/rutinas', 'POST', payload);
-				
-				if(!res.error) {
-					closeModal('modal-rutina-editor');
-					showVikingToast("¡Arsenal de combate actualizado!");
-					if (typeof fetchAlumnos === 'function') await fetchAlumnos();
-					renderRutinas();
-				} else {
-					showVikingToast("Error al forjar la rutina: " + res.error, true);
-				}
-			};
-		}
+        const res = await apiFetch('/rutinas', 'POST', payload);
+        
+        if(!res.error) {
+            closeModal('modal-rutina-editor');
+            showVikingToast("¡Arsenal de combate actualizado!");
+            if (typeof fetchAlumnos === 'function') await fetchAlumnos();
+            renderRutinas();
+        } else {
+            showVikingToast("Error al forjar la rutina: " + res.error, true);
+        }
+    };
+}
 
         async function apiFetch(endpoint, method = 'GET', body = null) {
 			const token = localStorage.getItem('viking_token');
