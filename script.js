@@ -3574,13 +3574,54 @@
 		}
 
         document.getElementById('form-alumno').onsubmit = async (e) => {
-            e.preventDefault(); const id = document.getElementById('al-id').value;
-            const data = { nombre_completo: document.getElementById('al-nombre').value, dni: document.getElementById('al-dni').value, email: document.getElementById('al-email').value, plan_id: parseInt(document.getElementById('al-plan').value) || null, peso: parseFloat(document.getElementById('al-peso').value) || null, altura: parseFloat(document.getElementById('al-altura').value) || null, imc: parseFloat(document.getElementById('al-imc').value) || null, fecha_ultima_renovacion: document.getElementById('al-fecha-renovacion').value, fecha_vencimiento: document.getElementById('al-fecha-vencimiento').value, fecha_nacimiento: document.getElementById('al-fecha-nacimiento').value || null, fecha_certificado: document.getElementById('al-fecha-certificado').value || null, certificado_entregado: document.getElementById('al-certificado-entregado').checked };
-            const pass = document.getElementById('al-pass').value; if(pass) data.password = pass;
-            const res = await apiFetch(id ? `/alumnos/${id}` : '/alumnos', id ? 'PUT' : 'POST', data);
-            if(!res.error) { closeModal('modal-alumno'); fetchAlumnos(); showVikingToast("Alumno Guardado"); }
-        };
-
+			e.preventDefault(); 
+			
+			// Obtenemos el ID para saber si es una edición (PUT) o un alta (POST)
+			const id = document.getElementById('al-id').value;
+			
+			// Construcción del objeto de datos con todos los campos necesarios
+			const data = { 
+				nombre_completo: document.getElementById('al-nombre').value, 
+				dni: document.getElementById('al-dni').value, 
+				email: document.getElementById('al-email').value, 
+				
+				// Conversión a enteros para las claves foráneas (Planes y Sucursales)
+				plan_id: parseInt(document.getElementById('al-plan').value) || null, 
+				sucursal_id: parseInt(document.getElementById('al-sucursal').value) || null, 
+				
+				// Conversión a decimales para métricas físicas
+				peso: parseFloat(document.getElementById('al-peso').value) || null, 
+				altura: parseFloat(document.getElementById('al-altura').value) || null, 
+				imc: parseFloat(document.getElementById('al-imc').value) || null, 
+				
+				// Manejo de fechas y estados
+				fecha_ultima_renovacion: document.getElementById('al-fecha-renovacion').value, 
+				fecha_vencimiento: document.getElementById('al-fecha-vencimiento').value, 
+				fecha_nacimiento: document.getElementById('al-fecha-nacimiento').value || null, 
+				fecha_certificado: document.getElementById('al-fecha-certificado').value || null, 
+				certificado_entregado: document.getElementById('al-certificado-entregado').checked 
+			};
+			
+			// Agregamos la contraseña solo si el usuario escribió algo en el campo
+			const pass = document.getElementById('al-pass').value; 
+			if (pass) data.password = pass;
+			
+			// Envío de datos al servidor
+			const res = await apiFetch(id ? `/alumnos/${id}` : '/alumnos', id ? 'PUT' : 'POST', data);
+			
+			// Si la operación fue exitosa, limpiamos la interfaz
+			if (!res.error) { 
+				closeModal('modal-alumno'); 
+				fetchAlumnos(); 
+				
+				// Verificamos cuál función de notificación está disponible en tu script
+				if (typeof showVikingToast === 'function') {
+					showVikingToast("Alumno Guardado"); 
+				} else if (typeof showToast === 'function') {
+					showToast("Alumno Guardado");
+				}
+			}
+		};
         function openModalStaff(rol) { document.getElementById('modal-staff-title').innerText = "Alta " + rol; document.getElementById('stf-id').value = ""; document.getElementById('stf-rol').value = rol; openModal('modal-staff'); }
         function openEditStaff(id, rol) {
             const user = (rol === 'Profesor' ? state.profesores : state.administrativos).find(x => x.id == id); if(!user) return;
