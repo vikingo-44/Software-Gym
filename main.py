@@ -176,6 +176,7 @@ class TokenResponse(BaseModel):
     edad: Optional[int] = None
     certificado_entregado: bool = False
     fecha_certificado: Optional[str] = None
+    sucursal_id: Optional[int] = None
 
 # --- NUEVO: Schema para Validación de QR ---
 class AccessCheck(BaseModel):
@@ -215,6 +216,7 @@ class UsuarioResponse(BaseModel):
     imc: Optional[float] = None
     certificado_entregado: bool = False
     fecha_certificado: Optional[date] = None
+    sucursal_id: Optional[int] = None
     
     class Config: from_attributes = True
 
@@ -233,6 +235,7 @@ class AlumnoUpdate(BaseModel):
     fecha_certificado: Optional[date] = None
     fecha_ultima_renovacion: Optional[date] = None
     fecha_vencimiento: Optional[date] = None
+    sucursal_id: Optional[int] = None
 
 class StaffUpdate(BaseModel):
     nombre_completo: Optional[str] = None
@@ -371,6 +374,16 @@ class ReservaCreate(BaseModel):
     horario: float
     dia_semana: int
 
+class SucursalCreate(BaseModel):
+    sucursal: str
+    direccion: str
+
+class SucursalResponse(BaseModel):
+    id: int
+    sucursal: str
+    direccion: str
+    class Config: from_attributes = True
+
 # ==========================================
 # LÓGICA DE ACTUALIZACIÓN GENÉRICA (FIX 500)
 # ==========================================
@@ -498,7 +511,8 @@ def login(data: UsuarioLogin, db: Session = Depends(database.get_db)):
         "fecha_nacimiento": user.fecha_nacimiento.isoformat() if user.fecha_nacimiento else None,
         "edad": user.edad,
         "certificado_entregado": user.certificado_entregado,
-        "fecha_certificado": user.fecha_certificado.isoformat() if user.fecha_certificado else None
+        "fecha_certificado": user.fecha_certificado.isoformat() if user.fecha_certificado else None,
+        "sucursal_id": user.sucursal_id
     }
 
 # --- NUEVO: RESET DE CONTRASEÑA (PUNTO 2) ---
@@ -610,6 +624,30 @@ def validar_acceso_qr(data: AccessCheck, db: Session = Depends(database.get_db))
 
     return final_response
 
+# --- SUCURSALES ---
+@app.get("/api/sucursales", response_model=List[SucursalResponse], tags=["Sucursales"])
+def get_sucursales(db: Session = Depends(database.get_db)):
+    """Lista todas las sucursales del gimnasio."""
+    return db.query(models.Sucursal).all()
+
+@app.post("/api/sucursales", tags=["Sucursales"])
+def create_sucursal(data: SucursalCreate, db: Session = Depends(database.get_db)):
+    """Crea una nueva sucursal."""
+    new_s = models.Sucursal(
+        sucursal=data.sucursal,
+        direccion=data.direccion
+    )
+    db.add(new_s)
+    db.commit()
+    return {"status": "success", "message": "Sucursal creada correctamente"}
+
+@app.delete("/api/sucursales/{id}", tags=["Sucursales"])
+def delete_sucursal(id: int, db: Session = Depends(database.get_db)):
+    """Elimina una sucursal."""
+    db.query(models.Sucursal).filter(models.Sucursal.id == id).delete()
+    db.commit()
+    return {"status": "success"}
+
 # --- NUEVO: HISTORIAL DE ACCESOS ---
 @app.get("/api/acceso/historial", tags=["Seguridad"])
 def get_historial_accesos(db: Session = Depends(database.get_db)):
@@ -703,7 +741,8 @@ def create_alumno(alumno: AlumnoUpdate, db: Session = Depends(database.get_db)):
             altura=alumno.altura,
             imc=alumno.imc,
             certificado_entregado=alumno.certificado_entregado or False,
-            fecha_certificado=alumno.fecha_certificado
+            fecha_certificado=alumno.fecha_certificado,
+            sucursal_id=alumno.sucursal_id
         )
         
         db.add(new_al)
@@ -1283,5 +1322,6 @@ def get_historial_rutinas(id: int, db: Session = Depends(database.get_db)):
 if __name__ == "__main__":
     import uvicorn
     port = int(os.environ.get("PORT", 8000))
+
 
     uvicorn.run(app, host="0.0.0.0", port=port)

@@ -37,6 +37,7 @@ class Usuario(Base):
     email = Column(String, nullable=True)
     perfil_id = Column(Integer, ForeignKey("perfiles.id"))
     plan_id = Column(Integer, ForeignKey("planes.id"), nullable=True)
+    sucursal_id = Column(Integer, ForeignKey("sucursales.id"), nullable=True)
     
     # Datos físicos y de salud
     fecha_nacimiento = Column(Date, nullable=True)
@@ -55,9 +56,21 @@ class Usuario(Base):
     
     perfil = relationship("Perfil", back_populates="usuarios")
     plan = relationship("Plan", back_populates="usuarios")
+    sucursal = relationship("Sucursal", back_populates="usuarios")
     reservas = relationship("Reserva", back_populates="usuario", cascade="all, delete-orphan")
     planes_rutina = relationship("PlanRutina", back_populates="usuario", cascade="all, delete-orphan")
     accesos = relationship("Acceso", back_populates="usuario")
+    sucursal = relationship("Sucursal", back_populates="usuarios")
+
+class Sucursal(Base):
+    __tablename__ = "sucursales"
+    id = Column(Integer, primary_key=True)
+    sucursal = Column(String, nullable=False)
+    direccion = Column(String, nullable=True)
+    fecha_creacion = Column(DateTime, default=datetime.datetime.now)
+    
+    # Relación: una sucursal tiene muchos usuarios
+    usuarios = relationship("Usuario", back_populates="sucursal")
 
 class Clase(Base):
     __tablename__ = "clases"

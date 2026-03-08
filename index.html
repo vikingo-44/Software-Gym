@@ -82,6 +82,10 @@
 				<span class="nav-text">Dashboard</span>
 			</button>
 			
+			<button onclick="switchView('sucursales')" id="nav-sucursales" class="nav-btn w-full nav-item px-6 py-4 rounded-2xl font-black uppercase text-[11px] italic flex items-center gap-3">
+				<i data-lucide="map-pin" class="w-4 h-4"></i> <span class="nav-text">Sucursales</span>
+			</button>
+
 			<button onclick="switchView('perfil')" id="nav-perfil" class="nav-btn w-full nav-item px-6 py-4 rounded-2xl font-black uppercase text-[11px] italic flex items-center gap-3">
 				<i data-lucide="user-cog" class="w-4 h-4"></i> 
 				<span class="nav-text">Mi Perfil</span>
@@ -913,6 +917,22 @@
 					</div>
 				</div>
 			</div>
+			<!-- VISTA SUCURSALES -->
+			<div id="view-sucursales" class="view-content hidden">
+				<div class="flex justify-between items-center mb-8">
+					<div>
+						<h3 class="text-3xl font-black italic uppercase">Gestión de Sedes</h3>
+						<p class="text-[10px] text-white-500 font-bold uppercase tracking-widest mt-1 italic">Administración de Sucursales</p>
+					</div>
+					<button id="btn-nueva-sucursal" onclick="openModalSucursal()" class="viking-bg-red text-black px-8 py-4 rounded-2xl font-black uppercase italic text-[12px] shadow-xl flex items-center gap-3">
+						<i data-lucide="plus" class="w-4 h-4"></i> Nueva Sucursal
+					</button>
+				</div>
+				<!-- Contenedor donde el JS va a dibujar las sucursales -->
+				<div class="grid grid-cols-1 md:grid-cols-3 gap-8" id="sucursales-container">
+					<!-- Dinámico -->
+				</div>
+			</div>
         </div>
     </main>
 
@@ -1156,6 +1176,11 @@
 					<input type="checkbox" id="al-certificado-entregado" class="w-4 h-4 accent-red-600">
 					<label for="al-certificado-entregado" class="text-[10px] font-black uppercase italic text-white-300">¿Certificado Físico Entregado?</label>
 				</div>
+				<div class="grid grid-cols-1 gap-4">
+					<select id="al-sucursal" class="viking-input" required>
+						<option value="">Seleccionar Sucursal...</option>
+					</select>
+				</div>
                 <div class="grid grid-cols-2 gap-4">
                     <select id="al-plan" class="viking-input" required onchange="autoCalculateExpiry()"></select>
                     <input type="password" id="al-pass" placeholder="Contraseña de Acceso" class="viking-input">
@@ -1356,6 +1381,29 @@
             <button onclick="closeModal('modal-inscriptos')" class="w-full py-4 viking-bg-red text-black rounded-2xl font-black uppercase italic text-[11px]">Cerrar</button>
         </div>
     </div>
+
+	<!-- MODAL SUCURSAL -->
+	<div id="modal-sucursal" class="viking-modal hidden">
+		<div class="glass-card p-10 rounded-[3rem] w-full max-w-lg text-left border border-white/5">
+			<h3 class="text-2xl font-black uppercase italic mb-8" id="modal-sucursal-title">Configurar Sede</h3>
+			<form id="form-sucursal" class="space-y-4" onsubmit="window.handleSaveSucursal(event)">
+				<input type="hidden" id="suc-id">
+				<div class="space-y-1">
+					<p class="text-[9px] font-black text-white-500 uppercase px-2">Nombre de la Sucursal</p>
+					<input type="text" id="suc-nombre" placeholder="Ej: Vikingo Central" required class="viking-input">
+				</div>
+				<div class="space-y-1">
+					<p class="text-[9px] font-black text-white-500 uppercase px-2">Dirección</p>
+					<input type="text" id="suc-direccion" placeholder="Ej: Av. Siempre Viva 123" required class="viking-input">
+				</div>
+				<div class="flex gap-4 pt-6">
+					<button type="button" onclick="closeModal('modal-sucursal')" class="flex-1 py-4 bg-white/5 rounded-2xl font-black uppercase italic text-[11px]">Cancelar</button>
+					<button type="submit" class="flex-1 py-4 viking-bg-red text-black rounded-2xl font-black uppercase italic text-[11px] shadow-xl">Guardar Sede</button>
+				</div>
+				<button type="button" id="btn-delete-sucursal" class="w-full text-[10px] text-red-600 font-bold uppercase mt-4 hidden">Eliminar Sucursal Permanentemente</button>
+			</form>
+		</div>
+	</div>
 
 		<!-- ========================================== -->
 		<!-- MÓDULO: LOS OJOS DE ODÍN (SCANNER QR)      -->
