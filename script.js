@@ -5242,14 +5242,20 @@ if (editorForm) {
                 state.currentPageAlumnos = 1; // Siempre volvemos a la página 1 al filtrar
                 if(!state.alumnos) return;
                 
-                // Actualizar botones visualmente
+                // Limpiar el input de búsqueda al filtrar para evitar confusión
+                const searchInput = document.querySelector('input[oninput*="searchAlumno"]');
+                if(searchInput) searchInput.value = "";
+
+                // Actualizar botones visualmente (Limpiamos todos primero)
                 document.querySelectorAll('.filter-btn').forEach(btn => {
                     btn.classList.remove('bg-red-600', 'text-black');
-                    btn.classList.add('text-gray-500', 'hover:text-white');
+                    btn.classList.add('text-white-500', 'hover:text-white'); // Clases originales de tu HTML
                 });
+
+                // Marcamos solo el activo
                 const activeBtn = document.getElementById('filter-' + filtro);
                 if(activeBtn) {
-                    activeBtn.classList.remove('text-gray-500', 'hover:text-white');
+                    activeBtn.classList.remove('text-white-500', 'hover:text-white');
                     activeBtn.classList.add('bg-red-600', 'text-black');
                 }
 
@@ -5268,9 +5274,10 @@ if (editorForm) {
                 state.currentPageAlumnos = 1; // Siempre volvemos a la página 1 al buscar
                 if(!query) { filterAlumnos('todos'); return; }
                 
+                // Al buscar, quitamos el estado "activo" de los botones de filtro
                 document.querySelectorAll('.filter-btn').forEach(btn => {
                     btn.classList.remove('bg-red-600', 'text-black');
-                    btn.classList.add('text-gray-500');
+                    btn.classList.add('text-white-500');
                 });
 
                 const q = query.toLowerCase();
@@ -5307,7 +5314,11 @@ if (editorForm) {
                 const listaPaginada = listaDatos.slice(inicio, fin);
 
                 if(listaPaginada.length === 0) {
-                    contenedor.innerHTML = `<div class="h-full flex flex-col items-center justify-center text-gray-600 opacity-50 py-10"><i data-lucide="users" class="w-12 h-12 mb-2"></i><p class="text-xs font-black uppercase italic">Sin resultados</p></div>`;
+                    contenedor.innerHTML = `
+                        <div class="h-full flex flex-col items-center justify-center text-white/20 py-10">
+                            <i data-lucide="users" class="w-12 h-12 mb-2"></i>
+                            <p class="text-xs font-black uppercase italic tracking-widest">Sin resultados en el arsenal</p>
+                        </div>`;
                     renderPaginationControls(0); // Limpiar paginación si no hay datos
                     if(window.lucide) lucide.createIcons();
                     return;
@@ -5390,37 +5401,46 @@ if (editorForm) {
                 const paginator = document.getElementById('alumnos-pagination');
                 if (!paginator) return;
                 
-                if (totalPages <= 1) {
+                // Si no hay resultados, ocultamos paginador
+                if (totalPages === 0) {
                     paginator.innerHTML = "";
                     return;
                 }
 
+                const isFirstPage = state.currentPageAlumnos === 1;
+                const isLastPage = state.currentPageAlumnos === totalPages;
+
                 let html = `
                     <button onclick="window.changePageAlumnos(${state.currentPageAlumnos - 1})" 
-                            class="p-3 rounded-xl bg-white/5 border border-white/10 text-white hover:bg-red-600 hover:text-black transition-all ${state.currentPageAlumnos === 1 ? 'opacity-20 cursor-not-allowed' : ''}"
-                            ${state.currentPageAlumnos === 1 ? 'disabled' : ''}>
+                            class="p-3 rounded-xl bg-white/5 border border-white/10 text-white transition-all ${isFirstPage ? 'opacity-20 cursor-not-allowed' : 'hover:bg-red-600 hover:text-black'}"
+                            ${isFirstPage ? 'disabled' : ''}>
                         <i data-lucide="chevron-left" class="w-4 h-4"></i>
                     </button>
                 `;
 
-                for (let i = 1; i <= totalPages; i++) {
-                    // Lógica para mostrar solo páginas cercanas a la actual para no saturar
-                    if (i === 1 || i === totalPages || (i >= state.currentPageAlumnos - 1 && i <= state.currentPageAlumnos + 1)) {
-                        html += `
-                            <button onclick="window.changePageAlumnos(${i})" 
-                                    class="w-10 h-10 rounded-xl font-black italic text-[11px] transition-all ${state.currentPageAlumnos === i ? 'bg-red-600 text-black shadow-lg shadow-red-600/20' : 'bg-white/5 text-white/40 hover:text-white border border-white/10'}">
-                                ${i}
-                            </button>
-                        `;
-                    } else if (i === state.currentPageAlumnos - 2 || i === state.currentPageAlumnos + 2) {
-                        html += `<span class="text-white/20">...</span>`;
+                // Solo generamos números si hay más de 1 página
+                if (totalPages > 1) {
+                    for (let i = 1; i <= totalPages; i++) {
+                        if (i === 1 || i === totalPages || (i >= state.currentPageAlumnos - 1 && i <= state.currentPageAlumnos + 1)) {
+                            html += `
+                                <button onclick="window.changePageAlumnos(${i})" 
+                                        class="w-10 h-10 rounded-xl font-black italic text-[11px] transition-all ${state.currentPageAlumnos === i ? 'bg-red-600 text-black shadow-lg shadow-red-600/20' : 'bg-white/5 text-white/40 hover:text-white border border-white/10'}">
+                                    ${i}
+                                </button>
+                            `;
+                        } else if (i === state.currentPageAlumnos - 2 || i === state.currentPageAlumnos + 2) {
+                            html += `<span class="text-white/20">...</span>`;
+                        }
                     }
+                } else {
+                    // Si solo hay una página, mostramos el número 1 estático
+                    html += `<span class="w-10 h-10 flex items-center justify-center rounded-xl bg-red-600 text-black font-black italic text-[11px]">1</span>`;
                 }
 
                 html += `
                     <button onclick="window.changePageAlumnos(${state.currentPageAlumnos + 1})" 
-                            class="p-3 rounded-xl bg-white/5 border border-white/10 text-white hover:bg-red-600 hover:text-black transition-all ${state.currentPageAlumnos === totalPages ? 'opacity-20 cursor-not-allowed' : ''}"
-                            ${state.currentPageAlumnos === totalPages ? 'disabled' : ''}>
+                            class="p-3 rounded-xl bg-white/5 border border-white/10 text-white transition-all ${isLastPage ? 'opacity-20 cursor-not-allowed' : 'hover:bg-red-600 hover:text-black'}"
+                            ${isLastPage ? 'disabled' : ''}>
                         <i data-lucide="chevron-right" class="w-4 h-4"></i>
                     </button>
                 `;
@@ -5439,12 +5459,14 @@ if (editorForm) {
                 state.currentPageAlumnos = newPage;
                 renderAlumnosList(state.filteredAlumnos);
                 
-                // Scroll arriba suave del contenedor
+                // Scroll arriba del contenedor suavemente para que el usuario vea el inicio de la nueva página
                 const contenedor = document.getElementById('lista-alumnos-container');
-                if(contenedor) contenedor.scrollTop = 0;
+                if(contenedor) {
+                    contenedor.scrollTo({ top: 0, behavior: 'smooth' });
+                }
             }
 
-			// --- VINCULACIÓN CON WINDOW (Para acceso desde el HTML) ---
+            // --- VINCULACIÓN CON WINDOW (Para acceso desde el HTML) ---
             window.filterAlumnos = filterAlumnos;
             window.searchAlumno = searchAlumno;
             window.renderAlumnosList = renderAlumnosList;
