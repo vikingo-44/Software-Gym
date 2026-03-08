@@ -5219,6 +5219,26 @@
 		 * antiguos y sean redirigidos automáticamente a las nuevas.
 		 */
 
+		/**
+		 * Muestra el aviso (toast) configurado en el HTML
+		 */
+		function showToast(message, type = "success") {
+			const toast = document.getElementById('viking-toast');
+			if (toast) {
+				toast.innerText = message;
+				toast.classList.add('show');
+				// Cambiar color según tipo si es necesario
+				toast.style.borderLeft = type === "error" ? "4px solid #ff0000" : "4px solid #00ff00";
+				
+				setTimeout(() => toast.classList.remove('show'), 3000);
+			}
+		}
+		
+		// Aseguramos que estén disponibles globalmente
+		window.showToast = showToast;
+		window.openModal = openModal;
+		window.closeModal = closeModal;
+
 		window.openModalSucursal = function() {
 			console.log("📂 Abriendo modal de sucursal...");
 			const form = document.getElementById('form-sucursal');
