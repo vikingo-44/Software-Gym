@@ -5326,8 +5326,9 @@ if (editorForm) {
                 const searchInput = document.getElementById('search-alumno-input');
                 if(searchInput) searchInput.value = "";
 
-                // REINICIAR BOTONES: Limpiamos absolutamente todos los botones con la clase 'filter-btn'
-                document.querySelectorAll('.filter-btn').forEach(btn => {
+                // REINICIAR BOTONES: Limpiamos absolutamente todos los botones que tengan la clase de filtro
+                // Usamos un selector doble por seguridad para que limpie sí o sí
+                document.querySelectorAll('.filter-btn, .filter-btn-alumno').forEach(btn => {
                     btn.classList.remove('bg-red-600', 'text-black');
                     btn.classList.add('text-white-500', 'hover:text-white');
                 });
@@ -5357,7 +5358,7 @@ if (editorForm) {
                 if(!query) { filterAlumnos('todos'); return; }
                 
                 // Al buscar, reseteamos todos los botones de filtro a su estado normal (gris)
-                document.querySelectorAll('.filter-btn').forEach(btn => {
+                document.querySelectorAll('.filter-btn, .filter-btn-alumno').forEach(btn => {
                     btn.classList.remove('bg-red-600', 'text-black');
                     btn.classList.add('text-white-500', 'hover:text-white');
                 });
