@@ -2528,29 +2528,36 @@
 			}
 
 			// 5. Totales
-            // Recuperamos el usuario actual del localStorage para saber su rol
-            const userActual = JSON.parse(localStorage.getItem('vikingo_user') || '{}');
-            const rolActual = userActual.rol_nombre || "";
-
-            // Definimos la restricción: El rol "Administracion" (recepción) NO debe ver totales
-            const esRestringido = rolActual === "Administracion";
-            
-            // Definimos quiénes SÍ están autorizados (Administrador y Supervisor)
-            const esAutorizado = rolActual === "Administrador" || rolActual === "Supervisor";
-
             const calcBalance = calcIngresos - calcGastos;
+            
+            // --- LÓGICA DE PRIVACIDAD PARA STAFF (ADMINISTRACION) ---
+            // 1. Obtenemos el usuario del storage
+            const vikingoUser = JSON.parse(localStorage.getItem('vikingo_user') || '{}');
+            
+            // 2. Limpiamos el nombre del rol (lo pasamos a minúsculas y quitamos espacios)
+            // Esto evita errores si en la DB dice "Administracion" o "administracion"
+            const rolActual = (vikingoUser.rol_nombre || "").toLowerCase().trim();
 
-            // Si el usuario pertenece a "Administracion" y no tiene un rol superior autorizado
-            if (esRestringido && !esAutorizado) {
+            // 3. Definimos quién tiene prohibido ver los totales
+            // Según tu lista, el staff de recepción es "administracion"
+            const esPerfilRestringido = (rolActual === "administracion");
+
+            // 4. Definimos quién SI puede ver (Administrador o Supervisor)
+            const esJefe = (rolActual === "administrador" || rolActual === "supervisor");
+
+            // 5. Aplicamos la restricción
+            if (esPerfilRestringido && !esJefe) {
+                // Si es del staff de recepción, ponemos asteriscos o texto de bloqueo
                 if(document.getElementById('caja-ingresos')) document.getElementById('caja-ingresos').innerText = `$ ****`;
                 if(document.getElementById('caja-gastos')) document.getElementById('caja-gastos').innerText = `$ ****`;
                 if(document.getElementById('caja-balance')) {
                     const eb = document.getElementById('caja-balance');
-                    eb.innerText = `ACCESO RESTRINGIDO`;
-                    eb.className = `text-xl font-black italic text-white/20`; 
+                    eb.innerText = `RESTRINGIDO`;
+                    eb.className = `text-xl font-black italic text-white/20 uppercase tracking-tighter`;
                 }
+                console.log("🛡️ Seguridad: Totales ocultos para perfil recepcionista.");
             } else {
-                // Para Administradores, Supervisores (o cualquier otro rol no restringido como el dueño)
+                // Si es Administrador, Supervisor o cualquier otro, ve todo normal
                 if(document.getElementById('caja-ingresos')) document.getElementById('caja-ingresos').innerText = `$ ${calcIngresos.toLocaleString()}`;
                 if(document.getElementById('caja-gastos')) document.getElementById('caja-gastos').innerText = `$ ${calcGastos.toLocaleString()}`;
                 if(document.getElementById('caja-balance')) {
