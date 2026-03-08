@@ -5442,6 +5442,141 @@
 			if(window.lucide) lucide.createIcons();
 		};
 
+		// --- FILTROS SECCIÓN RUTINAS ---
+		window.filterRutinas = function(filtro) {
+			if(!state.alumnos) return;
+			
+			// Actualizar botones visualmente (filtros de rutina)
+			document.querySelectorAll('.filter-btn-rutina').forEach(btn => {
+				btn.classList.remove('bg-red-600', 'text-black');
+				btn.classList.add('text-white-500', 'hover:text-white');
+			});
+			const activeBtn = document.getElementById('filter-rutina-' + filtro);
+			if(activeBtn) {
+				activeBtn.classList.remove('text-white-500', 'hover:text-white');
+				activeBtn.classList.add('bg-red-600', 'text-black');
+			}
+
+			const hoy = new Date().toISOString().split('T')[0];
+			
+			// Filtro base: Solo alumnos con planes que permiten musculación
+			let baseMusculacion = state.alumnos.filter(a => {
+				const planNombre = (a.plan?.nombre || "").toLowerCase();
+				const normalized = planNombre.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+				return normalized.includes('musculacion') || normalized.includes('completo') || normalized.includes('personalizado');
+			});
+
+			let filtrados = baseMusculacion;
+			
+			// Aplicar filtros de estado de rutina
+			if(filtro === 'con') filtrados = baseMusculacion.filter(a => a.rutina_id);
+			if(filtro === 'sin') filtrados = baseMusculacion.filter(a => !a.rutina_id);
+			if(filtro === 'vencidas') filtrados = baseMusculacion.filter(a => a.rutina_vencimiento && a.rutina_vencimiento < hoy);
+			
+			renderRutinasList(filtrados);
+		}
+
+		// Búsqueda en Rutinas
+		window.searchRutinaAlumno = function(query) {
+			if(!query) { filterRutinas('todos'); return; }
+			
+			document.querySelectorAll('.filter-btn-rutina').forEach(btn => {
+				btn.classList.remove('bg-red-600', 'text-black');
+				btn.classList.add('text-white-500');
+			});
+
+			const q = query.toLowerCase();
+			const filtrados = state.alumnos.filter(a => {
+				// Primero que sea de musculación
+				const planNombre = (a.plan?.nombre || "").toLowerCase();
+				const normalized = planNombre.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+				const esMusculo = normalized.includes('musculacion') || normalized.includes('completo') || normalized.includes('personalizado');
+				
+				// Luego buscamos por nombre o dni
+				return esMusculo && (a.nombre_completo.toLowerCase().includes(q) || a.dni.includes(q));
+			});
+			renderRutinasList(filtrados);
+		}
+
+		window.renderRutinasList = function(listaDatos) {
+			const contenedor = document.getElementById('rutinas-lista');
+			if(!contenedor) return;
+
+			if(listaDatos.length === 0) {
+				contenedor.innerHTML = `<div class="h-full flex flex-col items-center justify-center text-gray-600 opacity-50 py-10"><i data-lucide="dumbbell" class="w-12 h-12 mb-2"></i><p class="text-xs font-black uppercase italic">Sin guerreros en esta categoría</p></div>`;
+				if(window.lucide) lucide.createIcons();
+				return;
+			}
+
+			const hoy = new Date().toISOString().split('T')[0];
+
+			contenedor.innerHTML = listaDatos.map(a => {
+				// Lógica de Estado de Plan (Identica a Alumnos)
+				const estaVencido = !a.fecha_vencimiento || a.fecha_vencimiento < hoy;
+				const colorEstado = estaVencido ? 'bg-red-600' : 'bg-green-600'; 
+				const textoEstado = estaVencido ? 'VENCIDO' : 'AL DÍA';
+				const colorBadge = estaVencido ? 'text-red-500 bg-red-500/10 border-red-500/20' : 'text-green-500 bg-green-500/10 border-green-500/20';
+
+				const initials = a.nombre_completo ? a.nombre_completo.substring(0,2).toUpperCase() : "??";
+				const planNombre = a.plan ? a.plan.nombre : 'Sin Plan';
+
+				return `
+				<div class="glass-card p-5 rounded-3xl border-white/5 flex flex-col md:flex-row md:items-center gap-6 hover:border-red-600/20 transition-all group relative overflow-hidden bg-gradient-to-r from-white/[0.01] to-transparent">
+					<div class="absolute left-0 top-0 bottom-0 w-1.5 ${colorEstado} opacity-40 group-hover:opacity-100 transition-opacity"></div>
+					
+					<!-- IDENTIDAD -->
+					<div class="flex items-center gap-4 w-full md:w-1/3">
+						<div class="w-14 h-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center font-black text-white text-lg italic shadow-lg group-hover:bg-red-600 group-hover:text-black transition-colors shrink-0">
+							${initials}
+						</div>
+						<div class="overflow-hidden">
+							<h4 class="text-sm font-black uppercase italic text-white group-hover:text-red-500 transition-colors truncate">${a.nombre_completo}</h4>
+							<p class="text-[10px] text-white-500 font-bold flex items-center gap-1.5 mt-1"><i data-lucide="id-card" class="w-3 h-3"></i> ${a.dni}</p>
+						</div>
+					</div>
+
+					<!-- PLAN Y ESTADO -->
+					<div class="flex-1 border-t md:border-t-0 md:border-l border-white/5 pt-4 md:pt-0 md:pl-8">
+						<div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
+							<div>
+								<p class="text-[9px] text-white-500 font-black uppercase tracking-widest mb-1 flex items-center gap-1.5">
+									<i data-lucide="ticket" class="w-3 h-3 text-red-600"></i> Plan Actual
+								</p>
+								<p class="text-sm font-black uppercase italic text-white truncate">${planNombre}</p>
+							</div>
+							<div class="flex flex-row md:flex-col items-center md:items-start justify-between gap-2">
+								<span class="px-3 py-1 rounded-lg text-[9px] font-black uppercase border ${colorBadge}">
+									${textoEstado}
+								</span>
+								<p class="text-[10px] text-white-500 font-bold italic">
+									Vence: <span class="text-white">${a.fecha_vencimiento || 'N/A'}</span>
+								</p>
+							</div>
+						</div>
+					</div>
+
+					<!-- ACCIONES: FICHA, HISTORIAL, NUEVA RUTINA -->
+					<div class="flex items-center justify-end border-t md:border-t-0 border-white/5 pt-3 md:pt-0 gap-2">
+						<button onclick="openFichaTecnica(${a.id})" class="p-3 bg-white/5 hover:bg-white/10 border border-white/10 text-white rounded-xl transition-all" title="Ficha Técnica">
+							<i data-lucide="clipboard-list" class="w-4 h-4"></i>
+						</button>
+						
+						<button onclick="openHistorialRutinas(${a.id})" class="p-3 bg-blue-700 hover:bg-blue-800 text-white rounded-xl shadow-lg transition-all" title="Historial">
+							<i data-lucide="history" class="w-4 h-4"></i>
+						</button>
+
+						<button onclick="openRoutineEditor(${a.id}, false)" class="px-6 py-3 viking-bg-red text-black rounded-xl text-[10px] font-black uppercase italic hover:scale-105 transition-all shadow-lg flex items-center gap-2">
+							<i data-lucide="plus-circle" class="w-3.5 h-3.5"></i>
+							<span>Nueva Rutina</span>
+						</button>
+					</div>
+				</div>
+				`;
+			}).join('');
+			
+			if(window.lucide) lucide.createIcons();
+		}
+
 		window.deleteSucursal = async function(id) {
 			if (!confirm("¿Deseas eliminar esta sede? Los alumnos asignados quedarán sin sucursal.")) return;
 			try {
