@@ -2530,15 +2530,18 @@
 			// 5. Totales
             // Recuperamos el usuario actual del localStorage para saber su rol
             const userActual = JSON.parse(localStorage.getItem('vikingo_user') || '{}');
-            const esAdministrativo = userActual.rol_nombre === "Administrativo";
+            const rolActual = userActual.rol_nombre || "";
+
+            // Definimos la restricción: El rol "Administracion" (recepción) NO debe ver totales
+            const esRestringido = rolActual === "Administracion";
             
-            // CORRECCIÓN: Quitamos el acento para que coincida con "Administracion" de la BD
-            const esAdminTotal = userActual.rol_nombre === "Administracion" || userActual.rol_nombre === "Admin";
+            // Definimos quiénes SÍ están autorizados (Administrador y Supervisor)
+            const esAutorizado = rolActual === "Administrador" || rolActual === "Supervisor";
 
             const calcBalance = calcIngresos - calcGastos;
 
-            // Si es Administrativo (Staff de recepción), ocultamos los totales por privacidad
-            if (esAdministrativo && !esAdminTotal) {
+            // Si el usuario pertenece a "Administracion" y no tiene un rol superior autorizado
+            if (esRestringido && !esAutorizado) {
                 if(document.getElementById('caja-ingresos')) document.getElementById('caja-ingresos').innerText = `$ ****`;
                 if(document.getElementById('caja-gastos')) document.getElementById('caja-gastos').innerText = `$ ****`;
                 if(document.getElementById('caja-balance')) {
@@ -2547,7 +2550,7 @@
                     eb.className = `text-xl font-black italic text-white/20`; 
                 }
             } else {
-                // Si es el Dueño o Administrador, mostramos los totales normalmente
+                // Para Administradores, Supervisores (o cualquier otro rol no restringido como el dueño)
                 if(document.getElementById('caja-ingresos')) document.getElementById('caja-ingresos').innerText = `$ ${calcIngresos.toLocaleString()}`;
                 if(document.getElementById('caja-gastos')) document.getElementById('caja-gastos').innerText = `$ ${calcGastos.toLocaleString()}`;
                 if(document.getElementById('caja-balance')) {
