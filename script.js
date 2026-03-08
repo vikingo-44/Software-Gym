@@ -4012,31 +4012,37 @@
 				});
 				const sucursales = await response.json();
 				
-				// 1. Llenar el contenedor de la vista de sucursales
+				// Actualizar el contenedor de la vista de sucursales
 				const container = document.getElementById('sucursales-container');
 				if (container) {
-					container.innerHTML = sucursales.map(s => `
-						<div class="glass-card p-6 rounded-[2rem] border border-white/5 hover:border-red-600/30 transition-all group">
-							<div class="flex justify-between items-start mb-4">
-								<div class="p-3 bg-red-600/10 rounded-2xl text-red-500">
-									<i data-lucide="map-pin" class="w-6 h-6"></i>
+					if (sucursales.length === 0) {
+						container.innerHTML = '<p class="text-center text-white/20 col-span-3 py-10 italic">No hay sucursales registradas.</p>';
+					} else {
+						container.innerHTML = sucursales.map(s => `
+							<div class="glass-card p-8 rounded-[2.5rem] border border-white/5 hover:border-red-600/30 transition-all group">
+								<div class="flex justify-between items-start mb-6">
+									<div class="p-4 bg-red-600/10 rounded-2xl text-red-500 group-hover:bg-red-600 group-hover:text-black transition-all">
+										<i data-lucide="map-pin" class="w-6 h-6"></i>
+									</div>
+									<button onclick="window.deleteSucursal(${s.id})" class="text-white/10 hover:text-red-600 transition-colors">
+										<i data-lucide="trash-2" class="w-5 h-5"></i>
+									</button>
 								</div>
-								<button onclick="deleteSucursal(${s.id})" class="text-white/20 hover:text-red-600 transition-colors">
-									<i data-lucide="trash-2" class="w-4 h-4"></i>
-								</button>
+								<h4 class="text-2xl font-black italic uppercase text-white mb-2 tracking-tighter">${s.sucursal}</h4>
+								<p class="text-[10px] text-white-500 font-bold uppercase tracking-[0.2em] italic">${s.direccion}</p>
 							</div>
-							<h4 class="text-xl font-black italic uppercase text-white mb-1">${s.sucursal}</h4>
-							<p class="text-[10px] text-white-500 font-bold uppercase tracking-widest">${s.direccion}</p>
-						</div>
-					`).join('');
-					lucide.createIcons();
+						`).join('');
+						lucide.createIcons();
+					}
 				}
 
-				// 2. Llenar los Selects (en el modal de alumnos)
+				// Actualizar el selector en el modal de alumnos
 				const selectAl = document.getElementById('al-sucursal');
 				if (selectAl) {
+					const currentVal = selectAl.value;
 					selectAl.innerHTML = '<option value="">Seleccionar Sucursal...</option>' + 
 						sucursales.map(s => `<option value="${s.id}">${s.sucursal.toUpperCase()}</option>`).join('');
+					if(currentVal) selectAl.value = currentVal;
 				}
 			} catch (error) {
 				console.error("Error cargando sucursales:", error);
@@ -4745,47 +4751,49 @@
 				if (typeof originalSwitchView === 'function') {
 					originalSwitchView(view);
 				} else {
-					// Fallback en caso de que la función no esté definida globalmente pero se llame
 					console.warn("⚠️ originalSwitchView no definida. Solo se ejecutará lógica de carga.");
 				}
 				
 				// 3. Lógica específica por vista (Carga de datos)
 				switch (view) {
 					case 'dashboard':
-						// Si entramos al Dashboard, actualizamos los 3 paneles (Accesos, Staff y Stock)
 						if (typeof loadDashboard === 'function') {
 							loadDashboard();
-						} else {
-							console.error("❌ Error: loadDashboard() no encontrada.");
 						}
 						break;
 
 					case 'acceso-virtual':
-						// Si entramos a la sección de Molinetes / Seguridad
 						if (typeof fetchAccesos === 'function') {
 							fetchAccesos();
 						} else if (typeof renderAccesos === 'function') {
-							// Si no existe el fetch, al menos intentamos renderizar lo que haya en estado
 							renderAccesos();
 						}
 						break;
 
 					case 'alumnos':
-						// Aseguramos que la lista de alumnos esté fresca
+						// Aseguramos que la lista esté fresca y cargamos sucursales para el select del modal
 						if (typeof fetchAlumnos === 'function') {
 							fetchAlumnos();
+						}
+						if (typeof loadSucursales === 'function') {
+							loadSucursales();
+						}
+						break;
+
+					case 'sucursales':
+						// NUEVO: Cargamos la vista de sedes vikingas
+						if (typeof loadSucursales === 'function') {
+							loadSucursales();
 						}
 						break;
 
 					case 'merca':
-						// Si tienes una función para cargar inventario, podrías llamarla aquí
 						if (typeof fetchStock === 'function') {
 							fetchStock();
 						}
 						break;
 
 					default:
-						// No se requiere acción adicional para otras vistas
 						break;
 				}
 
@@ -5201,8 +5209,10 @@
 		window.openModalSucursal = function() {
 			document.getElementById('form-sucursal').reset();
 			document.getElementById('suc-id').value = '';
+			document.getElementById('modal-sucursal-title').innerText = "Nueva Sucursal";
 			document.getElementById('modal-sucursal').classList.remove('hidden');
 		};
+
 
 		window.handleSaveSucursal = async function(e) {
 			e.preventDefault();
@@ -5222,29 +5232,33 @@
 				});
 
 				if (response.ok) {
-					showToast("Sucursal creada con éxito");
+					showToast("Sede Vikinga establecida");
 					closeModal('modal-sucursal');
 					loadSucursales();
+				} else {
+					const error = await response.json();
+					showToast(error.detail || "Error al crear sucursal", "error");
 				}
 			} catch (error) {
-				showToast("Error al guardar sucursal", "error");
+				showToast("Error de conexión con el servidor", "error");
 			}
 		};
 
 		window.deleteSucursal = async function(id) {
-			if (!confirm("¿Eliminar esta sucursal permanentemente?")) return;
+			if (!confirm("¿Deseas eliminar esta sede? Esto no borrará los alumnos, pero quedarán sin sucursal asignada.")) return;
 			try {
-				await fetch(`${API_BASE}/sucursales/${id}`, {
+				const response = await fetch(`${API_BASE}/sucursales/${id}`, {
 					method: 'DELETE',
 					headers: { 'Authorization': `Bearer ${localStorage.getItem('viking_token')}` }
 				});
-				loadSucursales();
-				showToast("Sucursal eliminada");
+				if (response.ok) {
+					loadSucursales();
+					showToast("Sucursal eliminada");
+				}
 			} catch (error) {
-				showToast("No se pudo eliminar", "error");
+				showToast("No se pudo eliminar la sucursal", "error");
 			}
 		};
-
 		// Si el botón dice onclick="finalizarVenta()", ejecuta finalizarVentaMercaderia()
 		window.finalizarVenta = finalizarVentaMercaderia; 
 
