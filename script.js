@@ -1195,7 +1195,7 @@
                 const hoy = new Date();
                 hoy.setHours(0, 0, 0, 0);
 
-                const mainHTML = rutinas.map((rutina, rIdx) => {
+                const generatedHTML = rutinas.map((rutina, rIdx) => {
                     // Si el objeto no tiene ID ni objetivo ni días, y no somos Staff viendo un error con posible data, no renderizamos
                     if (!rutina.id && !rutina.objetivo && (!rutina.dias || rutina.dias.length === 0)) return '';
 
@@ -1283,9 +1283,6 @@
                         `;
                     }).join('');
 
-                    // Estructura general de la tarjeta de rutina
-                    if (mainHTML.trim() === '') return '';
-
                     return `
                     <div class="col-span-2 mb-6">
                         <div class="bg-gradient-to-b from-white/[0.05] to-transparent border border-white/10 rounded-[2.5rem] overflow-hidden shadow-2xl">
@@ -1314,7 +1311,7 @@
                     `;
                 }).join('');
 
-                rutinaContainer.innerHTML = mainHTML || `
+                rutinaContainer.innerHTML = generatedHTML || `
                     <div class="col-span-2 p-20 border-2 border-dashed border-white/5 rounded-[3rem] text-center bg-white/[0.01]">
                         <div class="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-6">
                             <i data-lucide="skull" class="w-10 h-10 text-white/10"></i>
@@ -1363,186 +1360,186 @@
         }
 
         async function renderRutinas() {
-			const rol = (state.user?.rol_nombre || "").toLowerCase();
-			const list = document.getElementById('rutinas-lista'); 
-			const studentView = document.getElementById('musculacion-student-view'); 
-			const titleEl = document.getElementById('rutina-title');
-			
-			// 1. CONFIGURACIÓN DE VISTAS SEGÚN ROL (VISTA ALUMNO)
-			if (rol === "alumno") {
-				if(list) list.classList.add('hidden');
-				if(studentView) studentView.classList.remove('hidden');
-				if(titleEl) titleEl.innerText = "Mi Rutina Musculación";
-				
-				let res = await apiFetch(`/rutinas/usuario/${state.user.id}`);
-				let rutina = null;
-				if (Array.isArray(res) && res.length > 0) {
-					const hoy = new Date(); hoy.setHours(0,0,0,0);
-					rutina = res.find(r => !r.fecha_vencimiento || new Date(r.fecha_vencimiento + 'T23:59:59') >= hoy) || res[0];
-				} else if (res && !res.error && res.id) {
-					rutina = res;
-				}
+            const rol = (state.user?.rol_nombre || "").toLowerCase();
+            const list = document.getElementById('rutinas-lista'); 
+            const studentView = document.getElementById('musculacion-student-view'); 
+            const titleEl = document.getElementById('rutina-title');
+            
+            // 1. CONFIGURACIÓN DE VISTAS SEGÚN ROL (VISTA ALUMNO)
+            if (rol === "alumno") {
+                if(list) list.classList.add('hidden');
+                if(studentView) studentView.classList.remove('hidden');
+                if(titleEl) titleEl.innerText = "Mi Rutina Musculación";
+                
+                let res = await apiFetch(`/rutinas/usuario/${state.user.id}`);
+                let rutina = null;
+                if (Array.isArray(res) && res.length > 0) {
+                    const hoy = new Date(); hoy.setHours(0,0,0,0);
+                    rutina = res.find(r => !r.fecha_vencimiento || new Date(r.fecha_vencimiento + 'T23:59:59') >= hoy) || res[0];
+                } else if (res && !res.error && res.id) {
+                    rutina = res;
+                }
 
-				if (rutina) {
-					document.getElementById('al-rutina-objetivo').innerText = "OBJETIVO: " + (rutina.objetivo || "Entrenamiento").toUpperCase();
-					document.getElementById('student-routine-exercises').innerHTML = (rutina.dias || []).map(d => `
-						<div class="glass-card p-8 rounded-[2.5rem] border border-white/10 shadow-2xl mb-8 bg-gradient-to-b from-white/[0.03] to-transparent">
-							<h5 class="text-xl font-black italic uppercase text-red-600 mb-6 border-b border-white/5 pb-4 flex items-center gap-3">
-								<i data-lucide="zap" class="w-6 h-6 shadow-[0_0_10px_rgba(255,0,0,0.5)]"></i>
-								${d.nombre_dia}
-							</h5>
-							<div class="space-y-6">
-								${(d.ejercicios || []).map(e => {
-									const exName = e.ejercicio_obj?.nombre || e.exercise_name || "Ejercicio";
-									return `
-									<div class="bg-white/[0.02] p-6 rounded-[1.5rem] border border-white/5 hover:border-red-600/30 transition-all group">
-										<p class="text-[14px] font-black uppercase italic mb-4 text-white group-hover:text-red-500 transition-colors tracking-tight">${exName}</p>
-										<div class="space-y-1.5">
-											${(e.series_detalle || e.series || []).sort((a,b)=>a.numero_serie-b.numero_serie).map(s => `
-												<div class="grid grid-cols-4 items-center text-[11px] bg-black/40 p-3.5 rounded-xl border border-white/5 hover:bg-white/[0.05] transition-colors">
-													<span class="text-red-600 font-black italic uppercase tracking-tighter">Set ${s.numero_serie}</span>
-													<span class="text-white font-black text-center">${s.repeticiones} Reps</span>
-													<span class="text-white/60 font-black text-center">${s.peso} Kg</span>
-													<span class="text-white/20 italic text-[10px] text-right">${s.descanso || '-'}</span>
-												</div>
-											`).join('')}
-										</div>
-										${e.comentario ? `
-											<div class="mt-4 bg-red-600/5 p-3 rounded-xl border border-red-600/10 flex gap-2">
-												<i data-lucide="info" class="w-3 h-3 text-red-600 mt-0.5 shrink-0"></i>
-												<p class="text-[10px] text-white/40 italic leading-relaxed font-medium">${e.comentario}</p>
-											</div>
-										` : ''}
-									</div>`;
-								}).join('')}
-							</div>
-						</div>
-					`).join('');
-				} else {
-					document.getElementById('al-rutina-objetivo').innerText = "SIN ASIGNAR";
-					document.getElementById('student-routine-exercises').innerHTML = `
-						<div class="col-span-2 text-center py-20 bg-white/[0.01] border-2 border-dashed border-white/5 rounded-[3rem]">
-							<i data-lucide="skull" class="w-16 h-16 text-white/5 mx-auto mb-4"></i>
-							<p class="text-white/20 italic font-black uppercase tracking-[0.4em]">Sin estrategia de entrenamiento activa</p>
-						</div>
-					`;
-				}
+                if (rutina) {
+                    document.getElementById('al-rutina-objetivo').innerText = "OBJETIVO: " + (rutina.objetivo || "Entrenamiento").toUpperCase();
+                    document.getElementById('student-routine-exercises').innerHTML = (rutina.dias || []).map(d => `
+                        <div class="glass-card p-8 rounded-[2.5rem] border border-white/10 shadow-2xl mb-8 bg-gradient-to-b from-white/[0.03] to-transparent">
+                            <h5 class="text-xl font-black italic uppercase text-red-600 mb-6 border-b border-white/5 pb-4 flex items-center gap-3">
+                                <i data-lucide="zap" class="w-6 h-6 shadow-[0_0_10px_rgba(255,0,0,0.5)]"></i>
+                                ${d.nombre_dia}
+                            </h5>
+                            <div class="space-y-6">
+                                ${(d.ejercicios || []).map(e => {
+                                    const exName = e.ejercicio_obj?.nombre || e.exercise_name || "Ejercicio";
+                                    return `
+                                    <div class="bg-white/[0.02] p-6 rounded-[1.5rem] border border-white/5 hover:border-red-600/30 transition-all group">
+                                        <p class="text-[14px] font-black uppercase italic mb-4 text-white group-hover:text-red-500 transition-colors tracking-tight">${exName}</p>
+                                        <div class="space-y-1.5">
+                                            ${(e.series_detalle || e.series || []).sort((a,b)=>a.numero_serie-b.numero_serie).map(s => `
+                                                <div class="grid grid-cols-4 items-center text-[11px] bg-black/40 p-3.5 rounded-xl border border-white/5 hover:bg-white/[0.05] transition-colors">
+                                                    <span class="text-red-600 font-black italic uppercase tracking-tighter">Set ${s.numero_serie}</span>
+                                                    <span class="text-white font-black text-center">${s.repeticiones} Reps</span>
+                                                    <span class="text-white/60 font-black text-center">${s.peso} Kg</span>
+                                                    <span class="text-white/20 italic text-[10px] text-right">${s.descanso || '-'}</span>
+                                                </div>
+                                            `).join('')}
+                                        </div>
+                                        ${e.comentario ? `
+                                            <div class="mt-4 bg-red-600/5 p-3 rounded-xl border border-red-600/10 flex gap-2">
+                                                <i data-lucide="info" class="w-3 h-3 text-red-600 mt-0.5 shrink-0"></i>
+                                                <p class="text-[10px] text-white/40 italic leading-relaxed font-medium">${e.comentario}</p>
+                                            </div>
+                                        ` : ''}
+                                    </div>`;
+                                }).join('')}
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    document.getElementById('al-rutina-objetivo').innerText = "SIN ASIGNAR";
+                    document.getElementById('student-routine-exercises').innerHTML = `
+                        <div class="col-span-2 text-center py-20 bg-white/[0.01] border-2 border-dashed border-white/5 rounded-[3rem]">
+                            <i data-lucide="skull" class="w-16 h-16 text-white/5 mx-auto mb-4"></i>
+                            <p class="text-white/20 italic font-black uppercase tracking-[0.4em]">Sin estrategia de entrenamiento activa</p>
+                        </div>
+                    `;
+                }
 
-			} else {
-				// --- 2. MODO PROFESOR / ADMIN / SUPERVISOR (VISTA STAFF) ---
-				if(studentView) studentView.classList.add('hidden');
-				if(list) {
-					list.classList.remove('hidden');
-					list.className = "space-y-4 min-h-[400px] overflow-y-auto custom-scrollbar flex-1 pr-2 pb-10"; 
-				}
-				if(titleEl) titleEl.innerText = "Control de Rutinas";
-				
-				// Filtramos alumnos con planes de Musculación
-				const alRutinas = state.alumnos.filter(a => {
-					const planNombre = (a.plan?.nombre || "").toLowerCase();
-					const normalized = planNombre.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-					return normalized.includes('musculacion') || normalized.includes('completo') || normalized.includes('personalizado');
-				});
+            } else {
+                // --- 2. MODO PROFESOR / ADMIN / SUPERVISOR (VISTA STAFF) ---
+                if(studentView) studentView.classList.add('hidden');
+                if(list) {
+                    list.classList.remove('hidden');
+                    list.className = "space-y-4 min-h-[400px] overflow-y-auto custom-scrollbar flex-1 pr-2 pb-10"; 
+                }
+                if(titleEl) titleEl.innerText = "Control de Rutinas";
+                
+                // Filtramos alumnos con planes de Musculación
+                const alRutinas = state.alumnos.filter(a => {
+                    const planNombre = (a.plan?.nombre || "").toLowerCase();
+                    const normalized = planNombre.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                    return normalized.includes('musculacion') || normalized.includes('completo') || normalized.includes('personalizado');
+                });
 
-				if (alRutinas.length === 0) {
-					list.innerHTML = `
-						<div class="col-span-full p-20 glass-card rounded-[3rem] text-center border-2 border-dashed border-white/5">
-							<i data-lucide="users" class="w-16 h-16 text-white/5 mx-auto mb-4"></i>
-							<p class="text-white/20 italic font-black uppercase tracking-widest">No se encontraron alumnos con planes de musculación.</p>
-						</div>
-					`;
-				} else {
-					const hoy = new Date().toISOString().split('T')[0];
+                if (alRutinas.length === 0) {
+                    list.innerHTML = `
+                        <div class="col-span-full p-20 glass-card rounded-[3rem] text-center border-2 border-dashed border-white/5">
+                            <i data-lucide="users" class="w-16 h-16 text-white/5 mx-auto mb-4"></i>
+                            <p class="text-white/20 italic font-black uppercase tracking-widest">No se encontraron alumnos con planes de musculación.</p>
+                        </div>
+                    `;
+                } else {
+                    const hoy = new Date().toISOString().split('T')[0];
 
-					// Renderizamos la lista usando el formato IDÉNTICO a la sección de Alumnos
-					list.innerHTML = alRutinas.map(a => {
-						const estaVencido = !a.fecha_vencimiento || a.fecha_vencimiento < hoy;
-						const colorEstado = estaVencido ? 'bg-red-600' : 'bg-green-600';
-						const textoEstado = estaVencido ? 'VENCIDA' : 'AL DÍA';
-						const colorBadge = estaVencido ? 'text-red-500 bg-red-500/10 border-red-500/20' : 'text-green-500 bg-green-500/10 border-green-500/20';
+                    // Renderizamos la lista usando el formato IDÉNTICO a la sección de Alumnos
+                    list.innerHTML = alRutinas.map(a => {
+                        const estaVencido = !a.fecha_vencimiento || a.fecha_vencimiento < hoy;
+                        const colorEstado = estaVencido ? 'bg-red-600' : 'bg-green-600';
+                        const textoEstado = estaVencido ? 'VENCIDA' : 'AL DÍA';
+                        const colorBadge = estaVencido ? 'text-red-500 bg-red-500/10 border-red-500/20' : 'text-green-500 bg-green-500/10 border-green-500/20';
 
-						const initials = a.nombre_completo ? a.nombre_completo.substring(0,2).toUpperCase() : "??";
-						const planNombre = a.plan ? a.plan.nombre : 'Sin Plan';
+                        const initials = a.nombre_completo ? a.nombre_completo.substring(0,2).toUpperCase() : "??";
+                        const planNombre = a.plan ? a.plan.nombre : 'Sin Plan';
 
-						// Lógica del botón Nueva Rutina (Bloqueado si está vencido el plan)
-						const btnNuevaRutina = estaVencido 
-							? `<button class="px-6 py-3 bg-white/5 text-white/20 rounded-xl text-[10px] font-black uppercase italic cursor-not-allowed flex items-center gap-2 border border-white/5 opacity-50">
-									<i data-lucide="lock" class="w-3.5 h-3.5"></i>
-									<span>Nueva Rutina</span>
-								</button>`
-							: `<button onclick="openRoutineEditor(${a.id}, false)" class="px-6 py-3 viking-bg-red text-black rounded-xl text-[10px] font-black uppercase italic hover:scale-105 transition-all shadow-lg flex items-center gap-2">
-									<i data-lucide="plus-circle" class="w-3.5 h-3.5"></i>
-									<span>Nueva Rutina</span>
-								</button>`;
+                        // Lógica del botón Nueva Rutina (Bloqueado si está vencido el plan)
+                        const btnNuevaRutina = estaVencido 
+                            ? `<button class="px-6 py-3 bg-white/5 text-white/20 rounded-xl text-[10px] font-black uppercase italic cursor-not-allowed flex items-center gap-2 border border-white/5 opacity-50">
+                                    <i data-lucide="lock" class="w-3.5 h-3.5"></i>
+                                    <span>Nueva Rutina</span>
+                                </button>`
+                            : `<button onclick="openRoutineEditor(${a.id}, false)" class="px-6 py-3 viking-bg-red text-black rounded-xl text-[10px] font-black uppercase italic hover:scale-105 transition-all shadow-lg flex items-center gap-2">
+                                    <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i>
+                                    <span>Nueva Rutina</span>
+                                </button>`;
 
-						return `
-						<div class="glass-card p-5 rounded-3xl border-white/5 flex flex-col md:flex-row md:items-center gap-6 hover:border-red-600/20 transition-all group relative overflow-hidden bg-gradient-to-r from-white/[0.01] to-transparent">
-							<!-- Barra lateral decorativa según estado del plan -->
-							<div class="absolute left-0 top-0 bottom-0 w-1.5 ${colorEstado} opacity-40 group-hover:opacity-100 transition-opacity"></div>
-							
-							<!-- COLUMNA 1: IDENTIDAD -->
-							<div class="flex items-center gap-4 w-full md:w-1/3">
-								<div class="w-14 h-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center font-black text-white text-lg italic shadow-lg group-hover:bg-red-600 group-hover:text-black transition-colors shrink-0">
-									${initials}
-								</div>
-								<div class="overflow-hidden">
-									<h4 class="text-sm font-black uppercase italic text-white group-hover:text-red-500 transition-colors truncate tracking-tighter">${a.nombre_completo}</h4>
-									<div class="flex flex-col mt-1">
-										<p class="text-[10px] text-white-500 font-bold flex items-center gap-1.5 uppercase tracking-widest truncate">
-											<i data-lucide="id-card" class="w-3 h-3"></i> ${a.dni}
-										</p>
-									</div>
-								</div>
-							</div>
+                        return `
+                        <div class="glass-card p-5 rounded-3xl border-white/5 flex flex-col md:flex-row md:items-center gap-6 hover:border-red-600/20 transition-all group relative overflow-hidden bg-gradient-to-r from-white/[0.01] to-transparent">
+                            <!-- Barra lateral decorativa según estado del plan -->
+                            <div class="absolute left-0 top-0 bottom-0 w-1.5 ${colorEstado} opacity-40 group-hover:opacity-100 transition-opacity"></div>
+                            
+                            <!-- COLUMNA 1: IDENTIDAD -->
+                            <div class="flex items-center gap-4 w-full md:w-1/3">
+                                <div class="w-14 h-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center font-black text-white text-lg italic shadow-lg group-hover:bg-red-600 group-hover:text-black transition-colors shrink-0">
+                                    ${initials}
+                                </div>
+                                <div class="overflow-hidden">
+                                    <h4 class="text-sm font-black uppercase italic text-white group-hover:text-red-500 transition-colors truncate tracking-tighter">${a.nombre_completo}</h4>
+                                    <div class="flex flex-col mt-1">
+                                        <p class="text-[10px] text-white-500 font-bold flex items-center gap-1.5 uppercase tracking-widest truncate">
+                                            <i data-lucide="id-card" class="w-3 h-3"></i> ${a.dni}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
 
-							<!-- COLUMNA 2: PLAN Y ESTADO (ESTILO ALUMNOS) -->
-							<div class="flex-1 border-t md:border-t-0 md:border-l border-white/5 pt-4 md:pt-0 md:pl-8">
-								<div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
-									
-									<!-- Info Plan -->
-									<div>
-										<p class="text-[9px] text-white-500 font-black uppercase tracking-[0.2em] mb-1 flex items-center gap-1.5">
-											<i data-lucide="ticket" class="w-3 h-3 text-red-600"></i> Plan Actual
-										</p>
-										<p class="text-sm font-black uppercase italic text-white truncate tracking-tight">${planNombre}</p>
-									</div>
+                            <!-- COLUMNA 2: PLAN Y ESTADO (ESTILO ALUMNOS) -->
+                            <div class="flex-1 border-t md:border-t-0 md:border-l border-white/5 pt-4 md:pt-0 md:pl-8">
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
+                                    
+                                    <!-- Info Plan -->
+                                    <div>
+                                        <p class="text-[9px] text-white-500 font-black uppercase tracking-[0.2em] mb-1 flex items-center gap-1.5">
+                                            <i data-lucide="ticket" class="w-3 h-3 text-red-600"></i> Plan Actual
+                                        </p>
+                                        <p class="text-sm font-black uppercase italic text-white truncate tracking-tight">${planNombre}</p>
+                                    </div>
 
-									<!-- Estado y Fechas -->
-									<div class="flex flex-row md:flex-col items-center md:items-start justify-between gap-2">
-										<div class="flex items-center gap-2">
-											<span class="px-3 py-1 rounded-lg text-[9px] font-black uppercase border ${colorBadge} tracking-widest">
-												${textoEstado}
-											</span>
-										</div>
-										<p class="text-[10px] text-white-500 font-bold italic flex items-center gap-1">
-											Vence: <span class="text-white">${a.fecha_vencimiento || 'N/A'}</span>
-										</p>
-									</div>
-								</div>
-							</div>
+                                    <!-- Estado y Fechas -->
+                                    <div class="flex flex-row md:flex-col items-center md:items-start justify-between gap-2">
+                                        <div class="flex items-center gap-2">
+                                            <span class="px-3 py-1 rounded-lg text-[9px] font-black uppercase border ${colorBadge} tracking-widest">
+                                                ${textoEstado}
+                                            </span>
+                                        </div>
+                                        <p class="text-[10px] text-white-500 font-bold italic flex items-center gap-1">
+                                            Vence: <span class="text-white">${a.fecha_vencimiento || 'N/A'}</span>
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
 
-							<!-- COLUMNA 3: ACCIONES ESPECÍFICAS MUSCULACIÓN -->
-							<div class="flex items-center justify-end border-t md:border-t-0 border-white/5 pt-3 md:pt-0 gap-2">
-								<!-- FICHA TÉCNICA -->
-								<button onclick="openFichaTecnica(${a.id})" class="p-3 bg-white/5 hover:bg-white/10 border border-white/10 text-white rounded-xl transition-all" title="Ficha Técnica">
-									<i data-lucide="clipboard-list" class="w-4 h-4"></i>
-								</button>
-								
-								<!-- HISTORIAL (Azul Sólido) -->
-								<button onclick="openHistorialRutinas(${a.id})" class="p-3 bg-blue-700 hover:bg-blue-800 text-white rounded-xl shadow-lg transition-all" title="Historial">
-									<i data-lucide="history" class="w-4 h-4"></i>
-								</button>
+                            <!-- COLUMNA 3: ACCIONES ESPECÍFICAS MUSCULACIÓN -->
+                            <div class="flex items-center justify-end border-t md:border-t-0 border-white/5 pt-3 md:pt-0 gap-2">
+                                <!-- FICHA TÉCNICA -->
+                                <button onclick="openFichaTecnica(${a.id})" class="p-3 bg-white/5 hover:bg-white/10 border border-white/10 text-white rounded-xl transition-all" title="Ficha Técnica">
+                                    <i data-lucide="clipboard-list" class="w-4 h-4"></i>
+                                </button>
+                                
+                                <!-- HISTORIAL (Azul Sólido) -->
+                                <button onclick="openHistorialRutinas(${a.id})" class="p-3 bg-blue-700 hover:bg-blue-800 text-white rounded-xl shadow-lg transition-all" title="Historial">
+                                    <i data-lucide="history" class="w-4 h-4"></i>
+                                </button>
 
-								<!-- NUEVA RUTINA (Rojo Vikingo) -->
-								${btnNuevaRutina}
-							</div>
-						</div>
-						`;
-					}).join('');
-				}
-			}
-			if(window.lucide) lucide.createIcons();
-		}
+                                <!-- NUEVA RUTINA (Rojo Vikingo) -->
+                                ${btnNuevaRutina}
+                            </div>
+                        </div>
+                        `;
+                    }).join('');
+                }
+            }
+            if(window.lucide) lucide.createIcons();
+        }
 
         async function openHistorialRutinas(alumnoId) {
             const al = state.alumnos.find(a => a.id === alumnoId);
@@ -1950,6 +1947,64 @@
                     </div>`;
             }
         }
+
+		// =========================================================
+		// 4. GUARDADO DE RUTINA (FIX: ACTIVACIÓN Y PERSISTENCIA)
+		// =========================================================
+		const editorForm = document.getElementById('form-rutina-editor');
+		if (editorForm) {
+			editorForm.onsubmit = async (e) => {
+				e.preventDefault();
+				const alumnoId = document.getElementById('rutina-editor-alumno-id').value;
+				
+				const dias = [];
+				document.querySelectorAll('.rutina-dia-card').forEach(dayCard => {
+					const ejercicios = [];
+					dayCard.querySelectorAll('.exercise-row').forEach(exRow => {
+						const series = [];
+						exRow.querySelectorAll('.serie-row').forEach(sRow => {
+							series.push({
+								numero_serie: parseInt(sRow.dataset.serieNum),
+								repeticiones: sRow.querySelector('.serie-reps').value,
+								peso: sRow.querySelector('.serie-weight').value,
+								descanso: sRow.querySelector('.serie-rest').value
+							});
+						});
+
+						ejercicios.push({
+							ejercicio_id: parseInt(exRow.querySelector('.exercise-id').value) || null,
+							exercise_name: exRow.querySelector('.text-[13px]')?.innerText || "Ejercicio", 
+							series_detalle: series,
+							comentario: exRow.querySelector('.exercise-comment')?.value || ""
+						});
+					});
+
+					dias.push({
+						nombre_dia: dayCard.querySelector('.day-title').value,
+						ejercicios: ejercicios
+					});
+				});
+
+				const payload = {
+					usuario_id: parseInt(alumnoId),
+					objetivo: document.getElementById('rutina-objetivo').value,
+					fecha_vencimiento: document.getElementById('rutina-vencimiento').value,
+					activo: true, // <--- INDISPENSABLE PARA QUE QUEDE ACTIVA
+					dias: dias
+				};
+
+				const res = await apiFetch('/rutinas', 'POST', payload);
+				
+				if(!res.error) {
+					closeModal('modal-rutina-editor');
+					showVikingToast("¡Arsenal de combate actualizado!");
+					if (typeof fetchAlumnos === 'function') await fetchAlumnos();
+					renderRutinas();
+				} else {
+					showVikingToast("Error al forjar la rutina: " + res.error, true);
+				}
+			};
+		}
 
         async function apiFetch(endpoint, method = 'GET', body = null) {
 			const token = localStorage.getItem('viking_token');
