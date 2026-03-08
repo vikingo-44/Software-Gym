@@ -5199,40 +5199,6 @@ if (editorForm) {
 			if (window.lucide) lucide.createIcons();
 		}
 
-
-			// ==========================================
-			// NUEVA LÓGICA DE ALUMNOS (FIX PANTALLA VACÍA)
-			// ==========================================
-
-			// 1. Función de Entrada
-			function renderAlumnosSection() {
-				filterAlumnos('todos');
-			}
-
-			function toggleMobileMenu() {
-				const sidebar = document.getElementById('sidebar');
-				const overlay = document.getElementById('mobile-overlay');
-				
-				// Alternamos la clase que creamos en el CSS
-				sidebar.classList.toggle('mobile-open');
-				overlay.classList.toggle('active');
-			}
-
-			// Función para cerrar sesión y limpiar persistencia
-				function cerrarSesionVikinga() {
-					// 1. Borrar datos de sesión
-					localStorage.removeItem('viking_user');
-					localStorage.removeItem('viking_token');
-					
-					// 2. Limpiar estado global
-					if (typeof state !== 'undefined') {
-						state.user = null;
-					}
-
-					// 3. Recargar página (al estar vacío el localStorage, window.onload mostrará el login)
-					location.reload();
-				}
-
 			// --- VARIABLES DE ESTADO PARA PAGINACIÓN ---
             if (!state.currentPageAlumnos) state.currentPageAlumnos = 1;
             state.itemsPerPage = 15;
@@ -5351,7 +5317,6 @@ if (editorForm) {
 
             /**
              * 2. Función de Filtrado
-             * SOLUCIÓN: Reinicio total de clases para evitar que los botones se queden rojos (marcados).
              */
             function filterAlumnos(filtro) {
                 state.currentPageAlumnos = 1; // Siempre volvemos a la página 1 al filtrar
@@ -5384,7 +5349,9 @@ if (editorForm) {
             }
 
 
-            // 3. Función de Búsqueda
+            /**
+             * 3. Función de Búsqueda
+             */
             function searchAlumno(query) {
                 state.currentPageAlumnos = 1; // Siempre volvemos a la página 1 al buscar
                 if(!query) { filterAlumnos('todos'); return; }
@@ -5402,18 +5369,14 @@ if (editorForm) {
 
             /**
              * 4. Genera los botones de la paginación
-             * MEJORA: Los botones de Anterior/Siguiente ahora se "grisan" (desactivan) si no hay más páginas.
              */
             function renderPaginationControls(totalPages) {
                 const paginator = document.getElementById('alumnos-pagination');
                 if (!paginator) return;
                 
-                // Si no hay resultados o solo hay una página, ocultamos paginador para una interfaz más limpia
+                // Si no hay resultados o solo hay una página, ocultamos paginador
                 if (totalPages <= 1) {
                     paginator.innerHTML = "";
-                    if (totalPages === 1) {
-                        // Opcional: Podríamos mostrar un indicador de página 1 única, pero mejor nada.
-                    }
                     return;
                 }
 
@@ -5466,11 +5429,50 @@ if (editorForm) {
                 state.currentPageAlumnos = newPage;
                 renderAlumnosList(state.filteredAlumnos);
                 
-                // Scroll arriba del contenedor suavemente para que el usuario vea el inicio de la nueva página
+                // Scroll arriba del contenedor suavemente
                 const contenedor = document.getElementById('lista-alumnos-container');
                 if(contenedor) {
                     contenedor.scrollTo({ top: 0, behavior: 'smooth' });
                 }
+            }
+
+            // ==========================================
+            // NUEVA LÓGICA DE ALUMNOS (FIX PANTALLA VACÍA)
+            // ==========================================
+
+            /**
+             * 6. Función de Entrada (Trigger inicial)
+             */
+            function renderAlumnosSection() {
+                filterAlumnos('todos');
+            }
+
+            /**
+             * 7. Utilidades Generales de la Interfaz
+             */
+            function toggleMobileMenu() {
+                const sidebar = document.getElementById('sidebar');
+                const overlay = document.getElementById('mobile-overlay');
+                
+                sidebar.classList.toggle('mobile-open');
+                overlay.classList.toggle('active');
+            }
+
+            /**
+             * 8. Cierre de Sesión
+             */
+            function cerrarSesionVikinga() {
+                // 1. Borrar datos de sesión
+                localStorage.removeItem('viking_user');
+                localStorage.removeItem('viking_token');
+                
+                // 2. Limpiar estado global
+                if (typeof state !== 'undefined') {
+                    state.user = null;
+                }
+
+                // 3. Recargar página
+                location.reload();
             }
 
             // --- VINCULACIÓN CON WINDOW (Para acceso desde el HTML) ---
@@ -5479,6 +5481,9 @@ if (editorForm) {
             window.renderAlumnosList = renderAlumnosList;
             window.changePageAlumnos = changePageAlumnos;
             window.renderPaginationControls = renderPaginationControls;
+            window.renderAlumnosSection = renderAlumnosSection;
+            window.toggleMobileMenu = toggleMobileMenu;
+            window.cerrarSesionVikinga = cerrarSesionVikinga;
 
         document.getElementById('form-nuevo-ejercicio-lib').onsubmit = async (e) => {
             e.preventDefault();
