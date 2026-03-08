@@ -3538,7 +3538,7 @@
 			if(document.getElementById('al-sucursal')) document.getElementById('al-sucursal').value = "";
 			
 			loadSucursales();
-			openModal('modal-alumno'); 
+			if (typeof openModal === 'function') openModal('modal-alumno'); 
 		}
 
         function openEditAlumno(id) {
@@ -3552,28 +3552,25 @@
 			document.getElementById('al-email').value = al.email || ""; 
 			document.getElementById('al-plan').value = al.plan_id || ""; 
 			
-			// NUEVO: Asignamos la sucursal del alumno al selector
-			if(document.getElementById('al-sucursal')) document.getElementById('al-sucursal').value = al.sucursal_id || "";
+			// Asignar sucursal en edición
+			const selSuc = document.getElementById('al-sucursal');
+			if(selSuc) selSuc.value = al.sucursal_id || "";
 			
 			document.getElementById('al-peso').value = al.peso || "";
 			document.getElementById('al-altura').value = al.altura || ""; 
 			document.getElementById('al-imc').value = al.imc || ""; 
 			document.getElementById('al-fecha-renovacion').value = al.fecha_ultima_renovacion || "";
 			document.getElementById('al-fecha-vencimiento').value = al.fecha_vencimiento || "";
-			
 			document.getElementById('al-fecha-nacimiento').value = al.fecha_nacimiento || "";
 			document.getElementById('al-fecha-certificado').value = al.fecha_certificado || "";
 			document.getElementById('al-certificado-entregado').checked = al.certificado_entregado || false;
 			
 			const delBtn = document.getElementById('btn-delete-alumno'); 
 			if(state.user.rol_nombre === "Administrador" || state.user.rol_nombre === "Supervisor") delBtn.classList.remove('hidden');
-			
 			delBtn.onclick = () => deleteRecord('alumnos', id, 'modal-alumno', fetchAlumnos);
 			
-			// Aseguramos que las sucursales estén cargadas en el select antes de abrir
-			loadSucursales(); 
-			
-			openModal('modal-alumno');
+			loadSucursales();
+			if (typeof openModal === 'function') openModal('modal-alumno');
 		}
 
         document.getElementById('form-alumno').onsubmit = async (e) => {
@@ -4017,7 +4014,7 @@
 				if (container) {
 					if (sucursales.length === 0) {
 						container.innerHTML = `
-							<div class="col-span-full py-20 text-center opacity-30">
+							<div class="col-span-full py-20 text-center opacity-30 italic font-black uppercase">
 								<i data-lucide="map-pin-off" class="w-12 h-12 mx-auto mb-4"></i>
 								<p class="font-black uppercase italic">No hay sedes registradas en el arsenal</p>
 							</div>`;
@@ -4748,6 +4745,11 @@
 			 * 4. ACTUALIZACIÓN DE SWITCHVIEW
 			 * Asegúrate de que al cambiar a esta vista, traiga los datos.
 			 */
+
+			if (typeof window.switchView === 'function' && !window.switchView.isVikingo) {
+				window.originalSwitchView = window.switchView;
+			}
+
 			const originalSwitchView = window.switchView;
 
 			window.switchView = function(view) {
@@ -4812,6 +4814,7 @@
 					setTimeout(() => lucide.createIcons(), 50);
 				}
 			};
+			window.switchView.isVikingo = true;
 
 			console.log("✅ Sistema de navegación extendido correctamente.");
 			
@@ -5255,7 +5258,11 @@
 
 				if (response.ok) {
 					showToast("Sede Vikinga establecida");
-					closeModal('modal-sucursal');
+					if (typeof closeModal === 'function') {
+						closeModal('modal-sucursal');
+					} else {
+						document.getElementById('modal-sucursal').classList.add('hidden');
+					}
 					loadSucursales();
 				} else {
 					const error = await response.json();
