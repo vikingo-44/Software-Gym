@@ -2833,7 +2833,7 @@
                                     <p class="text-[8px] text-red-500 font-bold uppercase">Reposición Urgente</p>
                                 </div>
                             </div>
-                            <button onclick="switchView('caja')" class="text-[9px] border border-white/10 text-gray-400 px-2 py-1 rounded hover:bg-white/10 transition-colors italic font-black uppercase">Ver</button>
+                            <button onclick="switchView('stock')" class="text-[9px] border border-white/10 text-gray-400 px-2 py-1 rounded hover:bg-white/10 transition-colors italic font-black uppercase">Ver</button>
                         </div>
                     `).join('');
                 }
