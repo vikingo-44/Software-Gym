@@ -2527,37 +2527,22 @@
 				}
 			}
 
-			// 5. Totales
+			// 5. Totales (Con bloqueo de seguridad por Rol)
             const calcBalance = calcIngresos - calcGastos;
-            
-            // --- LÓGICA DE PRIVACIDAD PARA STAFF (ADMINISTRACION) ---
-            // 1. Obtenemos el usuario del storage
-            const vikingoUser = JSON.parse(localStorage.getItem('vikingo_user') || '{}');
-            
-            // 2. Limpiamos el nombre del rol (lo pasamos a minúsculas y quitamos espacios)
-            // Esto evita errores si en la DB dice "Administracion" o "administracion"
-            const rolActual = (vikingoUser.rol_nombre || "").toLowerCase().trim();
+            const uData = JSON.parse(localStorage.getItem('vikingo_user') || '{}');
+            const rol = (uData.rol_nombre || "").toLowerCase().trim();
 
-            // 3. Definimos quién tiene prohibido ver los totales
-            // Según tu lista, el staff de recepción es "administracion"
-            const esPerfilRestringido = (rolActual === "administracion");
+            // Identificamos el contenedor (el grid que envuelve los 3 cuadros de totales)
+            const elIng = document.getElementById('caja-ingresos');
+            const containerTotales = elIng ? elIng.closest('.grid') : null;
 
-            // 4. Definimos quién SI puede ver (Administrador o Supervisor)
-            const esJefe = (rolActual === "administrador" || rolActual === "supervisor");
-
-            // 5. Aplicamos la restricción
-            if (esPerfilRestringido && !esJefe) {
-                // Si es del staff de recepción, ponemos asteriscos o texto de bloqueo
-                if(document.getElementById('caja-ingresos')) document.getElementById('caja-ingresos').innerText = `$ ****`;
-                if(document.getElementById('caja-gastos')) document.getElementById('caja-gastos').innerText = `$ ****`;
-                if(document.getElementById('caja-balance')) {
-                    const eb = document.getElementById('caja-balance');
-                    eb.innerText = `RESTRINGIDO`;
-                    eb.className = `text-xl font-black italic text-white/20 uppercase tracking-tighter`;
-                }
-                console.log("🛡️ Seguridad: Totales ocultos para perfil recepcionista.");
+            if (rol === "administracion") {
+                // Si es staff de recepción, desaparece el bloque completo
+                if (containerTotales) containerTotales.style.setProperty('display', 'none', 'important');
             } else {
-                // Si es Administrador, Supervisor o cualquier otro, ve todo normal
+                // Si es Administrador o Supervisor, se muestra y se actualizan los números
+                if (containerTotales) containerTotales.style.setProperty('display', 'grid', 'important');
+                
                 if(document.getElementById('caja-ingresos')) document.getElementById('caja-ingresos').innerText = `$ ${calcIngresos.toLocaleString()}`;
                 if(document.getElementById('caja-gastos')) document.getElementById('caja-gastos').innerText = `$ ${calcGastos.toLocaleString()}`;
                 if(document.getElementById('caja-balance')) {
