@@ -1155,8 +1155,7 @@
 			}
 		}
 
-		// --- REEMPLAZA TU FUNCIÓN openFichaTecnica POR ESTA VERSIÓN CON DISEÑO DE FILAS ---
-		/**
+/**
  * ============================================================
  * MÓDULO DE RUTINAS VIKINGAS - SISTEMA INTEGRADO PRO
  * ============================================================
@@ -1179,19 +1178,21 @@ if (!state.routineEditor) {
 
 /**
  * 2. CARGA DE METADATOS (Sincronización con initApp)
- * Evita el ReferenceError al iniciar sesión
+ * FIX: Ajuste de rutas para evitar duplicar /api/ y asegurar carga en state
  */
 window.loadMusculacionMetadata = async function() {
     try {
+        // En la mayoría de las configuraciones, apiFetch ya antepone /api. 
+        // Si tus rutas en main.py son @app.get("/api/rutinas/..."), usamos /rutinas/...
         const [grupos, ejercicios] = await Promise.all([
-            apiFetch('/api/rutinas/grupos-musculares'),
-            apiFetch('/api/rutinas/ejercicios')
+            apiFetch('/rutinas/grupos-musculares'),
+            apiFetch('/rutinas/ejercicios')
         ]);
         
         state.gruposMusculares = Array.isArray(grupos) ? grupos : [];
         state.ejerciciosLibreria = Array.isArray(ejercicios) ? ejercicios : [];
         
-        console.log("⚔️ Armería Vikinga sincronizada:", state.ejerciciosLibreria.length, "ejercicios disponibles.");
+        console.log("⚔️ Armería Vikinga sincronizada:", state.ejerciciosLibreria.length, "ejercicios.");
         return true;
     } catch (err) {
         console.error("Error cargando metadatos de musculación:", err);
@@ -1212,7 +1213,7 @@ window.renderRutinas = async function() {
         if(list) list.classList.add('hidden');
         if(studentView) studentView.classList.remove('hidden');
         if(titleEl) titleEl.innerText = "Mi Arsenal de Entrenamiento";
-        // Aquí podrías llamar a una función específica para el alumno si la tienes
+        // Aquí podrías llamar a una función específica para el alumno
     } else {
         if(studentView) studentView.classList.add('hidden');
         if(list) list.classList.remove('hidden');
@@ -1224,7 +1225,6 @@ window.renderRutinas = async function() {
 window.filterRutinas = function(filtro) {
     if(!state.alumnos) return;
     
-    // UI: Feedback de botones de filtro
     document.querySelectorAll('.filter-btn-rutina').forEach(btn => {
         btn.classList.remove('bg-red-600', 'text-black');
         btn.classList.add('text-white-500', 'hover:text-white');
@@ -1278,9 +1278,9 @@ window.renderRutinasList = function(listaDatos) {
                 <p class="text-xs font-black uppercase italic text-white truncate">${a.plan?.nombre || 'Sin Plan'}</p>
             </div>
             <div class="flex items-center gap-2">
-                <button onclick="openFichaTecnica(${a.id})" class="p-3 bg-white/5 hover:bg-white/10 text-white rounded-xl transition-all" title="Ver Ficha"><i data-lucide="clipboard-list" class="w-4 h-4"></i></button>
-                <button onclick="openHistorialRutinas(${a.id})" class="p-3 bg-blue-700/10 hover:bg-blue-700 text-blue-500 hover:text-white rounded-xl transition-all" title="Historial"><i data-lucide="history" class="w-4 h-4"></i></button>
-                <button onclick="openRoutineEditor(${a.id})" class="px-6 py-3 viking-bg-red text-black rounded-xl text-[10px] font-black uppercase italic hover:scale-105 transition-all flex items-center gap-2 shadow-lg shadow-red-600/10">
+                <button onclick="window.openFichaTecnica(${a.id})" class="p-3 bg-white/5 hover:bg-white/10 text-white rounded-xl transition-all" title="Ver Ficha"><i data-lucide="clipboard-list" class="w-4 h-4"></i></button>
+                <button onclick="window.openHistorialRutinas(${a.id})" class="p-3 bg-blue-700/10 hover:bg-blue-700 text-blue-500 hover:text-white rounded-xl transition-all" title="Historial"><i data-lucide="history" class="w-4 h-4"></i></button>
+                <button onclick="window.openRoutineEditor(${a.id})" class="px-6 py-3 viking-bg-red text-black rounded-xl text-[10px] font-black uppercase italic hover:scale-105 transition-all flex items-center gap-2 shadow-lg shadow-red-600/10">
                     <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i> NUEVA RUTINA
                 </button>
             </div>
@@ -1302,7 +1302,7 @@ window.openFichaTecnica = async function(alumnoId) {
     document.getElementById('ficha-nombre').innerText = al.nombre_completo;
     document.getElementById('ficha-dni').innerText = "DNI: " + al.dni;
 
-    const res = await apiFetch(`/api/rutinas/usuario/${alumnoId}`);
+    const res = await apiFetch(`/rutinas/usuario/${alumnoId}`);
     const rutinas = Array.isArray(res) ? res : (res && res.id ? [res] : []);
 
     if (rutinas.length === 0) {
@@ -1317,7 +1317,7 @@ window.openFichaTecnica = async function(alumnoId) {
                         <p class="text-[10px] text-white/30 font-bold uppercase mt-2 italic flex items-center gap-2"><i data-lucide="calendar" class="w-3.5 h-3.5 text-red-600"></i> Vence: ${rutina.fecha_vencimiento}</p>
                     </div>
                     <div class="flex gap-2">
-                        <button onclick="closeModal('modal-ficha-tecnica'); openRoutineEditor(${alumnoId}, true)" class="px-6 py-3 bg-white/5 rounded-xl hover:text-red-600 transition-all font-black uppercase italic text-[10px] border border-white/5">Editar</button>
+                        <button onclick="closeModal('modal-ficha-tecnica'); window.openRoutineEditor(${alumnoId})" class="px-6 py-3 bg-white/5 rounded-xl hover:text-red-600 transition-all font-black uppercase italic text-[10px] border border-white/5">Editar</button>
                     </div>
                 </div>
                 <div class="p-8 space-y-8">
@@ -1358,7 +1358,7 @@ window.openRoutineEditor = async function(alumnoId) {
     const al = state.alumnos.find(a => a.id === alumnoId);
     if (!al) return;
 
-    // Resetear Estado del Editor
+    // Reiniciar Estado del Editor
     state.routineEditor = {
         alumnoId: alumnoId,
         currentStep: 1,
@@ -1398,7 +1398,7 @@ window.renderEditorStep = function() {
         const dayIdx = step - 2;
         label.innerText = `PASO ${step}: CONFIGURACIÓN DÍA ${dayIdx + 1}`;
         body.innerHTML = renderDayStep(dayIdx);
-        initDaySearch(dayIdx);
+        initDaySearch(dayIdx); // Iniciamos el buscador para este paso
     } else {
         label.innerText = `PASO ${total}: RESUMEN Y CONFIRMACIÓN`;
         body.innerHTML = renderSummaryStep();
@@ -1436,7 +1436,7 @@ function renderStep1() {
                 <div class="grid grid-cols-6 gap-3">
                     ${[1,2,3,4,5,6].map(n => `
                         <button onclick="state.routineEditor.cantDias = ${n}; window.renderEditorStep();" 
-                            class="p-5 rounded-2xl border-2 font-black italic text-lg transition-all ${state.routineEditor.cantDias === n ? 'bg-red-600 text-black border-red-600' : 'bg-white/5 border-white/5 text-white/30'}">
+                            class="p-5 rounded-2xl border-2 font-black italic text-lg transition-all ${state.routineEditor.cantDias === n ? 'bg-red-600 text-black border-red-600 shadow-lg' : 'bg-white/5 border-white/5 text-white/30'}">
                             ${n}
                         </button>
                     `).join('')}
@@ -1528,13 +1528,13 @@ function renderBasicSeriesView(dayIdx, exIdx, ex) {
         </div>
         ${ex.series.map((s, sIdx) => `
             <div class="grid grid-cols-4 gap-3 bg-black/60 p-4 rounded-2xl border border-white/5">
-                <span class="text-xs font-black text-red-600 italic pl-2">#${sIdx+1}</span>
-                <input type="text" value="${s.reps}" oninput="state.routineEditor.dias[${dayIdx}].ejercicios[${exIdx}].series[${sIdx}].reps = this.value" class="bg-transparent text-center font-black text-white text-sm outline-none">
-                <input type="text" value="${s.peso}" oninput="state.routineEditor.dias[${dayIdx}].ejercicios[${exIdx}].series[${sIdx}].peso = this.value" class="bg-transparent text-center font-black text-white text-sm outline-none">
-                <input type="text" value="${s.descanso}" oninput="state.routineEditor.dias[${dayIdx}].ejercicios[${exIdx}].series[${sIdx}].descanso = this.value" class="bg-transparent text-center text-[11px] italic text-white/40 outline-none">
+                <span class="text-xs font-black text-red-600 italic pl-2 flex items-center">#${sIdx+1}</span>
+                <input type="text" value="${s.reps}" oninput="state.routineEditor.dias[${dayIdx}].ejercicios[${exIdx}].series[${sIdx}].reps = this.value" class="bg-transparent text-center font-black text-white text-sm outline-none" placeholder="Reps">
+                <input type="text" value="${s.peso}" oninput="state.routineEditor.dias[${dayIdx}].ejercicios[${exIdx}].series[${sIdx}].peso = this.value" class="bg-transparent text-center font-black text-white text-sm outline-none" placeholder="Peso">
+                <input type="text" value="${s.descanso}" oninput="state.routineEditor.dias[${dayIdx}].ejercicios[${exIdx}].series[${sIdx}].descanso = this.value" class="bg-transparent text-center text-[11px] italic text-white/40 outline-none" placeholder="Pausa">
             </div>
         `).join('')}
-        <button onclick="window.addSerie(${dayIdx}, ${exIdx})" class="text-[10px] font-black uppercase text-red-600 mt-4 ml-2 flex items-center gap-2 hover:text-white"><i data-lucide="plus-circle" class="w-4 h-4"></i> Añadir Serie</button>
+        <button onclick="window.addSerie(${dayIdx}, ${exIdx})" class="text-[10px] font-black uppercase text-red-600 mt-4 ml-2 flex items-center gap-2 hover:text-white transition-all"><i data-lucide="plus-circle" class="w-4 h-4"></i> Añadir Serie</button>
     </div>`;
 }
 
@@ -1597,7 +1597,7 @@ window.nextStep = function() {
         state.routineEditor.currentStep++;
         window.renderEditorStep();
     } else {
-        saveRoutine();
+        window.saveRoutine();
     }
 };
 
@@ -1608,7 +1608,7 @@ window.prevStep = function() {
     }
 };
 
-async function saveRoutine() {
+window.saveRoutine = async function() {
     const payload = {
         usuario_id: state.routineEditor.alumnoId,
         objetivo: state.routineEditor.objetivo,
@@ -1631,7 +1631,7 @@ async function saveRoutine() {
         }))
     };
 
-    const res = await apiFetch('/api/rutinas/plan', 'POST', payload);
+    const res = await apiFetch('/rutinas/plan', 'POST', payload);
     if (!res.error) {
         showVikingToast("¡Plan de batalla forjado!");
         closeModal('modal-rutina-editor');
@@ -1642,35 +1642,53 @@ async function saveRoutine() {
 }
 
 /**
- * 7. VINCULACIONES GLOBALES
+ * 7. VINCULACIONES GLOBALES DEL BUSCADOR
  */
 function initDaySearch(dayIdx) {
     const input = document.getElementById(`ex-search-${dayIdx}`);
     const results = document.getElementById(`ex-results-${dayIdx}`);
     const groupFilter = document.getElementById(`group-filter-${dayIdx}`);
-    if(!input || !results) return;
+    
+    if(!input || !results || !groupFilter) return;
 
-    input.oninput = () => {
+    // Función interna para realizar el filtrado
+    const runSearch = () => {
         const query = input.value.toLowerCase();
         const groupId = groupFilter.value;
-        if (query.length < 2 && groupId === 'all') { results.classList.add('hidden'); return; }
+        
+        // Si no hay búsqueda y no hay filtro de grupo, ocultamos
+        if (query.length === 0 && groupId === 'all') { 
+            results.classList.add('hidden'); 
+            return; 
+        }
 
-        const filtered = state.ejerciciosLibreria.filter(ex => 
-            ex.nombre.toLowerCase().includes(query) && 
-            (groupId === 'all' || ex.grupo_muscular_id == groupId)
-        );
+        const filtered = state.ejerciciosLibreria.filter(ex => {
+            const matchesQuery = ex.nombre.toLowerCase().includes(query);
+            const matchesGroup = (groupId === 'all' || ex.grupo_muscular_id == groupId);
+            return matchesQuery && matchesGroup;
+        });
 
-        results.innerHTML = filtered.map(ex => `
-            <div class="p-5 hover:bg-red-600/10 cursor-pointer text-xs font-black uppercase italic text-white/60 border-b border-white/5 flex justify-between items-center" 
-                onclick="window.addExerciseToWizard(${dayIdx}, ${ex.id}, '${ex.nombre}')">
-                <span>${ex.nombre}</span>
-                <i data-lucide="plus" class="w-4 h-4 text-red-600"></i>
-            </div>
-        `).join('');
+        if (filtered.length > 0) {
+            results.innerHTML = filtered.map(ex => `
+                <div class="p-5 hover:bg-red-600/10 cursor-pointer text-xs font-black uppercase italic text-white/60 border-b border-white/5 flex justify-between items-center" 
+                    onclick="window.addExerciseToWizard(${dayIdx}, ${ex.id}, '${ex.nombre}')">
+                    <span>${ex.nombre}</span>
+                    <i data-lucide="plus" class="w-4 h-4 text-red-600"></i>
+                </div>
+            `).join('');
+            results.classList.remove('hidden');
+        } else {
+            results.innerHTML = `<div class="p-5 text-white/20 text-xs italic">No se encontraron resultados</div>`;
+            results.classList.remove('hidden');
+        }
 
-        results.classList.remove('hidden');
         if(window.lucide) lucide.createIcons();
     };
+
+    // Escuchar el input de texto
+    input.oninput = runSearch;
+    // Escuchar el cambio de grupo muscular
+    groupFilter.onchange = runSearch;
 }
 
 window.addExerciseToWizard = (dayIdx, id, nombre) => {
@@ -1700,7 +1718,7 @@ window.renderAlumnosSection = function() {
 };
 
 window.openHistorialRutinas = async function(alumnoId) {
-    await openFichaTecnica(alumnoId);
+    await window.openFichaTecnica(alumnoId);
     const nombreFicha = document.getElementById('ficha-nombre');
     if(nombreFicha) nombreFicha.innerText = "Historial Táctico";
 };
