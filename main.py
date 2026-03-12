@@ -346,6 +346,7 @@ class EjercicioEnRutinaCreate(BaseModel):
     ejercicio_id: int
     series: List[SerieCreate]
     comentario: Optional[str] = ""
+    progreso_json: Optional[str] = None # <--- NUEVO: Para recibir el JSON de semanas
 
 class DiaRutinaCreate(BaseModel):
     nombre_dia: str
@@ -357,6 +358,7 @@ class PlanRutinaCreate(BaseModel):
     descripcion: Optional[str] = ""
     objetivo: str
     fecha_vencimiento: date
+    tipo: Optional[str] = "basica" # <--- NUEVO: 'basica' o 'progreso'
     dias: List[DiaRutinaCreate]
 
 class EjercicioCreate(BaseModel):
@@ -1229,18 +1231,19 @@ def create_plan_rutina(data: PlanRutinaCreate, db: Session = Depends(database.ge
         if not user:
             raise HTTPException(status_code=404, detail="Usuario no encontrado")
 
-        # --- BLOQUEO DE SEGURIDAD VIKINGA: NO SE CREAN RUTINAS SI EL PLAN ESTÁ VENCIDO ---
+        # --- BLOQUEO DE SEGURIDAD VIKINGA ---
         if user.fecha_vencimiento and user.fecha_vencimiento < date.today():
             raise HTTPException(
                 status_code=400, 
                 detail="No se puede asignar una rutina a un alumno con el plan vencido. Debe renovar primero."
             )
 
-        # Desactivar rutinas anteriores
+        # Desactivar rutinas anteriores para que solo haya una activa
         db.query(models.PlanRutina).filter(
             models.PlanRutina.usuario_id == data.usuario_id
         ).update({"activo": False}, synchronize_session=False)
         
+        # Crear la cabecera del plan incluyendo el nuevo campo 'tipo'
         nuevo_plan = models.PlanRutina(
             usuario_id=data.usuario_id,
             nombre_grupo=data.nombre_grupo,
@@ -1248,6 +1251,7 @@ def create_plan_rutina(data: PlanRutinaCreate, db: Session = Depends(database.ge
             objetivo=data.objetivo,
             fecha_vencimiento=data.fecha_vencimiento,
             activo=True,
+            tipo=data.tipo, # <--- GUARDADO DEL TIPO
             fecha_creacion=date.today()
         )
         db.add(nuevo_plan)
@@ -1261,15 +1265,18 @@ def create_plan_rutina(data: PlanRutinaCreate, db: Session = Depends(database.ge
             lista_ejercicios = d.ejercicios if d.ejercicios else []
             
             for e in lista_ejercicios:
+                # Guardamos el ejercicio con su comentario y el JSON de progreso semanal
                 ej_en_rut = models.EjercicioEnRutina(
                     dia_id=nuevo_dia.id,
                     rutina_id=nuevo_plan.id,
                     ejercicio_id=e.ejercicio_id,
-                    comentario=e.comentario
+                    comentario=e.comentario,
+                    progreso_json=e.progreso_json # <--- GUARDADO DE SEMANAS (JSON)
                 )
                 db.add(ej_en_rut)
                 db.flush()
 
+                # Guardamos las series (para modo básico o como respaldo)
                 for s in e.series:
                     nueva_serie = models.SerieEjercicio(
                         ejercicio_en_rutina_id=ej_en_rut.id,

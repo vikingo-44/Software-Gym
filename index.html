@@ -883,6 +883,7 @@
             </div>
 
             <div id="view-rutinas" class="view-content">
+				<!-- CABECERA PRINCIPAL -->
 				<div class="flex justify-between items-center mb-8">
 					<div>
 						<h3 class="text-3xl font-black italic uppercase" id="rutina-title">Rutinas de Alumnos</h3>
@@ -890,17 +891,17 @@
 					</div>
 				</div>
 
+				<!-- BUSCADOR Y FILTROS -->
 				<div class="flex flex-col lg:flex-row gap-4 mb-8">
-					<!-- BUSCADOR -->
 					<div class="flex-1 relative">
 						<i data-lucide="search" class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white-500"></i>
-						<input type="text" 
-							placeholder="Buscar Alumno por nombre o DNI..." 
+						<input type="text" 
+							id="search-rutina-input"
+							placeholder="Buscar Alumno por nombre o DNI..." 
 							oninput="searchRutinaAlumno(this.value)"
-							class="viking-input pl-12 bg-white/5 border-white/10 text-white rounded-2xl focus:border-red-600 transition-all">
+							class="viking-input pl-12 bg-white/5 border-white/10 text-white rounded-2xl focus:border-red-600 transition-all h-[52px]">
 					</div>
 
-					<!-- FILTROS DE ESTADO RUTINA -->
 					<div class="flex bg-white/5 p-1 rounded-2xl border border-white/5 h-[52px] overflow-x-auto no-scrollbar">
 						<button onclick="filterRutinas('todos')" id="filter-rutina-todos" class="filter-btn-rutina px-6 rounded-xl text-[10px] font-black uppercase italic transition-all bg-red-600 text-black whitespace-nowrap">Todos</button>
 						<button onclick="filterRutinas('con')" id="filter-rutina-con" class="filter-btn-rutina px-6 rounded-xl text-[10px] font-black uppercase italic transition-all text-white-500 hover:text-white whitespace-nowrap">Con Rutina</button>
@@ -909,17 +910,54 @@
 					</div>
 				</div>
 
-				<div id="musculacion-student-view" class="hidden glass-card p-10 rounded-[3rem] border-red-600/10 mb-6 space-y-8">
-					<div class="bg-red-600/10 p-6 rounded-3xl border border-red-600/20" id="student-plan-header">
-						<h4 class="text-xl font-black italic uppercase mb-2">MI RUTINA</h4>
-						<p class="text-[11px] text-white-400 font-bold uppercase tracking-widest" id="al-rutina-objetivo">Cargando objetivo...</p>
-					</div>
-					<div class="grid grid-cols-1 md:grid-cols-2 gap-6" id="student-routine-exercises"></div>
+				<!-- VISTA ALUMNO (OCULTA POR DEFECTO) -->
+				<div id="musculacion-student-view" class="hidden space-y-8">
+					<!-- El JS inyectará aquí la rutina personalizada -->
 				</div>
 
+				<!-- LISTADO DE ALUMNOS (VISTA STAFF) -->
 				<div class="glass-card p-8 rounded-[3rem] border border-white/5 mb-10">
 					<div id="rutinas-lista" class="space-y-3 h-[600px] overflow-y-auto custom-scrollbar pr-2">
-						<p class="text-center text-white-600 italic py-10">Cargando lista de alumnos...</p>
+						<p class="text-center text-white-600 italic py-10">Cargando arsenal de alumnos...</p>
+					</div>
+				</div>
+			</div>
+
+			<!-- MODAL EDITOR DE RUTINAS POR PASOS -->
+			<div id="modal-rutina-editor" class="fixed inset-0 z-[100] hidden bg-black/90 backdrop-blur-xl flex items-center justify-center p-4">
+				<div class="bg-[#0a0a0a] w-full max-w-5xl max-h-[90vh] rounded-[3rem] border border-white/10 overflow-hidden flex flex-col shadow-2xl">
+					<!-- Header del Modal -->
+					<div class="p-8 border-b border-white/5 flex justify-between items-center bg-white/[0.02]">
+						<div>
+							<h3 id="rutina-editor-alumno" class="text-2xl font-black italic uppercase text-white">Configurar Plan de Batalla</h3>
+							<p id="rutina-editor-step-label" class="text-[10px] text-red-600 font-black uppercase tracking-[0.2em] mt-1">Paso 1: Configuración Inicial</p>
+						</div>
+						<button onclick="closeModal('modal-rutina-editor')" class="p-3 hover:bg-red-600/20 rounded-2xl transition-all text-white/20 hover:text-red-600">
+							<i data-lucide="x" class="w-6 h-6"></i>
+						</button>
+					</div>
+
+					<!-- Indicador de Progreso -->
+					<div id="editor-progress-bar" class="flex h-1.5 w-full bg-white/5">
+						<div id="editor-progress-fill" class="h-full bg-red-600 transition-all duration-500" style="width: 20%"></div>
+					</div>
+
+					<!-- Contenido Dinámico (Cuerpo del Modal) -->
+					<div id="rutina-editor-body" class="flex-1 overflow-y-auto custom-scrollbar p-8">
+						<!-- El JS renderizará los pasos aquí -->
+					</div>
+
+					<!-- Footer de Navegación -->
+					<div class="p-8 border-t border-white/5 flex justify-between items-center bg-white/[0.01]">
+						<button id="btn-editor-prev" onclick="prevStep()" class="px-8 py-4 rounded-2xl font-black uppercase italic text-[11px] text-white/40 hover:text-white transition-all flex items-center gap-2">
+							<i data-lucide="arrow-left" class="w-4 h-4"></i> Volver
+						</button>
+						<div id="step-indicators" class="flex gap-2">
+							<!-- Bolitas de pasos -->
+						</div>
+						<button id="btn-editor-next" onclick="nextStep()" class="viking-bg-red text-black px-10 py-4 rounded-2xl font-black uppercase italic text-[12px] shadow-xl flex items-center gap-2 hover:scale-105 transition-all">
+							<span>Siguiente</span> <i data-lucide="arrow-right" class="w-4 h-4"></i>
+						</button>
 					</div>
 				</div>
 			</div>
