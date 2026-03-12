@@ -1155,7 +1155,7 @@
 			}
 		}
 
-/**
+		/**
  * ============================================================
  * MÓDULO DE RUTINAS VIKINGAS - SISTEMA INTEGRADO PRO
  * ============================================================
@@ -1168,31 +1168,29 @@ if (!state.routineEditor) {
         alumnoId: null,
         currentStep: 1,
         totalSteps: 3,
-        tipo: 'basica', // 'basica' o 'progreso'
+        tipo: 'basica', 
         cantDias: 3,
         objetivo: '',
         vencimiento: '',
-        dias: [] // [{nombre: '', ejercicios: []}]
+        dias: [],
+        semanaActivaFicha: 0 // Para controlar las solapas en la vista
     };
 }
 
 /**
- * 2. CARGA DE METADATOS (Sincronización con initApp)
- * FIX: Ajuste de rutas para evitar duplicar /api/ y asegurar carga en state
+ * 2. CARGA DE METADATOS
  */
 window.loadMusculacionMetadata = async function() {
     try {
-        // En la mayoría de las configuraciones, apiFetch ya antepone /api. 
-        // Si tus rutas en main.py son @app.get("/api/rutinas/..."), usamos /rutinas/...
         const [grupos, ejercicios] = await Promise.all([
-            apiFetch('/rutinas/grupos-musculares'),
-            apiFetch('/rutinas/ejercicios')
+            apiFetch('/api/rutinas/grupos-musculares'),
+            apiFetch('/api/rutinas/ejercicios')
         ]);
         
         state.gruposMusculares = Array.isArray(grupos) ? grupos : [];
         state.ejerciciosLibreria = Array.isArray(ejercicios) ? ejercicios : [];
         
-        console.log("⚔️ Armería Vikinga sincronizada:", state.ejerciciosLibreria.length, "ejercicios.");
+        console.log("⚔️ Armería Vikinga sincronizada:", state.ejerciciosLibreria.length, "ejercicios disponibles.");
         return true;
     } catch (err) {
         console.error("Error cargando metadatos de musculación:", err);
@@ -1213,7 +1211,7 @@ window.renderRutinas = async function() {
         if(list) list.classList.add('hidden');
         if(studentView) studentView.classList.remove('hidden');
         if(titleEl) titleEl.innerText = "Mi Arsenal de Entrenamiento";
-        // Aquí podrías llamar a una función específica para el alumno
+        // Aquí renderizaría la ficha propia del alumno
     } else {
         if(studentView) studentView.classList.add('hidden');
         if(list) list.classList.remove('hidden');
@@ -1254,7 +1252,7 @@ window.renderRutinasList = function(listaDatos) {
     if(!list) return;
 
     if (listaDatos.length === 0) {
-        list.innerHTML = `<div class="p-20 text-center opacity-20 font-black uppercase italic tracking-widest"><i data-lucide="users" class="w-12 h-12 mx-auto mb-2"></i>Sin registros en el radar</div>`;
+        list.innerHTML = `<div class="p-20 text-center opacity-20 font-black uppercase italic tracking-widest"><i data-lucide="users" class="w-12 h-12 mx-auto mb-2"></i>Sin registros</div>`;
         if(window.lucide) lucide.createIcons();
         return;
     }
@@ -1292,7 +1290,7 @@ window.renderRutinasList = function(listaDatos) {
 /**
  * 4. FICHA TÉCNICA E HISTORIAL
  */
-window.openFichaTecnica = async function(alumnoId) {
+window.openFichaTecnica = async function(alumnoId, mostrarTodo = false) {
     const al = state.alumnos.find(a => a.id === alumnoId);
     if(!al) return;
 
@@ -1302,41 +1300,110 @@ window.openFichaTecnica = async function(alumnoId) {
     document.getElementById('ficha-nombre').innerText = al.nombre_completo;
     document.getElementById('ficha-dni').innerText = "DNI: " + al.dni;
 
-    const res = await apiFetch(`/rutinas/usuario/${alumnoId}`);
+    // Fetch de rutinas. Si mostrarTodo es true, el backend debería devolver históricas.
+    const res = await apiFetch(`/api/rutinas/usuario/${alumnoId}${mostrarTodo ? '?todo=true' : ''}`);
     const rutinas = Array.isArray(res) ? res : (res && res.id ? [res] : []);
 
     if (rutinas.length === 0) {
-        container.innerHTML = `<div class="col-span-2 p-20 border-2 border-dashed border-white/5 rounded-[3rem] text-center bg-white/[0.01]"><i data-lucide="skull" class="w-12 h-12 mx-auto mb-4 opacity-10"></i><p class="text-xs text-white/20 font-black uppercase italic">Sin arsenal activo asignado</p></div>`;
+        container.innerHTML = `<div class="col-span-2 p-20 border-2 border-dashed border-white/5 rounded-[3rem] text-center bg-white/[0.01]"><i data-lucide="skull" class="w-12 h-12 mx-auto mb-4 opacity-10"></i><p class="text-xs text-white/20 font-black uppercase italic">Sin registros de arsenal</p></div>`;
     } else {
-        container.innerHTML = rutinas.map(rutina => `
-            <div class="col-span-2 mb-6 bg-white/[0.02] border border-white/10 rounded-[2.5rem] overflow-hidden shadow-2xl">
-                <div class="p-8 border-b border-white/5 flex justify-between items-center bg-white/[0.02]">
-                    <div>
-                        <p class="text-[8px] text-red-600 font-black uppercase tracking-[0.4em] mb-1">Estrategia Activa</p>
-                        <h5 class="text-2xl font-black italic uppercase text-white tracking-tight">${rutina.objetivo}</h5>
-                        <p class="text-[10px] text-white/30 font-bold uppercase mt-2 italic flex items-center gap-2"><i data-lucide="calendar" class="w-3.5 h-3.5 text-red-600"></i> Vence: ${rutina.fecha_vencimiento}</p>
-                    </div>
-                    <div class="flex gap-2">
-                        <button onclick="closeModal('modal-ficha-tecnica'); window.openRoutineEditor(${alumnoId})" class="px-6 py-3 bg-white/5 rounded-xl hover:text-red-600 transition-all font-black uppercase italic text-[10px] border border-white/5">Editar</button>
+        container.innerHTML = rutinas.map(rutina => renderRutinaCard(rutina, alumnoId, mostrarTodo)).join('');
+    }
+    
+    if(window.lucide) lucide.createIcons();
+    openModal('modal-ficha-tecnica');
+};
+
+function renderRutinaCard(rutina, alumnoId, esHistorial) {
+    const isActive = rutina.activo;
+    const esProgreso = rutina.tipo === 'progreso';
+    
+    return `
+    <div class="col-span-2 mb-8 bg-white/[0.02] border ${isActive ? 'border-red-600/30' : 'border-white/10 opacity-60'} rounded-[2.5rem] overflow-hidden shadow-2xl transition-all">
+        <div class="p-8 border-b border-white/5 flex justify-between items-center bg-white/[0.02]">
+            <div>
+                <div class="flex items-center gap-3 mb-1">
+                    <p class="text-[8px] ${isActive ? 'text-green-500' : 'text-white/30'} font-black uppercase tracking-[0.4em]">${isActive ? '● Activa' : '○ Inactiva'}</p>
+                    <p class="text-[8px] text-red-600 font-black uppercase tracking-[0.4em] italic">${rutina.tipo?.toUpperCase()}</p>
+                </div>
+                <h5 class="text-2xl font-black italic uppercase text-white tracking-tight">${rutina.objetivo}</h5>
+                <p class="text-[10px] text-white/30 font-bold uppercase mt-2 italic flex items-center gap-2"><i data-lucide="calendar" class="w-3.5 h-3.5 text-red-600"></i> Vence: ${rutina.fecha_vencimiento}</p>
+            </div>
+            <div class="flex gap-2">
+                ${esHistorial ? `
+                    <button onclick="window.toggleRutinaActiva(${rutina.id}, ${alumnoId})" class="px-5 py-3 ${isActive ? 'bg-white/5 text-white/40' : 'bg-green-600 text-black'} rounded-xl transition-all font-black uppercase italic text-[10px] border border-white/5">
+                        ${isActive ? 'Desactivar' : 'Activar'}
+                    </button>
+                ` : ''}
+                <button onclick="closeModal('modal-ficha-tecnica'); openRoutineEditor(${alumnoId}, true)" class="px-5 py-3 bg-white/5 rounded-xl hover:text-red-600 transition-all font-black uppercase italic text-[10px] border border-white/5">Editar</button>
+            </div>
+        </div>
+
+        ${esProgreso ? renderTabSistemaProgreso(rutina) : renderSistemaBasico(rutina)}
+    </div>`;
+}
+
+function renderTabSistemaProgreso(rutina) {
+    const semanaActual = state.routineEditor.semanaActivaFicha || 0;
+    
+    return `
+    <div class="p-8">
+        <!-- Solapas de Semanas -->
+        <div class="flex gap-2 mb-8 border-b border-white/5 pb-4 overflow-x-auto custom-scrollbar">
+            ${[0, 1, 2, 3].map(i => `
+                <button onclick="window.setSemanaFicha(${i}, ${rutina.id})" class="px-6 py-3 rounded-xl font-black italic uppercase text-[10px] transition-all shrink-0 ${semanaActual === i ? 'bg-red-600 text-black' : 'bg-white/5 text-white/30 hover:bg-white/10'}">
+                    Semana ${i + 1}
+                </button>
+            `).join('')}
+        </div>
+
+        <div class="space-y-8 animate-in fade-in duration-300">
+            ${(rutina.dias || []).map(d => `
+                <div class="space-y-4">
+                    <p class="text-[12px] font-black text-red-600 uppercase italic tracking-[0.2em] border-l-2 border-red-600 pl-4">${d.nombre_dia}</p>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        ${(d.ejercicios || []).map(ex => {
+                            let semData = { series: '-', reps: '-', peso: '-' };
+                            try {
+                                const progreso = JSON.parse(ex.progreso_json || '[]');
+                                if(progreso[semanaActual]) semData = progreso[semanaActual];
+                            } catch(e) {}
+                            
+                            return `
+                                <div class="bg-black/40 p-5 rounded-3xl border border-white/5">
+                                    <p class="text-xs font-black uppercase italic text-white mb-3">${ex.ejercicio_obj?.nombre || ex.exercise_name}</p>
+                                    <div class="flex gap-6">
+                                        <div class="flex flex-col"><span class="text-[7px] uppercase font-black text-white/30">Sets</span><span class="text-xs font-black text-white">${semData.series}</span></div>
+                                        <div class="flex flex-col"><span class="text-[7px] uppercase font-black text-white/30">Reps</span><span class="text-xs font-black text-white">${semData.reps}</span></div>
+                                        <div class="flex flex-col"><span class="text-[7px] uppercase font-black text-white/30">Peso</span><span class="text-xs font-black text-red-600">${semData.peso} kg</span></div>
+                                    </div>
+                                    ${ex.comentario ? `<p class="mt-3 text-[9px] italic text-white/20 border-t border-white/5 pt-2">Nota: ${ex.comentario}</p>` : ''}
+                                </div>
+                            `;
+                        }).join('')}
                     </div>
                 </div>
-                <div class="p-8 space-y-8">
-                    ${(rutina.dias || []).map(d => `
-                        <div class="space-y-4">
-                            <div class="flex items-center gap-4">
-                                <div class="h-px flex-1 bg-white/5"></div>
-                                <p class="text-[12px] font-black text-red-600 uppercase italic tracking-[0.2em]">${d.nombre_dia}</p>
-                                <div class="h-px flex-1 bg-white/5"></div>
-                            </div>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                ${(d.ejercicios || []).map(ex => `
-                                    <div class="bg-black/40 p-5 rounded-3xl border border-white/5 hover:border-red-600/20 transition-all">
-                                        <p class="text-sm font-black uppercase italic text-white mb-3">${ex.ejercicio_obj?.nombre || ex.exercise_name}</p>
-                                        <div class="flex gap-4 opacity-60">
-                                            <div class="flex flex-col"><span class="text-[8px] uppercase font-black text-white/30">Series</span><span class="text-xs font-black text-white">${ex.series_detalle?.length || 0}</span></div>
-                                            <div class="flex flex-col"><span class="text-[8px] uppercase font-black text-white/30">Reps</span><span class="text-xs font-black text-white">${ex.series_detalle?.[0]?.repeticiones || '-'}</span></div>
-                                            <div class="flex flex-col"><span class="text-[8px] uppercase font-black text-white/30">Peso</span><span class="text-xs font-black text-red-600">${ex.series_detalle?.[0]?.peso || '-'} kg</span></div>
-                                        </div>
+            `).join('')}
+        </div>
+    </div>`;
+}
+
+function renderSistemaBasico(rutina) {
+    return `
+    <div class="p-8 space-y-8">
+        ${(rutina.dias || []).map(d => `
+            <div class="space-y-4">
+                <p class="text-[12px] font-black text-red-600 uppercase italic tracking-[0.2em] border-l-2 border-red-600 pl-4">${d.nombre_dia}</p>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    ${(d.ejercicios || []).map(ex => `
+                        <div class="bg-black/40 p-5 rounded-3xl border border-white/5">
+                            <p class="text-xs font-black uppercase italic text-white mb-3">${ex.ejercicio_obj?.nombre || ex.exercise_name}</p>
+                            <div class="space-y-2">
+                                ${(ex.series_detalle || []).map(s => `
+                                    <div class="flex justify-between text-[10px] font-black uppercase bg-white/5 px-3 py-1.5 rounded-lg">
+                                        <span class="text-white/30">Serie ${s.numero_serie}</span>
+                                        <span class="text-white">${s.repeticiones} reps</span>
+                                        <span class="text-red-600">${s.peso} kg</span>
                                     </div>
                                 `).join('')}
                             </div>
@@ -1344,11 +1411,24 @@ window.openFichaTecnica = async function(alumnoId) {
                     `).join('')}
                 </div>
             </div>
-        `).join('');
+        `).join('')}
+    </div>`;
+}
+
+window.setSemanaFicha = function(idx, rutinaId) {
+    state.routineEditor.semanaActivaFicha = idx;
+    // Volvemos a renderizar la ficha sin cerrar el modal
+    const alId = state.routineEditor.alumnoId;
+    window.openFichaTecnica(alId);
+};
+
+window.toggleRutinaActiva = async function(rutinaId, alumnoId) {
+    const res = await apiFetch(`/api/rutinas/plan/${rutinaId}/toggle`, 'POST');
+    if(!res.error) {
+        showVikingToast("Estado de arsenal actualizado ⚔️");
+        window.openFichaTecnica(alumnoId, true);
+        fetchAlumnos(); // Refrescar estado general
     }
-    
-    if(window.lucide) lucide.createIcons();
-    openModal('modal-ficha-tecnica');
 };
 
 /**
@@ -1358,7 +1438,6 @@ window.openRoutineEditor = async function(alumnoId) {
     const al = state.alumnos.find(a => a.id === alumnoId);
     if (!al) return;
 
-    // Reiniciar Estado del Editor
     state.routineEditor = {
         alumnoId: alumnoId,
         currentStep: 1,
@@ -1367,10 +1446,10 @@ window.openRoutineEditor = async function(alumnoId) {
         cantDias: 3,
         objetivo: 'Musculación General',
         vencimiento: new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0],
-        dias: []
+        dias: [],
+        semanaActivaFicha: 0
     };
 
-    // Asegurar que los datos maestros estén cargados antes de abrir
     if (!state.ejerciciosLibreria || state.ejerciciosLibreria.length === 0) {
         await window.loadMusculacionMetadata();
     }
@@ -1398,7 +1477,7 @@ window.renderEditorStep = function() {
         const dayIdx = step - 2;
         label.innerText = `PASO ${step}: CONFIGURACIÓN DÍA ${dayIdx + 1}`;
         body.innerHTML = renderDayStep(dayIdx);
-        initDaySearch(dayIdx); // Iniciamos el buscador para este paso
+        initDaySearch(dayIdx);
     } else {
         label.innerText = `PASO ${total}: RESUMEN Y CONFIRMACIÓN`;
         body.innerHTML = renderSummaryStep();
@@ -1414,9 +1493,6 @@ window.renderEditorStep = function() {
     body.scrollTo({ top: 0, behavior: 'smooth' });
 };
 
-/**
- * PASO 1: METADATOS
- */
 function renderStep1() {
     return `
     <div class="grid grid-cols-1 md:grid-cols-2 gap-12 animate-in fade-in duration-500">
@@ -1461,9 +1537,6 @@ function renderStep1() {
     </div>`;
 }
 
-/**
- * PASO DINÁMICO: CONFIGURACIÓN DE DÍA
- */
 function renderDayStep(dayIdx) {
     if (!state.routineEditor.dias[dayIdx]) state.routineEditor.dias[dayIdx] = { nombre: `Día ${dayIdx + 1}`, ejercicios: [] };
     const dia = state.routineEditor.dias[dayIdx];
@@ -1484,9 +1557,10 @@ function renderDayStep(dayIdx) {
                 ${state.gruposMusculares.map(g => `<option value="${g.id}">${g.nombre}</option>`).join('')}
             </select>
             <div class="md:col-span-2 relative">
-                <input type="text" id="ex-search-${dayIdx}" placeholder="Buscar ejercicio..." class="viking-input !bg-black/60 h-14 pl-14 text-xs font-bold border-white/10">
+                <!-- Se despliega al hacer foco -->
+                <input type="text" id="ex-search-${dayIdx}" onfocus="initDaySearch(${dayIdx}, true)" placeholder="Escribe para buscar o haz foco para ver todos..." class="viking-input !bg-black/60 h-14 pl-14 text-xs font-bold border-white/10">
                 <i data-lucide="search" class="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-white/20"></i>
-                <div id="ex-results-${dayIdx}" class="absolute top-full left-0 w-full bg-[#0a0a0a] border border-red-600/30 rounded-3xl mt-4 z-[100] hidden max-h-72 overflow-y-auto shadow-2xl"></div>
+                <div id="ex-results-${dayIdx}" class="absolute top-full left-0 w-full bg-[#0a0a0a] border border-red-600/30 rounded-3xl mt-4 z-[100] hidden max-h-72 overflow-y-auto shadow-2xl custom-scrollbar"></div>
             </div>
         </div>
 
@@ -1501,7 +1575,7 @@ function renderDayStep(dayIdx) {
 function renderExerciseInWizard(dayIdx, exIdx, ex) {
     const esProgreso = state.routineEditor.tipo === 'progreso';
     return `
-    <div class="bg-white/[0.02] border border-white/5 rounded-[2.5rem] p-8 group transition-all hover:border-red-600/30 shadow-xl relative overflow-hidden">
+    <div class="bg-white/[0.02] border border-white/10 rounded-[2.5rem] p-8 group transition-all hover:border-red-600/30 shadow-xl relative overflow-hidden">
         <div class="absolute left-0 top-0 bottom-0 w-1.5 bg-red-600 opacity-20 group-hover:opacity-100 transition-opacity"></div>
         <div class="flex justify-between items-start mb-8">
             <div class="flex items-center gap-4">
@@ -1529,9 +1603,9 @@ function renderBasicSeriesView(dayIdx, exIdx, ex) {
         ${ex.series.map((s, sIdx) => `
             <div class="grid grid-cols-4 gap-3 bg-black/60 p-4 rounded-2xl border border-white/5">
                 <span class="text-xs font-black text-red-600 italic pl-2 flex items-center">#${sIdx+1}</span>
-                <input type="text" value="${s.reps}" oninput="state.routineEditor.dias[${dayIdx}].ejercicios[${exIdx}].series[${sIdx}].reps = this.value" class="bg-transparent text-center font-black text-white text-sm outline-none" placeholder="Reps">
-                <input type="text" value="${s.peso}" oninput="state.routineEditor.dias[${dayIdx}].ejercicios[${exIdx}].series[${sIdx}].peso = this.value" class="bg-transparent text-center font-black text-white text-sm outline-none" placeholder="Peso">
-                <input type="text" value="${s.descanso}" oninput="state.routineEditor.dias[${dayIdx}].ejercicios[${exIdx}].series[${sIdx}].descanso = this.value" class="bg-transparent text-center text-[11px] italic text-white/40 outline-none" placeholder="Pausa">
+                <input type="text" value="${s.reps}" oninput="state.routineEditor.dias[${dayIdx}].ejercicios[${exIdx}].series[${sIdx}].reps = this.value" class="bg-transparent text-center font-black text-white text-sm outline-none">
+                <input type="text" value="${s.peso}" oninput="state.routineEditor.dias[${dayIdx}].ejercicios[${exIdx}].series[${sIdx}].peso = this.value" class="bg-transparent text-center font-black text-white text-sm outline-none">
+                <input type="text" value="${s.descanso}" oninput="state.routineEditor.dias[${dayIdx}].ejercicios[${exIdx}].series[${sIdx}].descanso = this.value" class="bg-transparent text-center text-[11px] italic text-white/40 outline-none">
             </div>
         `).join('')}
         <button onclick="window.addSerie(${dayIdx}, ${exIdx})" class="text-[10px] font-black uppercase text-red-600 mt-4 ml-2 flex items-center gap-2 hover:text-white transition-all"><i data-lucide="plus-circle" class="w-4 h-4"></i> Añadir Serie</button>
@@ -1597,7 +1671,7 @@ window.nextStep = function() {
         state.routineEditor.currentStep++;
         window.renderEditorStep();
     } else {
-        window.saveRoutine();
+        saveRoutine();
     }
 };
 
@@ -1608,7 +1682,7 @@ window.prevStep = function() {
     }
 };
 
-window.saveRoutine = async function() {
+async function saveRoutine() {
     const payload = {
         usuario_id: state.routineEditor.alumnoId,
         objetivo: state.routineEditor.objetivo,
@@ -1631,7 +1705,7 @@ window.saveRoutine = async function() {
         }))
     };
 
-    const res = await apiFetch('/rutinas/plan', 'POST', payload);
+    const res = await apiFetch('/api/rutinas/plan', 'POST', payload);
     if (!res.error) {
         showVikingToast("¡Plan de batalla forjado!");
         closeModal('modal-rutina-editor');
@@ -1642,53 +1716,53 @@ window.saveRoutine = async function() {
 }
 
 /**
- * 7. VINCULACIONES GLOBALES DEL BUSCADOR
+ * 7. VINCULACIONES GLOBALES
  */
-function initDaySearch(dayIdx) {
+function initDaySearch(dayIdx, fromFocus = false) {
     const input = document.getElementById(`ex-search-${dayIdx}`);
     const results = document.getElementById(`ex-results-${dayIdx}`);
     const groupFilter = document.getElementById(`group-filter-${dayIdx}`);
-    
-    if(!input || !results || !groupFilter) return;
+    if(!input || !results) return;
 
-    // Función interna para realizar el filtrado
     const runSearch = () => {
         const query = input.value.toLowerCase();
         const groupId = groupFilter.value;
         
-        // Si no hay búsqueda y no hay filtro de grupo, ocultamos
-        if (query.length === 0 && groupId === 'all') { 
+        // Si hay foco y grupo, o si hay texto, filtramos
+        if (!fromFocus && query.length < 2 && groupId === 'all') { 
             results.classList.add('hidden'); 
             return; 
         }
 
-        const filtered = state.ejerciciosLibreria.filter(ex => {
-            const matchesQuery = ex.nombre.toLowerCase().includes(query);
-            const matchesGroup = (groupId === 'all' || ex.grupo_muscular_id == groupId);
-            return matchesQuery && matchesGroup;
-        });
+        const filtered = state.ejerciciosLibreria.filter(ex => 
+            (ex.nombre.toLowerCase().includes(query) || query === "") && 
+            (groupId === 'all' || ex.grupo_muscular_id == groupId)
+        );
 
-        if (filtered.length > 0) {
+        if (filtered.length === 0) {
+            results.innerHTML = `<div class="p-5 text-center text-white/20 text-xs italic">No hay arsenal compatible</div>`;
+        } else {
             results.innerHTML = filtered.map(ex => `
-                <div class="p-5 hover:bg-red-600/10 cursor-pointer text-xs font-black uppercase italic text-white/60 border-b border-white/5 flex justify-between items-center" 
+                <div class="p-5 hover:bg-red-600/10 cursor-pointer text-xs font-black uppercase italic text-white/60 border-b border-white/5 flex justify-between items-center group/item" 
                     onclick="window.addExerciseToWizard(${dayIdx}, ${ex.id}, '${ex.nombre}')">
                     <span>${ex.nombre}</span>
-                    <i data-lucide="plus" class="w-4 h-4 text-red-600"></i>
+                    <i data-lucide="plus" class="w-4 h-4 text-red-600 opacity-0 group-hover/item:opacity-100 transition-opacity"></i>
                 </div>
             `).join('');
-            results.classList.remove('hidden');
-        } else {
-            results.innerHTML = `<div class="p-5 text-white/20 text-xs italic">No se encontraron resultados</div>`;
-            results.classList.remove('hidden');
         }
 
+        results.classList.remove('hidden');
         if(window.lucide) lucide.createIcons();
     };
 
-    // Escuchar el input de texto
-    input.oninput = runSearch;
-    // Escuchar el cambio de grupo muscular
-    groupFilter.onchange = runSearch;
+    if (fromFocus) {
+        runSearch();
+    } else {
+        input.oninput = runSearch;
+    }
+    
+    // Cerrar resultados al perder el foco (con delay para permitir click)
+    input.onblur = () => setTimeout(() => results.classList.add('hidden'), 200);
 }
 
 window.addExerciseToWizard = (dayIdx, id, nombre) => {
@@ -1718,7 +1792,9 @@ window.renderAlumnosSection = function() {
 };
 
 window.openHistorialRutinas = async function(alumnoId) {
-    await window.openFichaTecnica(alumnoId);
+    state.routineEditor.alumnoId = alumnoId;
+    state.routineEditor.semanaActivaFicha = 0;
+    await window.openFichaTecnica(alumnoId, true);
     const nombreFicha = document.getElementById('ficha-nombre');
     if(nombreFicha) nombreFicha.innerText = "Historial Táctico";
 };
