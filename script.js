@@ -1174,7 +1174,7 @@ if (!state.routineWizard) {
         objetivo: '',     
         vencimiento: '',
         dias: [],
-        semanaActivaFicha: 0,
+        semanaActivaFicha: 1, // Ahora basado en IDs 1 a 5
         rutinasCargadas: [],
         editMode: false,
         isTabSwitching: false,
@@ -1213,7 +1213,7 @@ async function loadMusculacionMetadata() {
 }
 
 /**
- * 2. FICHA TÉCNICA (Visualización y Re-activación)
+ * 2. FICHA TÉCNICA (Visualización por Semanas ID)
  */
 window.openFichaTecnica = async function(alumnoId) {
     const rutinaContainer = document.getElementById('ficha-rutina-container');
@@ -1267,7 +1267,7 @@ window.openFichaTecnica = async function(alumnoId) {
 
     if (listaRutinas.length > 0) {
         state.routineWizard.rutinasCargadas = listaRutinas;
-        const semIdx = state.routineWizard.semanaActivaFicha || 0;
+        const semIdActivo = state.routineWizard.semanaActivaFicha || 1;
 
         rutinaContainer.innerHTML = listaRutinas.map((rutina, rIdx) => {
             const esProg = rutina.tipo_id === 2 || rutina.tipo === 'progresiva';
@@ -1275,11 +1275,11 @@ window.openFichaTecnica = async function(alumnoId) {
             
             const tabsHTML = esProg ? `
                 <div class="flex gap-2 mb-8 bg-black/40 p-2 rounded-2xl border border-white/5 overflow-x-auto no-scrollbar">
-                    ${Array.from({length: 4}).map((_, i) => `
-                        <button onclick="window.changeFichaSemana(${i}, ${alumnoId})"
+                    ${[1, 2, 3, 4, 5].map(id => `
+                        <button onclick="window.changeFichaSemana(${id}, ${alumnoId})"
                             class="flex-1 min-w-[100px] py-3 rounded-xl font-black italic uppercase text-[10px] transition-all shrink-0
-                            ${semIdx === i ? 'bg-red-600 text-black shadow-[0_0_20px_rgba(255,0,0,0.3)]' : 'bg-white/5 text-white/30 hover:bg-white/10 border border-white/10'}">
-                            Semana ${i+1}
+                            ${semIdActivo === id ? 'bg-red-600 text-black shadow-[0_0_20px_rgba(255,0,0,0.3)]' : 'bg-white/5 text-white/30 hover:bg-white/10 border border-white/10'}">
+                            Semana ${id}
                         </button>
                     `).join('')}
                 </div>
@@ -1289,11 +1289,13 @@ window.openFichaTecnica = async function(alumnoId) {
                 const diaId = `ficha-dia-${rIdx}-${dIdx}`;
                 const isOpen = state.routineWizard.openDays?.includes(diaId);
 
+                // FILTRADO SEGURO POR SEMANA_ID
                 let ejerciciosFiltrados = d.ejercicios || [];
                 if (esProg) {
-                    const marker = `[Semana ${semIdx + 1}]`;
-                    ejerciciosFiltrados = ejerciciosFiltrados.filter(ex => (ex.comentario || "").includes(marker));
+                    ejerciciosFiltrados = ejerciciosFiltrados.filter(ex => ex.semana_id === semIdActivo);
                 }
+
+                if (esProg && ejerciciosFiltrados.length === 0) return ''; 
 
                 return `
                 <div class="bg-white/2 rounded-[2rem] border border-white/5 overflow-hidden mb-4 transition-all hover:bg-white/[0.04]">
@@ -1334,7 +1336,7 @@ window.openFichaTecnica = async function(alumnoId) {
                                             </div>
                                         `).join('')}
                                     </div>
-                                    ${ex.comentario ? `<p class="mt-4 text-[10px] text-white/30 italic">Nota: ${ex.comentario}</p>` : ''}
+                                    ${ex.comentario ? `<p class="mt-4 text-[10px] text-white/30 italic">Nota: ${ex.comentario.replace(/\[Semana \d+\]/, "").trim()}</p>` : ''}
                                 </div>
                             `;
                         }).join('')}
@@ -1377,14 +1379,14 @@ window.openFichaTecnica = async function(alumnoId) {
     state.routineWizard.isTabSwitching = false;
 }
 
-window.changeFichaSemana = function(idx, alumnoId) {
-    state.routineWizard.semanaActivaFicha = idx;
+window.changeFichaSemana = function(id, alumnoId) {
+    state.routineWizard.semanaActivaFicha = id;
     state.routineWizard.isTabSwitching = true;
     window.openFichaTecnica(alumnoId);
 }
 
 /**
- * 3. WIZARD DE CREACIÓN / EDICIÓN (CORRECCIÓN PERSISTENCIA Y TIPO_ID)
+ * 3. WIZARD DE CREACIÓN / EDICIÓN (PERSISTENCIA TOTAL POR SEMANA_ID)
  */
 window.openRoutineEditor = async function(alumnoId, isEdit = false) {
     const al = state.alumnos.find(a => a.id === alumnoId);
@@ -1407,7 +1409,7 @@ window.openRoutineEditor = async function(alumnoId, isEdit = false) {
         let lista = await apiFetch(`/rutinas/usuario/${alumnoId}?todo=true`);
         let active = Array.isArray(lista) ? lista.find(r => r.activo) : (lista && lista.activo ? lista : null);
         if (active) {
-            routineData.tipo_id = active.tipo_id || (active.tipo === 'progresiva' ? 2 : 1);
+            routineData.tipo_id = parseInt(active.tipo_id) || (active.tipo === 'progresiva' ? 2 : 1);
             routineData.tipo = routineData.tipo_id === 2 ? 'progresiva' : 'normal';
             routineData.cantDias = active.dias?.length || 3;
             routineData.nombre_grupo = active.nombre_grupo || active.objetivo;
@@ -1418,8 +1420,7 @@ window.openRoutineEditor = async function(alumnoId, isEdit = false) {
                 const uniqueEx = [];
                 d.ejercicios.forEach(ex => {
                     const cleanName = (ex.ejercicio_obj?.nombre || ex.exercise_name || "").replace(/\[Semana \d+\]/, "").trim();
-                    const semMatch = (ex.comentario || "").match(/\[Semana (\d+)\]/);
-                    const semIdx = semMatch ? parseInt(semMatch[1]) - 1 : 0;
+                    const semId = ex.semana_id; // Clave para reconstruir el array progreso
 
                     let existing = uniqueEx.find(u => u.id === ex.ejercicio_id);
                     if(!existing) {
@@ -1428,20 +1429,20 @@ window.openRoutineEditor = async function(alumnoId, isEdit = false) {
                             nombre: cleanName,
                             comentario: (ex.comentario || "").replace(/\[Semana \d+\]/, "").trim(),
                             series: [],
-                            progreso: Array.from({length: 4}).map(() => ({series:'3', repeticiones:'12', peso:'', descanso:'90s'}))
+                            progreso: Array.from({length: 5}).map(() => ({series:'1', repeticiones:'12', peso:'', descanso:'90s'}))
                         };
                         uniqueEx.push(existing);
                     }
 
-                    if (routineData.tipo === 'progresiva') {
+                    if (routineData.tipo_id === 2 && semId) {
                         const s = ex.series_detalle?.[0] || ex.series?.[0] || {};
-                        existing.progreso[semIdx] = {
+                        existing.progreso[semId - 1] = {
                             series: '1',
                             repeticiones: s.repeticiones || '12',
                             peso: s.peso || '',
                             descanso: s.descanso || '90s'
                         };
-                    } else {
+                    } else if (routineData.tipo_id === 1) {
                         existing.series = (ex.series_detalle || ex.series || []).map(s => ({
                             numero_serie: s.numero_serie,
                             repeticiones: s.repeticiones,
@@ -1521,7 +1522,7 @@ window.renderWizardStep = function() {
                 <div class="bg-red-600/10 p-12 rounded-[4rem] border border-red-600/20 shadow-2xl">
                     <i data-lucide="shield-check" class="w-20 h-20 text-red-600 mx-auto mb-6"></i>
                     <h4 class="text-4xl font-black italic uppercase text-white tracking-tighter">${state.routineWizard.nombre_grupo}</h4>
-                    <p class="text-white/40 uppercase font-black tracking-[0.4em] text-xs mt-4 italic">${state.routineWizard.tipo_id === 2 ? 'Estrategia Progresiva por Filas Individuales' : 'Plan Táctico Estándar'}</p>
+                    <p class="text-white/40 uppercase font-black tracking-[0.4em] text-xs mt-4 italic">${state.routineWizard.tipo_id === 2 ? 'Estrategia Progresiva por Semanas' : 'Plan Táctico Estándar'}</p>
                 </div>
                 <p class="text-[11px] text-white/20 italic max-w-sm mx-auto">"${state.routineWizard.objetivo}"</p>
             </div>`;
@@ -1592,10 +1593,11 @@ window.renderSeriesNormalWizard = function(dayIdx, exIdx, ex) {
 }
 
 window.renderProgresoSemanasWizard = function(dayIdx, exIdx, ex) {
-    if (!ex.progreso) ex.progreso = Array.from({length: 4}).map(() => ({series:'1', repeticiones:'12', peso:'', descanso:'90s'}));
+    // SOPORTE PARA 5 SEMANAS SEGÚN SQL
+    if (!ex.progreso) ex.progreso = Array.from({length: 5}).map(() => ({series:'1', repeticiones:'12', peso:'', descanso:'90s'}));
 
     return `
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+    <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
         ${ex.progreso.map((sem, sIdx) => `
             <div class="bg-black/40 p-5 rounded-3xl border border-white/5 space-y-4">
                 <p class="text-[8px] font-black text-amber-500 uppercase text-center border-b border-white/5 pb-2">Semana ${sIdx+1}</p>
@@ -1611,7 +1613,7 @@ window.renderProgresoSemanasWizard = function(dayIdx, exIdx, ex) {
 }
 
 /**
- * 4. GUARDADO FINAL (EXPLOSIÓN DE REGISTROS POR SEMANA SI ES PROGRESIVA)
+ * 4. GUARDADO FINAL (EXPLOSIÓN DE REGISTROS POR SEMANA_ID)
  */
 window.saveFinalRutina = async function() {
     const isProgresiva = state.routineWizard.tipo_id === 2;
@@ -1619,13 +1621,14 @@ window.saveFinalRutina = async function() {
         let ejerciciosFinales = [];
 
         if (isProgresiva) {
-            // EXPLOSIÓN: 1 ejercicio del wizard -> 4 filas físicas en la base de datos
+            // EXPLOSIÓN: 1 ejercicio del wizard -> 5 filas físicas vinculadas por semana_id
             d.ejercicios.forEach(ex => {
-                ex.progreso.forEach((weekData, semIdx) => {
+                ex.progreso.forEach((weekData, idx) => {
+                    const semId = idx + 1; // ID 1 a 5 según tabla semanas_rutina
                     ejerciciosFinales.push({
                         ejercicio_id: ex.id,
-                        // El comentario ahora incluye la marca de semana de forma explícita
-                        comentario: `[Semana ${semIdx + 1}] ${ex.comentario || ""}`.trim(),
+                        semana_id: semId, 
+                        comentario: `[Semana ${semId}] ${ex.comentario || ""}`.trim(),
                         series: [{
                             numero_serie: 1, 
                             repeticiones: weekData.repeticiones || "12",
@@ -1640,6 +1643,7 @@ window.saveFinalRutina = async function() {
             // NORMAL: Mapeo estándar 1 a 1 con sus series
             ejerciciosFinales = d.ejercicios.map(ex => ({
                 ejercicio_id: ex.id,
+                semana_id: null,
                 comentario: ex.comentario || "",
                 series: ex.series?.map(s => ({
                     numero_serie: s.numero_serie,
@@ -1741,7 +1745,7 @@ window.addEjercicioWizard = (dayIdx, id, nombre) => {
         id, 
         nombre, 
         series: [{numero_serie: 1, repeticiones: '12', peso: '', descanso: '90s'}], 
-        progreso: esProg ? Array.from({length: 4}).map(() => ({series:'1', repeticiones:'12', peso:'', descanso:'90s'})) : null, 
+        progreso: esProg ? Array.from({length: 5}).map(() => ({series:'1', repeticiones:'12', peso:'', descanso:'90s'})) : null, 
         comentario: '' 
     });
     window.renderWizardStep();
