@@ -163,13 +163,17 @@ class PlanRutina(Base):
     usuario_id = Column(Integer, ForeignKey("usuarios.id"))
     nombre_grupo = Column(String, nullable=True) 
     descripcion = Column(Text, nullable=True) 
+    objetivo = Column(String)
+    # --- NUEVOS CAMPOS ---
+    tipo = Column(String, default="normal") # "normal" o "progresiva"
+    profesor_nombre = Column(String, nullable=True) # Requerimiento 10
+    # ---------------------
     fecha_creacion = Column(Date, default=datetime.date.today)
     fecha_vencimiento = Column(Date)
-    objetivo = Column(String)
     activo = Column(Boolean, default=True)
     
     usuario = relationship("Usuario", back_populates="planes_rutina")
-    dias = relationship("DiaRutina", back_populates="plan_rutina", cascade="all, delete-orphan")
+    dias = relationship("DiaRutina", back_populates="dias", cascade="all, delete-orphan")
 
 class DiaRutina(Base):
     __tablename__ = "rutina_dias"
@@ -186,6 +190,7 @@ class EjercicioEnRutina(Base):
     dia_id = Column(Integer, ForeignKey("rutina_dias.id"))
     ejercicio_id = Column(Integer, ForeignKey("ejercicios_libreria.id"))
     rutina_id = Column(Integer, ForeignKey("planes_rutina.id"), nullable=True)
+    progreso_json = Column(JSON, nullable=True) # Para guardar los datos de las semanas en rutinas progresivas
     
     # Sincronización total con tu JSON (soporta 'comentario' y 'comentarios')
     comentario = Column(Text, nullable=True)

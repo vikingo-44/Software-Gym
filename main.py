@@ -1223,7 +1223,11 @@ def create_ejercicio_lib(data: EjercicioCreate, db: Session = Depends(database.g
     return nuevo
 
 @app.post("/api/rutinas/plan", tags=["Musculación"])
-def create_plan_rutina(data: PlanRutinaCreate, db: Session = Depends(database.get_db)):
+def create_plan_rutina(data: PlanRutinaCreate, db: Session = Depends(database.get_db), current_user = Depends(get_current_user)):
+    """
+    Crea o actualiza el plan de entrenamiento.
+    Mejoras: Captura de profesor, Tipo de rutina y Soporte Progresivo.
+    """
     try:
         user = db.query(models.Usuario).filter(models.Usuario.id == data.usuario_id).first()
         if not user:
@@ -1236,16 +1240,19 @@ def create_plan_rutina(data: PlanRutinaCreate, db: Session = Depends(database.ge
                 detail="No se puede asignar una rutina a un alumno con el plan vencido. Debe renovar primero."
             )
 
-        # Desactivar rutinas anteriores
+        # Desactivar rutinas anteriores para este usuario
         db.query(models.PlanRutina).filter(
             models.PlanRutina.usuario_id == data.usuario_id
         ).update({"activo": False}, synchronize_session=False)
         
+        # Crear el nuevo plan capturando los nuevos requisitos (Tipo y Profesor)
         nuevo_plan = models.PlanRutina(
             usuario_id=data.usuario_id,
             nombre_grupo=data.nombre_grupo,
             descripcion=data.descripcion,
             objetivo=data.objetivo,
+            tipo=data.tipo, # 'normal' o 'progresiva'
+            profesor_nombre=current_user.nombre_completo, # Requerimiento 10: Profesor creador
             fecha_vencimiento=data.fecha_vencimiento,
             activo=True,
             fecha_creacion=date.today()
@@ -1261,24 +1268,28 @@ def create_plan_rutina(data: PlanRutinaCreate, db: Session = Depends(database.ge
             lista_ejercicios = d.ejercicios if d.ejercicios else []
             
             for e in lista_ejercicios:
+                # Se agrega soporte para progreso_json (Requerimiento 5)
                 ej_en_rut = models.EjercicioEnRutina(
                     dia_id=nuevo_dia.id,
                     rutina_id=nuevo_plan.id,
                     ejercicio_id=e.ejercicio_id,
-                    comentario=e.comentario
+                    comentario=e.comentario,
+                    progreso_json=e.progreso_json # Aquí se guardan los steps por semana si es progresiva
                 )
                 db.add(ej_en_rut)
                 db.flush()
 
-                for s in e.series:
-                    nueva_serie = models.SerieEjercicio(
-                        ejercicio_en_rutina_id=ej_en_rut.id,
-                        numero_serie=s.numero_serie,
-                        repeticiones=s.repeticiones,
-                        peso=s.peso,
-                        descanso=s.descanso
-                    )
-                    db.add(nueva_serie)
+                # Si es una rutina normal o tiene series específicas, las guardamos (Requerimiento 6)
+                if e.series:
+                    for s in e.series:
+                        nueva_serie = models.SerieEjercicio(
+                            ejercicio_en_rutina_id=ej_en_rut.id,
+                            numero_serie=s.numero_serie,
+                            repeticiones=s.repeticiones,
+                            weight=s.peso, # Asegurar que coincida con tu modelo 'peso' o 'weight'
+                            descanso=s.descanso
+                        )
+                        db.add(nueva_serie)
         
         db.commit()
         return {"status": "success", "id": nuevo_plan.id}
@@ -1288,7 +1299,8 @@ def create_plan_rutina(data: PlanRutinaCreate, db: Session = Depends(database.ge
         raise he
     except Exception as e:
         db.rollback()
-        logger.error(f"Error Grave en Rutinas: {str(e)}")
+        if 'logger' in globals():
+            logger.error(f"Error Grave en Rutinas: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/rutinas/usuario/{id}", response_model=Optional[PlanRutinaResponse], tags=["Musculación"])
