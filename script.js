@@ -1157,7 +1157,7 @@
 
 		/**
  * ============================================================
- * MÓDULO DE RUTINAS VIKINGAS - SISTEMA INTEGRAL PRO (FINAL)
+ * MÓDULO DE RUTINAS VIKINGAS - SISTEMA INTEGRAL PRO (DEFINITIVO)
  * ============================================================
  */
 
@@ -1168,21 +1168,22 @@ if (!state.routineWizard) {
         currentStep: 1,
         totalSteps: 3,
         tipo: 'normal',
+        tipo_id: 1, // 1: normal, 2: progresiva
         cantDias: 3,
-        objetivo: '',
+        nombre_grupo: '', 
+        objetivo: '',     
         vencimiento: '',
         dias: [],
         semanaActivaFicha: 0,
         rutinasCargadas: [],
         editMode: false,
         isTabSwitching: false,
-        openDays: [] // Para mantener acordeones abiertos al cambiar de semana
+        openDays: [] 
     };
 }
 
 /**
- * Función robusta para iniciales.
- * Busca en nombre_completo o dentro del objeto usuario si existe.
+ * Función para iniciales.
  */
 function getVikingInitials(a) {
     const nombre = a.nombre_completo || (a.usuario ? a.usuario.nombre_completo : null);
@@ -1207,19 +1208,18 @@ async function loadMusculacionMetadata() {
         state.gruposMusculares = Array.isArray(grupos) ? grupos : [];
         state.ejerciciosLibreria = Array.isArray(ejercicios) ? ejercicios : [];
     } catch (e) {
-        console.error("Error cargando arsenal:", e);
+        console.error("Error cargando arsenal vikingo:", e);
     }
 }
 
 /**
- * 2. FICHA TÉCNICA (Semanas, Profesor, Membresía, Pesos)
+ * 2. FICHA TÉCNICA (Visualización y Re-activación)
  */
 window.openFichaTecnica = async function(alumnoId) {
     const rutinaContainer = document.getElementById('ficha-rutina-container');
     const isStaff = ["Profesor", "Administrador", "Supervisor"].includes(state.user?.rol_nombre);
 
     if (!rutinaContainer) return;
-
     state.routineWizard.alumnoId = alumnoId;
 
     if (!state.routineWizard.isTabSwitching) {
@@ -1231,40 +1231,37 @@ window.openFichaTecnica = async function(alumnoId) {
         `;
     }
 
-    // 1. Obtener datos del alumno
     const al = await apiFetch(`/alumnos/${alumnoId}/ficha`);
     if (al.error) {
         showVikingToast("Error al conectar con el servidor", true);
         return;
     }
 
-    // 2. Cálculo de membresía corregido
     const hoy = new Date();
     hoy.setHours(0, 0, 0, 0);
     const fechaVencPlanStr = al.fecha_vencimiento || al.vencimiento;
     let alDia = false;
-    if (fechaVencPlanStr) {
+    if (fechaVencPlanStr && fechaVencPlanStr !== '---') {
         const parts = fechaVencPlanStr.split('-');
         const vencMemb = new Date(parts[0], parts[1] - 1, parts[2], 23, 59, 59);
         alDia = hoy <= vencMemb;
     }
 
-    // 3. Llenar metadatos en el modal (PUNTO 10)
+    // Cabecera UI
     if (document.getElementById('ficha-avatar')) document.getElementById('ficha-avatar').innerText = getVikingInitials(al);
     if (document.getElementById('ficha-nombre')) document.getElementById('ficha-nombre').innerText = al.nombre_completo || 'Sin Nombre';
     if (document.getElementById('ficha-dni')) document.getElementById('ficha-dni').innerText = "DNI: " + (al.dni || '---');
     if (document.getElementById('ficha-plan')) document.getElementById('ficha-plan').innerText = "Plan: " + (al.plan || al.plan_nombre || 'Sin Plan Activo');
     
     const vencPlanLabel = document.getElementById('ficha-venc-plan') || document.getElementById('ficha-vencimiento-plan');
-    if (vencPlanLabel) vencPlanLabel.innerText = "Venc. Plan: " + (fechaVencPlanStr || 'Indefinido');
+    if (vencPlanLabel) vencPlanLabel.innerText = "Venc. Plan: " + (fechaVencPlanStr || '---');
 
     const statusEl = document.getElementById('ficha-plan-status');
     if (statusEl) {
-        statusEl.innerText = alDia ? "MEMBRESÍA: AL DÍA" : "MEMBRESÍA: VENCIDA";
+        statusEl.innerText = alDia ? "STATUS: ACTIVO" : "STATUS: INACTIVO";
         statusEl.className = `px-4 py-1.5 rounded-xl text-[10px] font-black uppercase ${alDia ? 'bg-green-600/10 text-green-500 border border-green-500/20' : 'bg-red-600/10 text-red-600 border border-red-600/20'}`;
     }
 
-    // 4. Obtener Rutinas
     let rutinas = await apiFetch(`/rutinas/usuario/${alumnoId}?todo=true`);
     const listaRutinas = Array.isArray(rutinas) ? rutinas : (rutinas && !rutinas.error ? [rutinas] : []);
 
@@ -1272,24 +1269,13 @@ window.openFichaTecnica = async function(alumnoId) {
         state.routineWizard.rutinasCargadas = listaRutinas;
         const semIdx = state.routineWizard.semanaActivaFicha || 0;
 
-        const generatedHTML = listaRutinas.map((rutina, rIdx) => {
-            const esProg = rutina.tipo === 'progresiva';
+        rutinaContainer.innerHTML = listaRutinas.map((rutina, rIdx) => {
+            const esProg = rutina.tipo_id === 2 || rutina.tipo === 'progresiva';
             const objetivoId = `obj-group-${rIdx}`;
             
-            // Verificación de Rutina Activa
-            const partsV = (rutina.fecha_vencimiento || "").split('-');
-            const fechaVencRutina = partsV.length === 3 ? new Date(partsV[0], partsV[1]-1, partsV[2], 23, 59, 59) : null;
-            const esActiva = rutina.activo && (fechaVencRutina ? hoy <= fechaVencRutina : true);
-            const numSemanas = esProg ? 4 : 0;
-
-            const statusBadge = esActiva
-                ? `<span class="bg-green-600/10 text-green-500 border border-green-500/20 px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest animate-pulse">Estrategia Activa</span>`
-                : `<span class="bg-red-600/10 text-red-500 border border-red-600/20 px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest">Plan Vencido / Histórico</span>`;
-
-            // SOLAPAS DE SEMANAS - ALTO CONTRASTE (PUNTO 9)
             const tabsHTML = esProg ? `
                 <div class="flex gap-2 mb-8 bg-black/40 p-2 rounded-2xl border border-white/5 overflow-x-auto no-scrollbar">
-                    ${Array.from({length: numSemanas}).map((_, i) => `
+                    ${Array.from({length: 4}).map((_, i) => `
                         <button onclick="window.changeFichaSemana(${i}, ${alumnoId})"
                             class="flex-1 min-w-[100px] py-3 rounded-xl font-black italic uppercase text-[10px] transition-all shrink-0
                             ${semIdx === i ? 'bg-red-600 text-black shadow-[0_0_20px_rgba(255,0,0,0.3)]' : 'bg-white/5 text-white/30 hover:bg-white/10 border border-white/10'}">
@@ -1303,6 +1289,12 @@ window.openFichaTecnica = async function(alumnoId) {
                 const diaId = `ficha-dia-${rIdx}-${dIdx}`;
                 const isOpen = state.routineWizard.openDays?.includes(diaId);
 
+                let ejerciciosFiltrados = d.ejercicios || [];
+                if (esProg) {
+                    const marker = `[Semana ${semIdx + 1}]`;
+                    ejerciciosFiltrados = ejerciciosFiltrados.filter(ex => (ex.comentario || "").includes(marker));
+                }
+
                 return `
                 <div class="bg-white/2 rounded-[2rem] border border-white/5 overflow-hidden mb-4 transition-all hover:bg-white/[0.04]">
                     <button onclick="window.toggleFichaElement('${diaId}')" class="w-full flex items-center justify-between p-6 group text-left">
@@ -1312,53 +1304,37 @@ window.openFichaTecnica = async function(alumnoId) {
                             </div>
                             <div>
                                 <span class="text-[13px] font-black italic uppercase tracking-wider text-white group-hover:text-red-500 transition-colors">${d.nombre_dia}</span>
-                                <p class="text-[9px] text-white/30 font-bold uppercase tracking-widest">${(d.ejercicios || []).length} Ejercicios</p>
+                                <p class="text-[9px] text-white/30 font-bold uppercase tracking-widest">${ejerciciosFiltrados.length} Ejercicios</p>
                             </div>
                         </div>
                         <i data-lucide="chevron-down" class="w-5 h-5 text-white/20 transition-transform duration-500 ${isOpen ? 'rotate-180' : ''}" id="icon-${diaId}"></i>
                     </button>
                     
                     <div id="${diaId}" class="${isOpen ? '' : 'hidden'} p-6 space-y-8 bg-black/40 border-t border-white/5">
-                        ${(d.ejercicios || []).map(ex => {
-                            const nombreEjercicio = ex.ejercicio_obj?.nombre || ex.exercise_name || "Ejercicio";
-                            let info = [];
-                            
-                            if (esProg) {
-                                try {
-                                    const prog = JSON.parse(ex.progreso_json || '[]');
-                                    info = prog[semIdx] ? [prog[semIdx]] : [];
-                                } catch(e) { info = []; }
-                            } else {
-                                info = ex.series_detalle || ex.series || [];
-                            }
+                        ${ejerciciosFiltrados.map(ex => {
+                            const nombreEjercicio = (ex.ejercicio_obj?.nombre || ex.exercise_name || "Ejercicio").replace(/\[Semana \d+\]/, "").trim();
+                            const info = ex.series_detalle || ex.series || [];
                             
                             return `
                                 <div class="flex flex-col border-l-2 border-red-600/30 pl-6 relative group/item">
                                     <p class="text-[14px] font-black uppercase italic text-white tracking-wide mb-5 group-hover/item:text-red-500 transition-colors">${nombreEjercicio}</p>
-                                    
-                                    <div class="grid grid-cols-4 gap-2 mb-3 px-4 opacity-40">
-                                        <span class="text-[8px] font-black uppercase text-red-600 tracking-widest text-center">Serie</span>
-                                        <span class="text-[8px] font-black uppercase text-center tracking-widest">Reps</span>
-                                        <span class="text-[8px] font-black uppercase text-center tracking-widest">Peso</span>
-                                        <span class="text-[8px] font-black uppercase text-right tracking-widest">Pausa</span>
+                                    <div class="grid grid-cols-4 gap-2 mb-3 px-4 opacity-40 text-center">
+                                        <span class="text-[8px] font-black uppercase text-red-600 tracking-widest">Serie</span>
+                                        <span class="text-[8px] font-black uppercase tracking-widest">Reps</span>
+                                        <span class="text-[8px] font-black uppercase tracking-widest">Peso</span>
+                                        <span class="text-[8px] font-black uppercase tracking-widest">Pausa</span>
                                     </div>
-
                                     <div class="flex flex-col gap-2">
-                                        ${info.length > 0 ? info.map(s => `
-                                            <div class="grid grid-cols-4 items-center bg-white/[0.03] px-5 py-3.5 rounded-2xl border border-white/5 hover:border-red-600/30 transition-all">
-                                                <span class="text-[11px] font-black text-red-600 italic text-center">#${s.numero_serie || s.series || 'S'}</span>
-                                                <span class="text-[12px] font-black text-white text-center">${s.repeticiones || s.reps || '-'}</span>
-                                                <span class="text-[12px] font-black text-white text-center">${s.peso || s.weight || '-'}<small class="text-[9px] text-white/40 ml-0.5">kg</small></span>
-                                                <span class="text-[10px] text-white/40 italic text-right">${s.descanso || s.pausa || '-'}</span>
+                                        ${info.map(s => `
+                                            <div class="grid grid-cols-4 items-center bg-white/[0.03] px-5 py-3.5 rounded-2xl border border-white/5 hover:border-red-600/30 transition-all text-center">
+                                                <span class="text-[11px] font-black text-red-600 italic">#${s.numero_serie || '1'}</span>
+                                                <span class="text-[12px] font-black text-white">${s.repeticiones || '-'}</span>
+                                                <span class="text-[12px] font-black text-white">${s.peso || '-'}<small class="text-[9px] text-white/40 ml-0.5">kg</small></span>
+                                                <span class="text-[10px] text-white/40 italic">${s.descanso || '-'}</span>
                                             </div>
-                                        `).join('') : '<p class="text-[9px] text-white/10 uppercase italic pl-4">Sin datos registrados</p>'}
+                                        `).join('')}
                                     </div>
-                                    ${ex.comentario ? `
-                                        <div class="mt-4 bg-red-600/5 p-4 rounded-2xl border border-red-600/10 flex gap-3">
-                                            <i data-lucide="info" class="w-4 h-4 text-red-600 mt-0.5"></i>
-                                            <p class="text-[10px] text-white/60 italic leading-relaxed">${ex.comentario}</p>
-                                        </div>
-                                    ` : ''}
+                                    ${ex.comentario ? `<p class="mt-4 text-[10px] text-white/30 italic">Nota: ${ex.comentario}</p>` : ''}
                                 </div>
                             `;
                         }).join('')}
@@ -1374,15 +1350,14 @@ window.openFichaTecnica = async function(alumnoId) {
                             <div class="w-2 h-16 viking-bg-red rounded-full shadow-[0_0_20px_rgba(255,0,0,0.6)]"></div>
                             <div>
                                 <p class="text-[10px] text-red-600 font-black uppercase tracking-[0.4em] mb-2 italic">Profesor: ${rutina.profesor_nombre || 'Desconocido'}</p>
-                                <h5 class="text-2xl font-black italic uppercase text-white leading-none tracking-tighter">${rutina.objetivo || 'Rutina de Musculación'}</h5>
+                                <h5 class="text-2xl font-black italic uppercase text-white leading-none tracking-tighter">${rutina.nombre_grupo || 'Plan Vikingo'}</h5>
                                 <p class="text-[10px] text-white/40 font-bold italic mt-3 flex items-center gap-2 uppercase tracking-widest">
-                                    <i data-lucide="calendar" class="w-3.5 h-3.5 text-red-600"></i> Expiración: ${rutina.fecha_vencimiento || 'Indefinido'}
+                                    <i data-lucide="info" class="w-3.5 h-3.5 text-red-600"></i> Objetivo: ${rutina.objetivo || 'Sin descripción estratégica'}
                                 </p>
                             </div>
                         </div>
                         <div class="flex items-center gap-5">
                             ${isStaff ? `<button onclick="closeModal('modal-ficha-tecnica'); window.openRoutineEditor(${alumnoId}, true)" class="bg-amber-600 hover:bg-amber-700 text-white px-5 py-2.5 rounded-xl text-[10px] font-black uppercase italic flex items-center gap-2 transition-all shadow-lg"><i data-lucide="edit-3" class="w-4 h-4"></i> Editar</button>` : ''}
-                            ${statusBadge}
                             <i data-lucide="chevron-down" class="w-7 h-7 text-white/20 transition-transform duration-500 cursor-pointer" id="icon-${objetivoId}" onclick="window.toggleFichaElement('${objetivoId}')"></i>
                         </div>
                     </div>
@@ -1393,10 +1368,8 @@ window.openFichaTecnica = async function(alumnoId) {
                 </div>
             </div>`;
         }).join('');
-
-        rutinaContainer.innerHTML = generatedHTML;
     } else {
-        rutinaContainer.innerHTML = `<div class="col-span-2 p-20 border-2 border-dashed border-white/5 rounded-[4rem] text-center bg-white/[0.01] opacity-20"><p class="text-sm font-black uppercase italic tracking-widest">Arsenal vacío o inactivo</p></div>`;
+        rutinaContainer.innerHTML = `<div class="col-span-2 p-20 border-2 border-dashed border-white/5 rounded-[4rem] text-center bg-white/[0.01] opacity-20"><p class="text-sm font-black uppercase italic tracking-widest">Arsenal vacío</p></div>`;
     }
 
     if (window.lucide) lucide.createIcons();
@@ -1411,7 +1384,7 @@ window.changeFichaSemana = function(idx, alumnoId) {
 }
 
 /**
- * 3. WIZARD DE CREACIÓN / EDICIÓN
+ * 3. WIZARD DE CREACIÓN / EDICIÓN (CORRECCIÓN PERSISTENCIA Y TIPO_ID)
  */
 window.openRoutineEditor = async function(alumnoId, isEdit = false) {
     const al = state.alumnos.find(a => a.id === alumnoId);
@@ -1421,8 +1394,10 @@ window.openRoutineEditor = async function(alumnoId, isEdit = false) {
         alumnoId: alumnoId,
         currentStep: 1,
         tipo: 'normal',
+        tipo_id: 1,
         cantDias: 3,
-        objetivo: 'Musculación General',
+        nombre_grupo: 'Entrenamiento A',
+        objetivo: 'Mejora de composición corporal',
         vencimiento: new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0],
         dias: [],
         editMode: isEdit
@@ -1432,25 +1407,51 @@ window.openRoutineEditor = async function(alumnoId, isEdit = false) {
         let lista = await apiFetch(`/rutinas/usuario/${alumnoId}?todo=true`);
         let active = Array.isArray(lista) ? lista.find(r => r.activo) : (lista && lista.activo ? lista : null);
         if (active) {
-            routineData.tipo = active.tipo || 'normal';
+            routineData.tipo_id = active.tipo_id || (active.tipo === 'progresiva' ? 2 : 1);
+            routineData.tipo = routineData.tipo_id === 2 ? 'progresiva' : 'normal';
             routineData.cantDias = active.dias?.length || 3;
-            routineData.objetivo = active.objetivo;
+            routineData.nombre_grupo = active.nombre_grupo || active.objetivo;
+            routineData.objetivo = active.descripcion || active.objetivo;
             routineData.vencimiento = active.fecha_vencimiento;
-            routineData.dias = active.dias.map(d => ({
-                nombre: d.nombre_dia,
-                ejercicios: d.ejercicios.map(ex => ({
-                    id: ex.ejercicio_id,
-                    nombre: ex.ejercicio_obj?.nombre || ex.exercise_name || "Ejercicio",
-                    comentario: ex.comentario || "",
-                    series: (ex.series_detalle || ex.series || []).map(s => ({
-                        numero_serie: s.numero_serie,
-                        repeticiones: s.repeticiones || s.reps,
-                        peso: s.peso || s.weight,
-                        descanso: s.descanso || s.pausa
-                    })),
-                    progreso: ex.progreso_json ? JSON.parse(ex.progreso_json) : null
-                }))
-            }));
+
+            routineData.dias = active.dias.map(d => {
+                const uniqueEx = [];
+                d.ejercicios.forEach(ex => {
+                    const cleanName = (ex.ejercicio_obj?.nombre || ex.exercise_name || "").replace(/\[Semana \d+\]/, "").trim();
+                    const semMatch = (ex.comentario || "").match(/\[Semana (\d+)\]/);
+                    const semIdx = semMatch ? parseInt(semMatch[1]) - 1 : 0;
+
+                    let existing = uniqueEx.find(u => u.id === ex.ejercicio_id);
+                    if(!existing) {
+                        existing = {
+                            id: ex.ejercicio_id,
+                            nombre: cleanName,
+                            comentario: (ex.comentario || "").replace(/\[Semana \d+\]/, "").trim(),
+                            series: [],
+                            progreso: Array.from({length: 4}).map(() => ({series:'3', repeticiones:'12', peso:'', descanso:'90s'}))
+                        };
+                        uniqueEx.push(existing);
+                    }
+
+                    if (routineData.tipo === 'progresiva') {
+                        const s = ex.series_detalle?.[0] || ex.series?.[0] || {};
+                        existing.progreso[semIdx] = {
+                            series: '1',
+                            repeticiones: s.repeticiones || '12',
+                            peso: s.peso || '',
+                            descanso: s.descanso || '90s'
+                        };
+                    } else {
+                        existing.series = (ex.series_detalle || ex.series || []).map(s => ({
+                            numero_serie: s.numero_serie,
+                            repeticiones: s.repeticiones,
+                            peso: s.peso,
+                            descanso: s.descanso
+                        }));
+                    }
+                });
+                return { nombre: d.nombre_dia, ejercicios: uniqueEx };
+            });
         }
     }
 
@@ -1478,28 +1479,32 @@ window.renderWizardStep = function() {
         label.innerText = "PASO 1: INTELIGENCIA ESTRATÉGICA";
         body.innerHTML = `
             <div class="grid grid-cols-1 md:grid-cols-2 gap-12 animate-in fade-in">
-                <div class="space-y-10">
+                <div class="space-y-8">
                     <div>
-                        <label class="text-[10px] font-black text-red-600 uppercase block mb-4 italic tracking-widest">Objetivo Estratégico</label>
-                        <input type="text" value="${state.routineWizard.objetivo}" oninput="state.routineWizard.objetivo = this.value" class="viking-input text-2xl font-black italic uppercase">
+                        <label class="text-[10px] font-black text-red-600 uppercase block mb-3 italic tracking-widest">Nombre del Grupo (Plan)</label>
+                        <input type="text" value="${state.routineWizard.nombre_grupo}" oninput="state.routineWizard.nombre_grupo = this.value" class="viking-input text-xl font-black italic uppercase" placeholder="Ej: RUTINA VOLUMEN A">
                     </div>
                     <div>
-                        <label class="text-[10px] font-black text-white/30 uppercase block mb-4 italic tracking-widest">Fecha de Expiración</label>
+                        <label class="text-[10px] font-black text-white/30 uppercase block mb-3 italic tracking-widest">Objetivo Estratégico (Resumen)</label>
+                        <textarea oninput="state.routineWizard.objetivo = this.value" class="viking-input h-24 text-xs font-bold py-4" placeholder="Describe brevemente de qué trata esta rutina...">${state.routineWizard.objetivo}</textarea>
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-black text-white/30 uppercase block mb-3 italic tracking-widest">Fecha de Expiración</label>
                         <input type="date" value="${state.routineWizard.vencimiento}" oninput="state.routineWizard.vencimiento = this.value" class="viking-input">
                     </div>
                 </div>
-                <div class="space-y-10">
+                <div class="space-y-8">
                     <div>
-                        <label class="text-[10px] font-black text-red-600 uppercase block mb-4 italic tracking-widest">Días Semanales</label>
+                        <label class="text-[10px] font-black text-red-600 uppercase block mb-3 italic tracking-widest">Frecuencia Semanal</label>
                         <div class="grid grid-cols-6 gap-3">
                             ${[1,2,3,4,5,6].map(n => `<button onclick="state.routineWizard.cantDias = ${n}; window.renderWizardStep();" class="p-5 rounded-2xl border-2 font-black italic text-lg transition-all ${state.routineWizard.cantDias === n ? 'bg-red-600 text-black border-red-600 shadow-lg' : 'bg-white/5 border-white/5 text-white/40'}">${n}</button>`).join('')}
                         </div>
                     </div>
                     <div>
-                        <label class="text-[10px] font-black text-white/30 uppercase block mb-4 italic tracking-widest">Metodología de Carga</label>
+                        <label class="text-[10px] font-black text-white/30 uppercase block mb-3 italic tracking-widest">Metodología de Carga</label>
                         <div class="flex gap-4">
-                            <button onclick="state.routineWizard.tipo = 'normal'; window.renderWizardStep();" class="flex-1 p-6 rounded-3xl border-2 font-black uppercase text-[10px] transition-all ${state.routineWizard.tipo === 'normal' ? 'bg-red-600/10 border-red-600 text-red-600 shadow-lg' : 'opacity-30 border-white/5'}">Normal</button>
-                            <button onclick="state.routineWizard.tipo = 'progresiva'; window.renderWizardStep();" class="flex-1 p-6 rounded-3xl border-2 font-black uppercase text-[10px] transition-all ${state.routineWizard.tipo === 'progresiva' ? 'bg-amber-600/10 border-amber-600 text-amber-600 shadow-lg' : 'opacity-30 border-white/5'}">Progresiva</button>
+                            <button onclick="state.routineWizard.tipo = 'normal'; state.routineWizard.tipo_id = 1; window.renderWizardStep();" class="flex-1 p-6 rounded-3xl border-2 font-black uppercase text-[10px] transition-all ${state.routineWizard.tipo_id === 1 ? 'bg-red-600/10 border-red-600 text-red-600 shadow-lg' : 'opacity-30 border-white/5'}">Normal</button>
+                            <button onclick="state.routineWizard.tipo = 'progresiva'; state.routineWizard.tipo_id = 2; window.renderWizardStep();" class="flex-1 p-6 rounded-3xl border-2 font-black uppercase text-[10px] transition-all ${state.routineWizard.tipo_id === 2 ? 'bg-amber-600/10 border-amber-600 text-amber-600 shadow-lg' : 'opacity-30 border-white/5'}">Progresiva</button>
                         </div>
                     </div>
                 </div>
@@ -1515,19 +1520,10 @@ window.renderWizardStep = function() {
             <div class="text-center py-10 space-y-10 animate-in zoom-in">
                 <div class="bg-red-600/10 p-12 rounded-[4rem] border border-red-600/20 shadow-2xl">
                     <i data-lucide="shield-check" class="w-20 h-20 text-red-600 mx-auto mb-6"></i>
-                    <h4 class="text-5xl font-black italic uppercase text-white tracking-tighter">${state.routineWizard.objetivo}</h4>
-                    <p class="text-white/40 uppercase font-black tracking-[0.4em] text-xs mt-4 italic">${state.routineWizard.tipo === 'progresiva' ? 'Estrategia Evolutiva por Semanas' : 'Plan Táctico Estándar'}</p>
+                    <h4 class="text-4xl font-black italic uppercase text-white tracking-tighter">${state.routineWizard.nombre_grupo}</h4>
+                    <p class="text-white/40 uppercase font-black tracking-[0.4em] text-xs mt-4 italic">${state.routineWizard.tipo_id === 2 ? 'Estrategia Progresiva por Filas Individuales' : 'Plan Táctico Estándar'}</p>
                 </div>
-                <div class="grid grid-cols-2 gap-6 max-w-md mx-auto">
-                    <div class="bg-white/5 p-8 rounded-[2rem] border border-white/10 flex flex-col items-center">
-                        <p class="text-3xl font-black italic text-white">${state.routineWizard.cantDias}</p>
-                        <span class="text-[8px] uppercase font-black text-white/20">Jornadas</span>
-                    </div>
-                    <div class="bg-white/5 p-8 rounded-[2rem] border border-white/10 flex flex-col items-center">
-                        <p class="text-sm font-black italic text-red-600 uppercase mt-2">${state.routineWizard.vencimiento?.split('-').reverse().join('/')}</p>
-                        <span class="text-[8px] uppercase font-black text-white/20">Vencimiento</span>
-                    </div>
-                </div>
+                <p class="text-[11px] text-white/20 italic max-w-sm mx-auto">"${state.routineWizard.objetivo}"</p>
             </div>`;
     }
 
@@ -1543,13 +1539,13 @@ window.renderWizardStep = function() {
 window.renderStepDiaEditor = function(dayIdx) {
     if (!state.routineWizard.dias[dayIdx]) state.routineWizard.dias[dayIdx] = { nombre: `Día ${dayIdx + 1}`, ejercicios: [] };
     const dia = state.routineWizard.dias[dayIdx];
-    const esProg = state.routineWizard.tipo === 'progresiva';
+    const esProg = state.routineWizard.tipo_id === 2;
 
     return `
     <div class="animate-in slide-in-from-right space-y-10">
         <input type="text" value="${dia.nombre}" oninput="state.routineWizard.dias[${dayIdx}].nombre = this.value" class="bg-transparent border-none text-5xl font-black italic uppercase text-white w-full outline-none" placeholder="Nombre de la jornada...">
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4 bg-white/[0.03] p-8 rounded-[3rem] border border-white/5 shadow-inner relative">
-            <select id="wizard-group-${dayIdx}" onchange="window.initSearchInWizard(${dayIdx})" class="viking-input !bg-black/60 h-14 text-xs font-black uppercase italic border-white/10 cursor-pointer">
+            <select id="wizard-group-${dayIdx}" class="viking-input !bg-black/60 h-14 text-xs font-black uppercase italic border-white/10 cursor-pointer">
                 <option value="all">Todos los grupos</option>
                 ${state.gruposMusculares.map(g => `<option value="${g.id}">${g.nombre}</option>`).join('')}
             </select>
@@ -1559,9 +1555,8 @@ window.renderStepDiaEditor = function(dayIdx) {
                 <div id="wizard-results-${dayIdx}" class="absolute top-full left-0 w-full bg-[#0a0a0a] border border-red-600/30 rounded-3xl mt-4 z-[100] hidden max-h-72 overflow-y-auto shadow-2xl custom-scrollbar border-t-0"></div>
             </div>
         </div>
-
         <div class="space-y-6">
-            ${dia.ejercicios.length === 0 ? `<div class="py-20 text-center opacity-10 font-black uppercase italic text-xs tracking-widest">Arsenal vacío para este día</div>` : dia.ejercicios.map((ex, exIdx) => `
+            ${dia.ejercicios.length === 0 ? `<div class="py-20 text-center opacity-10 font-black uppercase italic text-xs tracking-widest">Arsenal vacío</div>` : dia.ejercicios.map((ex, exIdx) => `
                 <div class="bg-white/[0.02] border border-white/10 rounded-[2.5rem] p-8 relative group hover:border-red-600/30 transition-all shadow-xl">
                     <div class="flex justify-between items-start mb-6">
                         <div class="flex items-center gap-4">
@@ -1570,10 +1565,9 @@ window.renderStepDiaEditor = function(dayIdx) {
                         </div>
                         <button onclick="window.removeExercise(${dayIdx}, ${exIdx})" class="text-red-600/20 hover:text-red-600 transition-all"><i data-lucide="trash-2" class="w-5 h-5"></i></button>
                     </div>
-
                     ${esProg ? window.renderProgresoSemanasWizard(dayIdx, exIdx, ex) : window.renderSeriesNormalWizard(dayIdx, exIdx, ex)}
                     <div class="mt-6 border-t border-white/5 pt-4">
-                        <input type="text" value="${ex.comentario || ''}" placeholder="Nota táctica" oninput="state.routineWizard.dias[${dayIdx}].ejercicios[${exIdx}].comentario = this.value" class="w-full bg-transparent text-[11px] text-white/30 italic outline-none">
+                        <input type="text" value="${ex.comentario || ''}" placeholder="Nota táctica o Comentario" oninput="state.routineWizard.dias[${dayIdx}].ejercicios[${exIdx}].comentario = this.value" class="w-full bg-transparent text-[11px] text-white/30 italic outline-none">
                     </div>
                 </div>
             `).join('')}
@@ -1598,7 +1592,7 @@ window.renderSeriesNormalWizard = function(dayIdx, exIdx, ex) {
 }
 
 window.renderProgresoSemanasWizard = function(dayIdx, exIdx, ex) {
-    if (!ex.progreso || ex.progreso.length === 0) ex.progreso = Array.from({length: 4}).map(() => ({series:'3', reps:'12', peso:'', descanso:'90s'}));
+    if (!ex.progreso) ex.progreso = Array.from({length: 4}).map(() => ({series:'1', repeticiones:'12', peso:'', descanso:'90s'}));
 
     return `
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -1607,33 +1601,72 @@ window.renderProgresoSemanasWizard = function(dayIdx, exIdx, ex) {
                 <p class="text-[8px] font-black text-amber-500 uppercase text-center border-b border-white/5 pb-2">Semana ${sIdx+1}</p>
                 <div class="grid grid-cols-2 gap-1">
                     <input type="text" value="${sem.series}" oninput="state.routineWizard.dias[${dayIdx}].ejercicios[${exIdx}].progreso[${sIdx}].series = this.value" class="bg-transparent text-center text-white text-[10px] outline-none border-b border-white/10" placeholder="S">
-                    <input type="text" value="${sem.reps}" oninput="state.routineWizard.dias[${dayIdx}].ejercicios[${exIdx}].progreso[${sIdx}].reps = this.value" class="bg-transparent text-center text-white text-[10px] outline-none border-b border-white/10" placeholder="R">
+                    <input type="text" value="${sem.repeticiones}" oninput="state.routineWizard.dias[${dayIdx}].ejercicios[${exIdx}].progreso[${sIdx}].repeticiones = this.value" class="bg-transparent text-center text-white text-[10px] outline-none border-b border-white/10" placeholder="R">
                 </div>
                 <input type="text" value="${sem.peso}" oninput="state.routineWizard.dias[${dayIdx}].ejercicios[${exIdx}].progreso[${sIdx}].peso = this.value" class="w-full bg-white/5 text-center text-amber-500 font-black text-xs py-2 rounded-xl outline-none" placeholder="0 kg">
+                <input type="text" value="${sem.descanso || '90s'}" oninput="state.routineWizard.dias[${dayIdx}].ejercicios[${exIdx}].progreso[${sIdx}].descanso = this.value" class="w-full bg-transparent text-center text-white/20 italic text-[9px] outline-none" placeholder="Pausa">
             </div>
         `).join('')}
     </div>`;
 }
 
 /**
- * 4. GUARDADO FINAL
+ * 4. GUARDADO FINAL (EXPLOSIÓN DE REGISTROS POR SEMANA SI ES PROGRESIVA)
  */
 window.saveFinalRutina = async function() {
-    const payload = {
-        usuario_id: state.routineWizard.alumnoId,
-        objetivo: state.routineWizard.objetivo,
-        tipo: state.routineWizard.tipo,
-        fecha_vencimiento: state.routineWizard.vencimiento,
-        activo: true,
-        dias: state.routineWizard.dias.map(d => ({
-            nombre_dia: d.nombre,
-            ejercicios: d.ejercicios.map(ex => ({
+    const isProgresiva = state.routineWizard.tipo_id === 2;
+    const diasProcesados = state.routineWizard.dias.map(d => {
+        let ejerciciosFinales = [];
+
+        if (isProgresiva) {
+            // EXPLOSIÓN: 1 ejercicio del wizard -> 4 filas físicas en la base de datos
+            d.ejercicios.forEach(ex => {
+                ex.progreso.forEach((weekData, semIdx) => {
+                    ejerciciosFinales.push({
+                        ejercicio_id: ex.id,
+                        // El comentario ahora incluye la marca de semana de forma explícita
+                        comentario: `[Semana ${semIdx + 1}] ${ex.comentario || ""}`.trim(),
+                        series: [{
+                            numero_serie: 1, 
+                            repeticiones: weekData.repeticiones || "12",
+                            peso: weekData.peso || "0",
+                            descanso: weekData.descanso || "90s"
+                        }],
+                        progreso_json: JSON.stringify(ex.progreso) 
+                    });
+                });
+            });
+        } else {
+            // NORMAL: Mapeo estándar 1 a 1 con sus series
+            ejerciciosFinales = d.ejercicios.map(ex => ({
                 ejercicio_id: ex.id,
                 comentario: ex.comentario || "",
-                series: ex.series || [],
-                progreso_json: ex.progreso ? JSON.stringify(ex.progreso) : null
-            }))
-        }))
+                series: ex.series?.map(s => ({
+                    numero_serie: s.numero_serie,
+                    repeticiones: s.repeticiones, 
+                    peso: s.peso,
+                    descanso: s.descanso
+                })) || [],
+                progreso_json: null
+            }));
+        }
+
+        return {
+            nombre_dia: d.nombre,
+            ejercicios: ejerciciosFinales
+        };
+    });
+
+    const payload = {
+        usuario_id: state.routineWizard.alumnoId,
+        nombre_grupo: state.routineWizard.nombre_grupo,
+        objetivo: state.routineWizard.nombre_grupo, 
+        descripcion: state.routineWizard.objetivo,  
+        tipo_id: state.routineWizard.tipo_id,
+        tipo: state.routineWizard.tipo_id === 2 ? 'progresiva' : 'normal',
+        fecha_vencimiento: state.routineWizard.vencimiento,
+        activo: true,
+        dias: diasProcesados
     };
 
     const res = await apiFetch('/rutinas/plan', 'POST', payload);
@@ -1660,7 +1693,6 @@ window.initSearchInWizard = function(dayIdx) {
         const query = input.value.toLowerCase();
         const groupId = groupSelect ? groupSelect.value : 'all';
 
-        if (query.length < 1 && groupId === 'all') { results.classList.add('hidden'); return; }
         const filtered = state.ejerciciosLibreria.filter(e =>
             (groupId === 'all' || e.grupo_muscular_id == groupId) &&
             e.nombre.toLowerCase().includes(query)
@@ -1674,7 +1706,8 @@ window.initSearchInWizard = function(dayIdx) {
         `).join('');
 
         results.innerHTML += `
-            <div class="p-4 bg-red-600/5 hover:bg-red-600/10 cursor-pointer text-[10px] font-black uppercase italic text-red-500 border-t border-white/5 flex justify-center items-center gap-2" onmousedown="closeModal('modal-rutina-editor'); openModal('modal-ejercicio')">
+            <div class="p-4 bg-red-600/5 hover:bg-red-600/10 cursor-pointer text-[10px] font-black uppercase italic text-red-500 border-t border-white/5 flex justify-center items-center gap-2" 
+                onmousedown="window.prepareNewExerciseFromWizard(${dayIdx})">
                 <i data-lucide="plus-circle" class="w-4 h-4"></i> Crear nuevo ejercicio
             </div>`;
 
@@ -1687,7 +1720,15 @@ window.initSearchInWizard = function(dayIdx) {
     input.onblur = () => setTimeout(() => results.classList.add('hidden'), 250);
 }
 
-// ALIAS PARA COINCIDIR CON LOS ONCLICK DEL HTML
+window.prepareNewExerciseFromWizard = function(dayIdx) {
+    if (window.openModalEjercicio) {
+        closeModal('modal-rutina-editor');
+        openModal('modal-ejercicio');
+    } else {
+        showVikingToast("Modal de creación no detectado", true);
+    }
+}
+
 window.nextStep = function() { window.nextWizardStep(); };
 window.prevStep = function() { window.prevWizardStep(); };
 window.addSerie = function(dayIdx, exIdx) { window.addSerieWizard(dayIdx, exIdx); };
@@ -1695,7 +1736,14 @@ window.removeExercise = function(dayIdx, exIdx) { window.removeEjercicioWizard(d
 window.addExerciseToWizard = function(dayIdx, id, nombre) { window.addEjercicioWizard(dayIdx, id, nombre); };
 
 window.addEjercicioWizard = (dayIdx, id, nombre) => {
-    state.routineWizard.dias[dayIdx].ejercicios.push({ id, nombre, series: [{numero_serie: 1, repeticiones: '12', peso: '', descanso: '90s'}], progreso: null, comentario: '' });
+    const esProg = state.routineWizard.tipo_id === 2;
+    state.routineWizard.dias[dayIdx].ejercicios.push({ 
+        id, 
+        nombre, 
+        series: [{numero_serie: 1, repeticiones: '12', peso: '', descanso: '90s'}], 
+        progreso: esProg ? Array.from({length: 4}).map(() => ({series:'1', repeticiones:'12', peso:'', descanso:'90s'})) : null, 
+        comentario: '' 
+    });
     window.renderWizardStep();
 };
 
@@ -1795,7 +1843,7 @@ window.renderRutinasList = function(listaDatos) {
     if(!list) return;
 
     if (listaDatos.length === 0) {
-        list.innerHTML = `<div class="p-20 text-center opacity-20 font-black uppercase italic tracking-widest"><i data-lucide="users" class="w-12 h-12 mx-auto mb-2"></i>Sin registros en el radar</div>`;
+        list.innerHTML = `<div class="p-20 text-center opacity-20 font-black uppercase italic tracking-widest"><i data-lucide="users" class="w-12 h-12 mx-auto mb-2"></i>Sin registros</div>`;
         if(window.lucide) lucide.createIcons();
         return;
     }
@@ -1830,7 +1878,7 @@ window.renderRutinasList = function(listaDatos) {
 }
 
 /**
- * 7. HISTORIAL (REQ 8)
+ * 7. HISTORIAL
  */
 window.openHistorialRutinas = async function(alumnoId) {
     const al = state.alumnos.find(a => a.id === alumnoId);
@@ -1839,7 +1887,7 @@ window.openHistorialRutinas = async function(alumnoId) {
     const container = document.getElementById('ficha-rutina-container');
     if (!container) return;
 
-    container.innerHTML = `<div class="col-span-2 py-20 text-center animate-pulse"><p class="text-[10px] font-black uppercase text-white/20 tracking-widest">Recuperando registros tácticos...</p></div>`;
+    container.innerHTML = `<div class="col-span-2 py-20 text-center animate-pulse"><p class="text-[10px] font-black uppercase text-white/20 tracking-widest">Recuperando registros...</p></div>`;
 
     document.getElementById('ficha-nombre').innerText = "Historial: " + al.nombre_completo;
     let res = await apiFetch(`/rutinas/usuario/${alumnoId}?todo=true`);
@@ -1850,17 +1898,17 @@ window.openHistorialRutinas = async function(alumnoId) {
     } else {
         rutinas.sort((a,b) => new Date(b.fecha_creacion) - new Date(a.fecha_creacion));
         container.innerHTML = rutinas.map(r => `
-<div class="col-span-2 mb-4 bg-white/[0.03] border border-white/5 p-6 rounded-[2rem] flex justify-between items-center group hover:border-blue-600/30 transition-all">
-<div>
-<p class="text-[8px] text-blue-400 font-black uppercase tracking-widest mb-1 italic">${r.tipo} - Forjada: ${r.fecha_creacion || 'S/F'}</p>
-<h5 class="text-sm font-black italic uppercase text-white">${r.objetivo || 'Rutina de Musculación'}</h5>
-<p class="text-[9px] text-white/30 italic">Profesor: ${r.profesor_nombre || '---'}</p>
-</div>
-<button onclick="closeModal('modal-ficha-tecnica'); window.openRoutineEditor(${alumnoId}, true)" class="px-6 py-3 bg-blue-600 text-white rounded-xl text-[9px] font-black uppercase italic hover:scale-105 transition-all flex items-center gap-2">
-<i data-lucide="zap" class="w-3.5 h-3.5"></i> Reactivar
-</button>
-</div>
-`).join('');
+            <div class="col-span-2 mb-4 bg-white/[0.03] border border-white/5 p-6 rounded-[2rem] flex justify-between items-center group hover:border-blue-600/30 transition-all">
+                <div>
+                    <p class="text-[8px] text-blue-400 font-black uppercase tracking-widest mb-1 italic">${r.tipo} - Forjada: ${r.fecha_creacion || 'S/F'}</p>
+                    <h5 class="text-sm font-black italic uppercase text-white">${r.nombre_grupo || r.objetivo || 'Rutina de Musculación'}</h5>
+                    <p class="text-[9px] text-white/30 italic">Profesor: ${r.profesor_nombre || '---'}</p>
+                </div>
+                <button onclick="closeModal('modal-ficha-tecnica'); window.openRoutineEditor(${alumnoId}, true)" class="px-6 py-3 bg-blue-600 text-white rounded-xl text-[9px] font-black uppercase italic hover:scale-105 transition-all flex items-center gap-2">
+                    <i data-lucide="zap" class="w-3.5 h-3.5"></i> Reactivar
+                </button>
+            </div>
+        `).join('');
     }
 
     if (window.lucide) lucide.createIcons();
@@ -1870,15 +1918,6 @@ window.openHistorialRutinas = async function(alumnoId) {
 /**
  * 8. FUNCIONES DE APOYO GENERAL
  */
-function calcularSemanas(inicio, fin) {
-    if (!fin) return 4;
-    const d1 = new Date(inicio);
-    const d2 = new Date(fin);
-    const diff = d2 - d1;
-    const sem = Math.ceil(diff / (7 * 24 * 60 * 60 * 1000));
-    return sem > 0 ? sem : 4;
-}
-
 window.searchAlumnoRutina = function(query) {
     if(!query) { window.filterRutinas('todos'); return; }
     const q = query.toLowerCase();
@@ -1886,7 +1925,7 @@ window.searchAlumnoRutina = function(query) {
     window.renderRutinasList(filtrados);
 };
 
-// Vinculación global de funciones críticas
+// Vinculación global
 window.renderRutinas = renderRutinas;
 window.filterRutinas = filterRutinas;
 window.renderRutinasList = renderRutinasList;
