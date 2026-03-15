@@ -1161,27 +1161,42 @@
  * ============================================================
  */
 
+// --- 0. INICIALIZACIÓN Y RECUPERACIÓN DE SESIÓN (FIX REFRESCO) ---
+if (typeof state === 'undefined') window.state = {};
+
+// Esta función debe ejecutarse apenas carga el script
+(function initVikingSession() {
+    const savedUser = localStorage.getItem('viking_user');
+    const savedToken = localStorage.getItem('viking_token');
+
+    if (savedUser && savedToken) {
+        state.user = JSON.parse(savedUser);
+        state.token = savedToken;
+        console.log("⚔️ Sesión Vikinga recuperada:", state.user.nombre_completo);
+    } else {
+        console.log("🛡️ No hay sesión activa.");
+    }
+})();
+
 // --- ESTADO GLOBAL DEL WIZARD ---
 state.wizard = {
     alumnoId: null,
-    tipo: 'normal', // 'normal' o 'progresiva'
+    tipo: 'normal', 
     currentStep: 1,
     cantDias: 3,
     objetivo: '',
     vencimiento: '',
-    dias: [], // Estructura: [{nombre: '', ejercicios: []}]
+    dias: [], 
     semanaActivaFicha: 0
 };
 
 /**
  * 1. FUNCIÓN PRINCIPAL: OPEN FICHA TÉCNICA (INTEGRADA Y MEJORADA)
- * Respeta tus "montones de líneas" y agrega la lógica de semanas y profesor.
  */
 async function openFichaTecnica(alumnoId) {
     const rutinaContainer = document.getElementById('ficha-rutina-container');
     const isStaff = ["Profesor", "Administrador", "Supervisor"].includes(state.user?.rol_nombre);
 
-    // Estado de carga visual
     rutinaContainer.innerHTML = `
         <div class="col-span-2 py-16 flex flex-col items-center justify-center space-y-4">
             <div class="w-10 h-10 border-2 border-red-600 border-t-transparent rounded-full animate-spin"></div>
@@ -1189,14 +1204,12 @@ async function openFichaTecnica(alumnoId) {
         </div>
     `;
 
-    // 1. Obtener datos del alumno (Metadata)
     const res = await apiFetch(`/alumnos/${alumnoId}/ficha`);
     if (res.error) {
         showVikingToast("Error al conectar con el servidor", true);
         return;
     }
 
-    // Llenar cabecera del modal (Requerimiento 10)
     const hoy = new Date();
     const vencMemb = res.fecha_vencimiento ? new Date(res.fecha_vencimiento) : null;
     const membAlDia = vencMemb && vencMemb >= hoy;
@@ -1205,7 +1218,6 @@ async function openFichaTecnica(alumnoId) {
     if (document.getElementById('ficha-dni')) document.getElementById('ficha-dni').innerText = "DNI: " + (res.dni || '---');
     if (document.getElementById('ficha-plan')) document.getElementById('ficha-plan').innerText = "Plan: " + (res.plan || 'Sin Plan Activo');
     
-    // Status y Vencimiento del Plan (Requerimiento 10)
     const statusEl = document.getElementById('ficha-plan-status');
     if (statusEl) {
         statusEl.innerText = membAlDia ? "MEMBRESÍA: AL DÍA" : "MEMBRESÍA: VENCIDA";
@@ -1213,18 +1225,15 @@ async function openFichaTecnica(alumnoId) {
     }
     if (document.getElementById('ficha-venc-plan')) document.getElementById('ficha-venc-plan').innerText = "Vence: " + (res.fecha_vencimiento || '---');
 
-    // Datos físicos
     if (document.getElementById('ficha-peso')) document.getElementById('ficha-peso').innerText = (res.peso || 0) + " kg";
     if (document.getElementById('ficha-altura')) document.getElementById('ficha-altura').innerText = (res.altura || 0) + " cm";
     if (document.getElementById('ficha-imc')) document.getElementById('ficha-imc').innerText = res.imc || 0;
 
-    // 2. Obtener Rutinas (Activa + Historial)
-    // Usamos el endpoint que devuelve el historial si es staff o la activa si es alumno
     let rutinasData = await apiFetch(`/rutinas/usuario/${alumnoId}`);
     const rutinas = Array.isArray(rutinasData) ? rutinasData : (rutinasData && !rutinasData.error ? [rutinasData] : []);
 
     if (rutinas.length > 0) {
-        state.wizard.rutinasCargadas = rutinas; // Guardamos en estado para tabs
+        state.wizard.rutinasCargadas = rutinas; 
         renderFichaRutinasContent(alumnoId, isStaff);
     } else {
         rutinaContainer.innerHTML = `
@@ -1239,7 +1248,7 @@ async function openFichaTecnica(alumnoId) {
 }
 
 /**
- * 2. RENDERIZADO DE CONTENIDO DE FICHA (TABLAS Y SOLAPAS)
+ * 2. RENDERIZADO DE CONTENIDO DE FICHA
  */
 function renderFichaRutinasContent(alumnoId, isStaff) {
     const container = document.getElementById('ficha-rutina-container');
@@ -1253,7 +1262,6 @@ function renderFichaRutinasContent(alumnoId, isStaff) {
 
         return `
         <div class="col-span-2 mb-8 bg-white/[0.02] border ${isActive ? 'border-red-600/30 shadow-lg' : 'border-white/5 opacity-50'} rounded-[2.5rem] overflow-hidden transition-all">
-            <!-- CABECERA DE LA RUTINA -->
             <div class="p-8 border-b border-white/5 flex justify-between items-center bg-white/[0.02]">
                 <div>
                     <div class="flex items-center gap-3 mb-2">
@@ -1272,7 +1280,6 @@ function renderFichaRutinasContent(alumnoId, isStaff) {
                 </div>
             </div>
 
-            <!-- CUERPO: SI ES PROGRESIVA MOSTRAR SOLAPAS -->
             ${esProgresiva ? `
                 <div class="p-8">
                     <div class="flex gap-2 mb-8 border-b border-white/5 pb-4 overflow-x-auto no-scrollbar">
@@ -1296,7 +1303,7 @@ function renderFichaRutinasContent(alumnoId, isStaff) {
 }
 
 /**
- * 3. RENDERIZADO DE DÍAS Y EJERCICIOS (REQUISITO 6: LÍNEAS POR SERIE)
+ * 3. RENDERIZADO DE DÍAS Y EJERCICIOS (LÍNEAS POR SERIE)
  */
 function renderDiasEjercicios(rutina, esProgresiva, semanaIdx = 0) {
     return (rutina.dias || []).map(d => `
@@ -1315,7 +1322,6 @@ function renderDiasEjercicios(rutina, esProgresiva, semanaIdx = 0) {
             return `
             <div class="bg-black/40 p-6 rounded-3xl border border-white/5 hover:border-red-600/20 transition-all group">
                 <p class="text-[13px] font-black uppercase italic text-white mb-4 group-hover:text-red-500 transition-colors">${ex.exercise_name || ex.ejercicio_obj?.nombre || 'Ejercicio'}</p>
-                
                 <div class="space-y-1.5">
                     ${esProgresiva ? seriesData.map(s => `
                         <div class="grid grid-cols-4 gap-2 text-center bg-white/5 p-3 rounded-xl">
@@ -1333,14 +1339,13 @@ function renderDiasEjercicios(rutina, esProgresiva, semanaIdx = 0) {
                         </div>
                     `).join('')}
                 </div>
-                ${ex.comentario ? `<p class="mt-4 text-[9px] text-white/30 italic px-2 border-t border-white/5 pt-3"><i data-lucide="info" class="w-3 h-3 inline mr-1"></i> ${ex.comentario}</p>` : ''}
             </div>`;
         }).join('')}
     `).join('');
 }
 
 /**
- * 4. WIZARD DE CREACIÓN PRO (REQUISITOS 1, 2, 3, 5)
+ * 4. WIZARD DE CREACIÓN PRO
  */
 async function openRoutineEditor(alumnoId, isEdit = false, routineId = null) {
     const al = state.alumnos.find(a => a.id === alumnoId);
@@ -1412,20 +1417,11 @@ function renderWizardStep() {
                 <div class="bg-red-600/10 p-12 rounded-[4rem] border border-red-600/20 shadow-2xl">
                     <i data-lucide="shield-check" class="w-20 h-20 text-red-600 mx-auto mb-6"></i>
                     <h4 class="text-5xl font-black italic uppercase text-white tracking-tighter">${state.wizard.objetivo}</h4>
-                    <p class="text-white/40 uppercase font-black tracking-[0.4em] text-xs mt-4 italic">${state.wizard.tipo === 'progresiva' ? 'Programa Evolutivo Semanal' : 'Programa Táctico Estándar'}</p>
                 </div>
                 <div class="grid grid-cols-3 gap-6">
                     <div class="bg-white/5 p-8 rounded-[2rem] border border-white/10 flex flex-col items-center">
                         <p class="text-3xl font-black italic text-white">${state.wizard.cantDias}</p>
                         <span class="text-[8px] uppercase font-black text-white/20">Jornadas</span>
-                    </div>
-                    <div class="bg-white/5 p-8 rounded-[2rem] border border-white/10 flex flex-col items-center">
-                        <p class="text-3xl font-black italic text-white">${state.wizard.dias.reduce((a, b) => a + (b.ejercicios?.length || 0), 0)}</p>
-                        <span class="text-[8px] uppercase font-black text-white/20">Arsenal</span>
-                    </div>
-                    <div class="bg-white/5 p-8 rounded-[2rem] border border-white/10 flex flex-col items-center">
-                        <p class="text-sm font-black italic text-red-600 uppercase mt-2">${state.wizard.vencimiento.split('-').reverse().join('/')}</p>
-                        <span class="text-[8px] uppercase font-black text-white/20">Vencimiento</span>
                     </div>
                 </div>
             </div>`;
@@ -1448,12 +1444,12 @@ function renderStepConfiguracionDia(dayIdx) {
     <div class="animate-in slide-in-from-right space-y-10">
         <input type="text" value="${dia.nombre}" oninput="state.wizard.dias[${dayIdx}].nombre = this.value" class="bg-transparent border-none text-5xl font-black italic uppercase text-white w-full outline-none" placeholder="Nombre de la Jornada...">
         <div class="bg-white/[0.03] p-8 rounded-[3rem] border border-white/5 shadow-inner relative">
-            <input type="text" id="wizard-search-${dayIdx}" placeholder="Escribe para buscar arsenal en la armería..." class="viking-input !bg-black/60 h-14 pl-14 text-xs font-bold border-white/10">
+            <input type="text" id="wizard-search-${dayIdx}" placeholder="Buscar arsenal..." class="viking-input !bg-black/60 h-14 pl-14 text-xs font-bold">
             <i data-lucide="search" class="absolute left-12 top-1/2 -translate-y-1/2 w-5 h-5 text-white/20"></i>
             <div id="wizard-results-${dayIdx}" class="absolute top-full left-0 w-full bg-[#0a0a0a] border border-red-600/30 rounded-3xl mt-4 z-[100] hidden max-h-72 overflow-y-auto custom-scrollbar shadow-2xl"></div>
         </div>
         <div class="space-y-6">
-            ${dia.ejercicios.length === 0 ? `<div class="py-20 text-center opacity-10 font-black uppercase italic text-xs tracking-widest">Sin arsenal asignado para hoy</div>` : dia.ejercicios.map((ex, exIdx) => `
+            ${dia.ejercicios.length === 0 ? `<div class="py-20 text-center opacity-10 font-black uppercase italic text-xs tracking-widest">Sin arsenal asignado</div>` : dia.ejercicios.map((ex, exIdx) => `
                 <div class="bg-white/[0.02] border border-white/10 rounded-[2.5rem] p-8 relative group hover:border-red-600/30 transition-all shadow-xl">
                     <div class="flex justify-between items-start mb-6">
                         <div class="flex items-center gap-4">
@@ -1524,7 +1520,7 @@ window.saveFinalRutina = async function() {
         }))
     };
 
-    const res = await apiFetch('/api/rutinas/plan', 'POST', payload);
+    const res = await apiFetch('/rutinas/plan', 'POST', payload);
     if (!res.error) {
         showVikingToast("Arsenal forjado con éxito ⚔️");
         closeModal('modal-rutina-editor');
@@ -1559,7 +1555,7 @@ function calcularSemanas(inicio, fin) {
 }
 
 window.rehabilitarRutina = async function(rutinaId, alumnoId) {
-    const res = await apiFetch(`/api/rutinas/plan/${rutinaId}/toggle`, 'POST');
+    const res = await apiFetch(`/rutinas/plan/${rutinaId}/toggle`, 'POST');
     if(!res.error) {
         showVikingToast("Arsenal histórico activado ⚔️");
         openFichaTecnica(alumnoId);
@@ -1578,8 +1574,8 @@ window.addSerieWizard = (dayIdx, exIdx) => {
 };
 
 async function loadMusculacionMetadata() {
-    const grupos = await apiFetch('/api/rutinas/grupos-musculares');
-    const ejercicios = await apiFetch('/api/rutinas/ejercicios');
+    const grupos = await apiFetch('/rutinas/grupos-musculares');
+    const ejercicios = await apiFetch('/rutinas/ejercicios');
     state.gruposMusculares = Array.isArray(grupos) ? grupos : [];
     state.ejerciciosLibreria = Array.isArray(ejercicios) ? ejercicios : [];
 }
