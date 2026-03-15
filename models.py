@@ -167,7 +167,6 @@ class PlanRutina(Base):
     fecha_vencimiento = Column(Date)
     objetivo = Column(String)
     activo = Column(Boolean, default=True)
-    tipo = Column(String, default="basica") # 'basica' o 'progreso'
     
     usuario = relationship("Usuario", back_populates="planes_rutina")
     dias = relationship("DiaRutina", back_populates="plan_rutina", cascade="all, delete-orphan")
@@ -190,9 +189,7 @@ class EjercicioEnRutina(Base):
     
     # Sincronización total con tu JSON (soporta 'comentario' y 'comentarios')
     comentario = Column(Text, nullable=True)
-    comentarios = Column(Text, nullable=True)
-
-    progreso_json = Column(Text, nullable=True) # Aquí guardaremos las 4 semanas como string JSON 
+    comentarios = Column(Text, nullable=True) 
 
     dia = relationship("DiaRutina", back_populates="ejercicios")
     ejercicio_obj = relationship("Ejercicio", back_populates="ejercicios_en_rutina")
