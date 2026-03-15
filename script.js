@@ -1254,7 +1254,7 @@ window.openFichaTecnica = async function(alumnoId) {
 
             const statusBadge = esActiva 
                 ? `<span class="bg-green-600/10 text-green-500 border border-green-500/20 px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest animate-pulse">Estrategia Activa</span>`
-                : `<span class="bg-red-600/10 text-red-500 border border-red-500/20 px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest">Plan Vencido / Histórico</span>`;
+                : `<span class="bg-red-600/10 text-red-500 border border-red-600/20 px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest">Plan Vencido / Histórico</span>`;
 
             // Solapas de Semanas (Requerimiento 9)
             const tabsHTML = esProg ? `
@@ -1504,7 +1504,7 @@ window.renderStepDiaEditor = function(dayIdx) {
                             <span class="w-10 h-10 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center font-black italic text-red-600">${exIdx+1}</span>
                             <h6 class="text-xl font-black uppercase italic text-white">${ex.nombre}</h6>
                         </div>
-                        <button onclick="window.removeEjercicioWizard(${dayIdx}, ${exIdx})" class="text-red-600/20 hover:text-red-600 transition-all"><i data-lucide="trash-2" class="w-5 h-5"></i></button>
+                        <button onclick="window.removeExercise(${dayIdx}, ${exIdx})" class="text-red-600/20 hover:text-red-600 transition-all"><i data-lucide="trash-2" class="w-5 h-5"></i></button>
                     </div>
 
                     ${esProg ? window.renderProgresoSemanasWizard(dayIdx, exIdx, ex) : window.renderSeriesNormalWizard(dayIdx, exIdx, ex)}
@@ -1525,12 +1525,12 @@ window.renderSeriesNormalWizard = function(dayIdx, exIdx, ex) {
         ${ex.series.map((s, sIdx) => `
             <div class="grid grid-cols-4 gap-4 bg-black/60 p-4 rounded-2xl border border-white/5">
                 <span class="text-xs font-black text-red-600 italic mt-1">#${sIdx+1}</span>
-                <input type="text" value="${s.repeticiones}" oninput="state.routineWizard.dias[${dayIdx}].ejercicios[${exIdx}].series[${sIdx}].repeticiones = this.value" class="bg-transparent text-center text-white text-sm outline-none border-b border-white/5" placeholder="Reps">
-                <input type="text" value="${s.peso}" oninput="state.routineWizard.dias[${dayIdx}].ejercicios[${exIdx}].series[${sIdx}].peso = this.value" class="bg-transparent text-center text-white text-sm outline-none border-b border-white/5" placeholder="Kg">
-                <input type="text" value="${s.descanso}" oninput="state.routineWizard.dias[${dayIdx}].ejercicios[${exIdx}].series[${sIdx}].descanso = this.value" class="bg-transparent text-center text-[10px] text-white/30 outline-none italic" placeholder="90s">
+                <input type="text" value="${s.repeticiones || s.reps || ''}" oninput="state.routineWizard.dias[${dayIdx}].ejercicios[${exIdx}].series[${sIdx}].repeticiones = this.value" class="bg-transparent text-center text-white text-sm outline-none border-b border-white/5" placeholder="Reps">
+                <input type="text" value="${s.peso || ''}" oninput="state.routineWizard.dias[${dayIdx}].ejercicios[${exIdx}].series[${sIdx}].peso = this.value" class="bg-transparent text-center text-white text-sm outline-none border-b border-white/5" placeholder="Kg">
+                <input type="text" value="${s.descanso || '90s'}" oninput="state.routineWizard.dias[${dayIdx}].ejercicios[${exIdx}].series[${sIdx}].descanso = this.value" class="bg-transparent text-center text-[10px] text-white/30 outline-none italic" placeholder="90s">
             </div>
         `).join('')}
-        <button onclick="window.addSerieWizard(${dayIdx}, ${exIdx})" class="text-[10px] font-black uppercase text-red-600 mt-4 flex items-center gap-2 hover:text-white transition-all"><i data-lucide="plus" class="w-4 h-4"></i> Añadir Serie</button>
+        <button onclick="window.addSerie(${dayIdx}, ${exIdx})" class="text-[10px] font-black uppercase text-red-600 mt-4 flex items-center gap-2 hover:text-white transition-all"><i data-lucide="plus" class="w-4 h-4"></i> Añadir Serie</button>
     </div>`;
 }
 
@@ -1607,7 +1607,7 @@ window.initSearchInWizard = function(dayIdx) {
         if (query.length < 2) { results.classList.add('hidden'); return; }
         const filtered = state.ejerciciosLibreria.filter(e => e.nombre.toLowerCase().includes(query));
         results.innerHTML = filtered.map(e => `
-            <div class="p-4 border-b border-white/5 hover:bg-red-600/10 cursor-pointer text-[11px] font-black uppercase italic text-white/50 flex justify-between items-center" onmousedown="window.addEjercicioWizard(${dayIdx}, ${e.id}, '${e.nombre}')">
+            <div class="p-4 border-b border-white/5 hover:bg-red-600/10 cursor-pointer text-[11px] font-black uppercase italic text-white/50 flex justify-between items-center" onmousedown="window.addExerciseToWizard(${dayIdx}, ${e.id}, '${e.nombre}')">
                 <span>${e.nombre}</span>
                 <i data-lucide="plus" class="w-3 h-3 text-red-600"></i>
             </div>
@@ -1618,8 +1618,15 @@ window.initSearchInWizard = function(dayIdx) {
     input.onblur = () => setTimeout(() => results.classList.add('hidden'), 250);
 }
 
+// ALIAS PARA COINCIDIR CON LOS ONCLICK DEL HTML
+window.nextStep = function() { window.nextWizardStep(); };
+window.prevStep = function() { window.prevWizardStep(); };
+window.addSerie = function(dayIdx, exIdx) { window.addSerieWizard(dayIdx, exIdx); };
+window.removeExercise = function(dayIdx, exIdx) { window.removeEjercicioWizard(dayIdx, exIdx); };
+window.addExerciseToWizard = function(dayIdx, id, nombre) { window.addEjercicioWizard(dayIdx, id, nombre); };
+
 window.addEjercicioWizard = (dayIdx, id, nombre) => {
-    state.routineWizard.dias[dayIdx].ejercicios.push({ id, nombre, series: null, progreso: null, comentario: '' });
+    state.routineWizard.dias[dayIdx].ejercicios.push({ id, nombre, series: [{numero_serie: 1, repeticiones: '12', peso: '', descanso: '90s'}], progreso: null, comentario: '' });
     window.renderWizardStep();
 };
 
@@ -1668,7 +1675,7 @@ window.toggleFichaElement = function(id) {
 /**
  * 6. VISTAS Y FILTROS (REQ 7)
  */
-async function renderRutinas() {
+window.renderRutinas = async function() {
     const rol = (state.user?.rol_nombre || "").toLowerCase();
     const list = document.getElementById('rutinas-lista'); 
     const studentView = document.getElementById('musculacion-student-view'); 
@@ -1713,7 +1720,7 @@ window.filterRutinas = function(filtro) {
     window.renderRutinasList(filtrados);
 }
 
-function renderRutinasList(listaDatos) {
+window.renderRutinasList = function(listaDatos) {
     const list = document.getElementById('rutinas-lista');
     if(!list) return;
 
