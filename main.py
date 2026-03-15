@@ -1286,7 +1286,7 @@ def create_plan_rutina(data: PlanRutinaCreate, db: Session = Depends(database.ge
                             ejercicio_en_rutina_id=ej_en_rut.id,
                             numero_serie=s.numero_serie,
                             repeticiones=s.repeticiones,
-                            weight=s.peso, # Asegurar que coincida con tu modelo 'peso' o 'weight'
+                            peso=s.peso, # Sincronizado con el modelo de la base de datos
                             descanso=s.descanso
                         )
                         db.add(nueva_serie)
@@ -1299,8 +1299,11 @@ def create_plan_rutina(data: PlanRutinaCreate, db: Session = Depends(database.ge
         raise he
     except Exception as e:
         db.rollback()
+        # Verificamos si existe el logger antes de usarlo para evitar otros errores 500
         if 'logger' in globals():
             logger.error(f"Error Grave en Rutinas: {str(e)}")
+        else:
+            print(f"Error Grave en Rutinas: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/rutinas/usuario/{id}", response_model=Optional[PlanRutinaResponse], tags=["Musculación"])

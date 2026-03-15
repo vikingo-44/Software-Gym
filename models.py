@@ -164,16 +164,18 @@ class PlanRutina(Base):
     nombre_grupo = Column(String, nullable=True) 
     descripcion = Column(Text, nullable=True) 
     objetivo = Column(String)
-    # --- NUEVOS CAMPOS ---
-    tipo = Column(String, default="normal") # "normal" o "progresiva"
-    profesor_nombre = Column(String, nullable=True) # Requerimiento 10
-    # ---------------------
+    
+    # --- MEJORA: Tipo de Rutina y Profesor ---
+    tipo = Column(String, default="normal") # 'normal' o 'progresiva'
+    profesor_nombre = Column(String, nullable=True) 
+    # -----------------------------------------
+    
     fecha_creacion = Column(Date, default=datetime.date.today)
     fecha_vencimiento = Column(Date)
     activo = Column(Boolean, default=True)
     
     usuario = relationship("Usuario", back_populates="planes_rutina")
-    dias = relationship("DiaRutina", back_populates="dias", cascade="all, delete-orphan")
+    dias = relationship("DiaRutina", back_populates="plan_rutina", cascade="all, delete-orphan")
 
 class DiaRutina(Base):
     __tablename__ = "rutina_dias"
