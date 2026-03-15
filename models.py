@@ -3,6 +3,10 @@ from sqlalchemy.orm import relationship
 from database import Base
 import datetime
 
+# =========================================
+# GESTIÓN DE USUARIOS Y PLANES DE MEMBRESÍA
+# =========================================
+
 class Perfil(Base):
     __tablename__ = "perfiles"
     id = Column(Integer, primary_key=True)
@@ -60,7 +64,6 @@ class Usuario(Base):
     reservas = relationship("Reserva", back_populates="usuario", cascade="all, delete-orphan")
     planes_rutina = relationship("PlanRutina", back_populates="usuario", cascade="all, delete-orphan")
     accesos = relationship("Acceso", back_populates="usuario")
-    sucursal = relationship("Sucursal", back_populates="usuarios")
 
 class Sucursal(Base):
     __tablename__ = "sucursales"
@@ -69,14 +72,17 @@ class Sucursal(Base):
     direccion = Column(String, nullable=True)
     fecha_creacion = Column(DateTime, default=datetime.datetime.now)
     
-    # Relación: una sucursal tiene muchos usuarios
     usuarios = relationship("Usuario", back_populates="sucursal")
+
+# =========================================
+# GESTIÓN DE CLASES Y RESERVAS
+# =========================================
 
 class Clase(Base):
     __tablename__ = "clases"
     id = Column(Integer, primary_key=True)
     nombre = Column(String)
-    coach = Column(String) # <--- Volvemos a tu columna original
+    coach = Column(String) 
     capacidad_max = Column(Integer, default=20)
     horarios_detalle = Column(JSON, nullable=True) 
     color = Column(String, default="#FF0000")
@@ -89,13 +95,15 @@ class Reserva(Base):
     clase_id = Column(Integer, ForeignKey("clases.id"))
     fecha_reserva = Column(Date, default=datetime.date.today)
     
-    # --- CAMPOS NUEVOS PARA DIFERENCIAR TURNOS ---
-    horario = Column(Float)      # Ejemplo: 18.5 para 18:30
-    dia_semana = Column(Integer) # 1 para Lunes, 2 Martes, etc.
-    # ---------------------------------------------
+    horario = Column(Float)      
+    dia_semana = Column(Integer) 
 
     usuario = relationship("Usuario", back_populates="reservas")
     clase = relationship("Clase", back_populates="reservas")
+
+# =========================================
+# GESTIÓN DE PRODUCTOS Y FINANZAS
+# =========================================
 
 class Stock(Base):
     __tablename__ = "stock"
@@ -104,34 +112,29 @@ class Stock(Base):
     precio_venta = Column(Float)
     stock_actual = Column(Integer)
     stock_inicial = Column(Integer)
-    url_imagen = Column(String, nullable=True) # <-- Agregado para el catálogo
+    url_imagen = Column(String, nullable=True) 
 
 class MovimientoCaja(Base):
     __tablename__ = "caja"
     id = Column(Integer, primary_key=True)
-    tipo = Column(String) # Ingreso / Egreso
+    tipo = Column(String) 
     monto = Column(Float)
     descripcion = Column(String)
-    descripcion2 = Column(String, nullable=True) # <-- Columna para notas manuales
-    metodo_pago = Column(String, default="Efectivo") # <-- Agregado para reportes
+    descripcion2 = Column(String, nullable=True) 
+    metodo_pago = Column(String, default="Efectivo") 
     fecha = Column(DateTime, default=datetime.datetime.now)
     cuotas = Column(Integer, default=1)
-
-# =========================================
-# NUEVA TABLA: ACCESO (HISTORIAL)
-# =========================================
 
 class Acceso(Base):
     __tablename__ = "historial_accesos"
     id = Column(Integer, primary_key=True)
     usuario_id = Column(Integer, ForeignKey("usuarios.id"), nullable=False)
     fecha = Column(DateTime, default=datetime.datetime.now)
-    accion = Column(String(50), nullable=False) # 'AUTHORIZED', 'DENIED'
+    accion = Column(String(50), nullable=False) 
     ip_address = Column(String(45), nullable=True)
     user_agent = Column(Text, nullable=True)
     exitoso = Column(Boolean, default=True)
     
-    # Campos redundantes para que el Dashboard no tenga que hacer JOINs pesados
     nombre = Column(String, nullable=True)
     dni = Column(String, nullable=True)
     rol = Column(String, nullable=True)
@@ -140,8 +143,14 @@ class Acceso(Base):
     usuario = relationship("Usuario", back_populates="accesos")
 
 # =========================================
-# TABLAS MUSCULACIÓN
+# MÓDULO DE MUSCULACIÓN VIKINGA (PRO)
 # =========================================
+
+class TipoRutina(Base):
+    """Tabla maestra para tipos de rutina: normal, progresiva"""
+    __tablename__ = "tipos_rutina"
+    id = Column(Integer, primary_key=True)
+    nombre = Column(String, unique=True) # normal, progresiva
 
 class GrupoMuscular(Base):
     __tablename__ = "grupos_musculares"
@@ -161,20 +170,22 @@ class PlanRutina(Base):
     __tablename__ = "planes_rutina"
     id = Column(Integer, primary_key=True)
     usuario_id = Column(Integer, ForeignKey("usuarios.id"))
+    
+    # Metadata del plan
     nombre_grupo = Column(String, nullable=True) 
     descripcion = Column(Text, nullable=True) 
-    objetivo = Column(String)
+    objetivo = Column(String) # Titulo/Resumen visual
     
-    # --- MEJORA: Tipo de Rutina y Profesor ---
-    tipo = Column(String, default="normal") # 'normal' o 'progresiva'
+    # Tipo vinculado a tabla maestra
+    tipo_id = Column(Integer, ForeignKey("tipos_rutina.id"), default=1)
     profesor_nombre = Column(String, nullable=True) 
-    # -----------------------------------------
     
     fecha_creacion = Column(Date, default=datetime.date.today)
     fecha_vencimiento = Column(Date)
     activo = Column(Boolean, default=True)
     
     usuario = relationship("Usuario", back_populates="planes_rutina")
+    tipo_rel = relationship("TipoRutina")
     dias = relationship("DiaRutina", back_populates="plan_rutina", cascade="all, delete-orphan")
 
 class DiaRutina(Base):
@@ -192,23 +203,25 @@ class EjercicioEnRutina(Base):
     dia_id = Column(Integer, ForeignKey("rutina_dias.id"))
     ejercicio_id = Column(Integer, ForeignKey("ejercicios_libreria.id"))
     rutina_id = Column(Integer, ForeignKey("planes_rutina.id"), nullable=True)
-    progreso_json = Column(JSON, nullable=True) # Para guardar los datos de las semanas en rutinas progresivas
     
-    # Sincronización total con tu JSON (soporta 'comentario' y 'comentarios')
+    # Campo para backup de semanas si es progresiva
+    progreso_json = Column(JSON, nullable=True) 
+    
+    # Sincronización de notas tácticas
     comentario = Column(Text, nullable=True)
     comentarios = Column(Text, nullable=True) 
 
     dia = relationship("DiaRutina", back_populates="ejercicios")
     ejercicio_obj = relationship("Ejercicio", back_populates="ejercicios_en_rutina")
-    # Esta es la clave:
     series_detalle = relationship("SerieEjercicio", back_populates="ejercicio_en_rutina", cascade="all, delete-orphan")
 
 class SerieEjercicio(Base):
     __tablename__ = "series_ejercicio"
     id = Column(Integer, primary_key=True)
     ejercicio_en_rutina_id = Column(Integer, ForeignKey("ejercicios_en_rutina.id"))
-    numero_serie = Column(Integer) # 1, 2, 3...
+    numero_serie = Column(Integer) 
     repeticiones = Column(String)
     peso = Column(String)
     descanso = Column(String)
+    
     ejercicio_en_rutina = relationship("EjercicioEnRutina", back_populates="series_detalle")
