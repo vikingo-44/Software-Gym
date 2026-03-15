@@ -344,8 +344,9 @@ class SerieCreate(BaseModel):
     
 class EjercicioEnRutinaCreate(BaseModel):
     ejercicio_id: int
-    series: List[SerieCreate]
+    series: Optional[List[SerieCreate]] = []
     comentario: Optional[str] = ""
+    progreso_json: Optional[str] = None # <--- REQUERIDO PARA RUTINAS PROGRESIVAS
 
 class DiaRutinaCreate(BaseModel):
     nombre_dia: str
@@ -356,6 +357,7 @@ class PlanRutinaCreate(BaseModel):
     nombre_grupo: Optional[str] = "Nueva Rutina"
     descripcion: Optional[str] = ""
     objetivo: str
+    tipo: Optional[str] = "normal" # <--- REQUERIDO PARA IDENTIFICAR EL TIPO
     fecha_vencimiento: date
     dias: List[DiaRutinaCreate]
 

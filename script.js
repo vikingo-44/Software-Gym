@@ -1221,11 +1221,10 @@ window.openFichaTecnica = async function(alumnoId) {
     // Lógica de Estado de Membresía (CORRECCIÓN: Comparación robusta con fecha local)
     const hoy = new Date();
     hoy.setHours(0, 0, 0, 0);
-    // Usamos T23:59:59 para que el día del vencimiento sea inclusivo y no falle por horas
     const vencMemb = al.fecha_vencimiento ? new Date(al.fecha_vencimiento + 'T23:59:59') : null;
     const alDia = vencMemb && hoy <= vencMemb;
 
-    // Llenar metadatos en el modal (CORRECCIÓN: Buscando DNI en objeto anidado si es necesario)
+    // Llenar metadatos en el modal
     const dniFinal = al.dni || (al.usuario ? al.usuario.dni : '---');
     if (document.getElementById('ficha-nombre')) document.getElementById('ficha-nombre').innerText = al.nombre_completo || 'Sin Nombre';
     if (document.getElementById('ficha-dni')) document.getElementById('ficha-dni').innerText = "DNI: " + dniFinal;
@@ -1250,13 +1249,12 @@ window.openFichaTecnica = async function(alumnoId) {
             const objetivoId = `obj-group-${rIdx}`;
             const fechaVenc = rutina.fecha_vencimiento ? new Date(rutina.fecha_vencimiento + 'T23:59:59') : null;
             const esActiva = rutina.activo && (fechaVenc ? hoy <= fechaVenc : true);
-            const numSemanas = esProg ? 4 : 0; // Por defecto 4 semanas en progresiva
+            const numSemanas = esProg ? 4 : 0; 
 
             const statusBadge = esActiva 
                 ? `<span class="bg-green-600/10 text-green-500 border border-green-500/20 px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest animate-pulse">Estrategia Activa</span>`
                 : `<span class="bg-red-600/10 text-red-500 border border-red-600/20 px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest">Plan Vencido / Histórico</span>`;
 
-            // Solapas de Semanas (Requerimiento 9)
             const tabsHTML = esProg ? `
                 <div class="flex gap-2 mb-6 border-b border-white/5 pb-4 overflow-x-auto no-scrollbar">
                     ${Array.from({length: numSemanas}).map((_, i) => `
@@ -1273,7 +1271,7 @@ window.openFichaTecnica = async function(alumnoId) {
                 <div class="bg-white/2 rounded-[2rem] border border-white/5 overflow-hidden mb-3 transition-all hover:bg-white/[0.04]">
                     <button onclick="window.toggleFichaElement('${diaId}')" class="w-full flex items-center justify-between p-5 group text-left">
                         <div class="flex items-center gap-4">
-                            <div class="w-10 h-10 rounded-2xl bg-white/5 flex items-center justify-center border border-white/10 font-black italic text-red-600 group-hover:bg-red-600 group-hover:text-black transition-all">
+                            <div class="w-10 h-10 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center font-black italic text-red-600 group-hover:bg-red-600 group-hover:text-black transition-all">
                                 ${d.nombre_dia.charAt(0).toUpperCase()}
                             </div>
                             <div>
@@ -1367,7 +1365,7 @@ window.openFichaTecnica = async function(alumnoId) {
 }
 
 /**
- * 3. WIZARD DE CREACIÓN (PASO A PASO - REQ 1, 2, 3, 5)
+ * 3. WIZARD DE CREACIÓN (PASO A PASO)
  */
 window.openRoutineEditor = async function(alumnoId, isEdit = false) {
     const al = state.alumnos.find(a => a.id === alumnoId);
@@ -1400,15 +1398,10 @@ window.renderWizardStep = function() {
     const body = document.getElementById('rutina-editor-body');
     const label = document.getElementById('rutina-editor-step-label');
     const step = state.routineWizard.currentStep;
-    
-    // El total de pasos depende de la cantidad de días + configuración inicial y resumen final
     const totalSteps = 2 + parseInt(state.routineWizard.cantDias); 
     state.routineWizard.totalSteps = totalSteps;
 
-    if (!body || !label) {
-        console.error("Error: No se encontró el contenedor del editor 'rutina-editor-body' en el HTML.");
-        return;
-    }
+    if (!body || !label) return;
 
     const fill = document.getElementById('editor-progress-fill');
     if(fill) fill.style.width = `${(step / totalSteps) * 100}%`;
@@ -1490,7 +1483,6 @@ window.renderStepDiaEditor = function(dayIdx) {
     <div class="animate-in slide-in-from-right space-y-10">
         <input type="text" value="${dia.nombre}" oninput="state.routineWizard.dias[${dayIdx}].nombre = this.value" class="bg-transparent border-none text-5xl font-black italic uppercase text-white w-full outline-none" placeholder="Nombre de la jornada...">
         
-        <!-- FILTRO POR GRUPO MUSCULAR (RESTABLECIDO) -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4 bg-white/[0.03] p-8 rounded-[3rem] border border-white/5 shadow-inner relative">
             <select id="wizard-group-${dayIdx}" onchange="window.initSearchInWizard(${dayIdx})" class="viking-input !bg-black/60 h-14 text-xs font-black uppercase italic border-white/10 cursor-pointer">
                 <option value="all">Todos los grupos</option>
@@ -1542,7 +1534,6 @@ window.renderSeriesNormalWizard = function(dayIdx, exIdx, ex) {
 }
 
 window.renderProgresoSemanasWizard = function(dayIdx, exIdx, ex) {
-    // Si es progresiva, cada ejercicio tiene 4 filas de configuración (4 semanas)
     if (!ex.progreso || ex.progreso.length === 0) ex.progreso = Array.from({length: 4}).map(() => ({series:'3', reps:'12', peso:'', descanso:'90s'}));
 
     return `
@@ -1570,14 +1561,13 @@ window.renderProgresoSemanasWizard = function(dayIdx, exIdx, ex) {
 }
 
 /**
- * 4. GUARDADO FINAL (Req 10: Profesor se captura en backend via current_user)
- * FIX ERROR 500: Eliminamos 'tipo' del payload si el servidor no lo soporta en el esquema Create
+ * 4. GUARDADO FINAL (Sincronizado con backend)
  */
 window.saveFinalRutina = async function() {
     const payload = {
         usuario_id: state.routineWizard.alumnoId,
         objetivo: state.routineWizard.objetivo,
-        // tipo: state.routineWizard.tipo, // Eliminado para evitar 'tipo' attribute error si el backend no lo espera
+        tipo: state.routineWizard.tipo, // Rehabilitado: El backend ahora soporta este atributo
         fecha_vencimiento: state.routineWizard.vencimiento,
         activo: true,
         dias: state.routineWizard.dias.map(d => ({
@@ -1603,7 +1593,7 @@ window.saveFinalRutina = async function() {
 }
 
 /**
- * 5. AUXILIARES Y GESTIÓN DE INTERFAZ (BOTÓN CREAR NUEVO EJERCICIO INCLUIDO)
+ * 5. AUXILIARES Y GESTIÓN DE INTERFAZ
  */
 window.initSearchInWizard = function(dayIdx) {
     const input = document.getElementById(`wizard-search-${dayIdx}`);
