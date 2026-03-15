@@ -1,6 +1,8 @@
 from sqlalchemy import Column, Integer, String, Float, Date, DateTime, ForeignKey, Text, Boolean, JSON
 from sqlalchemy.orm import relationship
 from database import Base
+from pydantic import BaseModel
+from typing import List, Optional
 import datetime
 
 # =========================================
@@ -26,9 +28,7 @@ class Plan(Base):
     nombre = Column(String)
     precio = Column(Float)
     tipo_plan_id = Column(Integer, ForeignKey("tipos_planes.id"))
-    # --- NUEVO CAMPO PARA CUPO ---
     clases_mensuales = Column(Integer, default=12) 
-    # -----------------------------
     tipo = relationship("TipoPlan", back_populates="planes")
     usuarios = relationship("Usuario", back_populates="plan")
 
@@ -43,7 +43,6 @@ class Usuario(Base):
     plan_id = Column(Integer, ForeignKey("planes.id"), nullable=True)
     sucursal_id = Column(Integer, ForeignKey("sucursales.id"), nullable=True)
     
-    # Datos físicos y de salud
     fecha_nacimiento = Column(Date, nullable=True)
     edad = Column(Integer, nullable=True)
     peso = Column(Float, nullable=True)
@@ -51,9 +50,8 @@ class Usuario(Base):
     imc = Column(Float, nullable=True)
     certificado_entregado = Column(Boolean, default=False)
     fecha_certificado = Column(Date, nullable=True)
-    especialidad = Column(String, nullable=True) # Para Staff/Profesores
+    especialidad = Column(String, nullable=True)
     
-    # Gestión de membresía
     fecha_ultima_renovacion = Column(Date, nullable=True)
     fecha_vencimiento = Column(Date, nullable=True)
     estado_cuenta = Column(String, default="Al día")
@@ -71,7 +69,6 @@ class Sucursal(Base):
     sucursal = Column(String, nullable=False)
     direccion = Column(String, nullable=True)
     fecha_creacion = Column(DateTime, default=datetime.datetime.now)
-    
     usuarios = relationship("Usuario", back_populates="sucursal")
 
 # =========================================
@@ -94,16 +91,10 @@ class Reserva(Base):
     usuario_id = Column(Integer, ForeignKey("usuarios.id"))
     clase_id = Column(Integer, ForeignKey("clases.id"))
     fecha_reserva = Column(Date, default=datetime.date.today)
-    
     horario = Column(Float)      
     dia_semana = Column(Integer) 
-
     usuario = relationship("Usuario", back_populates="reservas")
     clase = relationship("Clase", back_populates="reservas")
-
-# =========================================
-# GESTIÓN DE PRODUCTOS Y FINANZAS
-# =========================================
 
 class Stock(Base):
     __tablename__ = "stock"
@@ -134,12 +125,10 @@ class Acceso(Base):
     ip_address = Column(String(45), nullable=True)
     user_agent = Column(Text, nullable=True)
     exitoso = Column(Boolean, default=True)
-    
     nombre = Column(String, nullable=True)
     dni = Column(String, nullable=True)
     rol = Column(String, nullable=True)
     metodo = Column(String, default="QR")
-    
     usuario = relationship("Usuario", back_populates="accesos")
 
 # =========================================
@@ -147,10 +136,9 @@ class Acceso(Base):
 # =========================================
 
 class TipoRutina(Base):
-    """Tabla maestra para tipos de rutina: normal, progresiva"""
     __tablename__ = "tipos_rutina"
     id = Column(Integer, primary_key=True)
-    nombre = Column(String, unique=True) # normal, progresiva
+    nombre = Column(String, unique=True)
 
 class GrupoMuscular(Base):
     __tablename__ = "grupos_musculares"
@@ -170,16 +158,11 @@ class PlanRutina(Base):
     __tablename__ = "planes_rutina"
     id = Column(Integer, primary_key=True)
     usuario_id = Column(Integer, ForeignKey("usuarios.id"))
-    
-    # Metadata del plan
     nombre_grupo = Column(String, nullable=True) 
     descripcion = Column(Text, nullable=True) 
-    objetivo = Column(String) # Titulo/Resumen visual
-    
-    # Tipo vinculado a tabla maestra
+    objetivo = Column(String)
     tipo_id = Column(Integer, ForeignKey("tipos_rutina.id"), default=1)
     profesor_nombre = Column(String, nullable=True) 
-    
     fecha_creacion = Column(Date, default=datetime.date.today)
     fecha_vencimiento = Column(Date)
     activo = Column(Boolean, default=True)
@@ -193,7 +176,6 @@ class DiaRutina(Base):
     id = Column(Integer, primary_key=True)
     plan_rutina_id = Column(Integer, ForeignKey("planes_rutina.id"))
     nombre_dia = Column(String)
-    
     plan_rutina = relationship("PlanRutina", back_populates="dias")
     ejercicios = relationship("EjercicioEnRutina", back_populates="dia", cascade="all, delete-orphan")
 
@@ -203,11 +185,7 @@ class EjercicioEnRutina(Base):
     dia_id = Column(Integer, ForeignKey("rutina_dias.id"))
     ejercicio_id = Column(Integer, ForeignKey("ejercicios_libreria.id"))
     rutina_id = Column(Integer, ForeignKey("planes_rutina.id"), nullable=True)
-    
-    # Campo para backup de semanas si es progresiva
     progreso_json = Column(JSON, nullable=True) 
-    
-    # Sincronización de notas tácticas
     comentario = Column(Text, nullable=True)
     comentarios = Column(Text, nullable=True) 
 
@@ -223,5 +201,34 @@ class SerieEjercicio(Base):
     repeticiones = Column(String)
     peso = Column(String)
     descanso = Column(String)
-    
     ejercicio_en_rutina = relationship("EjercicioEnRutina", back_populates="series_detalle")
+
+# =========================================
+# SCHEMAS DE VALIDACIÓN (PYDANTIC)
+# Necesarios para FastAPI /main.py
+# =========================================
+
+class SerieEjercicioCreate(BaseModel):
+    numero_serie: int
+    repeticiones: str
+    peso: str
+    descanso: Optional[str] = None
+
+class EjercicioEnRutinaCreate(BaseModel):
+    ejercicio_id: int
+    comentario: Optional[str] = ""
+    progreso_json: Optional[str] = None # Viene como string JSON desde el front
+    series: List[SerieEjercicioCreate]
+
+class DiaRutinaCreate(BaseModel):
+    nombre_dia: str
+    ejercicios: List[EjercicioEnRutinaCreate]
+
+class PlanRutinaCreate(BaseModel):
+    usuario_id: int
+    nombre_grupo: str
+    descripcion: str
+    objetivo: Optional[str] = None
+    tipo: str # "normal" o "progresiva"
+    fecha_vencimiento: datetime.date
+    dias: List[DiaRutinaCreate]
