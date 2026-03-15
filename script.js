@@ -1490,10 +1490,17 @@ window.renderStepDiaEditor = function(dayIdx) {
     <div class="animate-in slide-in-from-right space-y-10">
         <input type="text" value="${dia.nombre}" oninput="state.routineWizard.dias[${dayIdx}].nombre = this.value" class="bg-transparent border-none text-5xl font-black italic uppercase text-white w-full outline-none" placeholder="Nombre de la jornada...">
         
-        <div class="bg-white/[0.03] p-8 rounded-[3rem] border border-white/5 shadow-inner relative">
-            <input type="text" id="wizard-search-${dayIdx}" placeholder="Buscar ejercicio en la armería..." class="viking-input !bg-black/60 h-14 pl-14 text-xs font-bold border-white/10">
-            <i data-lucide="search" class="absolute left-12 top-1/2 -translate-y-1/2 w-5 h-5 text-white/20"></i>
-            <div id="wizard-results-${dayIdx}" class="absolute top-full left-0 w-full bg-[#0a0a0a] border border-red-600/30 rounded-3xl mt-4 z-[100] hidden max-h-72 overflow-y-auto shadow-2xl custom-scrollbar"></div>
+        <!-- FILTRO POR GRUPO MUSCULAR (RESTABLECIDO) -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 bg-white/[0.03] p-8 rounded-[3rem] border border-white/5 shadow-inner relative">
+            <select id="wizard-group-${dayIdx}" onchange="window.initSearchInWizard(${dayIdx})" class="viking-input !bg-black/60 h-14 text-xs font-black uppercase italic border-white/10 cursor-pointer">
+                <option value="all">Todos los grupos</option>
+                ${state.gruposMusculares.map(g => `<option value="${g.id}">${g.nombre}</option>`).join('')}
+            </select>
+            <div class="md:col-span-2 relative">
+                <input type="text" id="wizard-search-${dayIdx}" placeholder="Buscar ejercicio en la armería..." class="viking-input !bg-black/60 h-14 pl-14 text-xs font-bold border-white/10">
+                <i data-lucide="search" class="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-white/20"></i>
+                <div id="wizard-results-${dayIdx}" class="absolute top-full left-0 w-full bg-[#0a0a0a] border border-red-600/30 rounded-3xl mt-4 z-[100] hidden max-h-72 overflow-y-auto shadow-2xl custom-scrollbar border-t-0"></div>
+            </div>
         </div>
 
         <div class="space-y-6">
@@ -1564,12 +1571,13 @@ window.renderProgresoSemanasWizard = function(dayIdx, exIdx, ex) {
 
 /**
  * 4. GUARDADO FINAL (Req 10: Profesor se captura en backend via current_user)
+ * FIX ERROR 500: Eliminamos 'tipo' del payload si el servidor no lo soporta en el esquema Create
  */
 window.saveFinalRutina = async function() {
     const payload = {
         usuario_id: state.routineWizard.alumnoId,
         objetivo: state.routineWizard.objetivo,
-        tipo: state.routineWizard.tipo,
+        // tipo: state.routineWizard.tipo, // Eliminado para evitar 'tipo' attribute error si el backend no lo espera
         fecha_vencimiento: state.routineWizard.vencimiento,
         activo: true,
         dias: state.routineWizard.dias.map(d => ({
@@ -1595,26 +1603,44 @@ window.saveFinalRutina = async function() {
 }
 
 /**
- * 5. AUXILIARES Y GESTIÓN DE INTERFAZ
+ * 5. AUXILIARES Y GESTIÓN DE INTERFAZ (BOTÓN CREAR NUEVO EJERCICIO INCLUIDO)
  */
 window.initSearchInWizard = function(dayIdx) {
     const input = document.getElementById(`wizard-search-${dayIdx}`);
     const results = document.getElementById(`wizard-results-${dayIdx}`);
+    const groupSelect = document.getElementById(`wizard-group-${dayIdx}`);
     if(!input || !results) return;
 
-    input.oninput = () => {
+    const performSearch = () => {
         const query = input.value.toLowerCase();
-        if (query.length < 2) { results.classList.add('hidden'); return; }
-        const filtered = state.ejerciciosLibreria.filter(e => e.nombre.toLowerCase().includes(query));
+        const groupId = groupSelect ? groupSelect.value : 'all';
+
+        if (query.length < 1 && groupId === 'all') { results.classList.add('hidden'); return; }
+        
+        const filtered = state.ejerciciosLibreria.filter(e => 
+            (groupId === 'all' || e.grupo_muscular_id == groupId) && 
+            e.nombre.toLowerCase().includes(query)
+        );
+
         results.innerHTML = filtered.map(e => `
-            <div class="p-4 border-b border-white/5 hover:bg-red-600/10 cursor-pointer text-[11px] font-black uppercase italic text-white/50 flex justify-between items-center" onmousedown="window.addExerciseToWizard(${dayIdx}, ${e.id}, '${e.nombre}')">
+            <div class="p-4 border-b border-white/5 hover:bg-red-600/10 cursor-pointer text-[11px] font-black uppercase italic text-white/50 flex justify-between items-center group/item" onmousedown="window.addExerciseToWizard(${dayIdx}, ${e.id}, '${e.nombre}')">
                 <span>${e.nombre}</span>
-                <i data-lucide="plus" class="w-3 h-3 text-red-600"></i>
+                <i data-lucide="plus" class="w-4 h-4 text-red-600 opacity-0 group-hover/item:opacity-100 transition-opacity"></i>
             </div>
         `).join('');
+
+        // BOTÓN "CREAR EJERCICIO NUEVO" (RESTABLECIDO)
+        results.innerHTML += `
+            <div class="p-4 bg-red-600/5 hover:bg-red-600/10 cursor-pointer text-[10px] font-black uppercase italic text-red-500 border-t border-white/5 flex justify-center items-center gap-2" onmousedown="closeModal('modal-rutina-editor'); openModal('modal-ejercicio')">
+                <i data-lucide="plus-circle" class="w-4 h-4"></i> ¿No está en la lista? Crear nuevo ejercicio
+            </div>`;
+
         results.classList.remove('hidden');
         if(window.lucide) lucide.createIcons();
     };
+
+    input.oninput = performSearch;
+    input.onfocus = performSearch;
     input.onblur = () => setTimeout(() => results.classList.add('hidden'), 250);
 }
 
@@ -1828,6 +1854,11 @@ window.nextWizardStep = nextWizardStep;
 window.prevWizardStep = prevWizardStep;
 window.toggleFichaElement = toggleFichaElement;
 window.openHistorialRutinas = openHistorialRutinas;
+window.nextStep = nextStep;
+window.prevStep = prevStep;
+window.addSerie = addSerie;
+window.removeExercise = removeExercise;
+window.addExerciseToWizard = addExerciseToWizard;
 
 // =========================================================
 // 4. GUARDADO DE RUTINA (FIX: ACTIVACIÓN Y PERSISTENCIA)
