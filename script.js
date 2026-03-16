@@ -1174,7 +1174,7 @@ if (!state.routineWizard) {
         objetivo: '',     
         vencimiento: '',
         dias: [],
-        semanaActivaFicha: 1, // Ahora basado en IDs 1 a 5
+        semanaActivaFicha: 1, // ID de semana inicial (1 a 5)
         rutinasCargadas: [],
         editMode: false,
         isTabSwitching: false,
@@ -1213,7 +1213,7 @@ async function loadMusculacionMetadata() {
 }
 
 /**
- * 2. FICHA TÉCNICA (Visualización por Semanas ID)
+ * 2. FICHA TÉCNICA (Visualización con Solapas de Semanas 1-5)
  */
 window.openFichaTecnica = async function(alumnoId) {
     const rutinaContainer = document.getElementById('ficha-rutina-container');
@@ -1253,9 +1253,6 @@ window.openFichaTecnica = async function(alumnoId) {
     if (document.getElementById('ficha-dni')) document.getElementById('ficha-dni').innerText = "DNI: " + (al.dni || '---');
     if (document.getElementById('ficha-plan')) document.getElementById('ficha-plan').innerText = "Plan: " + (al.plan || al.plan_nombre || 'Sin Plan Activo');
     
-    const vencPlanLabel = document.getElementById('ficha-venc-plan') || document.getElementById('ficha-vencimiento-plan');
-    if (vencPlanLabel) vencPlanLabel.innerText = "Venc. Plan: " + (fechaVencPlanStr || '---');
-
     const statusEl = document.getElementById('ficha-plan-status');
     if (statusEl) {
         statusEl.innerText = alDia ? "STATUS: ACTIVO" : "STATUS: INACTIVO";
@@ -1267,12 +1264,14 @@ window.openFichaTecnica = async function(alumnoId) {
 
     if (listaRutinas.length > 0) {
         state.routineWizard.rutinasCargadas = listaRutinas;
+        // Requisito: Usar semana activa del estado (1 a 5)
         const semIdActivo = state.routineWizard.semanaActivaFicha || 1;
 
         rutinaContainer.innerHTML = listaRutinas.map((rutina, rIdx) => {
             const esProg = rutina.tipo_id === 2 || rutina.tipo === 'progresiva';
             const objetivoId = `obj-group-${rIdx}`;
             
+            // SOLAPAS: 5 semanas fijas según tabla semanas_rutina
             const tabsHTML = esProg ? `
                 <div class="flex gap-2 mb-8 bg-black/40 p-2 rounded-2xl border border-white/5 overflow-x-auto no-scrollbar">
                     ${[1, 2, 3, 4, 5].map(id => `
@@ -1289,13 +1288,14 @@ window.openFichaTecnica = async function(alumnoId) {
                 const diaId = `ficha-dia-${rIdx}-${dIdx}`;
                 const isOpen = state.routineWizard.openDays?.includes(diaId);
 
-                // FILTRADO SEGURO POR SEMANA_ID
+                // FILTRADO CRÍTICO: Solo ejercicios que pertenezcan a la semana seleccionada
                 let ejerciciosFiltrados = d.ejercicios || [];
                 if (esProg) {
                     ejerciciosFiltrados = ejerciciosFiltrados.filter(ex => ex.semana_id === semIdActivo);
                 }
 
-                if (esProg && ejerciciosFiltrados.length === 0) return ''; 
+                // Si no hay ejercicios para este día en esta semana, no mostramos el día
+                if (esProg && ejerciciosFiltrados.length === 0) return '';
 
                 return `
                 <div class="bg-white/2 rounded-[2rem] border border-white/5 overflow-hidden mb-4 transition-all hover:bg-white/[0.04]">
@@ -1314,6 +1314,7 @@ window.openFichaTecnica = async function(alumnoId) {
                     
                     <div id="${diaId}" class="${isOpen ? '' : 'hidden'} p-6 space-y-8 bg-black/40 border-t border-white/5">
                         ${ejerciciosFiltrados.map(ex => {
+                            // Limpiamos el nombre por si quedó algún rastro de [Semana X] en el texto
                             const nombreEjercicio = (ex.ejercicio_obj?.nombre || ex.exercise_name || "Ejercicio").replace(/\[Semana \d+\]/, "").trim();
                             const info = ex.series_detalle || ex.series || [];
                             
@@ -1363,7 +1364,7 @@ window.openFichaTecnica = async function(alumnoId) {
                             <i data-lucide="chevron-down" class="w-7 h-7 text-white/20 transition-transform duration-500 cursor-pointer" id="icon-${objetivoId}" onclick="window.toggleFichaElement('${objetivoId}')"></i>
                         </div>
                     </div>
-                    <div id="${objetivoId}" class="hidden p-8 bg-black/30 border-t border-white/5">
+                    <div id="${objetivoId}" class="p-8 bg-black/30 border-t border-white/5">
                         ${tabsHTML}
                         ${diasHTML}
                     </div>
@@ -1386,7 +1387,7 @@ window.changeFichaSemana = function(id, alumnoId) {
 }
 
 /**
- * 3. WIZARD DE CREACIÓN / EDICIÓN (PERSISTENCIA TOTAL POR SEMANA_ID)
+ * 3. WIZARD DE CREACIÓN / EDICIÓN (CORRECCIÓN PERSISTENCIA Y AGRUPAMIENTO)
  */
 window.openRoutineEditor = async function(alumnoId, isEdit = false) {
     const al = state.alumnos.find(a => a.id === alumnoId);
@@ -1408,7 +1409,9 @@ window.openRoutineEditor = async function(alumnoId, isEdit = false) {
     if (isEdit) {
         let lista = await apiFetch(`/rutinas/usuario/${alumnoId}?todo=true`);
         let active = Array.isArray(lista) ? lista.find(r => r.activo) : (lista && lista.activo ? lista : null);
+        
         if (active) {
+            // Persistencia del tipo de rutina
             routineData.tipo_id = parseInt(active.tipo_id) || (active.tipo === 'progresiva' ? 2 : 1);
             routineData.tipo = routineData.tipo_id === 2 ? 'progresiva' : 'normal';
             routineData.cantDias = active.dias?.length || 3;
@@ -1420,7 +1423,7 @@ window.openRoutineEditor = async function(alumnoId, isEdit = false) {
                 const uniqueEx = [];
                 d.ejercicios.forEach(ex => {
                     const cleanName = (ex.ejercicio_obj?.nombre || ex.exercise_name || "").replace(/\[Semana \d+\]/, "").trim();
-                    const semId = ex.semana_id; // Clave para reconstruir el array progreso
+                    const semId = ex.semana_id; // Clave para reconstruir el progreso
 
                     let existing = uniqueEx.find(u => u.id === ex.ejercicio_id);
                     if(!existing) {
@@ -1429,6 +1432,7 @@ window.openRoutineEditor = async function(alumnoId, isEdit = false) {
                             nombre: cleanName,
                             comentario: (ex.comentario || "").replace(/\[Semana \d+\]/, "").trim(),
                             series: [],
+                            // Inicializamos array de 5 semanas
                             progreso: Array.from({length: 5}).map(() => ({series:'1', repeticiones:'12', peso:'', descanso:'90s'}))
                         };
                         uniqueEx.push(existing);
@@ -1436,6 +1440,7 @@ window.openRoutineEditor = async function(alumnoId, isEdit = false) {
 
                     if (routineData.tipo_id === 2 && semId) {
                         const s = ex.series_detalle?.[0] || ex.series?.[0] || {};
+                        // Mapeamos el dato a la posición correcta del array progreso (index semId - 1)
                         existing.progreso[semId - 1] = {
                             series: '1',
                             repeticiones: s.repeticiones || '12',
@@ -1593,27 +1598,26 @@ window.renderSeriesNormalWizard = function(dayIdx, exIdx, ex) {
 }
 
 window.renderProgresoSemanasWizard = function(dayIdx, exIdx, ex) {
-    // SOPORTE PARA 5 SEMANAS SEGÚN SQL
+    // SOPORTE PARA 5 SEMANAS SEGÚN SQL Y TABS
     if (!ex.progreso) ex.progreso = Array.from({length: 5}).map(() => ({series:'1', repeticiones:'12', peso:'', descanso:'90s'}));
 
     return `
-    <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+    <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
         ${ex.progreso.map((sem, sIdx) => `
-            <div class="bg-black/40 p-5 rounded-3xl border border-white/5 space-y-4">
+            <div class="bg-black/40 p-4 rounded-2xl border border-white/5 space-y-3">
                 <p class="text-[8px] font-black text-amber-500 uppercase text-center border-b border-white/5 pb-2">Semana ${sIdx+1}</p>
                 <div class="grid grid-cols-2 gap-1">
                     <input type="text" value="${sem.series}" oninput="state.routineWizard.dias[${dayIdx}].ejercicios[${exIdx}].progreso[${sIdx}].series = this.value" class="bg-transparent text-center text-white text-[10px] outline-none border-b border-white/10" placeholder="S">
                     <input type="text" value="${sem.repeticiones}" oninput="state.routineWizard.dias[${dayIdx}].ejercicios[${exIdx}].progreso[${sIdx}].repeticiones = this.value" class="bg-transparent text-center text-white text-[10px] outline-none border-b border-white/10" placeholder="R">
                 </div>
                 <input type="text" value="${sem.peso}" oninput="state.routineWizard.dias[${dayIdx}].ejercicios[${exIdx}].progreso[${sIdx}].peso = this.value" class="w-full bg-white/5 text-center text-amber-500 font-black text-xs py-2 rounded-xl outline-none" placeholder="0 kg">
-                <input type="text" value="${sem.descanso || '90s'}" oninput="state.routineWizard.dias[${dayIdx}].ejercicios[${exIdx}].progreso[${sIdx}].descanso = this.value" class="w-full bg-transparent text-center text-white/20 italic text-[9px] outline-none" placeholder="Pausa">
             </div>
         `).join('')}
     </div>`;
 }
 
 /**
- * 4. GUARDADO FINAL (EXPLOSIÓN DE REGISTROS POR SEMANA_ID)
+ * 4. GUARDADO FINAL (EXPLOSIÓN DE REGISTROS POR SEMANA_ID 1 a 5)
  */
 window.saveFinalRutina = async function() {
     const isProgresiva = state.routineWizard.tipo_id === 2;
@@ -1621,10 +1625,10 @@ window.saveFinalRutina = async function() {
         let ejerciciosFinales = [];
 
         if (isProgresiva) {
-            // EXPLOSIÓN: 1 ejercicio del wizard -> 5 filas físicas vinculadas por semana_id
+            // EXPLOSIÓN: 1 ejercicio del wizard -> 5 filas físicas en la base de datos (semanas 1 a 5)
             d.ejercicios.forEach(ex => {
                 ex.progreso.forEach((weekData, idx) => {
-                    const semId = idx + 1; // ID 1 a 5 según tabla semanas_rutina
+                    const semId = idx + 1; // IDs 1 a 5 según tabla semanas_rutina
                     ejerciciosFinales.push({
                         ejercicio_id: ex.id,
                         semana_id: semId, 
