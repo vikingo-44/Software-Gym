@@ -1161,7 +1161,7 @@
  * ============================================================
  */
 
-// --- 0. ESTADO GLOBAL DEL EDITOR ---
+// --- 0. GLOBAL EDITOR STATE ---
 if (!state.routineWizard) {
     state.routineWizard = {
         alumnoId: null,
@@ -1174,7 +1174,7 @@ if (!state.routineWizard) {
         objetivo: '',     
         vencimiento: '',
         dias: [],
-        semanaActivaFicha: 1, // ID de semana inicial (1 a 5)
+        semanaActivaFicha: 1, // ID 1 to 5
         rutinasCargadas: [],
         editMode: false,
         isTabSwitching: false,
@@ -1183,7 +1183,7 @@ if (!state.routineWizard) {
 }
 
 /**
- * Función para iniciales.
+ * Get initials for avatar.
  */
 function getVikingInitials(a) {
     const nombre = a.nombre_completo || (a.usuario ? a.usuario.nombre_completo : null);
@@ -1197,7 +1197,7 @@ function getVikingInitials(a) {
 }
 
 /**
- * 1. CARGA DE METADATOS
+ * 1. LOAD METADATA
  */
 async function loadMusculacionMetadata() {
     try {
@@ -1208,12 +1208,12 @@ async function loadMusculacionMetadata() {
         state.gruposMusculares = Array.isArray(grupos) ? grupos : [];
         state.ejerciciosLibreria = Array.isArray(ejercicios) ? ejercicios : [];
     } catch (e) {
-        console.error("Error cargando arsenal vikingo:", e);
+        console.error("Error loading viking arsenal:", e);
     }
 }
 
 /**
- * 2. FICHA TÉCNICA (Visualización con Solapas de Semanas 1-5)
+ * 2. TECHNICAL SHEET (Visualization with Week Tabs 1-5)
  */
 window.openFichaTecnica = async function(alumnoId) {
     const rutinaContainer = document.getElementById('ficha-rutina-container');
@@ -1233,7 +1233,7 @@ window.openFichaTecnica = async function(alumnoId) {
 
     const al = await apiFetch(`/alumnos/${alumnoId}/ficha`);
     if (al.error) {
-        showVikingToast("Error al conectar con el servidor", true);
+        showVikingToast("Error connecting to server", true);
         return;
     }
 
@@ -1247,7 +1247,7 @@ window.openFichaTecnica = async function(alumnoId) {
         alDia = hoy <= vencMemb;
     }
 
-    // Cabecera UI
+    // UI Header
     if (document.getElementById('ficha-avatar')) document.getElementById('ficha-avatar').innerText = getVikingInitials(al);
     if (document.getElementById('ficha-nombre')) document.getElementById('ficha-nombre').innerText = al.nombre_completo || 'Sin Nombre';
     if (document.getElementById('ficha-dni')) document.getElementById('ficha-dni').innerText = "DNI: " + (al.dni || '---');
@@ -1264,14 +1264,12 @@ window.openFichaTecnica = async function(alumnoId) {
 
     if (listaRutinas.length > 0) {
         state.routineWizard.rutinasCargadas = listaRutinas;
-        // Requisito: Usar semana activa del estado (1 a 5)
         const semIdActivo = state.routineWizard.semanaActivaFicha || 1;
 
         rutinaContainer.innerHTML = listaRutinas.map((rutina, rIdx) => {
             const esProg = rutina.tipo_id === 2 || rutina.tipo === 'progresiva';
             const objetivoId = `obj-group-${rIdx}`;
             
-            // SOLAPAS: 5 semanas fijas según tabla semanas_rutina
             const tabsHTML = esProg ? `
                 <div class="flex gap-2 mb-8 bg-black/40 p-2 rounded-2xl border border-white/5 overflow-x-auto no-scrollbar">
                     ${[1, 2, 3, 4, 5].map(id => `
@@ -1288,13 +1286,11 @@ window.openFichaTecnica = async function(alumnoId) {
                 const diaId = `ficha-dia-${rIdx}-${dIdx}`;
                 const isOpen = state.routineWizard.openDays?.includes(diaId);
 
-                // FILTRADO CRÍTICO: Solo ejercicios que pertenezcan a la semana seleccionada
                 let ejerciciosFiltrados = d.ejercicios || [];
                 if (esProg) {
                     ejerciciosFiltrados = ejerciciosFiltrados.filter(ex => ex.semana_id === semIdActivo);
                 }
 
-                // Si no hay ejercicios para este día en esta semana, no mostramos el día
                 if (esProg && ejerciciosFiltrados.length === 0) return '';
 
                 return `
@@ -1314,7 +1310,6 @@ window.openFichaTecnica = async function(alumnoId) {
                     
                     <div id="${diaId}" class="${isOpen ? '' : 'hidden'} p-6 space-y-8 bg-black/40 border-t border-white/5">
                         ${ejerciciosFiltrados.map(ex => {
-                            // Limpiamos el nombre por si quedó algún rastro de [Semana X] en el texto
                             const nombreEjercicio = (ex.ejercicio_obj?.nombre || ex.exercise_name || "Ejercicio").replace(/\[Semana \d+\]/, "").trim();
                             const info = ex.series_detalle || ex.series || [];
                             
@@ -1387,7 +1382,7 @@ window.changeFichaSemana = function(id, alumnoId) {
 }
 
 /**
- * 3. WIZARD DE CREACIÓN / EDICIÓN (CORRECCIÓN PERSISTENCIA Y AGRUPAMIENTO)
+ * 3. WIZARD CREATION / EDITION (FIX PERSISTENCE AND GROUPING)
  */
 window.openRoutineEditor = async function(alumnoId, isEdit = false) {
     const al = state.alumnos.find(a => a.id === alumnoId);
@@ -1411,7 +1406,6 @@ window.openRoutineEditor = async function(alumnoId, isEdit = false) {
         let active = Array.isArray(lista) ? lista.find(r => r.activo) : (lista && lista.activo ? lista : null);
         
         if (active) {
-            // Persistencia del tipo de rutina
             routineData.tipo_id = parseInt(active.tipo_id) || (active.tipo === 'progresiva' ? 2 : 1);
             routineData.tipo = routineData.tipo_id === 2 ? 'progresiva' : 'normal';
             routineData.cantDias = active.dias?.length || 3;
@@ -1423,7 +1417,7 @@ window.openRoutineEditor = async function(alumnoId, isEdit = false) {
                 const uniqueEx = [];
                 d.ejercicios.forEach(ex => {
                     const cleanName = (ex.ejercicio_obj?.nombre || ex.exercise_name || "").replace(/\[Semana \d+\]/, "").trim();
-                    const semId = ex.semana_id; // Clave para reconstruir el progreso
+                    const semId = ex.semana_id; 
 
                     let existing = uniqueEx.find(u => u.id === ex.ejercicio_id);
                     if(!existing) {
@@ -1432,7 +1426,6 @@ window.openRoutineEditor = async function(alumnoId, isEdit = false) {
                             nombre: cleanName,
                             comentario: (ex.comentario || "").replace(/\[Semana \d+\]/, "").trim(),
                             series: [],
-                            // Inicializamos array de 5 semanas
                             progreso: Array.from({length: 5}).map(() => ({series:'1', repeticiones:'12', peso:'', descanso:'90s'}))
                         };
                         uniqueEx.push(existing);
@@ -1440,9 +1433,10 @@ window.openRoutineEditor = async function(alumnoId, isEdit = false) {
 
                     if (routineData.tipo_id === 2 && semId) {
                         const s = ex.series_detalle?.[0] || ex.series?.[0] || {};
-                        // Mapeamos el dato a la posición correcta del array progreso (index semId - 1)
+                        const numSeriesGuardadas = (ex.series_detalle || ex.series || []).length;
+                        
                         existing.progreso[semId - 1] = {
-                            series: '1',
+                            series: numSeriesGuardadas > 0 ? numSeriesGuardadas.toString() : '1',
                             repeticiones: s.repeticiones || '12',
                             peso: s.peso || '',
                             descanso: s.descanso || '90s'
@@ -1598,7 +1592,6 @@ window.renderSeriesNormalWizard = function(dayIdx, exIdx, ex) {
 }
 
 window.renderProgresoSemanasWizard = function(dayIdx, exIdx, ex) {
-    // SOPORTE PARA 5 SEMANAS SEGÚN SQL Y TABS
     if (!ex.progreso) ex.progreso = Array.from({length: 5}).map(() => ({series:'1', repeticiones:'12', peso:'', descanso:'90s'}));
 
     return `
@@ -1617,7 +1610,7 @@ window.renderProgresoSemanasWizard = function(dayIdx, exIdx, ex) {
 }
 
 /**
- * 4. GUARDADO FINAL (EXPLOSIÓN DE REGISTROS POR SEMANA_ID 1 a 5)
+ * 4. FINAL SAVE (EXPLOSION OF RECORDS BY SEMANA_ID 1 to 5)
  */
 window.saveFinalRutina = async function() {
     const isProgresiva = state.routineWizard.tipo_id === 2;
@@ -1625,26 +1618,32 @@ window.saveFinalRutina = async function() {
         let ejerciciosFinales = [];
 
         if (isProgresiva) {
-            // EXPLOSIÓN: 1 ejercicio del wizard -> 5 filas físicas en la base de datos (semanas 1 a 5)
             d.ejercicios.forEach(ex => {
                 ex.progreso.forEach((weekData, idx) => {
-                    const semId = idx + 1; // IDs 1 a 5 según tabla semanas_rutina
-                    ejerciciosFinales.push({
-                        ejercicio_id: ex.id,
-                        semana_id: semId, 
-                        comentario: `[Semana ${semId}] ${ex.comentario || ""}`.trim(),
-                        series: [{
-                            numero_serie: 1, 
+                    const semId = idx + 1;
+                    
+                    // REQUISITO: Generar series reales según el input 'S' del wizard
+                    const numSeriesParaEstaSemana = parseInt(weekData.series) || 1;
+                    const seriesArray = [];
+                    for(let i = 1; i <= numSeriesParaEstaSemana; i++) {
+                        seriesArray.push({
+                            numero_serie: i,
                             repeticiones: weekData.repeticiones || "12",
                             peso: weekData.peso || "0",
                             descanso: weekData.descanso || "90s"
-                        }],
-                        progreso_json: JSON.stringify(ex.progreso) 
+                        });
+                    }
+
+                    ejerciciosFinales.push({
+                        ejercicio_id: ex.id,
+                        semana_id: semId, // SENDING TO DATABASE COLUMN
+                        comentario: (ex.comentario || "").trim(), // CLEAN COMMENT (no labels)
+                        series: seriesArray, // POPULATES series_ejercicios table
+                        progreso_json: JSON.stringify(ex.progreso) // BACKUP
                     });
                 });
             });
         } else {
-            // NORMAL: Mapeo estándar 1 a 1 con sus series
             ejerciciosFinales = d.ejercicios.map(ex => ({
                 ejercicio_id: ex.id,
                 semana_id: null,
@@ -1689,7 +1688,7 @@ window.saveFinalRutina = async function() {
 }
 
 /**
- * 5. AUXILIARES Y GESTIÓN DE INTERFAZ
+ * 5. AUXILIARY FUNCTIONS
  */
 window.initSearchInWizard = function(dayIdx) {
     const input = document.getElementById(`wizard-search-${dayIdx}`);
@@ -1728,19 +1727,6 @@ window.initSearchInWizard = function(dayIdx) {
     input.onblur = () => setTimeout(() => results.classList.add('hidden'), 250);
 }
 
-window.prepareNewExerciseFromWizard = function(dayIdx) {
-    if (window.openModalEjercicio) {
-        closeModal('modal-rutina-editor');
-        openModal('modal-ejercicio');
-    } else {
-        showVikingToast("Modal de creación no detectado", true);
-    }
-}
-
-window.nextStep = function() { window.nextWizardStep(); };
-window.prevStep = function() { window.prevWizardStep(); };
-window.addSerie = function(dayIdx, exIdx) { window.addSerieWizard(dayIdx, exIdx); };
-window.removeExercise = function(dayIdx, exIdx) { window.removeEjercicioWizard(dayIdx, exIdx); };
 window.addExerciseToWizard = function(dayIdx, id, nombre) { window.addEjercicioWizard(dayIdx, id, nombre); };
 
 window.addEjercicioWizard = (dayIdx, id, nombre) => {
@@ -1755,12 +1741,12 @@ window.addEjercicioWizard = (dayIdx, id, nombre) => {
     window.renderWizardStep();
 };
 
-window.removeEjercicioWizard = (dayIdx, exIdx) => {
+window.removeExercise = function(dayIdx, exIdx) {
     state.routineWizard.dias[dayIdx].ejercicios.splice(exIdx, 1);
     window.renderWizardStep();
 };
 
-window.addSerieWizard = (dayIdx, exIdx) => {
+window.addSerie = function(dayIdx, exIdx) {
     const ex = state.routineWizard.dias[dayIdx].ejercicios[exIdx];
     if(!ex.series) ex.series = [];
     ex.series.push({numero_serie: ex.series.length + 1, repeticiones: '12', peso: '', descanso: '90s'});
@@ -1800,9 +1786,6 @@ window.toggleFichaElement = function(id) {
     }
 };
 
-/**
- * 6. VISTAS Y FILTROS
- */
 window.renderRutinas = async function() {
     const rol = (state.user?.rol_nombre || "").toLowerCase();
     const list = document.getElementById('rutinas-lista');
@@ -1851,7 +1834,7 @@ window.renderRutinasList = function(listaDatos) {
     if(!list) return;
 
     if (listaDatos.length === 0) {
-        list.innerHTML = `<div class="p-20 text-center opacity-20 font-black uppercase italic tracking-widest"><i data-lucide="users" class="w-12 h-12 mx-auto mb-2"></i>Sin registros</div>`;
+        list.innerHTML = `<div class="p-20 text-center opacity-20 font-black uppercase italic tracking-widest">Sin registros</div>`;
         if(window.lucide) lucide.createIcons();
         return;
     }
@@ -1863,69 +1846,52 @@ window.renderRutinasList = function(listaDatos) {
         <div class="glass-card p-5 rounded-3xl border-white/5 flex flex-col md:flex-row md:items-center gap-6 hover:border-red-600/20 transition-all group relative overflow-hidden bg-gradient-to-r from-white/[0.01] to-transparent">
             <div class="absolute left-0 top-0 bottom-0 w-1.5 ${tieneRutina ? 'bg-green-600' : 'bg-white/10'} opacity-40 group-hover:opacity-100 transition-opacity"></div>
             <div class="flex items-center gap-4 w-full md:w-1/3">
-                <div class="w-14 h-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center font-black text-white text-lg italic group-hover:bg-red-600 group-hover:text-black transition-all shrink-0">${initials}</div>
+                <div class="w-14 h-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center font-black text-white text-lg italic shrink-0">${initials}</div>
                 <div class="overflow-hidden">
-                    <h4 class="text-sm font-black uppercase italic text-white group-hover:text-red-500 transition-colors truncate">${a.nombre_completo || (a.usuario ? a.usuario.nombre_completo : 'Alumno')}</h4>
-                    <p class="text-[10px] text-white/30 font-bold uppercase tracking-widest mt-1">${a.dni || (a.usuario ? a.usuario.dni : '---')}</p>
+                    <h4 class="text-sm font-black uppercase italic text-white truncate">${a.nombre_completo || 'Alumno'}</h4>
+                    <p class="text-[10px] text-white/30 font-bold uppercase mt-1">DNI: ${a.dni || '---'}</p>
                 </div>
             </div>
             <div class="flex-1">
-                <p class="text-[9px] text-white/20 font-black uppercase tracking-widest mb-1 italic">Membresía Activa</p>
+                <p class="text-[9px] text-white/20 font-black uppercase mb-1 italic">Membresía</p>
                 <p class="text-xs font-black uppercase italic text-white truncate">${a.plan?.nombre || 'Sin Plan'}</p>
             </div>
             <div class="flex items-center gap-2">
-                <button onclick="window.openFichaTecnica(${a.id})" class="p-3 bg-white/5 hover:bg-white/10 text-white rounded-xl transition-all" title="Ver Ficha"><i data-lucide="clipboard-list" class="w-4 h-4"></i></button>
-                <button onclick="window.openHistorialRutinas(${a.id})" class="p-3 bg-blue-700/10 hover:bg-blue-700 text-blue-500 hover:text-white rounded-xl transition-all" title="Historial"><i data-lucide="history" class="w-4 h-4"></i></button>
-                <button onclick="window.openRoutineEditor(${a.id})" class="px-6 py-3 viking-bg-red text-black rounded-xl text-[10px] font-black uppercase italic hover:scale-105 transition-all flex items-center gap-2 shadow-lg">
-                    <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i> NUEVA RUTINA
-                </button>
+                <button onclick="window.openFichaTecnica(${a.id})" class="p-3 bg-white/5 text-white rounded-xl"><i data-lucide="clipboard-list" class="w-4 h-4"></i></button>
+                <button onclick="window.openRoutineEditor(${a.id})" class="px-6 py-3 viking-bg-red text-black rounded-xl text-[10px] font-black uppercase italic shadow-lg">NUEVA RUTINA</button>
             </div>
         </div>`;
     }).join('');
     if(window.lucide) lucide.createIcons();
 }
 
-/**
- * 7. HISTORIAL
- */
 window.openHistorialRutinas = async function(alumnoId) {
     const al = state.alumnos.find(a => a.id === alumnoId);
     if (!al) return;
-
     const container = document.getElementById('ficha-rutina-container');
     if (!container) return;
-
     container.innerHTML = `<div class="col-span-2 py-20 text-center animate-pulse"><p class="text-[10px] font-black uppercase text-white/20 tracking-widest">Recuperando registros...</p></div>`;
-
     document.getElementById('ficha-nombre').innerText = "Historial: " + al.nombre_completo;
     let res = await apiFetch(`/rutinas/usuario/${alumnoId}?todo=true`);
     const rutinas = Array.isArray(res) ? res : (res && !res.error ? [res] : []);
-
     if (rutinas.length === 0) {
-        container.innerHTML = `<div class="col-span-2 p-20 text-center bg-white/[0.01] opacity-20 rounded-[3rem] border border-dashed border-white/5"><p class="text-xs font-black uppercase italic tracking-widest">Sin registros históricos</p></div>`;
+        container.innerHTML = `<div class="col-span-2 p-20 text-center opacity-20"><p class="text-xs font-black uppercase italic tracking-widest">Sin registros históricos</p></div>`;
     } else {
         rutinas.sort((a,b) => new Date(b.fecha_creacion) - new Date(a.fecha_creacion));
         container.innerHTML = rutinas.map(r => `
-            <div class="col-span-2 mb-4 bg-white/[0.03] border border-white/5 p-6 rounded-[2rem] flex justify-between items-center group hover:border-blue-600/30 transition-all">
+            <div class="col-span-2 mb-4 bg-white/[0.03] border border-white/5 p-6 rounded-[2rem] flex justify-between items-center group">
                 <div>
                     <p class="text-[8px] text-blue-400 font-black uppercase tracking-widest mb-1 italic">${r.tipo} - Forjada: ${r.fecha_creacion || 'S/F'}</p>
-                    <h5 class="text-sm font-black italic uppercase text-white">${r.nombre_grupo || r.objetivo || 'Rutina de Musculación'}</h5>
-                    <p class="text-[9px] text-white/30 italic">Profesor: ${r.profesor_nombre || '---'}</p>
+                    <h5 class="text-sm font-black italic uppercase text-white">${r.nombre_grupo || 'Rutina'}</h5>
                 </div>
-                <button onclick="closeModal('modal-ficha-tecnica'); window.openRoutineEditor(${alumnoId}, true)" class="px-6 py-3 bg-blue-600 text-white rounded-xl text-[9px] font-black uppercase italic hover:scale-105 transition-all flex items-center gap-2">
-                    <i data-lucide="zap" class="w-3.5 h-3.5"></i> Reactivar
-                </button>
+                <button onclick="closeModal('modal-ficha-tecnica'); window.openRoutineEditor(${alumnoId}, true)" class="px-6 py-3 bg-blue-600 text-white rounded-xl text-[9px] font-black uppercase italic">Reactivar</button>
             </div>
         `).join('');
     }
-
     if (window.lucide) lucide.createIcons();
     openModal('modal-ficha-tecnica');
 }
 
-/**
- * 8. FUNCIONES DE APOYO GENERAL
- */
 window.searchAlumnoRutina = function(query) {
     if(!query) { window.filterRutinas('todos'); return; }
     const q = query.toLowerCase();
@@ -1933,7 +1899,7 @@ window.searchAlumnoRutina = function(query) {
     window.renderRutinasList(filtrados);
 };
 
-// Vinculación global
+// Global bindings
 window.renderRutinas = renderRutinas;
 window.filterRutinas = filterRutinas;
 window.renderRutinasList = renderRutinasList;
@@ -1943,11 +1909,9 @@ window.nextWizardStep = nextWizardStep;
 window.prevWizardStep = prevWizardStep;
 window.toggleFichaElement = toggleFichaElement;
 window.openHistorialRutinas = openHistorialRutinas;
-window.nextStep = nextStep;
-window.prevStep = prevStep;
-window.addSerie = addSerie;
-window.removeExercise = removeExercise;
 window.addExerciseToWizard = addExerciseToWizard;
+window.removeExercise = removeExercise;
+window.addSerie = addSerie;
 
 // =========================================================
 // 4. GUARDADO DE RUTINA (FIX: ACTIVACIÓN Y PERSISTENCIA)
