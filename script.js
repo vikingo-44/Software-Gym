@@ -1161,7 +1161,7 @@
  * ============================================================
  */
 
-// --- 0. GLOBAL EDITOR STATE ---
+// --- 0. ESTADO GLOBAL DEL EDITOR ---
 if (!state.routineWizard) {
     state.routineWizard = {
         alumnoId: null,
@@ -1174,7 +1174,7 @@ if (!state.routineWizard) {
         objetivo: '',     
         vencimiento: '',
         dias: [],
-        semanaActivaFicha: 1, // ID 1 to 5
+        semanaActivaFicha: 1, // ID 1 a 5
         rutinasCargadas: [],
         editMode: false,
         isTabSwitching: false,
@@ -1183,7 +1183,7 @@ if (!state.routineWizard) {
 }
 
 /**
- * Get initials for avatar.
+ * Obtener iniciales para el avatar.
  */
 function getVikingInitials(a) {
     const nombre = a.nombre_completo || (a.usuario ? a.usuario.nombre_completo : null);
@@ -1197,7 +1197,7 @@ function getVikingInitials(a) {
 }
 
 /**
- * 1. LOAD METADATA
+ * 1. CARGA DE METADATOS
  */
 async function loadMusculacionMetadata() {
     try {
@@ -1208,12 +1208,12 @@ async function loadMusculacionMetadata() {
         state.gruposMusculares = Array.isArray(grupos) ? grupos : [];
         state.ejerciciosLibreria = Array.isArray(ejercicios) ? ejercicios : [];
     } catch (e) {
-        console.error("Error loading viking arsenal:", e);
+        console.error("Error cargando arsenal vikingo:", e);
     }
 }
 
 /**
- * 2. TECHNICAL SHEET (Visualization with Week Tabs 1-5)
+ * 2. FICHA TÉCNICA (Visualización con Solapas de Semanas 1 a 5)
  */
 window.openFichaTecnica = async function(alumnoId) {
     const rutinaContainer = document.getElementById('ficha-rutina-container');
@@ -1233,7 +1233,7 @@ window.openFichaTecnica = async function(alumnoId) {
 
     const al = await apiFetch(`/alumnos/${alumnoId}/ficha`);
     if (al.error) {
-        showVikingToast("Error connecting to server", true);
+        showVikingToast("Error al conectar con el servidor", true);
         return;
     }
 
@@ -1247,7 +1247,7 @@ window.openFichaTecnica = async function(alumnoId) {
         alDia = hoy <= vencMemb;
     }
 
-    // UI Header
+    // Cabecera UI
     if (document.getElementById('ficha-avatar')) document.getElementById('ficha-avatar').innerText = getVikingInitials(al);
     if (document.getElementById('ficha-nombre')) document.getElementById('ficha-nombre').innerText = al.nombre_completo || 'Sin Nombre';
     if (document.getElementById('ficha-dni')) document.getElementById('ficha-dni').innerText = "DNI: " + (al.dni || '---');
@@ -1610,7 +1610,7 @@ window.renderProgresoSemanasWizard = function(dayIdx, exIdx, ex) {
 }
 
 /**
- * 4. FINAL SAVE (EXPLOSION OF RECORDS BY SEMANA_ID 1 to 5)
+ * 4. GUARDADO FINAL (EXPLOSIÓN DE REGISTROS POR SEMANA_ID 1 a 5)
  */
 window.saveFinalRutina = async function() {
     const isProgresiva = state.routineWizard.tipo_id === 2;
@@ -1622,7 +1622,6 @@ window.saveFinalRutina = async function() {
                 ex.progreso.forEach((weekData, idx) => {
                     const semId = idx + 1;
                     
-                    // REQUISITO: Generar series reales según el input 'S' del wizard
                     const numSeriesParaEstaSemana = parseInt(weekData.series) || 1;
                     const seriesArray = [];
                     for(let i = 1; i <= numSeriesParaEstaSemana; i++) {
@@ -1636,10 +1635,9 @@ window.saveFinalRutina = async function() {
 
                     ejerciciosFinales.push({
                         ejercicio_id: ex.id,
-                        semana_id: semId, // SENDING TO DATABASE COLUMN
-                        comentario: (ex.comentario || "").trim(), // CLEAN COMMENT (no labels)
-                        series: seriesArray, // POPULATES series_ejercicios table
-                        progreso_json: JSON.stringify(ex.progreso) // BACKUP
+                        semana_id: semId,
+                        comentario: (ex.comentario || "").trim(),
+                        series: seriesArray
                     });
                 });
             });
@@ -1653,8 +1651,7 @@ window.saveFinalRutina = async function() {
                     repeticiones: s.repeticiones, 
                     peso: s.peso,
                     descanso: s.descanso
-                })) || [],
-                progreso_json: null
+                })) || []
             }));
         }
 
@@ -1688,7 +1685,7 @@ window.saveFinalRutina = async function() {
 }
 
 /**
- * 5. AUXILIARY FUNCTIONS
+ * 5. FUNCIONES AUXILIARES Y BÚSQUEDA
  */
 window.initSearchInWizard = function(dayIdx) {
     const input = document.getElementById(`wizard-search-${dayIdx}`);
@@ -1769,6 +1766,9 @@ window.prevWizardStep = function() {
     }
 };
 
+/**
+ * 6. VISTAS Y FILTROS
+ */
 window.toggleFichaElement = function(id) {
     const content = document.getElementById(id);
     const icon = document.getElementById('icon-' + id);
@@ -1785,49 +1785,6 @@ window.toggleFichaElement = function(id) {
         state.routineWizard.openDays = state.routineWizard.openDays.filter(d => d !== id);
     }
 };
-
-window.renderRutinas = async function() {
-    const rol = (state.user?.rol_nombre || "").toLowerCase();
-    const list = document.getElementById('rutinas-lista');
-    const studentView = document.getElementById('musculacion-student-view');
-    const titleEl = document.getElementById('rutina-title');
-    if (rol === "alumno") {
-        if(list) list.classList.add('hidden');
-        if(studentView) studentView.classList.remove('hidden');
-        if(titleEl) titleEl.innerText = "Mi Entrenamiento";
-        window.openFichaTecnica(state.user.id);
-    } else {
-        if(studentView) studentView.classList.add('hidden');
-        if(list) list.classList.remove('hidden');
-        if(titleEl) titleEl.innerText = "Control de Rutinas";
-        window.filterRutinas('todos');
-    }
-}
-
-window.filterRutinas = function(filtro) {
-    if(!state.alumnos) return;
-    document.querySelectorAll('.filter-btn-rutina').forEach(btn => {
-        btn.classList.remove('bg-red-600', 'text-black');
-        btn.classList.add('text-white-500', 'hover:text-white');
-    });
-    const activeBtn = document.getElementById('filter-rutina-' + filtro);
-    if(activeBtn) {
-        activeBtn.classList.remove('text-white-500', 'hover:text-white');
-        activeBtn.classList.add('bg-red-600', 'text-black');
-    }
-
-    const hoy = new Date().toISOString().split('T')[0];
-    let base = state.alumnos.filter(a => {
-        const plan = (a.plan?.nombre || "").toLowerCase();
-        return plan.includes('musculacion') || plan.includes('completo') || plan.includes('personalizado');
-    });
-
-    let filtrados = base;
-    if(filtro === 'con') filtrados = base.filter(a => a.id_rutina || a.rutina_id || (a.planes_rutina && a.planes_rutina.length > 0));
-    if(filtro === 'sin') filtrados = base.filter(a => !(a.id_rutina || a.rutina_id || (a.planes_rutina && a.planes_rutina.length > 0)));
-    if(filtro === 'vencidas') filtrados = base.filter(a => a.rutina_vencimiento && a.rutina_vencimiento < hoy);
-    window.renderRutinasList(filtrados);
-}
 
 window.renderRutinasList = function(listaDatos) {
     const list = document.getElementById('rutinas-lista');
@@ -1865,6 +1822,55 @@ window.renderRutinasList = function(listaDatos) {
     if(window.lucide) lucide.createIcons();
 }
 
+/**
+ * 7. VINCULACIÓN GLOBAL (FIX: nextStep y prevStep)
+ */
+window.nextStep = function() { window.nextWizardStep(); };
+window.prevStep = function() { window.prevWizardStep(); };
+
+window.renderRutinas = function() {
+    const rol = (state.user?.rol_nombre || "").toLowerCase();
+    const list = document.getElementById('rutinas-lista');
+    const studentView = document.getElementById('musculacion-student-view');
+    const titleEl = document.getElementById('rutina-title');
+    if (rol === "alumno") {
+        if(list) list.classList.add('hidden');
+        if(studentView) studentView.classList.remove('hidden');
+        if(titleEl) titleEl.innerText = "Mi Entrenamiento";
+        window.openFichaTecnica(state.user.id);
+    } else {
+        if(studentView) studentView.classList.add('hidden');
+        if(list) list.classList.remove('hidden');
+        if(titleEl) titleEl.innerText = "Control de Rutinas";
+        window.filterRutinas('todos');
+    }
+};
+
+window.filterRutinas = function(filtro) {
+    if(!state.alumnos) return;
+    document.querySelectorAll('.filter-btn-rutina').forEach(btn => {
+        btn.classList.remove('bg-red-600', 'text-black');
+        btn.classList.add('text-white-500', 'hover:text-white');
+    });
+    const activeBtn = document.getElementById('filter-rutina-' + filtro);
+    if(activeBtn) {
+        activeBtn.classList.remove('text-white-500', 'hover:text-white');
+        activeBtn.classList.add('bg-red-600', 'text-black');
+    }
+
+    const hoy = new Date().toISOString().split('T')[0];
+    let base = state.alumnos.filter(a => {
+        const plan = (a.plan?.nombre || "").toLowerCase();
+        return plan.includes('musculacion') || plan.includes('completo') || plan.includes('personalizado');
+    });
+
+    let filtrados = base;
+    if(filtro === 'con') filtrados = base.filter(a => a.id_rutina || a.rutina_id || (a.planes_rutina && a.planes_rutina.length > 0));
+    if(filtro === 'sin') filtrados = base.filter(a => !(a.id_rutina || a.rutina_id || (a.planes_rutina && a.planes_rutina.length > 0)));
+    if(filtro === 'vencidas') filtrados = base.filter(a => a.rutina_vencimiento && a.rutina_vencimiento < hoy);
+    window.renderRutinasList(filtrados);
+};
+
 window.openHistorialRutinas = async function(alumnoId) {
     const al = state.alumnos.find(a => a.id === alumnoId);
     if (!al) return;
@@ -1890,7 +1896,7 @@ window.openHistorialRutinas = async function(alumnoId) {
     }
     if (window.lucide) lucide.createIcons();
     openModal('modal-ficha-tecnica');
-}
+};
 
 window.searchAlumnoRutina = function(query) {
     if(!query) { window.filterRutinas('todos'); return; }
@@ -1899,16 +1905,12 @@ window.searchAlumnoRutina = function(query) {
     window.renderRutinasList(filtrados);
 };
 
-// Global bindings
-window.renderRutinas = renderRutinas;
-window.filterRutinas = filterRutinas;
-window.renderRutinasList = renderRutinasList;
-window.openFichaTecnica = openFichaTecnica;
+// Vinculación explícita para asegurar funcionamiento
 window.openRoutineEditor = openRoutineEditor;
+window.openFichaTecnica = openFichaTecnica;
 window.nextWizardStep = nextWizardStep;
 window.prevWizardStep = prevWizardStep;
 window.toggleFichaElement = toggleFichaElement;
-window.openHistorialRutinas = openHistorialRutinas;
 window.addExerciseToWizard = addExerciseToWizard;
 window.removeExercise = removeExercise;
 window.addSerie = addSerie;
