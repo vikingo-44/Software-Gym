@@ -1909,12 +1909,9 @@ window.nextWizardStep = nextWizardStep;
 window.prevWizardStep = prevWizardStep;
 window.toggleFichaElement = toggleFichaElement;
 window.openHistorialRutinas = openHistorialRutinas;
-window.nextStep = nextStep;
-window.prevStep = prevStep;
-window.addSerie = addSerie;
-window.removeExercise = removeExercise;
 window.addExerciseToWizard = addExerciseToWizard;
-
+window.removeExercise = removeExercise;
+window.addSerie = addSerie;
 
 // =========================================================
 // 4. GUARDADO DE RUTINA (FIX: ACTIVACIÓN Y PERSISTENCIA)
