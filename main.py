@@ -1199,158 +1199,93 @@ def procesar_cobro(data: TransactionCreate, db: Session = Depends(database.get_d
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Error interno: {str(e)}")
 
-# --- MUSCULACIÓN ---
-@app.get("/api/rutinas/grupos-musculares", tags=["Musculación"])
+@app.get("/api/rutinas/grupos-musculares")
 def get_grupos(db: Session = Depends(database.get_db)):
     return db.query(models.GrupoMuscular).all()
 
-@app.get("/api/rutinas/ejercicios", tags=["Musculación"])
-def get_ejercicios(db: Session = Depends(database.get_db)):
-    return db.query(models.Ejercicio).options(joinedload(models.Ejercicio.grupo_muscular)).all()
+@app.get("/api/rutinas/ejercicios")
+def get_ejercicios_libreria(db: Session = Depends(database.get_db)):
+    return db.query(models.EjercicioLibreria).all()
 
-@app.post("/api/rutinas/grupos-musculares", tags=["Musculación"])
-def create_grupo(data: dict, db: Session = Depends(database.get_db)):
-    nuevo = models.GrupoMuscular(nombre=data['nombre'])
-    db.add(nuevo)
-    db.commit()
-    db.refresh(nuevo)
-    return nuevo
-
-@app.post("/api/rutinas/ejercicios", tags=["Musculación"])
-def create_ejercicio_lib(data: EjercicioCreate, db: Session = Depends(database.get_db)):
-    nuevo = models.Ejercicio(nombre=data.nombre, grupo_muscular_id=data.grupo_muscular_id)
-    db.add(nuevo)
-    db.commit()
-    db.refresh(nuevo)
-    return nuevo
-
-@app.post("/api/rutinas/plan", tags=["Musculación"])
-def create_plan_rutina(data: models.PlanRutinaCreate, db: Session = Depends(database.get_db), current_user = Depends(get_current_user)):
+@app.get("/api/rutinas/usuario/{alumno_id}")
+def get_rutinas_alumno(alumno_id: int, todo: bool = False, db: Session = Depends(database.get_db)):
     """
-    Crea o actualiza el plan de entrenamiento.
-    Implementa:
-    1. Captura del profesor creador (current_user).
-    2. Asociación por tipo_id (Tabla maestra tipos_rutina).
-    3. Mapeo correcto: nombre_grupo y descripcion (objetivo).
-    4. Explosión de registros: Si es progresiva, el frontend envía una fila por cada semana.
+    Obtiene rutinas del alumno. 
+    Si todo=True devuelve historial. Si no, solo la activa.
+    """
+    query = db.query(models.PlanRutina).filter(models.PlanRutina.usuario_id == alumno_id)
+    if not todo:
+        query = query.filter(models.PlanRutina.activo == True)
+    
+    return query.options(
+        joinedload(models.PlanRutina.dias)
+        .joinedload(models.DiaRutina.ejercicios)
+        .joinedload(models.EjercicioEnRutina.series)
+    ).order_by(models.PlanRutina.fecha_creacion.desc()).all()
+
+@app.post("/api/rutinas/plan")
+def save_plan_rutina(data: dict, db: Session = Depends(database.get_db), current_user = Depends(get_current_user)):
+    """
+    Guarda el plan relacional. 
+    Maneja la 'explosión' de registros para rutinas progresivas (1 ejercicio -> 5 semanas).
     """
     try:
-        # 1. Validar existencia del alumno
-        user = db.query(models.Usuario).filter(models.Usuario.id == data.usuario_id).first()
-        if not user:
-            raise HTTPException(status_code=404, detail="Usuario no encontrado")
-
-        # 2. Bloqueo de seguridad Vikinga: No se crean rutinas si el plan de membresía está vencido
-        if user.fecha_vencimiento and user.fecha_vencimiento < date.today():
-            raise HTTPException(
-                status_code=400, 
-                detail="No se puede asignar una rutina a un alumno con el plan vencido. Debe renovar su membresía primero."
-            )
-
-        # 3. Desactivar planes de rutina anteriores para este usuario
+        # 1. Desactivar rutinas anteriores
         db.query(models.PlanRutina).filter(
-            models.PlanRutina.usuario_id == data.usuario_id
+            models.PlanRutina.usuario_id == data['usuario_id']
         ).update({"activo": False}, synchronize_session=False)
-        
-        # 4. Crear la cabecera del Plan
-        # Mapeamos nombre_grupo (título visual) y descripcion (el resumen/objetivo técnico)
+
+        # 2. Crear cabecera del Plan
         nuevo_plan = models.PlanRutina(
-            usuario_id=data.usuario_id,
-            nombre_grupo=data.nombre_grupo,
-            objetivo=data.nombre_grupo,      # Para compatibilidad con vistas viejas
-            descripcion=data.descripcion,    # El "objetivo" real/resumen del wizard
-            # Asociación por PK a tabla maestra: 1=normal, 2=progresiva
-            tipo_id=2 if data.tipo == 'progresiva' else 1,
-            profesor_nombre=current_user.nombre_completo, # Registra quién forjó el plan
-            fecha_vencimiento=data.fecha_vencimiento,
-            activo=True,
-            fecha_creacion=date.today()
+            usuario_id=data['usuario_id'],
+            tipo_id=data['tipo_id'],
+            nombre_plan=data['nombre_plan'],
+            objetivo=data['objetivo'],
+            descripcion=data['descripcion'],
+            fecha_vencimiento=data['fecha_vencimiento'],
+            profesor_nombre=current_user.nombre_completo,
+            activo=True
         )
         db.add(nuevo_plan)
-        db.flush() # Generamos ID para vincular los hijos
-        
-        # 5. Iterar los Días (Jornadas)
-        for d in data.dias:
+        db.flush()
+
+        # 3. Iterar Jornadas (Días)
+        for d in data['dias']:
             nuevo_dia = models.DiaRutina(
                 plan_rutina_id=nuevo_plan.id, 
-                nombre_dia=d.nombre_dia
+                nombre_dia=d['nombre_dia']
             )
             db.add(nuevo_dia)
             db.flush()
-            
-            lista_ejercicios = d.ejercicios if d.ejercicios else []
-            
-            # 6. Iterar Ejercicios
-            # Si la rutina es progresiva, el frontend ya envía 4 registros por ejercicio 
-            # (uno marcado como [Semana 1], [Semana 2], etc. en el comentario).
-            for e in lista_ejercicios:
-                ej_en_rut = models.EjercicioEnRutina(
+
+            # 4. Iterar Ejercicios (Ya vienen 'explotados' desde el Wizard Progresivo si corresponde)
+            for e in d['ejercicios']:
+                ej_rutina = models.EjercicioEnRutina(
                     dia_id=nuevo_dia.id,
                     rutina_id=nuevo_plan.id,
-                    ejercicio_id=e.ejercicio_id,
-                    comentario=e.comentario,     # Marker de semana o nota táctica
-                    comentarios=e.comentario,    # Duplicamos por compatibilidad de campos
-                    progreso_json=e.progreso_json # Backup del JSON por si se requiere edición
+                    ejercicio_id=e['ejercicio_id'],
+                    semana_id=e.get('semana_id'),
+                    comentario=e.get('comentario')
                 )
-                db.add(ej_en_rut)
+                db.add(ej_rutina)
                 db.flush()
 
-                # 7. Guardar las Series del registro
-                # En rutinas progresivas, cada registro suele traer 1 serie que representa 
-                # la carga de esa semana específica.
-                if e.series:
-                    for s in e.series:
-                        nueva_serie = models.SerieEjercicio(
-                            ejercicio_en_rutina_id=ej_en_rut.id,
-                            numero_serie=s.numero_serie,
-                            repeticiones=s.repeticiones,
-                            peso=s.peso,
-                            descanso=s.descanso
-                        )
-                        db.add(nueva_serie)
+                # 5. Guardar Series
+                for s in e['series']:
+                    nueva_serie = models.SerieEjercicio(
+                        ejercicio_en_rutina_id=ej_rutina.id,
+                        numero_serie=s['numero_serie'],
+                        repeticiones=s['repeticiones'],
+                        peso=s['peso'],
+                        descanso=s['descanso']
+                    )
+                    db.add(nueva_serie)
         
         db.commit()
-        return {"status": "success", "id": nuevo_plan.id, "message": "¡Arsenal vikingo forjado correctamente!"}
-
-    except HTTPException as he:
-        db.rollback()
-        raise he
+        return {"status": "success", "message": "Arsenal relacional forjado con éxito."}
     except Exception as e:
         db.rollback()
-        # Verificamos si existe el logger antes de usarlo para evitar otros errores 500
-        if 'logger' in globals():
-            logger.error(f"Error Grave en Rutinas: {str(e)}")
-        else:
-            print(f"Error Grave en Rutinas: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Falla en el servidor: {str(e)}")
-
-@app.get("/api/rutinas/usuario/{id}", response_model=Optional[PlanRutinaResponse], tags=["Musculación"])
-def get_rutina_activa(id: int, db: Session = Depends(database.get_db)):
-    # --- VERIFICACIÓN DE PLAN VENCIDO PARA VER RUTINA ---
-    user = db.query(models.Usuario).filter(models.Usuario.id == id).first()
-    if not user or not user.plan_id or (user.fecha_vencimiento and user.fecha_vencimiento < date.today()):
-        return None # Si el plan está vencido o no tiene, no se devuelve la rutina
-
-    return db.query(models.PlanRutina).filter(
-        models.PlanRutina.usuario_id == id, 
-        models.PlanRutina.activo == True
-    ).options(
-        joinedload(models.PlanRutina.dias).joinedload(models.DiaRutina.ejercicios).joinedload(models.EjercicioEnRutina.ejercicio_obj),
-        joinedload(models.PlanRutina.dias).joinedload(models.DiaRutina.ejercicios).joinedload(models.EjercicioEnRutina.series_detalle)
-    ).first()
-
-@app.get("/api/rutinas/historial/{id}", response_model=List[PlanRutinaResponse], tags=["Musculación"])
-def get_historial_rutinas(id: int, db: Session = Depends(database.get_db)):
-    # --- VERIFICACIÓN DE PLAN VENCIDO PARA VER HISTORIAL ---
-    user = db.query(models.Usuario).filter(models.Usuario.id == id).first()
-    if not user or not user.plan_id or (user.fecha_vencimiento and user.fecha_vencimiento < date.today()):
-        return [] # Si el plan está vencido, historial vacío por seguridad
-
-    return db.query(models.PlanRutina).filter(
-        models.PlanRutina.usuario_id == id
-    ).options(
-        joinedload(models.PlanRutina.dias).joinedload(models.DiaRutina.ejercicios).joinedload(models.EjercicioEnRutina.series_detalle)
-    ).order_by(models.PlanRutina.fecha_creacion.desc()).all()
+        raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
     import uvicorn
