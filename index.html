@@ -882,27 +882,26 @@
                 <div class="calendar-container h-[700px] overflow-y-auto custom-scrollbar" id="calendar-grid"></div>
             </div>
 
-			<!-- ============================================================
-			VISTA DE RUTINAS (STAFF & ALUMNO)
-			============================================================ -->
+			<!-- VISTA DE RUTINAS (STAFF) -->
 			<div id="view-rutinas" class="view-content">
 				<div class="flex justify-between items-center mb-8">
 					<div>
-						<h3 class="text-3xl font-black italic uppercase" id="rutina-title">Control de Arsenal Táctico</h3>
-						<p class="text-[10px] text-white/30 font-black uppercase tracking-[0.2em] mt-1 italic">Ingeniería de Entrenamiento Relacional v2.0</p>
+						<h3 class="text-3xl font-black italic uppercase" id="rutina-title">Rutinas de Alumnos</h3>
+						<p class="text-[10px] text-white/30 font-black uppercase tracking-[0.2em] mt-1 italic">Ingeniería de Entrenamiento Vikingo</p>
 					</div>
 				</div>
 
-				<!-- BUSCADOR Y FILTROS -->
 				<div class="flex flex-col lg:flex-row gap-4 mb-8">
+					<!-- BUSCADOR -->
 					<div class="flex-1 relative">
 						<i data-lucide="search" class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20"></i>
-						<input type="text" 
-							placeholder="Buscar Alumno por nombre o DNI..." 
+						<input type="text"
+							placeholder="Buscar Alumno por nombre o DNI..."
 							oninput="window.searchAlumnoRutina(this.value)"
 							class="viking-input pl-12 h-[52px] bg-white/5 border-white/10 text-white rounded-2xl">
 					</div>
 
+					<!-- FILTROS DE ESTADO RUTINA -->
 					<div class="flex bg-white/5 p-1 rounded-2xl border border-white/5 h-[52px] overflow-x-auto no-scrollbar">
 						<button onclick="window.filterRutinas('todos')" id="filter-rutina-todos" class="filter-btn-rutina px-6 rounded-xl text-[10px] font-black uppercase italic transition-all bg-red-600 text-black whitespace-nowrap">Todos</button>
 						<button onclick="window.filterRutinas('con')" id="filter-rutina-con" class="filter-btn-rutina px-6 rounded-xl text-[10px] font-black uppercase italic transition-all text-white/40 hover:text-white whitespace-nowrap">Con Rutina</button>
@@ -911,86 +910,71 @@
 					</div>
 				</div>
 
-				<!-- VISTA PARA EL ALUMNO (Se muestra si el rol es Alumno) -->
-				<div id="musculacion-student-view" class="hidden animate-in fade-in duration-500">
-					<!-- El contenido se inyecta vía JS llamando a openFichaTecnica -->
+				<!-- VISTA ESTUDIANTE / ALUMNO -->
+				<div id="musculacion-student-view" class="hidden glass-card p-10 rounded-[3rem] border-red-600/10 mb-6 space-y-8 bg-black/40">
+					<div class="flex flex-col md:flex-row justify-between items-start md:items-center bg-red-600/10 p-8 rounded-3xl border border-red-600/20 gap-6">
+						<div>
+							<h4 class="text-xl font-black italic uppercase mb-2">MI ENTRENAMIENTO</h4>
+							<div class="flex flex-wrap gap-4">
+								<p class="text-[11px] text-white/60 font-bold uppercase tracking-widest flex items-center gap-2">
+									<i data-lucide="target" class="w-4 h-4 text-red-600"></i> <span id="al-rutina-objetivo">Cargando objetivo...</span>
+								</p>
+								<p class="text-[11px] text-white/60 font-bold uppercase tracking-widest flex items-center gap-2">
+									<i data-lucide="user" class="w-4 h-4 text-red-600"></i> Profe: <span id="al-rutina-profe" class="text-white">---</span>
+								</p>
+							</div>
+						</div>
+						<div id="student-weeks-tabs" class="flex gap-2"></div>
+					</div>
+					<div class="grid grid-cols-1 md:grid-cols-2 gap-6" id="student-routine-exercises"></div>
 				</div>
 
-				<!-- LISTADO PARA EL STAFF (LISTA DE ALUMNOS) -->
+				<!-- LISTADO STAFF -->
 				<div class="glass-card p-8 rounded-[3rem] border border-white/5 mb-10 bg-white/[0.01]">
 					<div id="rutinas-lista" class="space-y-3 h-[600px] overflow-y-auto custom-scrollbar pr-2">
-						<div class="flex flex-col items-center justify-center h-full opacity-20">
-							<div class="w-12 h-12 border-2 border-white/20 border-t-white rounded-full animate-spin mb-4"></div>
-							<p class="font-black uppercase italic text-xs tracking-widest">Sincronizando registros relacionales...</p>
-						</div>
+						<p class="text-center text-white/20 italic py-10 font-black uppercase tracking-widest">Sincronizando arsenal...</p>
 					</div>
 				</div>
 			</div>
 
-			<!-- ============================================================
-				MODAL FICHA TÉCNICA (Semanas y Ejercicios)
-				============================================================ -->
+			<!-- MODAL FICHA TÉCNICA -->
 			<div id="modal-ficha-tecnica" class="fixed inset-0 z-[110] hidden bg-black/95 backdrop-blur-2xl flex items-center justify-center p-4">
 				<div class="bg-[#080808] w-full max-w-5xl max-h-[90vh] rounded-[3.5rem] border border-white/10 overflow-hidden flex flex-col shadow-2xl">
-					<!-- Cabecera del Modal -->
 					<div class="p-10 border-b border-white/5 bg-gradient-to-r from-red-600/10 to-transparent flex justify-between items-center">
 						<div class="flex items-center gap-6">
-							<div id="ficha-avatar" class="w-16 h-16 rounded-2xl bg-red-600 flex items-center justify-center text-black text-2xl font-black italic shadow-xl">V</div>
+							<div id="ficha-avatar" class="w-16 h-16 rounded-2xl bg-red-600 flex items-center justify-center text-black text-2xl font-black italic shadow-xl">??</div>
 							<div>
-								<h3 id="ficha-nombre" class="text-2xl font-black italic uppercase text-white tracking-tighter">CARGANDO...</h3>
+								<h3 id="ficha-nombre" class="text-2xl font-black italic uppercase text-white tracking-tighter">ALUMNO</h3>
 								<div class="flex flex-wrap gap-4 mt-2">
-									<span id="ficha-dni" class="text-[10px] font-black text-white/40 uppercase tracking-widest bg-white/5 px-3 py-1 rounded-lg">DNI: ---</span>
+									<span id="ficha-dni" class="text-[10px] font-black text-white/40 uppercase tracking-widest bg-white/5 px-3 py-1 rounded-lg">---</span>
 									<span id="ficha-plan" class="text-[10px] font-black text-white/40 uppercase tracking-widest bg-white/5 px-3 py-1 rounded-lg">PLAN: ---</span>
+									<span id="ficha-venc-plan" class="text-[10px] font-black text-red-500 uppercase tracking-widest bg-red-500/5 px-3 py-1 rounded-lg">VENCE: ---</span>
 									<span id="ficha-plan-status" class="text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-lg">ESTADO</span>
 								</div>
 							</div>
 						</div>
-						<button onclick="closeModal('modal-ficha-tecnica')" class="p-4 hover:bg-red-600 rounded-2xl transition-all text-white/20 hover:text-black group">
-							<i data-lucide="x" class="w-6 h-6"></i>
-						</button>
+						<button onclick="closeModal('modal-ficha-tecnica')" class="p-3 hover:bg-red-600 rounded-xl transition-all text-white/20 hover:text-black"><i data-lucide="x"></i></button>
 					</div>
-					
-					<!-- Contenedor Dinámico de la Rutina -->
-					<div id="ficha-rutina-container" class="flex-1 overflow-y-auto p-10 custom-scrollbar">
-						<!-- Aquí el script inyecta las solapas de semanas y los ejercicios -->
-					</div>
+					<div id="ficha-rutina-container" class="flex-1 overflow-y-auto p-10 custom-scrollbar"></div>
 				</div>
 			</div>
 
-			<!-- ============================================================
-				MODAL EDITOR WIZARD (Creación de Rutina)
-				============================================================ -->
+			<!-- MODAL EDITOR WIZARD -->
 			<div id="modal-rutina-editor" class="fixed inset-0 z-[120] hidden bg-black/98 backdrop-blur-xl flex items-center justify-center p-4">
 				<div class="bg-[#0a0a0a] w-full max-w-5xl max-h-[90vh] rounded-[3.5rem] border border-white/10 overflow-hidden flex flex-col shadow-2xl">
-					<!-- Cabecera Wizard -->
 					<div class="p-8 border-b border-white/5 flex justify-between items-center">
 						<div>
-							<h3 id="rutina-editor-alumno" class="text-xl font-black italic uppercase text-white tracking-tighter">NUEVA ESTRATEGIA</h3>
+							<h3 id="rutina-editor-alumno" class="text-xl font-black italic uppercase text-white tracking-tighter">Configurando Arsenal</h3>
 							<p id="rutina-editor-step-label" class="text-[9px] text-red-600 font-black uppercase tracking-widest mt-1 italic">Paso 1: Inteligencia</p>
 						</div>
-						<button onclick="closeModal('modal-rutina-editor')" class="p-3 hover:bg-white/10 rounded-xl transition-all text-white/20">
-							<i data-lucide="x"></i>
-						</button>
+						<button onclick="closeModal('modal-rutina-editor')" class="p-3 hover:bg-red-600/20 rounded-xl transition-all text-white/20"><i data-lucide="x"></i></button>
 					</div>
-
-					<!-- Barra de Progreso -->
-					<div class="h-1.5 w-full bg-white/5">
-						<div id="editor-progress-fill" class="h-full bg-red-600 shadow-[0_0_15px_rgba(255,0,0,0.5)] transition-all duration-700" style="width: 0%"></div>
-					</div>
-
-					<!-- Cuerpo del Wizard -->
-					<div id="rutina-editor-body" class="flex-1 overflow-y-auto p-10 custom-scrollbar">
-						<!-- Se carga dinámicamente: Paso 1 (Estrategia), Paso 2..N (Días), Paso Final (Revisión) -->
-					</div>
-
-					<!-- Navegación del Wizard -->
-					<div class="p-8 border-t border-white/5 flex justify-between items-center bg-white/[0.01]">
-						<button id="btn-editor-prev" onclick="window.prevStep()" class="px-8 py-3 text-white/40 font-black uppercase italic text-[11px] hover:text-white transition-all">
-							Volver
-						</button>
-						<button id="btn-editor-next" onclick="window.nextStep()" class="viking-bg-red text-black px-12 py-5 rounded-2xl font-black uppercase italic text-[11px] shadow-xl flex items-center gap-3 hover:scale-105 transition-all">
-							<span id="next-text">Siguiente Paso</span> 
-							<i data-lucide="arrow-right" class="w-4 h-4"></i>
+					<div class="h-1 w-full bg-white/5"><div id="editor-progress-fill" class="h-full bg-red-600 transition-all duration-500" style="width: 0%"></div></div>
+					<div id="rutina-editor-body" class="flex-1 overflow-y-auto p-10 custom-scrollbar"></div>
+					<div class="p-8 border-t border-white/5 flex justify-between bg-white/[0.01]">
+						<button id="btn-editor-prev" onclick="window.prevStep()" class="px-8 py-3 text-white/40 font-black uppercase italic text-[10px] hover:text-white transition-all">Volver</button>
+						<button id="btn-editor-next" onclick="window.nextStep()" class="viking-bg-red text-black px-12 py-4 rounded-2xl font-black uppercase italic text-[11px] shadow-xl flex items-center gap-3">
+							<span id="next-text">Siguiente Paso</span> <i data-lucide="arrow-right" class="w-4 h-4"></i>
 						</button>
 					</div>
 				</div>

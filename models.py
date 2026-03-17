@@ -138,72 +138,97 @@ class Acceso(Base):
 class TipoRutina(Base):
     __tablename__ = "tipos_rutina"
     id = Column(Integer, primary_key=True)
-    nombre = Column(String(50))
+    nombre = Column(String, unique=True)
 
 class GrupoMuscular(Base):
     __tablename__ = "grupos_musculares"
     id = Column(Integer, primary_key=True)
-    nombre = Column(String(100))
-    ejercicios = relationship("EjercicioLibreria", back_populates="grupo_muscular")
+    nombre = Column(String, unique=True)
+    ejercicios = relationship("Ejercicio", back_populates="grupo_muscular")
 
-class EjercicioLibreria(Base):
+class Ejercicio(Base):
     __tablename__ = "ejercicios_libreria"
     id = Column(Integer, primary_key=True)
-    nombre = Column(String(255))
+    nombre = Column(String)
     grupo_muscular_id = Column(Integer, ForeignKey("grupos_musculares.id"))
-    descripcion = Column(Text)
-    video_url = Column(String(255))
-    
     grupo_muscular = relationship("GrupoMuscular", back_populates="ejercicios")
-
-# --- SISTEMA DE PLANIFICACIÓN ---
+    ejercicios_en_rutina = relationship("EjercicioEnRutina", back_populates="ejercicio_obj")
 
 class PlanRutina(Base):
     __tablename__ = "planes_rutina"
     id = Column(Integer, primary_key=True)
     usuario_id = Column(Integer, ForeignKey("usuarios.id"))
-    tipo_id = Column(Integer, ForeignKey("tipos_rutina.id"))
-    nombre_plan = Column(String(255))
-    objetivo = Column(String(255))
-    descripcion = Column(Text)
+    nombre_grupo = Column(String, nullable=True) 
+    descripcion = Column(Text, nullable=True) 
+    objetivo = Column(String)
+    tipo_id = Column(Integer, ForeignKey("tipos_rutina.id"), default=1)
+    profesor_nombre = Column(String, nullable=True) 
     fecha_creacion = Column(Date, default=datetime.date.today)
     fecha_vencimiento = Column(Date)
     activo = Column(Boolean, default=True)
-    profesor_nombre = Column(String(255))
     
-    # Relaciones
-    dias = relationship("DiaRutina", back_populates="plan", cascade="all, delete-orphan")
+    usuario = relationship("Usuario", back_populates="planes_rutina")
     tipo_rel = relationship("TipoRutina")
+    dias = relationship("DiaRutina", back_populates="plan_rutina", cascade="all, delete-orphan")
 
 class DiaRutina(Base):
     __tablename__ = "rutina_dias"
     id = Column(Integer, primary_key=True)
     plan_rutina_id = Column(Integer, ForeignKey("planes_rutina.id"))
-    nombre_dia = Column(String(100))
-    
-    plan = relationship("PlanRutina", back_populates="dias")
+    nombre_dia = Column(String)
+    plan_rutina = relationship("PlanRutina", back_populates="dias")
     ejercicios = relationship("EjercicioEnRutina", back_populates="dia", cascade="all, delete-orphan")
 
 class EjercicioEnRutina(Base):
     __tablename__ = "ejercicios_en_rutina"
     id = Column(Integer, primary_key=True)
     dia_id = Column(Integer, ForeignKey("rutina_dias.id"))
-    rutina_id = Column(Integer, ForeignKey("planes_rutina.id"))
     ejercicio_id = Column(Integer, ForeignKey("ejercicios_libreria.id"))
-    semana_id = Column(Integer, nullable=True) # 1 a 5 para Progresivas
-    comentario = Column(Text)
-    
+    rutina_id = Column(Integer, ForeignKey("planes_rutina.id"), nullable=True)
+    progreso_json = Column(JSON, nullable=True) 
+    comentario = Column(Text, nullable=True)
+    comentarios = Column(Text, nullable=True) 
+
     dia = relationship("DiaRutina", back_populates="ejercicios")
-    ejercicio_obj = relationship("EjercicioLibreria")
-    series = relationship("SerieEjercicio", back_populates="ejercicio_rutina", cascade="all, delete-orphan")
+    ejercicio_obj = relationship("Ejercicio", back_populates="ejercicios_en_rutina")
+    series_detalle = relationship("SerieEjercicio", back_populates="ejercicio_en_rutina", cascade="all, delete-orphan")
 
 class SerieEjercicio(Base):
-    __tablename__ = "series_ejercicios"
+    __tablename__ = "series_ejercicio"
     id = Column(Integer, primary_key=True)
     ejercicio_en_rutina_id = Column(Integer, ForeignKey("ejercicios_en_rutina.id"))
-    numero_serie = Column(Integer)
-    repeticiones = Column(String(50))
-    peso = Column(String(50))
-    descanso = Column(String(50))
-    
-    ejercicio_rutina = relationship("EjercicioEnRutina", back_populates="series")
+    numero_serie = Column(Integer) 
+    repeticiones = Column(String)
+    peso = Column(String)
+    descanso = Column(String)
+    ejercicio_en_rutina = relationship("EjercicioEnRutina", back_populates="series_detalle")
+
+# =========================================
+# SCHEMAS DE VALIDACIÓN (PYDANTIC)
+# Necesarios para FastAPI /main.py
+# =========================================
+
+class SerieEjercicioCreate(BaseModel):
+    numero_serie: int
+    repeticiones: str
+    peso: str
+    descanso: Optional[str] = None
+
+class EjercicioEnRutinaCreate(BaseModel):
+    ejercicio_id: int
+    comentario: Optional[str] = ""
+    progreso_json: Optional[str] = None # Viene como string JSON desde el front
+    series: List[SerieEjercicioCreate]
+
+class DiaRutinaCreate(BaseModel):
+    nombre_dia: str
+    ejercicios: List[EjercicioEnRutinaCreate]
+
+class PlanRutinaCreate(BaseModel):
+    usuario_id: int
+    nombre_grupo: str
+    descripcion: str
+    objetivo: Optional[str] = None
+    tipo: str # "normal" o "progresiva"
+    fecha_vencimiento: datetime.date
+    dias: List[DiaRutinaCreate]
