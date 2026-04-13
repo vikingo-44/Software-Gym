@@ -1397,7 +1397,8 @@ window.openRoutineEditor = async function(alumnoId, isEdit = false) {
         if (active) {
             state.routineWizard.tipo_id = active.tipo_id;
             state.routineWizard.tipo = active.tipo_id === 2 ? 'progresiva' : 'normal';
-            // Leemos el nombre actual de la DB
+            
+            // Prioridad de lectura para el nombre del plan
             state.routineWizard.nombre_grupo = active.nombre_grupo || active.nombre_plan || active.objetivo;
             state.routineWizard.objetivo = active.descripcion;
             state.routineWizard.vencimiento = active.fecha_vencimiento;
@@ -1696,7 +1697,7 @@ window.renderRutinasList = function(listaDatos) {
                     <p class="text-[9px] text-white/20 font-black uppercase italic mb-2 tracking-widest">Estado Rutina</p>
                     <span class="text-[10px] font-black uppercase italic ${tieneRutina ? 'text-green-500' : 'text-white/20'}">${tieneRutina ? 'ARSENAL CARGADO' : 'PENDIENTE'}</span>
                 </div>
-                ${activa ? `<div><p class="text-[9px] text-white/20 font-black uppercase italic mb-2 tracking-widest">Plan Maestro</p><span class="text-[10px] font-black uppercase italic text-white">${activa.nombre_grupo || activa.objetivo}</span></div>` : ''}
+                ${activa ? `<div><p class="text-[9px] text-white/20 font-black uppercase italic mb-2 tracking-widest">Plan Maestro</p><span class="text-[10px] font-black uppercase italic text-white">${activa.nombre_grupo || activa.nombre_plan || activa.objetivo}</span></div>` : ''}
             </div>
             <div class="flex items-center gap-3">
                 <button onclick="window.openFichaTecnica(${a.id})" class="h-14 w-14 bg-white/5 hover:bg-white/10 text-white rounded-2xl transition-all flex items-center justify-center" title="Ficha Técnica"><i data-lucide="clipboard-list" class="w-5 h-5"></i></button>
