@@ -1334,7 +1334,7 @@ window.openFichaTecnica = async function(alumnoId) {
                         <div class="flex items-center gap-6 cursor-pointer" onclick="window.toggleFichaElement('${objetivoId}')">
                             <div class="w-1.5 h-12 viking-bg-red rounded-full"></div>
                             <div>
-                                <h5 class="text-xl font-black italic uppercase text-white leading-none">${rutina.nombre_grupo}</h5>
+                                <h5 class="text-xl font-black italic uppercase text-white leading-none">${rutina.nombre_grupo || rutina.nombre_plan || rutina.objetivo}</h5>
                                 <p class="text-[9px] text-white/40 font-bold italic mt-2 uppercase">OBJETIVO: ${rutina.descripcion || 'General'}</p>
                             </div>
                         </div>
@@ -1397,7 +1397,8 @@ window.openRoutineEditor = async function(alumnoId, isEdit = false) {
         if (active) {
             state.routineWizard.tipo_id = active.tipo_id;
             state.routineWizard.tipo = active.tipo_id === 2 ? 'progresiva' : 'normal';
-            state.routineWizard.nombre_grupo = active.nombre_grupo;
+            // Leemos el nombre actual de la DB
+            state.routineWizard.nombre_grupo = active.nombre_grupo || active.nombre_plan || active.objetivo;
             state.routineWizard.objetivo = active.descripcion;
             state.routineWizard.vencimiento = active.fecha_vencimiento;
             state.routineWizard.cantDias = active.dias.length;
@@ -1444,11 +1445,11 @@ window.renderWizardStep = function() {
             <div class="flex-1 p-10 lg:p-20 overflow-y-auto custom-scrollbar animate-in zoom-in-95 duration-500">
                 <div class="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-12">
                     <div class="col-span-full space-y-2">
-                        <label class="text-[10px] font-black text-red-600 uppercase tracking-widest italic ml-2">Nombre del Plan</label>
-                        <input type="text" value="${state.routineWizard.nombre_grupo}" oninput="state.routineWizard.nombre_grupo = this.value" class="viking-input !h-16 text-2xl font-black italic uppercase" placeholder="Ej: CICLO DE VOLUMEN">
+                        <label class="text-[10px] font-black text-red-600 uppercase tracking-widest italic ml-2">Nombre del Plan Maestro</label>
+                        <input type="text" value="${state.routineWizard.nombre_grupo}" oninput="state.routineWizard.nombre_grupo = this.value" class="viking-input !h-16 text-2xl font-black italic uppercase" placeholder="Ej: CICLO DE FUERZA BRUTA">
                     </div>
                     <div class="col-span-full space-y-2">
-                        <label class="text-[10px] font-black text-white/30 uppercase tracking-widest italic ml-2">Objetivo Estratégico</label>
+                        <label class="text-[10px] font-black text-white/30 uppercase tracking-widest italic ml-2">Objetivo Estratégico / Resumen</label>
                         <textarea oninput="state.routineWizard.objetivo = this.value" class="viking-input h-32 py-5 text-sm font-medium" placeholder="Descripción táctica...">${state.routineWizard.objetivo}</textarea>
                     </div>
                     <div class="space-y-2">
@@ -1456,7 +1457,7 @@ window.renderWizardStep = function() {
                         <input type="date" value="${state.routineWizard.vencimiento}" oninput="state.routineWizard.vencimiento = this.value" class="viking-input !h-14">
                     </div>
                     <div class="space-y-2">
-                        <label class="text-[10px] font-black text-white/30 uppercase tracking-widest italic ml-2">Metodología</label>
+                        <label class="text-[10px] font-black text-white/30 uppercase tracking-widest italic ml-2">Metodología de Carga</label>
                         <div class="flex gap-4">
                             <button onclick="state.routineWizard.tipo = 'normal'; state.routineWizard.tipo_id = 1; window.renderWizardStep();" class="flex-1 h-14 rounded-2xl border-2 font-black text-[10px] transition-all ${state.routineWizard.tipo_id === 1 ? 'bg-red-600 text-black border-red-600 shadow-xl' : 'bg-white/5 border-white/5 text-white/30'}">NORMAL</button>
                             <button onclick="state.routineWizard.tipo = 'progresiva'; state.routineWizard.tipo_id = 2; window.renderWizardStep();" class="flex-1 h-14 rounded-2xl border-2 font-black text-[10px] transition-all ${state.routineWizard.tipo_id === 2 ? 'bg-amber-600 text-black border-amber-600 shadow-xl' : 'bg-white/5 border-white/5 text-white/30'}">PROGRESIVA</button>
@@ -1588,7 +1589,7 @@ window.nextStep = () => {
 window.prevStep = () => { if (state.routineWizard.currentStep === 2) { state.routineWizard.currentStep = 1; window.renderWizardStep(); } };
 
 /**
- * 4. PERSISTENCIA FINAL (EXPLOSIÓN PARA NEONDB)
+ * 4. PERSISTENCIA FINAL (UTILIZANDO NOMBRE_GRUPO COMO CAMPO CLAVE)
  */
 window.saveFinalRutina = async function() {
     const config = state.routineWizard.config;
@@ -1624,11 +1625,12 @@ window.saveFinalRutina = async function() {
         processedDays.push({ nombre_dia: dName, ejercicios: ejerciciosDia });
     }
 
+    // Payload con nombre_grupo tal como se acordó para NeonDB
     const payload = {
         usuario_id: state.routineWizard.alumnoId,
-        nombre_grupo: state.routineWizard.nombre_grupo,
         descripcion: state.routineWizard.objetivo,
-        objetivo: state.routineWizard.nombre_grupo,
+        nombre_grupo: state.routineWizard.nombre_grupo, 
+        objetivo: state.routineWizard.nombre_grupo, 
         tipo: state.routineWizard.tipo,
         tipo_id: state.routineWizard.tipo_id,
         fecha_vencimiento: state.routineWizard.vencimiento,
@@ -1694,7 +1696,7 @@ window.renderRutinasList = function(listaDatos) {
                     <p class="text-[9px] text-white/20 font-black uppercase italic mb-2 tracking-widest">Estado Rutina</p>
                     <span class="text-[10px] font-black uppercase italic ${tieneRutina ? 'text-green-500' : 'text-white/20'}">${tieneRutina ? 'ARSENAL CARGADO' : 'PENDIENTE'}</span>
                 </div>
-                ${activa ? `<div><p class="text-[9px] text-white/20 font-black uppercase italic mb-2 tracking-widest">Plan Maestro</p><span class="text-[10px] font-black uppercase italic text-white">${activa.nombre_grupo}</span></div>` : ''}
+                ${activa ? `<div><p class="text-[9px] text-white/20 font-black uppercase italic mb-2 tracking-widest">Plan Maestro</p><span class="text-[10px] font-black uppercase italic text-white">${activa.nombre_grupo || activa.objetivo}</span></div>` : ''}
             </div>
             <div class="flex items-center gap-3">
                 <button onclick="window.openFichaTecnica(${a.id})" class="h-14 w-14 bg-white/5 hover:bg-white/10 text-white rounded-2xl transition-all flex items-center justify-center" title="Ficha Técnica"><i data-lucide="clipboard-list" class="w-5 h-5"></i></button>
