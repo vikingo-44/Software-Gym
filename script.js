@@ -1162,26 +1162,22 @@
  * ============================================================
  */
 
-// --- 0. ESTADO GLOBAL DEL EDITOR ---
-if (!state.routineWizard) {
-    state.routineWizard = {
-        alumnoId: null,
-        currentStep: 1,
-        totalSteps: 3,
-        tipo: 'normal',
-        tipo_id: 1, // 1: normal, 2: progresiva
-        cantDias: 3,
-        nombre_grupo: '', 
-        objetivo: '',     
-        vencimiento: '',
-        dias: [],
-        semanaActivaFicha: 1, // Ahora basado en IDs 1 a 5
-        rutinasCargadas: [],
-        editMode: false,
-        isTabSwitching: false,
-        openDays: [] 
-    };
-}
+// 1. EXTENSIÓN DEL ESTADO
+state.routineWizard = {
+    alumnoId: null,
+    currentStep: 1,
+    tipo: 'normal',
+    tipo_id: 1,
+    cantDias: 3,
+    cantSemanas: 5,
+    nombre_grupo: '',
+    objetivo: '',
+    vencimiento: '',
+    config: {}, // Estructura IRONMOD: { 'week1_day1': { label: '', notes: '', exercises: [] } }
+    semanaActivaWizard: 1,
+    diaActivoWizard: 1,
+    activeDayKey: null
+};
 
 /**
  * Función para iniciales.
@@ -1393,150 +1389,472 @@ window.openRoutineEditor = async function(alumnoId, isEdit = false) {
     const al = state.alumnos.find(a => a.id === alumnoId);
     if (!al) return;
 
-    let routineData = {
+    // Reset del Wizard
+    state.routineWizard = {
         alumnoId: alumnoId,
         currentStep: 1,
         tipo: 'normal',
         tipo_id: 1,
         cantDias: 3,
-        nombre_grupo: 'Entrenamiento A',
-        objetivo: 'Mejora de composición corporal',
+        cantSemanas: 5,
+        nombre_grupo: 'ENTRENAMIENTO A',
+        objetivo: 'Fase de fuerza y potencia',
         vencimiento: new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0],
-        dias: [],
-        editMode: isEdit
+        config: {},
+        semanaActivaWizard: 1,
+        diaActivoWizard: 1,
+        activeDayKey: null
     };
 
     if (isEdit) {
-        let lista = await apiFetch(`/rutinas/usuario/${alumnoId}?todo=true`);
-        let active = Array.isArray(lista) ? lista.find(r => r.activo) : (lista && lista.activo ? lista : null);
+        let res = await apiFetch(`/rutinas/usuario/${alumnoId}?todo=true`);
+        let active = res && !res.error ? res : null;
         if (active) {
-            routineData.tipo_id = parseInt(active.tipo_id) || (active.tipo === 'progresiva' ? 2 : 1);
-            routineData.tipo = routineData.tipo_id === 2 ? 'progresiva' : 'normal';
-            routineData.cantDias = active.dias?.length || 3;
-            routineData.nombre_grupo = active.nombre_grupo || active.objetivo;
-            routineData.objetivo = active.descripcion || active.objetivo;
-            routineData.vencimiento = active.fecha_vencimiento;
+            state.routineWizard.tipo_id = active.tipo_id;
+            state.routineWizard.tipo = active.tipo_id === 2 ? 'progresiva' : 'normal';
+            state.routineWizard.nombre_grupo = active.nombre_grupo;
+            state.routineWizard.objetivo = active.descripcion;
+            state.routineWizard.vencimiento = active.fecha_vencimiento;
+            state.routineWizard.cantDias = active.dias.length;
 
-            routineData.dias = active.dias.map(d => {
-                const uniqueEx = [];
+            // Reconstruir config desde la DB "explotada"
+            active.dias.forEach((d, dIdx) => {
+                const dayNum = dIdx + 1;
                 d.ejercicios.forEach(ex => {
-                    const cleanName = (ex.ejercicio_obj?.nombre || ex.exercise_name || "").replace(/\[Semana \d+\]/, "").trim();
-                    const semId = ex.semana_id; // Clave para reconstruir el array progreso
-
-                    let existing = uniqueEx.find(u => u.id === ex.ejercicio_id);
-                    if(!existing) {
-                        existing = {
-                            id: ex.ejercicio_id,
-                            nombre: cleanName,
-                            comentario: (ex.comentario || "").replace(/\[Semana \d+\]/, "").trim(),
-                            series: [],
-                            progreso: Array.from({length: 5}).map(() => ({series:'1', repeticiones:'12', peso:'', descanso:'90s'}))
-                        };
-                        uniqueEx.push(existing);
+                    const weekNum = ex.semana_id || 1;
+                    const key = state.routineWizard.tipo === 'progresiva' ? `week${weekNum}_day${dayNum}` : `day_${dayNum}`;
+                    
+                    if(!state.routineWizard.config[key]) {
+                        state.routineWizard.config[key] = { label: d.nombre_dia, notes: '', exercises: [] };
                     }
 
-                    if (routineData.tipo_id === 2 && semId) {
-                        const s = ex.series_detalle?.[0] || ex.series?.[0] || {};
-                        existing.progreso[semId - 1] = {
-                            series: '1',
-                            repeticiones: s.repeticiones || '12',
-                            peso: s.peso || '',
-                            descanso: s.descanso || '90s'
-                        };
-                    } else if (routineData.tipo_id === 1) {
-                        existing.series = (ex.series_detalle || ex.series || []).map(s => ({
-                            numero_serie: s.numero_serie,
-                            repeticiones: s.repeticiones,
-                            peso: s.peso,
-                            descanso: s.descanso
-                        }));
-                    }
+                    const cleanName = (ex.ejercicio_obj?.nombre || "").replace(/\[Semana \d+\]/, "").trim();
+                    const serie = ex.series_detalle?.[0] || {};
+
+                    state.routineWizard.config[key].exercises.push({
+                        id: ex.ejercicio_id,
+                        uid: Math.random().toString(36).substr(2, 9),
+                        nombre: cleanName,
+                        sets: 1,
+                        reps: serie.repeticiones || '12',
+                        weight: serie.peso || '0',
+                        rest: serie.descanso || '90s',
+                        comentario: (ex.comentario || "").replace(/\[Semana \d+\]/, "").trim()
+                    });
                 });
-                return { nombre: d.nombre_dia, ejercicios: uniqueEx };
             });
         }
     }
 
-    state.routineWizard = routineData;
     await loadMusculacionMetadata();
-    const titleEl = document.getElementById('rutina-editor-alumno');
-    if (titleEl) titleEl.innerText = (isEdit ? "Modificando: " : "Nueva Estrategia: ") + al.nombre_completo;
+    document.getElementById('rutina-editor-alumno').innerText = al.nombre_completo.toUpperCase();
     window.renderWizardStep();
     openModal('modal-rutina-editor');
-}
+};
 
 window.renderWizardStep = function() {
     const body = document.getElementById('rutina-editor-body');
     const label = document.getElementById('rutina-editor-step-label');
+    const badge = document.getElementById('wizard-badge-tipo');
     const step = state.routineWizard.currentStep;
-    const totalSteps = 2 + parseInt(state.routineWizard.cantDias);
-    state.routineWizard.totalSteps = totalSteps;
-
-    if (!body || !label) return;
 
     const fill = document.getElementById('editor-progress-fill');
-    if(fill) fill.style.width = `${(step / totalSteps) * 100}%`;
+    fill.style.width = step === 1 ? '30%' : '100%';
 
     if (step === 1) {
+        badge.innerText = state.routineWizard.tipo.toUpperCase();
+        badge.className = `text-[9px] font-black px-3 py-1 rounded-lg uppercase tracking-widest ${state.routineWizard.tipo === 'progresiva' ? 'bg-amber-500 text-black' : 'bg-white text-black'}`;
         label.innerText = "PASO 1: INTELIGENCIA ESTRATÉGICA";
+        
         body.innerHTML = `
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-12 animate-in fade-in">
-                <div class="space-y-8">
-                    <div>
-                        <label class="text-[10px] font-black text-red-600 uppercase block mb-3 italic tracking-widest">Nombre del Grupo (Plan)</label>
-                        <input type="text" value="${state.routineWizard.nombre_grupo}" oninput="state.routineWizard.nombre_grupo = this.value" class="viking-input text-xl font-black italic uppercase" placeholder="Ej: RUTINA VOLUMEN A">
+            <div class="flex-1 p-10 lg:p-20 overflow-y-auto custom-scrollbar animate-in zoom-in-95 duration-500">
+                <div class="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-12">
+                    <div class="col-span-full space-y-2">
+                        <label class="text-[10px] font-black text-red-600 uppercase tracking-widest italic ml-2">Nombre del Plan Maestro</label>
+                        <input type="text" value="${state.routineWizard.nombre_grupo}" oninput="state.routineWizard.nombre_grupo = this.value" class="viking-input !h-16 text-2xl font-black italic uppercase" placeholder="Ej: CICLO DE FUERZA BRUTA">
                     </div>
-                    <div>
-                        <label class="text-[10px] font-black text-white/30 uppercase block mb-3 italic tracking-widest">Objetivo Estratégico (Resumen)</label>
-                        <textarea oninput="state.routineWizard.objetivo = this.value" class="viking-input h-24 text-xs font-bold py-4" placeholder="Describe brevemente de qué trata esta rutina...">${state.routineWizard.objetivo}</textarea>
+                    <div class="col-span-full space-y-2">
+                        <label class="text-[10px] font-black text-white/30 uppercase tracking-widest italic ml-2">Objetivo Estratégico / Resumen del Plan</label>
+                        <textarea oninput="state.routineWizard.objetivo = this.value" class="viking-input h-32 py-5 text-sm font-medium" placeholder="Describe el enfoque táctico...">${state.routineWizard.objetivo}</textarea>
                     </div>
-                    <div>
-                        <label class="text-[10px] font-black text-white/30 uppercase block mb-3 italic tracking-widest">Fecha de Expiración</label>
-                        <input type="date" value="${state.routineWizard.vencimiento}" oninput="state.routineWizard.vencimiento = this.value" class="viking-input">
+                    <div class="space-y-2">
+                        <label class="text-[10px] font-black text-white/30 uppercase tracking-widest italic ml-2">Fecha de Vencimiento</label>
+                        <input type="date" value="${state.routineWizard.vencimiento}" oninput="state.routineWizard.vencimiento = this.value" class="viking-input !h-14">
                     </div>
-                </div>
-                <div class="space-y-8">
-                    <div>
-                        <label class="text-[10px] font-black text-red-600 uppercase block mb-3 italic tracking-widest">Frecuencia Semanal</label>
-                        <div class="grid grid-cols-6 gap-3">
-                            ${[1,2,3,4,5,6].map(n => `<button onclick="state.routineWizard.cantDias = ${n}; window.renderWizardStep();" class="p-5 rounded-2xl border-2 font-black italic text-lg transition-all ${state.routineWizard.cantDias === n ? 'bg-red-600 text-black border-red-600 shadow-lg' : 'bg-white/5 border-white/5 text-white/40'}">${n}</button>`).join('')}
-                        </div>
-                    </div>
-                    <div>
-                        <label class="text-[10px] font-black text-white/30 uppercase block mb-3 italic tracking-widest">Metodología de Carga</label>
+                    <div class="space-y-2">
+                        <label class="text-[10px] font-black text-white/30 uppercase tracking-widest italic ml-2">Metodología de Carga</label>
                         <div class="flex gap-4">
-                            <button onclick="state.routineWizard.tipo = 'normal'; state.routineWizard.tipo_id = 1; window.renderWizardStep();" class="flex-1 p-6 rounded-3xl border-2 font-black uppercase text-[10px] transition-all ${state.routineWizard.tipo_id === 1 ? 'bg-red-600/10 border-red-600 text-red-600 shadow-lg' : 'opacity-30 border-white/5'}">Normal</button>
-                            <button onclick="state.routineWizard.tipo = 'progresiva'; state.routineWizard.tipo_id = 2; window.renderWizardStep();" class="flex-1 p-6 rounded-3xl border-2 font-black uppercase text-[10px] transition-all ${state.routineWizard.tipo_id === 2 ? 'bg-amber-600/10 border-amber-600 text-amber-600 shadow-lg' : 'opacity-30 border-white/5'}">Progresiva</button>
+                            <button onclick="state.routineWizard.tipo = 'normal'; state.routineWizard.tipo_id = 1; window.renderWizardStep();" class="flex-1 h-14 rounded-2xl border-2 font-black text-[10px] uppercase italic transition-all ${state.routineWizard.tipo_id === 1 ? 'bg-red-600 text-black border-red-600 shadow-xl' : 'bg-white/5 border-white/5 text-white/30'}">NORMAL</button>
+                            <button onclick="state.routineWizard.tipo = 'progresiva'; state.routineWizard.tipo_id = 2; window.renderWizardStep();" class="flex-1 h-14 rounded-2xl border-2 font-black text-[10px] uppercase italic transition-all ${state.routineWizard.tipo_id === 2 ? 'bg-amber-600 text-black border-amber-600 shadow-xl' : 'bg-white/5 border-white/5 text-white/30'}">PROGRESIVA</button>
+                        </div>
+                    </div>
+                    <div class="space-y-2">
+                        <label class="text-[10px] font-black text-white/30 uppercase tracking-widest italic ml-2">Días de Entrenamiento Semanal</label>
+                        <div class="grid grid-cols-6 gap-2">
+                            ${[1,2,3,4,5,6].map(n => `<button onclick="state.routineWizard.cantDias = ${n}; window.renderWizardStep();" class="h-14 rounded-2xl border-2 font-black italic transition-all ${state.routineWizard.cantDias === n ? 'bg-red-600 text-black border-red-600 shadow-lg' : 'bg-white/5 border-white/5 text-white/20'}">${n}</button>`).join('')}
                         </div>
                     </div>
                 </div>
             </div>`;
-    } else if (step > 1 && step < totalSteps) {
-        const dayIdx = step - 2;
-        label.innerText = `PASO ${step}: CONFIGURACIÓN JORNADA ${dayIdx + 1}`;
-        body.innerHTML = window.renderStepDiaEditor(dayIdx);
-        window.initSearchInWizard(dayIdx);
     } else {
-        label.innerText = `PASO ${totalSteps}: REVISIÓN FINAL`;
+        label.innerText = "PASO 2: FORJA DE EJERCICIOS";
         body.innerHTML = `
-            <div class="text-center py-10 space-y-10 animate-in zoom-in">
-                <div class="bg-red-600/10 p-12 rounded-[4rem] border border-red-600/20 shadow-2xl">
-                    <i data-lucide="shield-check" class="w-20 h-20 text-red-600 mx-auto mb-6"></i>
-                    <h4 class="text-4xl font-black italic uppercase text-white tracking-tighter">${state.routineWizard.nombre_grupo}</h4>
-                    <p class="text-white/40 uppercase font-black tracking-[0.4em] text-xs mt-4 italic">${state.routineWizard.tipo_id === 2 ? 'Estrategia Progresiva por Semanas' : 'Plan Táctico Estándar'}</p>
+            <!-- Sidebar de Biblioteca -->
+            <div class="w-full lg:w-[400px] border-r border-white/5 flex flex-col bg-black/40">
+                <div class="p-8 border-b border-white/5">
+                    <div class="relative group">
+                        <i data-lucide="search" class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20"></i>
+                        <input type="text" id="wizard-search-lib" placeholder="Buscar en arsenal..." class="viking-input pl-12 h-12 text-[10px] font-black italic border-white/5 bg-white/5" oninput="window.filterWizardLib(this.value)">
+                    </div>
                 </div>
-                <p class="text-[11px] text-white/20 italic max-w-sm mx-auto">"${state.routineWizard.objetivo}"</p>
+                <div class="flex-1 overflow-y-auto p-8 space-y-8 custom-scrollbar" id="wizard-lib-results">
+                    <!-- Se llena con renderWizardLib -->
+                </div>
+            </div>
+
+            <!-- Editor Central -->
+            <div class="flex-1 flex flex-col bg-zinc-950/50">
+                <!-- TABS DE SEMANAS (Si es progresiva) -->
+                ${state.routineWizard.tipo === 'progresiva' ? `
+                    <div class="p-6 bg-black/60 flex gap-2 border-b border-white/5 overflow-x-auto no-scrollbar">
+                        ${[1,2,3,4,5].map(w => `
+                            <button onclick="state.routineWizard.semanaActivaWizard = ${w}; window.renderWizardStep();" 
+                                class="px-8 py-3 rounded-xl font-black italic text-[10px] uppercase transition-all whitespace-nowrap
+                                ${state.routineWizard.semanaActivaWizard === w ? 'bg-red-600 text-black' : 'bg-white/5 text-white/30 border border-white/10'}">
+                                SEMANA ${w}
+                            </button>
+                        `).join('')}
+                    </div>
+                ` : ''}
+
+                <!-- LISTADO DE DÍAS (ACORDEONES) -->
+                <div class="flex-1 overflow-y-auto p-8 lg:p-12 space-y-6 custom-scrollbar">
+                    ${Array.from({length: state.routineWizard.cantDias}).map((_, i) => {
+                        const dayNum = i + 1;
+                        const key = state.routineWizard.tipo === 'progresiva' ? `week${state.routineWizard.semanaActivaWizard}_day${dayNum}` : `day_${dayNum}`;
+                        const isOpen = state.routineWizard.activeDayKey === key;
+                        const data = state.routineWizard.config[key] || { label: `JORNADA ${dayNum}`, exercises: [] };
+
+                        return `
+                            <div class="border rounded-[2.5rem] overflow-hidden transition-all duration-500 ${isOpen ? 'border-red-600 bg-red-600/5 ring-1 ring-red-600/20' : 'border-white/5 bg-white/[0.02]'}">
+                                <button onclick="window.toggleWizardDay('${key}')" class="w-full flex items-center justify-between p-8 text-left hover:bg-white/5 transition-all">
+                                    <div class="flex items-center gap-6">
+                                        <div class="w-12 h-12 rounded-2xl flex items-center justify-center font-black italic text-sm ${isOpen ? 'bg-red-600 text-black' : 'bg-white/5 text-white/30'}">${dayNum}</div>
+                                        <div>
+                                            <span class="text-xl font-black italic uppercase text-white tracking-tighter">${data.label}</span>
+                                            <p class="text-[9px] text-white/30 font-bold uppercase tracking-widest">${data.exercises.length} ITEMS CARGADOS</p>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center gap-4">
+                                        ${state.routineWizard.tipo === 'progresiva' && state.routineWizard.semanaActivaWizard > 1 ? `
+                                            <button onclick="event.stopPropagation(); window.clonePrevWeekDay(${dayNum})" class="text-[9px] font-black uppercase italic bg-amber-600/10 text-amber-500 border border-amber-600/20 px-4 py-2 rounded-xl hover:bg-amber-600 hover:text-black transition-all">Clonar Sem. Ant.</button>
+                                        ` : ''}
+                                        <i data-lucide="${isOpen ? 'chevron-up' : 'chevron-down'}" class="w-6 h-6 text-white/20"></i>
+                                    </div>
+                                </button>
+                                ${isOpen ? `
+                                    <div class="p-10 border-t border-white/5 space-y-8 animate-in slide-in-from-top-4">
+                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div class="space-y-2">
+                                                <label class="text-[9px] font-black text-white/20 uppercase italic ml-2">Título de la Sesión</label>
+                                                <input type="text" value="${data.label}" oninput="window.updateSessionData('${key}', 'label', this.value)" class="viking-input !bg-black !h-12 !text-xs font-black italic uppercase">
+                                            </div>
+                                            <div class="space-y-2">
+                                                <label class="text-[9px] font-black text-white/20 uppercase italic ml-2">Notas Tácticas</label>
+                                                <input type="text" value="${data.notes || ''}" oninput="window.updateSessionData('${key}', 'notes', this.value)" class="viking-input !bg-black !h-12 !text-xs" placeholder="Enfoque de hoy...">
+                                            </div>
+                                        </div>
+                                        <div class="space-y-4 pt-4 border-t border-white/5">
+                                            ${data.exercises.map((ex, exIdx) => window.renderExerciseItemWizard(key, ex, exIdx)).join('')}
+                                            ${data.exercises.length === 0 ? '<p class="text-center py-10 text-white/10 font-black uppercase italic text-xs tracking-widest">Arsenal vacío. Añade ejercicios desde la izquierda.</p>' : ''}
+                                        </div>
+                                    </div>
+                                ` : ''}
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
             </div>`;
+        window.renderWizardLib();
+    }
+    if (window.lucide) lucide.createIcons();
+};
+
+
+
+window.renderExerciseItemWizard = (key, ex, idx) => {
+    return `
+        <div class="bg-black/60 border border-white/5 rounded-3xl p-6 group/ex relative hover:border-red-600/30 transition-all shadow-xl">
+            <div class="flex justify-between items-center mb-6">
+                <div class="flex items-center gap-4">
+                    <span class="w-8 h-8 rounded-xl bg-red-600 text-black text-[10px] flex items-center justify-center font-black italic">${idx + 1}</span>
+                    <h6 class="text-sm font-black italic uppercase text-white">${ex.nombre}</h6>
+                </div>
+                <button onclick="window.removeExFromWizard('${key}', '${ex.uid}')" class="text-white/10 hover:text-red-600 transition-all"><i data-lucide="trash-2" class="w-5 h-5"></i></button>
+            </div>
+            <div class="grid grid-cols-4 gap-4">
+                ${['reps', 'weight', 'rest'].map(field => `
+                    <div class="space-y-1">
+                        <label class="text-[8px] font-black text-white/20 uppercase tracking-widest ml-1">${field}</label>
+                        <input type="text" value="${ex[field]}" oninput="window.updateExFieldWizard('${key}', '${ex.uid}', '${field}', this.value)" 
+                            class="w-full bg-white/5 border border-white/5 rounded-xl text-[11px] font-black italic text-center text-red-600 h-10 outline-none focus:border-red-600 transition-all">
+                    </div>
+                `).join('')}
+                <div class="space-y-1">
+                    <label class="text-[8px] font-black text-white/20 uppercase tracking-widest ml-1">Nota</label>
+                    <input type="text" value="${ex.comentario || ''}" oninput="window.updateExFieldWizard('${key}', '${ex.uid}', 'comentario', this.value)" 
+                        class="w-full bg-white/5 border border-white/5 rounded-xl text-[10px] font-medium text-white/40 px-3 h-10 outline-none focus:border-red-600 transition-all" placeholder="...">
+                </div>
+            </div>
+        </div>
+    `;
+};
+
+window.renderWizardLib = (query = '') => {
+    const container = document.getElementById('wizard-lib-results');
+    if (!container) return;
+    
+    const filtered = state.ejerciciosLibreria.filter(e => e.nombre.toLowerCase().includes(query.toLowerCase()));
+    
+    // Agrupar por grupo muscular para mejor UX
+    const groups = {};
+    filtered.forEach(e => {
+        const gName = e.grupo_muscular?.nombre || 'General';
+        if (!groups[gName]) groups[gName] = [];
+        groups[gName].push(e);
+    });
+
+    container.innerHTML = Object.entries(groups).map(([name, exs]) => `
+        <div>
+            <h5 class="text-[9px] font-black text-red-600 uppercase tracking-[0.3em] mb-4 ml-2 italic border-l-2 border-red-600 pl-3">${name}</h5>
+            <div class="space-y-2">
+                ${exs.map(e => `
+                    <button onclick="window.addExToWizard(${e.id}, '${e.nombre}')" 
+                        class="w-full flex justify-between items-center p-4 bg-white/[0.03] border border-white/5 rounded-2xl text-[11px] font-black uppercase italic text-white/50 hover:bg-red-600 hover:text-black transition-all group">
+                        ${e.nombre}
+                        <i data-lucide="plus" class="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity"></i>
+                    </button>
+                `).join('')}
+            </div>
+        </div>
+    `).join('');
+    if (window.lucide) lucide.createIcons();
+};
+
+window.toggleWizardDay = (key) => {
+    state.routineWizard.activeDayKey = (state.routineWizard.activeDayKey === key) ? null : key;
+    window.renderWizardStep();
+};
+
+window.addExToWizard = (id, nombre) => {
+    const key = state.routineWizard.activeDayKey;
+    if (!key) return showVikingToast("Primero despliega un día de entrenamiento", true);
+    
+    if (!state.routineWizard.config[key]) state.routineWizard.config[key] = { label: `JORNADA`, exercises: [] };
+    
+    state.routineWizard.config[key].exercises.push({
+        id,
+        uid: Math.random().toString(36).substr(2, 9),
+        nombre,
+        sets: 1,
+        reps: '12',
+        weight: '0',
+        rest: '90s',
+        comentario: ''
+    });
+    window.renderWizardStep();
+};
+
+window.clonePrevWeekDay = (dayNum) => {
+    const currentWeek = state.routineWizard.semanaActivaWizard;
+    if (currentWeek <= 1) return;
+    
+    const prevKey = `week${currentWeek - 1}_day${dayNum}`;
+    const targetKey = `week${currentWeek}_day${dayNum}`;
+    
+    const source = state.routineWizard.config[prevKey];
+    if (!source || source.exercises.length === 0) return showVikingToast("No hay ejercicios en la semana anterior para clonar", true);
+    
+    state.routineWizard.config[targetKey] = {
+        label: source.label,
+        notes: source.notes,
+        exercises: source.exercises.map(ex => ({
+            ...ex,
+            uid: Math.random().toString(36).substr(2, 9)
+        }))
+    };
+    window.renderWizardStep();
+    showVikingToast(`Semana ${currentWeek - 1} clonada correctamente`);
+};
+
+window.updateSessionData = (key, field, val) => {
+    if (!state.routineWizard.config[key]) state.routineWizard.config[key] = { label: '', notes: '', exercises: [] };
+    state.routineWizard.config[key][field] = val;
+};
+
+window.updateExFieldWizard = (key, uid, field, val) => {
+    const ex = state.routineWizard.config[key].exercises.find(e => e.uid === uid);
+    if (ex) ex[field] = val;
+};
+
+window.removeExFromWizard = (key, uid) => {
+    state.routineWizard.config[key].exercises = state.routineWizard.config[key].exercises.filter(e => e.uid !== uid);
+    window.renderWizardStep();
+};
+
+window.nextStep = () => {
+    if (state.routineWizard.currentStep === 1) {
+        if (!state.routineWizard.nombre_grupo) return showVikingToast("Asigna un nombre al plan maestro", true);
+        state.routineWizard.currentStep = 2;
+        // Auto-abrir primer día
+        const firstKey = state.routineWizard.tipo === 'progresiva' ? 'week1_day1' : 'day_1';
+        state.routineWizard.activeDayKey = firstKey;
+        window.renderWizardStep();
+    } else {
+        window.saveFinalRutina();
+    }
+};
+
+window.prevStep = () => {
+    if (state.routineWizard.currentStep === 2) {
+        state.routineWizard.currentStep = 1;
+        window.renderWizardStep();
+    }
+};
+
+// 5. PERSISTENCIA FINAL (EXPLOSIÓN PARA NEONDB)
+window.saveFinalRutina = async function() {
+    const config = state.routineWizard.config;
+    const isProg = state.routineWizard.tipo_id === 2;
+    const processedDays = [];
+
+    // Iterar por días según la frecuencia elegida
+    for (let dNum = 1; dNum <= state.routineWizard.cantDias; dNum++) {
+        const ejerciciosDia = [];
+        
+        if (isProg) {
+            // EXPLOSIÓN: 5 registros por ejercicio (uno por semana)
+            // Tomamos los ejercicios de cada pestaña de semana
+            for (let wNum = 1; wNum <= state.routineWizard.cantSemanas; wNum++) {
+                const key = `week${wNum}_day${dNum}`;
+                const session = config[key];
+                if (session && session.exercises) {
+                    session.exercises.forEach(ex => {
+                        ejerciciosDia.push({
+                            ejercicio_id: ex.id,
+                            semana_id: wNum,
+                            comentario: `[Semana ${wNum}] ${ex.comentario || ''}`.trim(),
+                            progreso_json: JSON.stringify(config), // Backup total
+                            series: [{
+                                numero_serie: 1,
+                                repeticiones: ex.reps,
+                                peso: ex.weight,
+                                descanso: ex.rest
+                            }]
+                        });
+                    });
+                }
+            }
+        } else {
+            // NORMAL: 1 Registro estándar
+            const key = `day_${dNum}`;
+            const session = config[key];
+            if (session && session.exercises) {
+                session.exercises.forEach(ex => {
+                    ejerciciosDia.push({
+                        ejercicio_id: ex.id,
+                        semana_id: null,
+                        comentario: ex.comentario || '',
+                        series: [{
+                            numero_serie: 1,
+                            repeticiones: ex.reps,
+                            peso: ex.weight,
+                            descanso: ex.rest
+                        }]
+                    });
+                });
+            }
+        }
+
+        const dayName = (config[isProg ? `week1_day${dNum}` : `day_${dNum}`]?.label) || `Jornada ${dNum}`;
+        processedDays.push({
+            nombre_dia: dayName,
+            ejercicios: ejerciciosDia
+        });
     }
 
-    const btnNext = document.getElementById('btn-editor-next');
-    if(btnNext) {
-        const nextTextSpan = document.getElementById('next-text');
-        if (nextTextSpan) nextTextSpan.innerText = step === totalSteps ? 'FORJAR ARSENAL' : 'SIGUIENTE PASO';
+    const payload = {
+        usuario_id: state.routineWizard.alumnoId,
+        nombre_grupo: state.routineWizard.nombre_grupo,
+        descripcion: state.routineWizard.objetivo,
+        objetivo: state.routineWizard.nombre_grupo,
+        tipo: state.routineWizard.tipo,
+        fecha_vencimiento: state.routineWizard.vencimiento,
+        dias: processedDays
+    };
+
+    const res = await apiFetch('/rutinas/plan', 'POST', payload);
+    if (!res.error) {
+        showVikingToast("¡Arsenal vikingo forjado correctamente! ⚔️");
+        closeModal('modal-rutina-editor');
+        window.renderRutinas();
+    } else {
+        showVikingToast(res.error, true);
     }
+};
+
+/**
+ * 6. VISTA DE ATLETAS (ESTILO IRONMOD)
+ */
+window.renderRutinasList = function(listaDatos) {
+    const list = document.getElementById('rutinas-lista');
+    if(!list) return;
+
+    if (listaDatos.length === 0) {
+        list.innerHTML = `<div class="p-32 text-center opacity-10 font-black uppercase italic tracking-[0.5em] text-4xl">SIN REGISTROS</div>`;
+        return;
+    }
+
+    list.innerHTML = listaDatos.map(a => {
+        const initials = getVikingInitials(a);
+        const tieneRutina = a.planes_rutina && a.planes_rutina.length > 0;
+        const activa = tieneRutina ? a.planes_rutina.find(r => r.activo) : null;
+        
+        return `
+        <div class="p-8 border-b border-white/5 flex flex-col lg:flex-row lg:items-center gap-10 hover:bg-white/[0.02] transition-all group relative overflow-hidden">
+            <div class="absolute left-0 top-0 bottom-0 w-1 ${tieneRutina ? 'bg-red-600 shadow-[0_0_15px_#ef4444]' : 'bg-white/10'} transition-all"></div>
+            
+            <div class="flex items-center gap-6 w-full lg:w-1/3">
+                <div class="w-16 h-16 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center font-black text-white text-xl italic group-hover:bg-red-600 group-hover:text-black transition-all shrink-0">${initials}</div>
+                <div>
+                    <h4 class="text-lg font-black uppercase italic text-white group-hover:text-red-500 transition-colors leading-none">${a.nombre_completo}</h4>
+                    <p class="text-[10px] text-white/30 font-black uppercase tracking-[0.2em] mt-2">${a.dni} • ${a.plan?.nombre || 'SIN PLAN'}</p>
+                </div>
+            </div>
+
+            <div class="flex-1 flex gap-12">
+                <div>
+                    <p class="text-[9px] text-white/20 font-black uppercase italic mb-2 tracking-widest">Estado Rutina</p>
+                    <span class="text-[10px] font-black uppercase italic ${tieneRutina ? 'text-green-500' : 'text-white/20'}">${tieneRutina ? 'ARSENAL CARGADO' : 'PENDIENTE'}</span>
+                </div>
+                ${activa ? `
+                    <div>
+                        <p class="text-[9px] text-white/20 font-black uppercase italic mb-2 tracking-widest">Plan Maestro</p>
+                        <span class="text-[10px] font-black uppercase italic text-white">${activa.nombre_grupo}</span>
+                    </div>
+                ` : ''}
+            </div>
+
+            <div class="flex items-center gap-3">
+                <button onclick="window.openFichaTecnica(${a.id})" class="h-14 w-14 bg-white/5 hover:bg-white/10 text-white rounded-2xl transition-all flex items-center justify-center" title="Ficha Técnica"><i data-lucide="clipboard-list" class="w-5 h-5"></i></button>
+                <button onclick="window.openRoutineEditor(${a.id})" class="px-8 h-14 viking-bg-red text-black rounded-2xl text-[10px] font-black uppercase italic hover:scale-105 transition-all flex items-center gap-3 shadow-xl shadow-red-900/20">
+                    <i data-lucide="plus-circle" class="w-4 h-4"></i> NUEVO ARSENAL
+                </button>
+            </div>
+        </div>`;
+    }).join('');
     if(window.lucide) lucide.createIcons();
-    body.scrollTo({ top: 0, behavior: 'smooth' });
-}
+};
 
 window.renderStepDiaEditor = function(dayIdx) {
     if (!state.routineWizard.dias[dayIdx]) state.routineWizard.dias[dayIdx] = { nombre: `Día ${dayIdx + 1}`, ejercicios: [] };
@@ -1841,45 +2159,6 @@ window.filterRutinas = function(filtro) {
     if(filtro === 'sin') filtrados = base.filter(a => !(a.id_rutina || a.rutina_id || (a.planes_rutina && a.planes_rutina.length > 0)));
     if(filtro === 'vencidas') filtrados = base.filter(a => a.rutina_vencimiento && a.rutina_vencimiento < hoy);
     window.renderRutinasList(filtrados);
-}
-
-window.renderRutinasList = function(listaDatos) {
-    const list = document.getElementById('rutinas-lista');
-    if(!list) return;
-
-    if (listaDatos.length === 0) {
-        list.innerHTML = `<div class="p-20 text-center opacity-20 font-black uppercase italic tracking-widest"><i data-lucide="users" class="w-12 h-12 mx-auto mb-2"></i>Sin registros</div>`;
-        if(window.lucide) lucide.createIcons();
-        return;
-    }
-
-    list.innerHTML = listaDatos.map(a => {
-        const initials = getVikingInitials(a);
-        const tieneRutina = a.id_rutina || a.rutina_id || (a.planes_rutina && a.planes_rutina.length > 0);
-        return `
-        <div class="glass-card p-5 rounded-3xl border-white/5 flex flex-col md:flex-row md:items-center gap-6 hover:border-red-600/20 transition-all group relative overflow-hidden bg-gradient-to-r from-white/[0.01] to-transparent">
-            <div class="absolute left-0 top-0 bottom-0 w-1.5 ${tieneRutina ? 'bg-green-600' : 'bg-white/10'} opacity-40 group-hover:opacity-100 transition-opacity"></div>
-            <div class="flex items-center gap-4 w-full md:w-1/3">
-                <div class="w-14 h-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center font-black text-white text-lg italic group-hover:bg-red-600 group-hover:text-black transition-all shrink-0">${initials}</div>
-                <div class="overflow-hidden">
-                    <h4 class="text-sm font-black uppercase italic text-white group-hover:text-red-500 transition-colors truncate">${a.nombre_completo || (a.usuario ? a.usuario.nombre_completo : 'Alumno')}</h4>
-                    <p class="text-[10px] text-white/30 font-bold uppercase tracking-widest mt-1">${a.dni || (a.usuario ? a.usuario.dni : '---')}</p>
-                </div>
-            </div>
-            <div class="flex-1">
-                <p class="text-[9px] text-white/20 font-black uppercase tracking-widest mb-1 italic">Membresía Activa</p>
-                <p class="text-xs font-black uppercase italic text-white truncate">${a.plan?.nombre || 'Sin Plan'}</p>
-            </div>
-            <div class="flex items-center gap-2">
-                <button onclick="window.openFichaTecnica(${a.id})" class="p-3 bg-white/5 hover:bg-white/10 text-white rounded-xl transition-all" title="Ver Ficha"><i data-lucide="clipboard-list" class="w-4 h-4"></i></button>
-                <button onclick="window.openHistorialRutinas(${a.id})" class="p-3 bg-blue-700/10 hover:bg-blue-700 text-blue-500 hover:text-white rounded-xl transition-all" title="Historial"><i data-lucide="history" class="w-4 h-4"></i></button>
-                <button onclick="window.openRoutineEditor(${a.id})" class="px-6 py-3 viking-bg-red text-black rounded-xl text-[10px] font-black uppercase italic hover:scale-105 transition-all flex items-center gap-2 shadow-lg">
-                    <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i> NUEVA RUTINA
-                </button>
-            </div>
-        </div>`;
-    }).join('');
-    if(window.lucide) lucide.createIcons();
 }
 
 /**
@@ -5616,86 +5895,6 @@ if (editorForm) {
 			});
 			renderRutinasList(filtrados);
 		}
-
-		window.renderRutinasList = function(listaDatos) {
-			const contenedor = document.getElementById('rutinas-lista');
-			if(!contenedor) return;
-
-			if(listaDatos.length === 0) {
-				contenedor.innerHTML = `<div class="h-full flex flex-col items-center justify-center text-gray-600 opacity-50 py-10"><i data-lucide="dumbbell" class="w-12 h-12 mb-2"></i><p class="text-xs font-black uppercase italic">Sin guerreros en esta categoría</p></div>`;
-				if(window.lucide) lucide.createIcons();
-				return;
-			}
-
-			const hoy = new Date().toISOString().split('T')[0];
-
-			contenedor.innerHTML = listaDatos.map(a => {
-				// Lógica de Estado de Plan (Identica a Alumnos)
-				const estaVencido = !a.fecha_vencimiento || a.fecha_vencimiento < hoy;
-				const colorEstado = estaVencido ? 'bg-red-600' : 'bg-green-600'; 
-				const textoEstado = estaVencido ? 'VENCIDO' : 'AL DÍA';
-				const colorBadge = estaVencido ? 'text-red-500 bg-red-500/10 border-red-500/20' : 'text-green-500 bg-green-500/10 border-green-500/20';
-
-				const initials = a.nombre_completo ? a.nombre_completo.substring(0,2).toUpperCase() : "??";
-				const planNombre = a.plan ? a.plan.nombre : 'Sin Plan';
-
-				return `
-				<div class="glass-card p-5 rounded-3xl border-white/5 flex flex-col md:flex-row md:items-center gap-6 hover:border-red-600/20 transition-all group relative overflow-hidden bg-gradient-to-r from-white/[0.01] to-transparent">
-					<div class="absolute left-0 top-0 bottom-0 w-1.5 ${colorEstado} opacity-40 group-hover:opacity-100 transition-opacity"></div>
-					
-					<!-- IDENTIDAD -->
-					<div class="flex items-center gap-4 w-full md:w-1/3">
-						<div class="w-14 h-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center font-black text-white text-lg italic shadow-lg group-hover:bg-red-600 group-hover:text-black transition-colors shrink-0">
-							${initials}
-						</div>
-						<div class="overflow-hidden">
-							<h4 class="text-sm font-black uppercase italic text-white group-hover:text-red-500 transition-colors truncate">${a.nombre_completo}</h4>
-							<p class="text-[10px] text-white-500 font-bold flex items-center gap-1.5 mt-1"><i data-lucide="id-card" class="w-3 h-3"></i> ${a.dni}</p>
-						</div>
-					</div>
-
-					<!-- PLAN Y ESTADO -->
-					<div class="flex-1 border-t md:border-t-0 md:border-l border-white/5 pt-4 md:pt-0 md:pl-8">
-						<div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
-							<div>
-								<p class="text-[9px] text-white-500 font-black uppercase tracking-widest mb-1 flex items-center gap-1.5">
-									<i data-lucide="ticket" class="w-3 h-3 text-red-600"></i> Plan Actual
-								</p>
-								<p class="text-sm font-black uppercase italic text-white truncate">${planNombre}</p>
-							</div>
-							<div class="flex flex-row md:flex-col items-center md:items-start justify-between gap-2">
-								<span class="px-3 py-1 rounded-lg text-[9px] font-black uppercase border ${colorBadge}">
-									${textoEstado}
-								</span>
-								<p class="text-[10px] text-white-500 font-bold italic">
-									Vence: <span class="text-white">${a.fecha_vencimiento || 'N/A'}</span>
-								</p>
-							</div>
-						</div>
-					</div>
-
-					<!-- ACCIONES: FICHA, HISTORIAL, NUEVA RUTINA -->
-					<div class="flex items-center justify-end border-t md:border-t-0 border-white/5 pt-3 md:pt-0 gap-2">
-						<button onclick="openFichaTecnica(${a.id})" class="p-3 bg-white/5 hover:bg-white/10 border border-white/10 text-white rounded-xl transition-all" title="Ficha Técnica">
-							<i data-lucide="clipboard-list" class="w-4 h-4"></i>
-						</button>
-
-						
-						<button onclick="openHistorialRutinas(${a.id})" class="p-3 bg-blue-700 hover:bg-blue-800 text-white rounded-xl shadow-lg transition-all" title="Historial">
-							<i data-lucide="history" class="w-4 h-4"></i>
-						</button>
-
-						<button onclick="openRoutineEditor(${a.id}, false)" class="px-6 py-3 viking-bg-red text-black rounded-xl text-[10px] font-black uppercase italic hover:scale-105 transition-all shadow-lg flex items-center gap-2">
-							<i data-lucide="plus-circle" class="w-3.5 h-3.5"></i>
-							<span>Nueva Rutina</span>
-						</button>
-					</div>
-				</div>
-				`;
-			}).join('');
-			
-			if(window.lucide) lucide.createIcons();
-		};
 
 		window.deleteSucursal = async function(id) {
 			if (!confirm("¿Deseas eliminar esta sede? Los alumnos asignados quedarán sin sucursal.")) return;
