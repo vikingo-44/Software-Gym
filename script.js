@@ -1905,7 +1905,7 @@ window.filterRutinas = function(filtro) {
     
     let base = state.alumnos.filter(a => {
         const plan = (a.plan?.nombre || "").toLowerCase();
-        return plan.includes('musculacion') || plan.includes('completo') || plan.includes('personalizado') || plan.includes('premium');
+        return plan.includes('musculacion') || plan.includes('completo') || plan.includes('personalizado') || plan === 'premium';
     });
 
     let filtrados = base;
@@ -1923,7 +1923,7 @@ window.searchAlumnoRutina = function(query) {
     const filtrados = (state.alumnos || []).filter(a => {
         const matchSearch = (a.nombre_completo || "").toLowerCase().includes(q) || (a.dni || "").includes(q);
         const plan = (a.plan?.nombre || "").toLowerCase();
-        const esMusc = plan.includes('musculacion') || plan.includes('completo') || plan.includes('personalizado') || plan.includes('premium');
+        const esMusc = plan.includes('musculacion') || plan.includes('completo') || plan.includes('personalizado') || plan === 'premium';
         return matchSearch && esMusc;
     });
     window.renderRutinasList(filtrados);
@@ -5692,7 +5692,7 @@ if (editorForm) {
 			let baseMusculacion = state.alumnos.filter(a => {
 				const planNombre = (a.plan?.nombre || "").toLowerCase();
 				const normalized = planNombre.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-				return normalized.includes('musculacion') || normalized.includes('completo') || normalized.includes('personalizado');
+				return normalized.includes('musculacion') || normalized.includes('completo') || normalized.includes('personalizado') || plan === 'premium';
 			});
 
 			let filtrados = baseMusculacion;
@@ -5719,7 +5719,7 @@ if (editorForm) {
 				// Primero que sea de musculación
 				const planNombre = (a.plan?.nombre || "").toLowerCase();
 				const normalized = planNombre.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-				const esMusculo = normalized.includes('musculacion') || normalized.includes('completo') || normalized.includes('personalizado');
+				const esMusculo = normalized.includes('musculacion') || normalized.includes('completo') || normalized.includes('personalizado') || plan === 'premium';
 				
 				// Luego buscamos por nombre o dni
 				return esMusculo && (a.nombre_completo.toLowerCase().includes(q) || a.dni.includes(q));
