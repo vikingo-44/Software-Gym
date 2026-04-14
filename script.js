@@ -1785,19 +1785,23 @@ window.renderRutinasList = function(listaDatos) {
         return;
     }
 
+    const hoy = new Date().toISOString().split('T')[0];
+
+    // RENDERIZADO CON ESTÉTICA EXACTA DE ALUMNOS (CARDS INDEPENDIENTES CON MÁRGENES)
     list.innerHTML = listaDatos.map(a => {
         const initials = a.nombre_completo ? a.nombre_completo.substring(0,2).toUpperCase() : "??";
         const tieneRutina = a.planes_rutina && a.planes_rutina.length > 0;
         const activa = tieneRutina ? a.planes_rutina.find(r => r.activo) : null;
         
-        // Estética sincronizada con Alumnos
+        // Lógica de Estado (Sincronizada con visual de Alumnos)
         const colorEstado = tieneRutina ? 'bg-green-600' : 'bg-red-600'; 
-        const textoEstado = tieneRutina ? 'ARSENAL CARGADO' : 'PENDIENTE';
+        const textoEstado = tieneRutina ? 'CARGADO' : 'PENDIENTE';
         const colorBadge = tieneRutina ? 'text-green-500 bg-green-500/10 border-green-500/20' : 'text-red-500 bg-red-500/10 border-red-500/20';
+        const planNombre = a.plan ? a.plan.nombre : 'Sin Plan';
 
         return `
-        <div class="glass-card p-5 rounded-3xl border border-white/5 flex flex-col md:flex-row md:items-center gap-6 hover:border-red-600/20 transition-all group relative overflow-hidden mb-4 mx-4 mt-4">
-            <!-- Barra lateral decorativa exacta -->
+        <div class="glass-card p-5 rounded-3xl border border-white/5 flex flex-col md:flex-row md:items-center gap-6 hover:border-red-600/20 transition-all group relative overflow-hidden mb-4">
+            <!-- Barra lateral decorativa -->
             <div class="absolute left-0 top-0 bottom-0 w-1.5 ${colorEstado} opacity-40 group-hover:opacity-100 transition-opacity"></div>
             
             <!-- COLUMNA 1: IDENTIDAD -->
@@ -1808,38 +1812,36 @@ window.renderRutinasList = function(listaDatos) {
                 <div class="overflow-hidden">
                     <h4 class="text-sm font-black uppercase italic text-white group-hover:text-red-500 transition-colors truncate">${a.nombre_completo}</h4>
                     <div class="flex flex-col mt-1">
-                        <p class="text-[10px] text-white/30 font-bold flex items-center gap-1.5 uppercase tracking-widest">
+                        <p class="text-[10px] text-white/40 font-bold flex items-center gap-1.5 uppercase tracking-widest italic">
                             <i data-lucide="id-card" class="w-3 h-3"></i> ${a.dni}
                         </p>
-                        <p class="text-[10px] text-white/30 font-bold flex items-center gap-1.5 uppercase tracking-widest truncate">
-                            <i data-lucide="ticket" class="w-3 h-3"></i> ${a.plan?.nombre || 'SIN PLAN'}
+                        <p class="text-[10px] text-white/40 font-bold flex items-center gap-1.5 uppercase tracking-widest truncate italic">
+                            <i data-lucide="mail" class="w-3 h-3"></i> ${a.email || 'Sin Email'}
                         </p>
                     </div>
                 </div>
             </div>
 
-            <!-- COLUMNA 2: PLAN Y ESTADO (IGUAL QUE ALUMNOS) -->
+            <!-- COLUMNA 2: PLAN Y ESTADO -->
             <div class="flex-1 border-t md:border-t-0 md:border-l border-white/5 pt-4 md:pt-0 md:pl-8">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
-                    <!-- Info Arsenal -->
+                    <!-- Info Plan -->
                     <div>
                         <p class="text-[9px] text-white/20 font-black uppercase tracking-widest mb-1 flex items-center gap-1.5 italic">
-                            <i data-lucide="dumbbell" class="w-3 h-3 text-red-600"></i> Plan Musculación
+                            <i data-lucide="ticket" class="w-3 h-3 text-red-600"></i> Plan Actual
                         </p>
-                        <p class="text-sm font-black uppercase italic text-white truncate">
-                            ${activa ? (activa.nombre_grupo || activa.objetivo) : 'SIN ASIGNAR'}
-                        </p>
+                        <p class="text-sm font-black uppercase italic text-white truncate">${planNombre}</p>
                     </div>
 
-                    <!-- Estado y Badge -->
+                    <!-- Estado y Vencimiento -->
                     <div class="flex flex-row md:flex-col items-center md:items-start justify-between gap-2">
                         <div class="flex items-center gap-2">
                             <span class="px-3 py-1 rounded-lg text-[9px] font-black uppercase border ${colorBadge} italic">
                                 ${textoEstado}
                             </span>
                         </div>
-                        <p class="text-[10px] text-white/20 font-bold italic flex items-center gap-1 uppercase tracking-tighter">
-                            Vencimiento: <span class="text-white">${activa ? activa.fecha_vencimiento : 'N/A'}</span>
+                        <p class="text-[10px] text-white/40 font-bold italic flex items-center gap-1 uppercase tracking-tighter">
+                            Venc: <span class="text-white">${activa ? activa.fecha_vencimiento : 'N/A'}</span>
                         </p>
                     </div>
                 </div>
@@ -1847,15 +1849,13 @@ window.renderRutinasList = function(listaDatos) {
 
             <!-- COLUMNA 3: ACCIONES -->
             <div class="flex items-center justify-end gap-3 min-w-[120px] border-t md:border-t-0 border-white/5 pt-3 md:pt-0">
-                <button onclick="window.openFichaTecnica(${a.id})" 
-                    class="h-12 w-12 bg-white/5 hover:bg-white/10 text-white rounded-xl flex items-center justify-center transition-all border border-white/5 shadow-lg" 
-                    title="Ficha Técnica">
-                    <i data-lucide="clipboard-list" class="w-5 h-5"></i>
+                <button onclick="window.openFichaTecnica(${a.id})" class="px-4 py-3 bg-white/5 text-white rounded-xl text-[10px] font-black uppercase italic hover:bg-white/10 hover:text-red-500 transition-all flex items-center gap-2 shadow-lg w-full md:w-auto justify-center">
+                    <i data-lucide="clipboard-list" class="w-4 h-4"></i>
+                    <span>Ver</span>
                 </button>
-                <button onclick="window.openRoutineEditor(${a.id})" 
-                    class="px-6 h-12 viking-bg-red text-black rounded-xl text-[10px] font-black uppercase italic hover:scale-105 flex items-center gap-3 shadow-xl shadow-red-900/20 transition-all">
+                <button onclick="window.openRoutineEditor(${a.id})" class="viking-bg-red text-black px-6 py-3 rounded-xl font-black uppercase italic text-[10px] shadow-xl flex items-center gap-2 hover:scale-105 transition-all w-full md:w-auto justify-center">
                     <i data-lucide="plus-circle" class="w-4 h-4"></i>
-                    <span>ASIGNAR</span>
+                    <span>Arsenal</span>
                 </button>
             </div>
         </div>`;
