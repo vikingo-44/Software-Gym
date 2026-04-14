@@ -653,9 +653,11 @@
                                     ).length;
                                     const estaLleno = cupoActual >= cupoMax;
 
-                                    // CORRECCIÓN VISUAL: Aseguramos que el badge sea absoluto para que el flex interno no se rompa
+                                    // CORRECCIÓN VISUAL FINAL: Altura de 79px para ocupar 1 hora completa (2 slots de 40px)
+                                    // Z-index 20 para estar sobre las celdas pero bajo los headers (z-50)
                                     const badge = document.createElement('div');
-                                    badge.className = "absolute inset-0.5 rounded-xl flex flex-col items-center justify-center text-center overflow-hidden transition-transform hover:scale-[1.02] z-10 p-1 shadow-lg"; 
+                                    badge.className = "absolute top-0.5 left-0.5 right-0.5 rounded-xl flex flex-col items-center justify-center text-center overflow-hidden z-20 p-1 shadow-xl"; 
+                                    badge.style.height = "79px";
                                     badge.style.backgroundColor = c.color || '#FF0000';
                                     
                                     if (isAdmin) {
@@ -669,16 +671,16 @@
                                         badge.ondragend = () => badge.classList.remove('opacity-40');
                                     }
 
-                                    // CORRECCIÓN VISUAL: Usamos Tailwind directamente para el posicionamiento vertical sin desvíos
+                                    // CORRECCIÓN INTERNA: Flexbox con leading-tight y gaps eliminados para centrado absoluto
                                     badge.innerHTML = `
-                                        <div class="flex flex-col items-center justify-center h-full w-full gap-0.5 leading-none">
-                                            <span class="text-[8.5px] font-black uppercase italic truncate w-full px-1 ${colores.text}">
+                                        <div class="flex flex-col items-center justify-center h-full w-full leading-tight">
+                                            <span class="text-[9px] font-black uppercase italic truncate w-full px-1 ${colores.text}">
                                                 ${c.nombre}
                                             </span>
-                                            <span class="text-[7.5px] font-bold uppercase opacity-70 truncate w-full px-1 ${colores.text}">
+                                            <span class="text-[8px] font-bold uppercase opacity-80 truncate w-full px-1 ${colores.text}">
                                                 ${slot.coach || 'staff'}
                                             </span>
-                                            <div class="mt-0.5 px-2 py-0.5 rounded-full text-[7px] font-black ${colores.bg} ${estaLleno ? 'text-red-500' : colores.text}">
+                                            <div class="mt-1 px-2 py-0.5 rounded-full text-[8px] font-black ${colores.bg} ${estaLleno ? 'text-red-500' : colores.text}">
                                                 ${cupoActual}/${cupoMax}
                                             </div>
                                         </div>
