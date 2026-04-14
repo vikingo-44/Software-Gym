@@ -1210,20 +1210,43 @@
         </div>
     </div>
 
-    <!-- MODAL CLASE -->
-	<div id="modal-clase" class="viking-modal">
-		<div class="glass-card p-10 rounded-[3rem] w-full max-w-lg border-red-600/30">
-			<h3 id="modal-clase-title" class="text-2xl font-black italic uppercase mb-6">Configurar Clase</h3>
+	<!-- MODAL CLASE -->
+    <div id="modal-clase" class="viking-modal hidden fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+		<div class="glass-card p-10 rounded-[3rem] w-full max-w-lg border border-red-600/30 bg-zinc-950/90 shadow-2xl overflow-y-auto max-h-[90vh] custom-scrollbar">
+			<h3 id="modal-clase-title" class="text-2xl font-black italic uppercase mb-6 text-white">Configurar Clase</h3>
 			<form id="form-clase" class="space-y-4">
 				<input type="hidden" id="cl-id">
+				
 				<div class="w-full">
-					<input type="text" id="cl-nombre" placeholder="Nombre de Clase" class="viking-input" required>
-					<!-- El selector de coach global se elimina visualmente porque elegiremos coach por turno -->
-					<input type="hidden" id="cl-coach-select" value="Staff"> 
+					<label class="text-[9px] font-black text-white/30 uppercase tracking-widest italic ml-2">Nombre de Clase</label>
+					<input type="text" id="cl-nombre" placeholder="Nombre de Clase" class="viking-input mt-1" required>
 				</div>
+
+				<!-- SELECTOR DE PROFESOR (RESTABLECIDO) -->
+				<div class="w-full">
+					<label class="text-[9px] font-black text-white/30 uppercase tracking-widest italic ml-2">Profesor / Coach</label>
+					<select id="cl-coach-select" class="viking-input mt-1" required>
+						<!-- Cargado por JS -->
+					</select>
+				</div>
+
+				<!-- CAMPO DE BOX -->
+				<div class="w-full">
+					<label class="text-[9px] font-black text-white/30 uppercase tracking-widest italic ml-2">Seleccionar Box</label>
+					<select id="cl-box" class="viking-input mt-1" required>
+						<!-- Cargado por JS -->
+					</select>
+				</div>
+
 				<div class="grid grid-cols-2 gap-4">
-					<input type="number" id="cl-cupo" placeholder="Cupo Máximo" class="viking-input" required>
-					<input type="color" id="cl-color" value="#FF0000" class="viking-input h-[52px] cursor-pointer p-1">
+					<div class="w-full">
+						<label class="text-[9px] font-black text-white/30 uppercase tracking-widest italic ml-2">Cupo Máximo</label>
+						<input type="number" id="cl-cupo" placeholder="Cupo Máximo" class="viking-input mt-1" required>
+					</div>
+					<div class="w-full">
+						<label class="text-[9px] font-black text-white/30 uppercase tracking-widest italic ml-2">Color</label>
+						<input type="color" id="cl-color" value="#FF0000" class="viking-input h-[52px] cursor-pointer p-1 mt-1">
+					</div>
 				</div>
 
 				<div class="mt-6">
@@ -1240,7 +1263,7 @@
 				</div>
 
 				<div class="flex gap-4 pt-6">
-					<button type="button" onclick="closeModal('modal-clase')" class="flex-1 py-4 border border-white/10 rounded-2xl font-black uppercase italic text-[11px] hover:bg-white/5 transition-all">Cancelar</button>
+					<button type="button" onclick="closeModal('modal-clase')" class="flex-1 py-4 border border-white/10 rounded-2xl font-black uppercase italic text-[11px] hover:bg-white/5 transition-all text-white">Cancelar</button>
 					<button type="submit" class="flex-1 py-4 viking-bg-red text-black rounded-2xl font-black uppercase italic text-[11px] shadow-lg">Guardar Configuración</button>
 				</div>
 				<button type="button" id="btn-delete-clase" class="w-full text-[10px] text-red-600 font-bold uppercase mt-4 hidden">Eliminar Clase Permanentemente</button>
