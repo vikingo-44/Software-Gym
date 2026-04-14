@@ -5692,7 +5692,7 @@ if (editorForm) {
 			let baseMusculacion = state.alumnos.filter(a => {
 				const planNombre = (a.plan?.nombre || "").toLowerCase();
 				const normalized = planNombre.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-				return normalized.includes('musculacion') || normalized.includes('completo') || normalized.includes('personalizado') || plan === 'premium';
+				return normalized.includes('musculacion') || normalized.includes('completo') || normalized.includes('personalizado') || planNombre === 'premium';
 			});
 
 			let filtrados = baseMusculacion;
