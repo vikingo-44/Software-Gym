@@ -873,36 +873,45 @@
             <div id="view-calendario" class="view-content">
 				<div class="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-8 gap-6">
 					<div>
-						<h3 class="text-3xl font-black italic uppercase text-left">Agenda de Clases</h3>
-						<p class="text-[10px] text-white/30 font-bold uppercase tracking-[0.2em] mt-1 italic">Gestión de turnos y Boxes</p>
+						<h3 class="text-4xl font-black italic uppercase text-left tracking-tighter">Agenda de Clases</h3>
+						<p class="text-[10px] text-white/30 font-bold uppercase tracking-[0.3em] mt-1 italic">Gestión de turnos y Boxes</p>
 					</div>
 
 					<!-- SELECTOR DE BOXES (ESTILO VIKINGO) -->
-					<div class="flex bg-white/5 p-1 rounded-2xl border border-white/5">
-						<button onclick="window.changeCalendarBox('Principal')" id="box-Principal" class="box-filter-btn px-6 py-2 rounded-xl text-[10px] font-black uppercase italic transition-all bg-red-600 text-black">Box Principal</button>
-						<button onclick="window.changeCalendarBox('Calistenia')" id="box-Calistenia" class="box-filter-btn px-6 py-2 rounded-xl text-[10px] font-black uppercase italic transition-all text-white/30 hover:text-white">Box Calistenia</button>
-						<button onclick="window.changeCalendarBox('Musculacion')" id="box-Musculacion" class="box-filter-btn px-6 py-2 rounded-xl text-[10px] font-black uppercase italic transition-all text-white/30 hover:text-white">Box Musculación</button>
+					<div class="flex bg-black/40 p-1.5 rounded-[1.5rem] border border-white/5 backdrop-blur-md">
+						<button onclick="window.changeCalendarBox('Principal')" id="box-Principal" 
+							class="box-filter-btn px-6 py-2.5 rounded-xl text-[10px] font-black uppercase italic transition-all ${state.calendar.currentBox === 'Principal' ? 'bg-red-600 text-black shadow-lg shadow-red-900/20' : 'text-white/30 hover:text-white'}">
+							Box Principal
+						</button>
+						<button onclick="window.changeCalendarBox('Calistenia')" id="box-Calistenia" 
+							class="box-filter-btn px-6 py-2.5 rounded-xl text-[10px] font-black uppercase italic transition-all ${state.calendar.currentBox === 'Calistenia' ? 'bg-red-600 text-black shadow-lg shadow-red-900/20' : 'text-white/30 hover:text-white'}">
+							Calistenia
+						</button>
+						<button onclick="window.changeCalendarBox('Musculacion')" id="box-Musculacion" 
+							class="box-filter-btn px-6 py-2.5 rounded-xl text-[10px] font-black uppercase italic transition-all ${state.calendar.currentBox === 'Musculacion' ? 'bg-red-600 text-black shadow-lg shadow-red-900/20' : 'text-white/30 hover:text-white'}">
+							Musculación
+						</button>
 					</div>
 
 					<!-- CONTROLES DE SEMANA -->
 					<div class="flex gap-2 items-center">
-						<div class="flex bg-white/5 p-1 rounded-2xl border border-white/5 items-center">
+						<div class="flex bg-black/40 p-1.5 rounded-2xl border border-white/5 items-center backdrop-blur-md">
 							<button onclick="window.changeCalendarWeek(-1)" class="w-10 h-10 flex items-center justify-center text-white/40 hover:text-red-600 transition-all">
 								<i data-lucide="chevron-left" class="w-5 h-5"></i>
 							</button>
-							<div class="px-4 text-center min-w-[120px]">
-								<span id="label-semana-vikinga" class="text-[11px] font-black uppercase italic text-white">...</span>
+							<div class="px-6 text-center min-w-[140px]">
+								<span id="label-semana-vikinga" class="text-[11px] font-black uppercase italic text-white tracking-widest">...</span>
 							</div>
 							<button onclick="window.changeCalendarWeek(1)" class="w-10 h-10 flex items-center justify-center text-white/40 hover:text-red-600 transition-all">
 								<i data-lucide="chevron-right" class="w-5 h-5"></i>
 							</button>
 						</div>
-						<button onclick="window.resetCalendarWeek()" class="px-6 py-3 bg-white/5 hover:bg-white/10 text-white rounded-2xl text-[11px] font-black uppercase italic border border-white/10 transition-all">Hoy</button>
+						<button onclick="window.resetCalendarWeek()" class="px-8 py-3.5 bg-white/5 hover:bg-white/10 text-white rounded-2xl text-[11px] font-black uppercase italic border border-white/10 transition-all shadow-lg">Hoy</button>
 					</div>
 				</div>
 
 				<!-- CONTENEDOR DEL CALENDARIO -->
-				<div class="calendar-container h-[700px] overflow-y-auto custom-scrollbar" id="calendar-grid"></div>
+				<div id="calendar-grid" class="calendar-container h-[750px] overflow-y-auto custom-scrollbar"></div>
 			</div>
 
 			<!-- VISTA DE RUTINAS (STAFF) -->
