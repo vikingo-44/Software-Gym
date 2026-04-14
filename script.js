@@ -1785,41 +1785,77 @@ window.renderRutinasList = function(listaDatos) {
         return;
     }
 
-    // DISEÑO LINEAL SINCRONIZADO CON SECCIÓN ALUMNOS
     list.innerHTML = listaDatos.map(a => {
-        const initials = getVikingInitials(a);
+        const initials = a.nombre_completo ? a.nombre_completo.substring(0,2).toUpperCase() : "??";
         const tieneRutina = a.planes_rutina && a.planes_rutina.length > 0;
         const activa = tieneRutina ? a.planes_rutina.find(r => r.activo) : null;
         
+        // Estética sincronizada con Alumnos
+        const colorEstado = tieneRutina ? 'bg-green-600' : 'bg-red-600'; 
+        const textoEstado = tieneRutina ? 'ARSENAL CARGADO' : 'PENDIENTE';
+        const colorBadge = tieneRutina ? 'text-green-500 bg-green-500/10 border-green-500/20' : 'text-red-500 bg-red-500/10 border-red-500/20';
+
         return `
-        <div class="px-6 py-4 border-b border-white/5 flex items-center gap-4 hover:bg-white/[0.02] group relative transition-all">
-            <div class="absolute left-0 top-0 bottom-0 w-1 ${tieneRutina ? 'bg-red-600 shadow-[0_0_10px_#ef4444]' : 'bg-white/10'}"></div>
+        <div class="glass-card p-5 rounded-3xl border border-white/5 flex flex-col md:flex-row md:items-center gap-6 hover:border-red-600/20 transition-all group relative overflow-hidden mb-4 mx-4 mt-4">
+            <!-- Barra lateral decorativa exacta -->
+            <div class="absolute left-0 top-0 bottom-0 w-1.5 ${colorEstado} opacity-40 group-hover:opacity-100 transition-opacity"></div>
             
-            <div class="flex items-center gap-4 flex-1">
-                <div class="w-12 h-12 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center font-black text-white text-lg italic group-hover:bg-red-600 group-hover:text-black transition-all">
+            <!-- COLUMNA 1: IDENTIDAD -->
+            <div class="flex items-center gap-4 w-full md:w-1/3">
+                <div class="w-14 h-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center font-black text-white text-lg italic shadow-lg group-hover:bg-red-600 group-hover:text-black transition-colors shrink-0">
                     ${initials}
                 </div>
-                <div class="text-left">
-                    <h4 class="text-[14px] font-black uppercase italic text-white group-hover:text-red-500 leading-none">${a.nombre_completo}</h4>
-                    <p class="text-[9px] text-white/30 font-bold uppercase tracking-widest mt-1.5">${a.dni} • ${a.plan?.nombre || 'SIN PLAN'}</p>
+                <div class="overflow-hidden">
+                    <h4 class="text-sm font-black uppercase italic text-white group-hover:text-red-500 transition-colors truncate">${a.nombre_completo}</h4>
+                    <div class="flex flex-col mt-1">
+                        <p class="text-[10px] text-white/30 font-bold flex items-center gap-1.5 uppercase tracking-widest">
+                            <i data-lucide="id-card" class="w-3 h-3"></i> ${a.dni}
+                        </p>
+                        <p class="text-[10px] text-white/30 font-bold flex items-center gap-1.5 uppercase tracking-widest truncate">
+                            <i data-lucide="ticket" class="w-3 h-3"></i> ${a.plan?.nombre || 'SIN PLAN'}
+                        </p>
+                    </div>
                 </div>
             </div>
 
-            <div class="hidden md:flex flex-col text-left w-48">
-                <p class="text-[8px] text-white/20 font-black uppercase italic mb-1 tracking-widest">Plan Musculación</p>
-                <span class="text-[10px] font-black uppercase italic ${tieneRutina ? 'text-white' : 'text-white/20'}">
-                    ${activa ? (activa.nombre_grupo || activa.objetivo) : 'SIN ASIGNAR'}
-                </span>
+            <!-- COLUMNA 2: PLAN Y ESTADO (IGUAL QUE ALUMNOS) -->
+            <div class="flex-1 border-t md:border-t-0 md:border-l border-white/5 pt-4 md:pt-0 md:pl-8">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
+                    <!-- Info Arsenal -->
+                    <div>
+                        <p class="text-[9px] text-white/20 font-black uppercase tracking-widest mb-1 flex items-center gap-1.5 italic">
+                            <i data-lucide="dumbbell" class="w-3 h-3 text-red-600"></i> Plan Musculación
+                        </p>
+                        <p class="text-sm font-black uppercase italic text-white truncate">
+                            ${activa ? (activa.nombre_grupo || activa.objetivo) : 'SIN ASIGNAR'}
+                        </p>
+                    </div>
+
+                    <!-- Estado y Badge -->
+                    <div class="flex flex-row md:flex-col items-center md:items-start justify-between gap-2">
+                        <div class="flex items-center gap-2">
+                            <span class="px-3 py-1 rounded-lg text-[9px] font-black uppercase border ${colorBadge} italic">
+                                ${textoEstado}
+                            </span>
+                        </div>
+                        <p class="text-[10px] text-white/20 font-bold italic flex items-center gap-1 uppercase tracking-tighter">
+                            Vencimiento: <span class="text-white">${activa ? activa.fecha_vencimiento : 'N/A'}</span>
+                        </p>
+                    </div>
+                </div>
             </div>
 
-            <div class="flex items-center gap-2">
+            <!-- COLUMNA 3: ACCIONES -->
+            <div class="flex items-center justify-end gap-3 min-w-[120px] border-t md:border-t-0 border-white/5 pt-3 md:pt-0">
                 <button onclick="window.openFichaTecnica(${a.id})" 
-                    class="h-10 w-10 bg-white/5 hover:bg-white/10 text-white rounded-xl flex items-center justify-center transition-all">
-                    <i data-lucide="clipboard-list" class="w-4 h-4"></i>
+                    class="h-12 w-12 bg-white/5 hover:bg-white/10 text-white rounded-xl flex items-center justify-center transition-all border border-white/5 shadow-lg" 
+                    title="Ficha Técnica">
+                    <i data-lucide="clipboard-list" class="w-5 h-5"></i>
                 </button>
                 <button onclick="window.openRoutineEditor(${a.id})" 
-                    class="px-5 h-10 viking-bg-red text-black rounded-xl text-[9px] font-black uppercase italic hover:scale-105 flex items-center gap-2 shadow-lg shadow-red-900/10 transition-all">
-                    <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i> ASIGNAR
+                    class="px-6 h-12 viking-bg-red text-black rounded-xl text-[10px] font-black uppercase italic hover:scale-105 flex items-center gap-3 shadow-xl shadow-red-900/20 transition-all">
+                    <i data-lucide="plus-circle" class="w-4 h-4"></i>
+                    <span>ASIGNAR</span>
                 </button>
             </div>
         </div>`;
