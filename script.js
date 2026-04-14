@@ -1787,9 +1787,9 @@ window.renderRutinasList = function(listaDatos) {
 
     // --- ACTUALIZACIÓN DE ESTADÍSTICAS ---
     const total = state.alumnos.filter(a => {
-        const p = (a.plan?.nombre || "").toLowerCase().trim();
-        return p.includes('musculacion') || p.includes('completo') || p.includes('personalizado') || plan === 'premium';
-    }).length;
+		const nombrePlan = (a.plan?.nombre || "").toLowerCase().trim();
+		return nombrePlan.includes('musculacion') || nombrePlan.includes('completo') || nombrePlan.includes('personalizado') || nombrePlan === 'premium';
+	}).length;
     
     const conRutina = state.alumnos.filter(a => (a.planes_rutina && a.planes_rutina.length > 0)).length;
     const sinRutina = total - conRutina;
@@ -1904,9 +1904,9 @@ window.filterRutinas = function(filtro) {
     const hoy = new Date().toISOString().split('T')[0];
     
     let base = state.alumnos.filter(a => {
-        const plan = (a.plan?.nombre || "").toLowerCase().trim();
-        return plan.includes('musculacion') || plan.includes('completo') || plan.includes('personalizado') || plan === 'premium';
-    });
+		const nombrePlan = (a.plan?.nombre || "").toLowerCase().trim();
+		return nombrePlan.includes('musculacion') || nombrePlan.includes('completo') || nombrePlan.includes('personalizado') || nombrePlan === 'premium';
+	});
 
     let filtrados = base;
     if(filtro === 'con') filtrados = base.filter(a => (a.planes_rutina && a.planes_rutina.length > 0));
@@ -1921,11 +1921,11 @@ window.searchAlumnoRutina = function(query) {
     state.routineWizard.currentPage = 1;
     const q = query.toLowerCase().trim();
     const filtrados = (state.alumnos || []).filter(a => {
-        const matchSearch = (a.nombre_completo || "").toLowerCase().includes(q) || (a.dni || "").includes(q);
-        const plan = (a.plan?.nombre || "").toLowerCase().trim();
-        const esMusc = plan.includes('musculacion') || plan.includes('completo') || plan.includes('personalizado') || plan === 'premium';
-        return matchSearch && esMusc;
-    });
+		const matchSearch = (a.nombre_completo || "").toLowerCase().includes(q) || (a.dni || "").includes(q);
+		const nombrePlan = (a.plan?.nombre || "").toLowerCase().trim();
+		const esMusc = nombrePlan.includes('musculacion') || nombrePlan.includes('completo') || nombrePlan.includes('personalizado') || nombrePlan === 'premium';
+		return matchSearch && esMusc;
+	});
     window.renderRutinasList(filtrados);
 };
 
