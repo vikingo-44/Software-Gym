@@ -1905,7 +1905,7 @@ window.filterRutinas = function(filtro) {
     
     let base = state.alumnos.filter(a => {
         const plan = (a.plan?.nombre || "").toLowerCase();
-        return plan.includes('musculacion') || plan.includes('completo') || plan.includes('personalizado');
+        return plan.includes('musculacion') || plan.includes('completo') || plan.includes('personalizado') || plan.includes('premium');
     });
 
     let filtrados = base;
