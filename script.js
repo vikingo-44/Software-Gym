@@ -1787,7 +1787,7 @@ window.renderRutinasList = function(listaDatos) {
 
     // --- ACTUALIZACIÓN DE ESTADÍSTICAS ---
     const total = state.alumnos.filter(a => {
-        const p = (a.plan?.nombre || "").toLowerCase();
+        const p = (a.plan?.nombre || "").toLowerCase().trim();
         return p.includes('musculacion') || p.includes('completo') || p.includes('personalizado') || plan === 'premium';
     }).length;
     
@@ -1904,7 +1904,7 @@ window.filterRutinas = function(filtro) {
     const hoy = new Date().toISOString().split('T')[0];
     
     let base = state.alumnos.filter(a => {
-        const plan = (a.plan?.nombre || "").toLowerCase();
+        const plan = (a.plan?.nombre || "").toLowerCase().trim();
         return plan.includes('musculacion') || plan.includes('completo') || plan.includes('personalizado') || plan === 'premium';
     });
 
@@ -1919,10 +1919,10 @@ window.filterRutinas = function(filtro) {
 window.searchAlumnoRutina = function(query) {
     if(!query) { window.filterRutinas('todos'); return; }
     state.routineWizard.currentPage = 1;
-    const q = query.toLowerCase();
+    const q = query.toLowerCase().trim();
     const filtrados = (state.alumnos || []).filter(a => {
         const matchSearch = (a.nombre_completo || "").toLowerCase().includes(q) || (a.dni || "").includes(q);
-        const plan = (a.plan?.nombre || "").toLowerCase();
+        const plan = (a.plan?.nombre || "").toLowerCase().trim();
         const esMusc = plan.includes('musculacion') || plan.includes('completo') || plan.includes('personalizado') || plan === 'premium';
         return matchSearch && esMusc;
     });
