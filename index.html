@@ -910,8 +910,16 @@
 					</div>
 				</div>
 
-				<!-- CONTENEDOR DEL CALENDARIO -->
-				<div id="calendar-grid" class="calendar-container h-[750px] overflow-y-auto custom-scrollbar"></div>
+				<!-- CONTENEDOR DEL CALENDARIO (ESTRUCTURA FIJA PARA EVITAR DESFASES) -->
+				<!-- Se agrega overflow-x-auto para que en móviles no se aprete la grilla -->
+				<div class="glass-card rounded-[2.5rem] border border-white/5 bg-zinc-950/40 overflow-hidden shadow-2xl">
+					<div class="overflow-x-auto custom-scrollbar">
+						<div id="calendar-grid" 
+							class="calendar-container min-w-[900px] h-[750px] overflow-y-auto custom-scrollbar grid grid-cols-[80px_repeat(6,1fr)] bg-white/[0.02]">
+							<!-- El JS inyectará el contenido aquí siguiendo estrictamente las 7 columnas -->
+						</div>
+					</div>
+				</div>
 			</div>
 
 			<!-- VISTA DE RUTINAS (STAFF) -->
