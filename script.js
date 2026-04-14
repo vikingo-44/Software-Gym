@@ -1165,11 +1165,16 @@
 
 // 1. INICIALIZACIÓN DEL ESTADO
 if (!state.routineWizard) {
-    state.routineWizard = {};
+    state.routineWizard = {
+        currentPage: 1,
+        itemsPerPage: 10,
+        filteredAlumnos: []
+    };
 }
 
 function resetWizardState(alumnoId = null) {
     state.routineWizard = {
+        ...state.routineWizard,
         alumnoId: alumnoId,
         currentStep: 1,
         tipo: 'normal',
@@ -1761,50 +1766,70 @@ window.renderRutinas = async function() {
     const titleEl = document.getElementById('rutina-title');
     
     if (rol === "alumno") {
-        if(list) list.classList.add('hidden');
+        if(list) list.parentElement.parentElement.classList.add('hidden');
         if(studentView) studentView.classList.remove('hidden');
         if(titleEl) titleEl.innerText = "MI ENTRENAMIENTO";
         window.openFichaTecnica(state.user.id);
     } else {
         if(studentView) studentView.classList.add('hidden');
-        if(list) list.classList.remove('hidden');
-        if(titleEl) titleEl.innerText = "CONTROL DE ARSENAL";
+        if(list) list.parentElement.parentElement.classList.remove('hidden');
+        if(titleEl) titleEl.innerText = "CENTRAL DE ARSENAL";
         window.filterRutinas('todos');
     }
 };
 
 window.renderRutinasList = function(listaDatos) {
-    const list = document.getElementById('rutinas-lista');
-    if(!list) return;
+    const contenedor = document.getElementById('rutinas-lista');
+    if(!contenedor) return;
     
-    if (listaDatos.length === 0) {
-        list.innerHTML = `
-            <div class="p-32 text-center">
-                <p class="opacity-10 font-black uppercase italic tracking-[0.5em] text-4xl">SIN REGISTROS</p>
+    // Guardamos para que la paginación funcione
+    state.routineWizard.filteredAlumnos = listaDatos;
+
+    // --- ACTUALIZACIÓN DE ESTADÍSTICAS ---
+    const total = state.alumnos.filter(a => {
+        const p = (a.plan?.nombre || "").toLowerCase();
+        return p.includes('musculacion') || p.includes('completo') || p.includes('personalizado');
+    }).length;
+    
+    const conRutina = state.alumnos.filter(a => (a.planes_rutina && a.planes_rutina.length > 0)).length;
+    const sinRutina = total - conRutina;
+
+    if (document.getElementById('stats-rutinas-total')) document.getElementById('stats-rutinas-total').innerText = total;
+    if (document.getElementById('stats-rutinas-cargados')) document.getElementById('stats-rutinas-cargados').innerText = conRutina;
+    if (document.getElementById('stats-rutinas-pendientes')) document.getElementById('stats-rutinas-pendientes').innerText = sinRutina;
+    if (document.getElementById('stats-rutinas-pagina')) document.getElementById('stats-rutinas-pagina').innerText = state.routineWizard.currentPage;
+
+    // --- LÓGICA DE PAGINACIÓN ---
+    const totalItems = listaDatos.length;
+    const totalPages = Math.ceil(totalItems / state.routineWizard.itemsPerPage);
+    const inicio = (state.routineWizard.currentPage - 1) * state.routineWizard.itemsPerPage;
+    const fin = inicio + state.routineWizard.itemsPerPage;
+    const listaPaginada = listaDatos.slice(inicio, fin);
+
+    if (listaPaginada.length === 0) {
+        contenedor.innerHTML = `
+            <div class="h-full flex flex-col items-center justify-center text-white/20 py-10">
+                <i data-lucide="dumbbell" class="w-12 h-12 mb-2"></i>
+                <p class="text-xs font-black uppercase italic tracking-widest">Sin atletas en el arsenal</p>
             </div>`;
+        renderRutinasPagination(0);
+        if(window.lucide) lucide.createIcons();
         return;
     }
 
-    const hoy = new Date().toISOString().split('T')[0];
-
-    // RENDERIZADO CON ESTÉTICA EXACTA DE ALUMNOS (CARDS INDEPENDIENTES CON MÁRGENES)
-    list.innerHTML = listaDatos.map(a => {
-        const initials = a.nombre_completo ? a.nombre_completo.substring(0,2).toUpperCase() : "??";
+    contenedor.innerHTML = listaPaginada.map(a => {
+        const initials = getVikingInitials(a);
         const tieneRutina = a.planes_rutina && a.planes_rutina.length > 0;
         const activa = tieneRutina ? a.planes_rutina.find(r => r.activo) : null;
         
-        // Lógica de Estado (Sincronizada con visual de Alumnos)
         const colorEstado = tieneRutina ? 'bg-green-600' : 'bg-red-600'; 
         const textoEstado = tieneRutina ? 'CARGADO' : 'PENDIENTE';
         const colorBadge = tieneRutina ? 'text-green-500 bg-green-500/10 border-green-500/20' : 'text-red-500 bg-red-500/10 border-red-500/20';
-        const planNombre = a.plan ? a.plan.nombre : 'Sin Plan';
 
         return `
-        <div class="glass-card p-5 rounded-3xl border border-white/5 flex flex-col md:flex-row md:items-center gap-6 hover:border-red-600/20 transition-all group relative overflow-hidden mb-4">
-            <!-- Barra lateral decorativa -->
+        <div class="glass-card p-5 rounded-3xl border border-white/5 flex flex-col md:flex-row md:items-center gap-6 hover:border-red-600/20 transition-all group relative overflow-hidden mb-3">
             <div class="absolute left-0 top-0 bottom-0 w-1.5 ${colorEstado} opacity-40 group-hover:opacity-100 transition-opacity"></div>
             
-            <!-- COLUMNA 1: IDENTIDAD -->
             <div class="flex items-center gap-4 w-full md:w-1/3">
                 <div class="w-14 h-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center font-black text-white text-lg italic shadow-lg group-hover:bg-red-600 group-hover:text-black transition-colors shrink-0">
                     ${initials}
@@ -1812,48 +1837,44 @@ window.renderRutinasList = function(listaDatos) {
                 <div class="overflow-hidden">
                     <h4 class="text-sm font-black uppercase italic text-white group-hover:text-red-500 transition-colors truncate">${a.nombre_completo}</h4>
                     <div class="flex flex-col mt-1">
-                        <p class="text-[10px] text-white/40 font-bold flex items-center gap-1.5 uppercase tracking-widest italic">
+                        <p class="text-[10px] text-white/30 font-bold flex items-center gap-1.5 uppercase tracking-widest">
                             <i data-lucide="id-card" class="w-3 h-3"></i> ${a.dni}
                         </p>
-                        <p class="text-[10px] text-white/40 font-bold flex items-center gap-1.5 uppercase tracking-widest truncate italic">
-                            <i data-lucide="mail" class="w-3 h-3"></i> ${a.email || 'Sin Email'}
+                        <p class="text-[10px] text-white/30 font-bold flex items-center gap-1.5 uppercase tracking-widest truncate">
+                            <i data-lucide="ticket" class="w-3 h-3"></i> ${a.plan?.nombre || 'SIN PLAN'}
                         </p>
                     </div>
                 </div>
             </div>
 
-            <!-- COLUMNA 2: PLAN Y ESTADO -->
             <div class="flex-1 border-t md:border-t-0 md:border-l border-white/5 pt-4 md:pt-0 md:pl-8">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
-                    <!-- Info Plan -->
                     <div>
                         <p class="text-[9px] text-white/20 font-black uppercase tracking-widest mb-1 flex items-center gap-1.5 italic">
-                            <i data-lucide="ticket" class="w-3 h-3 text-red-600"></i> Plan Actual
+                            <i data-lucide="dumbbell" class="w-3 h-3 text-red-600"></i> Plan Musculación
                         </p>
-                        <p class="text-sm font-black uppercase italic text-white truncate">${planNombre}</p>
+                        <p class="text-sm font-black uppercase italic text-white truncate">
+                            ${activa ? (activa.nombre_grupo || activa.objetivo) : 'SIN ASIGNAR'}
+                        </p>
                     </div>
-
-                    <!-- Estado y Vencimiento -->
                     <div class="flex flex-row md:flex-col items-center md:items-start justify-between gap-2">
                         <div class="flex items-center gap-2">
                             <span class="px-3 py-1 rounded-lg text-[9px] font-black uppercase border ${colorBadge} italic">
                                 ${textoEstado}
                             </span>
                         </div>
-                        <p class="text-[10px] text-white/40 font-bold italic flex items-center gap-1 uppercase tracking-tighter">
-                            Venc: <span class="text-white">${activa ? activa.fecha_vencimiento : 'N/A'}</span>
+                        <p class="text-[10px] text-white/20 font-bold italic flex items-center gap-1 uppercase tracking-tighter">
+                            Venc: <span class="text-white">${activa ? (activa.fecha_vencimiento || 'N/A') : 'N/A'}</span>
                         </p>
                     </div>
                 </div>
             </div>
 
-            <!-- COLUMNA 3: ACCIONES -->
             <div class="flex items-center justify-end gap-3 min-w-[120px] border-t md:border-t-0 border-white/5 pt-3 md:pt-0">
-                <button onclick="window.openFichaTecnica(${a.id})" class="px-4 py-3 bg-white/5 text-white rounded-xl text-[10px] font-black uppercase italic hover:bg-white/10 hover:text-red-500 transition-all flex items-center gap-2 shadow-lg w-full md:w-auto justify-center">
-                    <i data-lucide="clipboard-list" class="w-4 h-4"></i>
-                    <span>Ver</span>
+                <button onclick="window.openFichaTecnica(${a.id})" class="h-12 w-12 bg-white/5 hover:bg-white/10 text-white rounded-xl flex items-center justify-center transition-all border border-white/5" title="Ver Arsenal">
+                    <i data-lucide="clipboard-list" class="w-5 h-5"></i>
                 </button>
-                <button onclick="window.openRoutineEditor(${a.id})" class="viking-bg-red text-black px-6 py-3 rounded-xl font-black uppercase italic text-[10px] shadow-xl flex items-center gap-2 hover:scale-105 transition-all w-full md:w-auto justify-center">
+                <button onclick="window.openRoutineEditor(${a.id})" class="viking-bg-red text-black px-6 py-3 rounded-xl font-black uppercase italic text-[10px] shadow-xl flex items-center gap-2 hover:scale-105 transition-all">
                     <i data-lucide="plus-circle" class="w-4 h-4"></i>
                     <span>Arsenal</span>
                 </button>
@@ -1861,11 +1882,13 @@ window.renderRutinasList = function(listaDatos) {
         </div>`;
     }).join('');
     
+    renderRutinasPagination(totalPages);
     if(window.lucide) lucide.createIcons();
 };
 
 window.filterRutinas = function(filtro) {
     if(!state.alumnos) return;
+    state.routineWizard.currentPage = 1; // Reset al filtrar
     
     document.querySelectorAll('.filter-btn-rutina').forEach(btn => {
         btn.classList.remove('bg-red-600', 'text-black');
@@ -1880,7 +1903,6 @@ window.filterRutinas = function(filtro) {
 
     const hoy = new Date().toISOString().split('T')[0];
     
-    // Filtramos alumnos que tengan planes relacionados a musculación
     let base = state.alumnos.filter(a => {
         const plan = (a.plan?.nombre || "").toLowerCase();
         return plan.includes('musculacion') || plan.includes('completo') || plan.includes('personalizado');
@@ -1896,11 +1918,61 @@ window.filterRutinas = function(filtro) {
 
 window.searchAlumnoRutina = function(query) {
     if(!query) { window.filterRutinas('todos'); return; }
+    state.routineWizard.currentPage = 1;
     const q = query.toLowerCase();
-    const filtrados = (state.alumnos || []).filter(a => 
-        (a.nombre_completo || "").toLowerCase().includes(q) || (a.dni || "").includes(q)
-    );
+    const filtrados = (state.alumnos || []).filter(a => {
+        const matchSearch = (a.nombre_completo || "").toLowerCase().includes(q) || (a.dni || "").includes(q);
+        const plan = (a.plan?.nombre || "").toLowerCase();
+        const esMusc = plan.includes('musculacion') || plan.includes('completo') || plan.includes('personalizado');
+        return matchSearch && esMusc;
+    });
     window.renderRutinasList(filtrados);
+};
+
+function renderRutinasPagination(totalPages) {
+    const container = document.getElementById('rutinas-pagination');
+    if (!container) return;
+    
+    if (totalPages <= 1) {
+        container.innerHTML = '';
+        return;
+    }
+
+    let html = `
+        <button onclick="changeRutinasPage(${state.routineWizard.currentPage - 1})" ${state.routineWizard.currentPage === 1 ? 'disabled' : ''} 
+            class="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-white hover:bg-red-600 hover:text-black transition-all disabled:opacity-20 disabled:pointer-events-none">
+            <i data-lucide="chevron-left" class="w-5 h-5"></i>
+        </button>
+    `;
+
+    for (let i = 1; i <= totalPages; i++) {
+        if (i === 1 || i === totalPages || (i >= state.routineWizard.currentPage - 1 && i <= state.routineWizard.currentPage + 1)) {
+            html += `
+                <button onclick="changeRutinasPage(${i})" 
+                    class="w-10 h-10 rounded-xl font-black italic text-xs transition-all 
+                    ${state.routineWizard.currentPage === i ? 'bg-red-600 text-black shadow-lg shadow-red-900/20' : 'bg-white/5 text-white/40 hover:text-white'}">
+                    ${i}
+                </button>
+            `;
+        } else if (i === state.routineWizard.currentPage - 2 || i === state.routineWizard.currentPage + 2) {
+            html += `<span class="text-white/10">...</span>`;
+        }
+    }
+
+    html += `
+        <button onclick="changeRutinasPage(${state.routineWizard.currentPage + 1})" ${state.routineWizard.currentPage === totalPages ? 'disabled' : ''} 
+            class="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-white hover:bg-red-600 hover:text-black transition-all disabled:opacity-20 disabled:pointer-events-none">
+            <i data-lucide="chevron-right" class="w-5 h-5"></i>
+        </button>
+    `;
+
+    container.innerHTML = html;
+    if(window.lucide) lucide.createIcons();
+}
+
+window.changeRutinasPage = function(page) {
+    state.routineWizard.currentPage = page;
+    window.renderRutinasList(state.routineWizard.filteredAlumnos);
 };
 
 // =========================================================
