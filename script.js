@@ -1159,6 +1159,7 @@
 		/**
  * ============================================================
  * MÓDULO DE RUTINAS VIKINGAS - SISTEMA INTEGRAL IRONMOD (DEFINITIVO)
+ * Sincronizado con: ejercicios_libreria, rutina_dias, series_ejercicios
  * ============================================================
  */
 
@@ -1178,7 +1179,7 @@ function resetWizardState(alumnoId = null) {
         nombre_grupo: 'ENTRENAMIENTO A',
         objetivo: 'Fase de fuerza y potencia',
         vencimiento: new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0],
-        config: {}, // Estructura IRONMOD: { 'week1_day1': { label: '', notes: '', exercises: [] } }
+        config: {}, // Estructura IRONMOD: { 'week1_day1': { label: '', exercises: [] } }
         semanaActivaWizard: 1,
         activeDayKey: null,
         isTabSwitching: false,
@@ -1188,7 +1189,7 @@ function resetWizardState(alumnoId = null) {
 }
 
 /**
- * Utilidades
+ * Utilidades de Identidad
  */
 function getVikingInitials(a) {
     const nombre = a.nombre_completo || (a.usuario ? a.usuario.nombre_completo : null);
@@ -1199,13 +1200,13 @@ function getVikingInitials(a) {
 }
 
 /**
- * 1. CARGA DE METADATOS
+ * 1. CARGA DE METADATOS (Arsenal Vikingo)
  */
 async function loadMusculacionMetadata() {
     try {
         const [grupos, ejercicios] = await Promise.all([
             apiFetch('/rutinas/grupos-musculares'),
-            apiFetch('/rutinas/ejercicios')
+            apiFetch('/rutinas/ejercicios') 
         ]);
         state.gruposMusculares = Array.isArray(grupos) ? grupos : [];
         state.ejerciciosLibreria = Array.isArray(ejercicios) ? ejercicios : [];
@@ -1215,7 +1216,7 @@ async function loadMusculacionMetadata() {
 }
 
 /**
- * 2. FICHA TÉCNICA (Visualización por Semanas ID)
+ * 2. FICHA TÉCNICA (Visualización Estratégica)
  */
 window.openFichaTecnica = async function(alumnoId) {
     const rutinaContainer = document.getElementById('ficha-rutina-container');
@@ -1239,7 +1240,6 @@ window.openFichaTecnica = async function(alumnoId) {
         return;
     }
 
-    // Actualizar UI de cabecera
     const ids = {
         'ficha-avatar': getVikingInitials(al),
         'ficha-nombre': al.nombre_completo || 'Sin Nombre',
@@ -1298,7 +1298,7 @@ window.openFichaTecnica = async function(alumnoId) {
                             </div>
                             <div>
                                 <span class="text-[13px] font-black italic uppercase tracking-wider text-white group-hover:text-red-500 transition-colors">${d.nombre_dia}</span>
-                                <p class="text-[9px] text-white/30 font-bold uppercase tracking-widest">${ejerciciosFiltrados.length} Ejercicios</p>
+                                <p class="text-[9px] text-white/30 font-bold uppercase tracking-widest">${ejerciciosFiltrados.length} Items</p>
                             </div>
                         </div>
                         <i data-lucide="chevron-down" class="w-5 h-5 text-white/20 transition-transform ${isOpen ? 'rotate-180' : ''}" id="icon-${diaId}"></i>
@@ -1334,12 +1334,12 @@ window.openFichaTecnica = async function(alumnoId) {
                         <div class="flex items-center gap-6 cursor-pointer" onclick="window.toggleFichaElement('${objetivoId}')">
                             <div class="w-1.5 h-12 viking-bg-red rounded-full"></div>
                             <div>
-                                <h5 class="text-xl font-black italic uppercase text-white leading-none">${rutina.nombre_grupo || rutina.nombre_plan || rutina.objetivo}</h5>
-                                <p class="text-[9px] text-white/40 font-bold italic mt-2 uppercase">OBJETIVO: ${rutina.descripcion || 'General'}</p>
+                                <h5 class="text-xl font-black italic uppercase text-white leading-none">${rutina.nombre_grupo || rutina.objetivo}</h5>
+                                <p class="text-[9px] text-white/40 font-bold italic mt-2 uppercase tracking-widest">OBJETIVO: ${rutina.descripcion || 'General'}</p>
                             </div>
                         </div>
                         <div class="flex items-center gap-4">
-                            ${isStaff ? `<button onclick="closeModal('modal-ficha-tecnica'); window.openRoutineEditor(${alumnoId}, true)" class="bg-amber-600 text-white px-4 py-2 rounded-xl text-[9px] font-black uppercase italic">EDITAR</button>` : ''}
+                            ${isStaff ? `<button onclick="closeModal('modal-ficha-tecnica'); window.openRoutineEditor(${alumnoId}, true)" class="bg-amber-600 text-white px-4 py-2 rounded-xl text-[9px] font-black uppercase italic">Editar</button>` : ''}
                             <i data-lucide="chevron-down" class="w-6 h-6 text-white/20 transition-transform" id="icon-${objetivoId}" onclick="window.toggleFichaElement('${objetivoId}')"></i>
                         </div>
                     </div>
@@ -1351,7 +1351,7 @@ window.openFichaTecnica = async function(alumnoId) {
             </div>`;
         }).join('');
     } else {
-        rutinaContainer.innerHTML = `<div class="col-span-2 p-20 text-center opacity-20 font-black uppercase italic tracking-widest border-2 border-dashed border-white/5 rounded-3xl">Arsenal vacío</div>`;
+        rutinaContainer.innerHTML = `<div class="col-span-2 p-20 text-center opacity-20 font-black uppercase italic tracking-widest border-2 border-dashed border-white/5 rounded-3xl">Sin Registros</div>`;
     }
 
     if (window.lucide) lucide.createIcons();
@@ -1397,9 +1397,7 @@ window.openRoutineEditor = async function(alumnoId, isEdit = false) {
         if (active) {
             state.routineWizard.tipo_id = active.tipo_id;
             state.routineWizard.tipo = active.tipo_id === 2 ? 'progresiva' : 'normal';
-            
-            // Prioridad de lectura para el nombre del plan
-            state.routineWizard.nombre_grupo = active.nombre_grupo || active.nombre_plan || active.objetivo;
+            state.routineWizard.nombre_grupo = active.nombre_grupo || active.objetivo;
             state.routineWizard.objetivo = active.descripcion;
             state.routineWizard.vencimiento = active.fecha_vencimiento;
             state.routineWizard.cantDias = active.dias.length;
@@ -1409,7 +1407,7 @@ window.openRoutineEditor = async function(alumnoId, isEdit = false) {
                 d.ejercicios.forEach(ex => {
                     const weekNum = ex.semana_id || 1;
                     const key = state.routineWizard.tipo === 'progresiva' ? `week${weekNum}_day${dayNum}` : `day_${dayNum}`;
-                    if(!state.routineWizard.config[key]) state.routineWizard.config[key] = { label: d.nombre_dia, notes: '', exercises: [] };
+                    if(!state.routineWizard.config[key]) state.routineWizard.config[key] = { label: d.nombre_dia, exercises: [] };
                     
                     const cleanName = (ex.ejercicio_obj?.nombre || "").replace(/\[Semana \d+\]/, "").trim();
                     const serie = ex.series_detalle?.[0] || {};
@@ -1447,14 +1445,14 @@ window.renderWizardStep = function() {
                 <div class="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-12">
                     <div class="col-span-full space-y-2">
                         <label class="text-[10px] font-black text-red-600 uppercase tracking-widest italic ml-2">Nombre del Plan Maestro</label>
-                        <input type="text" value="${state.routineWizard.nombre_grupo}" oninput="state.routineWizard.nombre_grupo = this.value" class="viking-input !h-16 text-2xl font-black italic uppercase" placeholder="Ej: CICLO DE FUERZA BRUTA">
+                        <input type="text" value="${state.routineWizard.nombre_grupo}" oninput="state.routineWizard.nombre_grupo = this.value" class="viking-input !h-16 text-2xl font-black italic uppercase" placeholder="Ej: CICLO DE VOLUMEN">
                     </div>
                     <div class="col-span-full space-y-2">
-                        <label class="text-[10px] font-black text-white/30 uppercase tracking-widest italic ml-2">Objetivo Estratégico / Resumen</label>
+                        <label class="text-[10px] font-black text-white/30 uppercase tracking-widest italic ml-2">Objetivo / Resumen Estratégico</label>
                         <textarea oninput="state.routineWizard.objetivo = this.value" class="viking-input h-32 py-5 text-sm font-medium" placeholder="Descripción táctica...">${state.routineWizard.objetivo}</textarea>
                     </div>
                     <div class="space-y-2">
-                        <label class="text-[10px] font-black text-white/30 uppercase tracking-widest italic ml-2">Fecha Vencimiento</label>
+                        <label class="text-[10px] font-black text-white/30 uppercase tracking-widest italic ml-2">Fecha de Vencimiento</label>
                         <input type="date" value="${state.routineWizard.vencimiento}" oninput="state.routineWizard.vencimiento = this.value" class="viking-input !h-14">
                     </div>
                     <div class="space-y-2">
@@ -1511,7 +1509,7 @@ window.renderWizardStep = function() {
                                     </div>
                                     <div class="space-y-4 pt-4 border-t border-white/5">
                                         ${data.exercises.map((ex, exIdx) => window.renderExerciseItemWizard(key, ex, exIdx)).join('')}
-                                        ${data.exercises.length === 0 ? '<p class="text-center py-10 text-white/10 font-black italic text-xs">Añade ejercicios desde el arsenal.</p>' : ''}
+                                        ${data.exercises.length === 0 ? '<p class="text-center py-10 text-white/10 font-black italic text-xs uppercase tracking-widest">Añade ejercicios desde el arsenal.</p>' : ''}
                                     </div>
                                 </div>` : ''}
                             </div>`;
@@ -1571,7 +1569,7 @@ window.clonePrevWeekDay = (dayNum) => {
     if (!src || src.exercises.length === 0) return showVikingToast("Sin datos en semana anterior", true);
     state.routineWizard.config[`week${curW}_day${dayNum}`] = { label: src.label, notes: src.notes, exercises: src.exercises.map(ex => ({ ...ex, uid: Math.random().toString(36).substr(2, 9) })) };
     window.renderWizardStep();
-    showVikingToast(`Semana ${curW-1} clonada.`);
+    showVikingToast(`Semana ${curW-1} clonada correctamente.`);
 };
 
 window.updateSessionData = (key, f, v) => { if (!state.routineWizard.config[key]) state.routineWizard.config[key] = { label: '', exercises: [] }; state.routineWizard.config[key][f] = v; };
@@ -1580,7 +1578,7 @@ window.removeExFromWizard = (key, uid) => { state.routineWizard.config[key].exer
 
 window.nextStep = () => {
     if (state.routineWizard.currentStep === 1) {
-        if (!state.routineWizard.nombre_grupo) return showVikingToast("Asigna un nombre al plan", true);
+        if (!state.routineWizard.nombre_grupo) return showVikingToast("Asigna un nombre al plan maestro", true);
         state.routineWizard.currentStep = 2;
         state.routineWizard.activeDayKey = state.routineWizard.tipo === 'progresiva' ? 'week1_day1' : 'day_1';
         window.renderWizardStep();
@@ -1590,7 +1588,7 @@ window.nextStep = () => {
 window.prevStep = () => { if (state.routineWizard.currentStep === 2) { state.routineWizard.currentStep = 1; window.renderWizardStep(); } };
 
 /**
- * 4. PERSISTENCIA FINAL (UTILIZANDO NOMBRE_GRUPO COMO CAMPO CLAVE)
+ * 4. PERSISTENCIA FINAL (SIN PROGRESO_JSON)
  */
 window.saveFinalRutina = async function() {
     const config = state.routineWizard.config;
@@ -1605,8 +1603,15 @@ window.saveFinalRutina = async function() {
                 if (session && session.exercises) {
                     session.exercises.forEach(ex => {
                         ejerciciosDia.push({
-                            ejercicio_id: ex.id, semana_id: wNum, comentario: `[Semana ${wNum}] ${ex.comentario || ''}`.trim(),
-                            series: [{ numero_serie: 1, repeticiones: ex.reps, peso: ex.weight, descanso: ex.rest }]
+                            ejercicio_id: ex.id,
+                            semana_id: wNum,
+                            comentario: `[Semana ${wNum}] ${ex.comentario || ''}`.trim(),
+                            series: [{
+                                numero_serie: 1,
+                                repeticiones: ex.reps,
+                                peso: ex.weight,
+                                descanso: ex.rest
+                            }]
                         });
                     });
                 }
@@ -1616,8 +1621,15 @@ window.saveFinalRutina = async function() {
             if (session && session.exercises) {
                 session.exercises.forEach(ex => {
                     ejerciciosDia.push({
-                        ejercicio_id: ex.id, semana_id: null, comentario: ex.comentario || '',
-                        series: [{ numero_serie: 1, repeticiones: ex.reps, peso: ex.weight, descanso: ex.rest }]
+                        ejercicio_id: ex.id,
+                        semana_id: null,
+                        comentario: ex.comentario || '',
+                        series: [{
+                            numero_serie: 1,
+                            repeticiones: ex.reps,
+                            peso: ex.weight,
+                            descanso: ex.rest
+                        }]
                     });
                 });
             }
@@ -1626,7 +1638,6 @@ window.saveFinalRutina = async function() {
         processedDays.push({ nombre_dia: dName, ejercicios: ejerciciosDia });
     }
 
-    // Payload con nombre_grupo tal como se acordó para NeonDB
     const payload = {
         usuario_id: state.routineWizard.alumnoId,
         descripcion: state.routineWizard.objetivo,
@@ -1638,9 +1649,10 @@ window.saveFinalRutina = async function() {
         dias: processedDays
     };
 
+    // ELIMINAR CUALQUIER REFERENCIA A progreso_json DEL PAYLOAD GLOBAL
     const res = await apiFetch('/rutinas/plan', 'POST', payload);
     if (!res.error) {
-        showVikingToast("¡Arsenal vikingo forjado exitosamente! ⚔️");
+        showVikingToast("¡Arsenal vikingo forjado correctamente! ⚔️");
         closeModal('modal-rutina-editor');
         if(typeof fetchAlumnos === 'function') fetchAlumnos();
         window.renderRutinas();
@@ -1697,7 +1709,7 @@ window.renderRutinasList = function(listaDatos) {
                     <p class="text-[9px] text-white/20 font-black uppercase italic mb-2 tracking-widest">Estado Rutina</p>
                     <span class="text-[10px] font-black uppercase italic ${tieneRutina ? 'text-green-500' : 'text-white/20'}">${tieneRutina ? 'ARSENAL CARGADO' : 'PENDIENTE'}</span>
                 </div>
-                ${activa ? `<div><p class="text-[9px] text-white/20 font-black uppercase italic mb-2 tracking-widest">Plan Maestro</p><span class="text-[10px] font-black uppercase italic text-white">${activa.nombre_grupo || activa.nombre_plan || activa.objetivo}</span></div>` : ''}
+                ${activa ? `<div><p class="text-[9px] text-white/20 font-black uppercase italic mb-2 tracking-widest">Plan Maestro</p><span class="text-[10px] font-black uppercase italic text-white">${activa.nombre_grupo || activa.objetivo}</span></div>` : ''}
             </div>
             <div class="flex items-center gap-3">
                 <button onclick="window.openFichaTecnica(${a.id})" class="h-14 w-14 bg-white/5 hover:bg-white/10 text-white rounded-2xl transition-all flex items-center justify-center" title="Ficha Técnica"><i data-lucide="clipboard-list" class="w-5 h-5"></i></button>
