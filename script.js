@@ -3759,18 +3759,19 @@ if (editorForm) {
 
 		// SECCION PLANES
 		// Alta de Plan Nuevo
-        function openModalPlan() { 
-			document.getElementById('plan-id').value = ""; 
-			document.getElementById('plan-nombre').value = "";
-			document.getElementById('plan-precio').value = "";
-			
-			// Seteamos el nuevo campo de cupos a 12 por defecto
-			const elClases = document.getElementById('plan-clases');
-			if(elClases) elClases.value = "12"; 
-			
-			document.getElementById('modal-plan-title').innerText = "Nuevo Plan"; 
-			openModal('modal-plan'); 
-		}
+			function openModalPlan() { 
+				document.getElementById('form-plan').reset();
+				document.getElementById('plan-id').value = ""; 
+				
+				// Valores por defecto
+				const elClases = document.getElementById('plan-clases');
+				if(elClases) elClases.value = "12"; 
+				
+				document.getElementById('modal-plan-title').innerText = "Nuevo Plan Maestro"; 
+				document.getElementById('btn-delete-plan').classList.add('hidden');
+				openModal('modal-plan'); 
+			}
+
         // Función para editar un plan existente
 			function openEditPlan(id) {
 				const p = state.planes.find(x => x.id == id); 
@@ -3779,18 +3780,24 @@ if (editorForm) {
 				document.getElementById('plan-id').value = p.id; 
 				document.getElementById('plan-nombre').value = p.nombre; 
 				document.getElementById('plan-tipo').value = p.tipo_plan_id; 
-				document.getElementById('plan-precio').value = p.precio;
 				
-				// CARGAMOS EL CUPO DESDE LA DB AL INPUT DEL MODAL
+				// Mapeo de los 3 nuevos campos de precio
+				document.getElementById('plan-efectivo').value = p.efectivo || 0;
+				document.getElementById('plan-transferencia').value = p.transferencia || 0;
+				document.getElementById('plan-debito').value = p.debito_credito || 0;
+				
 				const elClases = document.getElementById('plan-clases');
 				if(elClases) elClases.value = p.clases_mensuales || 0;
 
 				const delBtn = document.getElementById('btn-delete-plan'); 
 				if(state.user.rol_nombre === "Administrador" || state.user.rol_nombre === "Supervisor") {
 					delBtn.classList.remove('hidden');
+					delBtn.onclick = () => deleteRecord('planes', p.id, 'modal-plan', loadPlanes);
+				} else {
+					delBtn.classList.add('hidden');
 				}
 				
-				delBtn.onclick = () => deleteRecord('planes', p.id, 'modal-plan', loadPlanes);
+				document.getElementById('modal-plan-title').innerText = "Editar Plan: " + p.nombre;
 				openModal('modal-plan');
 			}
 
@@ -3799,10 +3806,11 @@ if (editorForm) {
 				e.preventDefault(); 
 				const id = document.getElementById('plan-id').value;
 				
-				// CAPTURAMOS LOS DATOS INCLUYENDO EL CAMPO CLASES_MENSUALES
 				const data = { 
 					nombre: document.getElementById('plan-nombre').value, 
-					precio: parseFloat(document.getElementById('plan-precio').value), 
+					efectivo: parseFloat(document.getElementById('plan-efectivo').value || 0), 
+					transferencia: parseFloat(document.getElementById('plan-transferencia').value || 0), 
+					debito_credito: parseFloat(document.getElementById('plan-debito').value || 0), 
 					tipo_plan_id: parseInt(document.getElementById('plan-tipo').value),
 					clases_mensuales: parseInt(document.getElementById('plan-clases').value || 0) 
 				};

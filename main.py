@@ -986,7 +986,9 @@ def get_planes(db: Session = Depends(database.get_db)):
 def create_plan(data: PlanUpdate, db: Session = Depends(database.get_db)):
     new_p = models.Plan(
         nombre=data.nombre,
-        precio=data.precio,
+        efectivo=data.efectivo,
+        transferencia=data.transferencia,
+        debito_credito=data.debito_credito,
         tipo_plan_id=data.tipo_plan_id,
         clases_mensuales=data.clases_mensuales 
     )
@@ -999,7 +1001,9 @@ def update_plan(id: int, data: PlanUpdate, db: Session = Depends(database.get_db
     p = db.query(models.Plan).filter(models.Plan.id == id).first()
     if p:
         p.nombre = data.nombre
-        p.precio = data.precio
+        p.efectivo = data.efectivo
+        p.transferencia = data.transferencia
+        p.debito_credito = data.debito_credito
         p.tipo_plan_id = data.tipo_plan_id
         p.clases_mensuales = data.clases_mensuales
         db.commit()

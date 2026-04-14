@@ -1542,28 +1542,62 @@
 			</div>
 		</div>
 
-    <div id="modal-plan" class="viking-modal">
-        <div class="glass-card p-10 rounded-[3rem] w-full max-w-lg text-left">
-            <h3 class="text-2xl font-black uppercase italic mb-8" id="modal-plan-title">Plan</h3>
-            <form id="form-plan" class="space-y-4">
-                <input type="hidden" id="plan-id">
-                <input type="text" id="plan-nombre" placeholder="Nombre del Plan" required class="viking-input">
-                <div class="grid grid-cols-2 gap-4">
-                    <select id="plan-tipo" class="viking-input" required></select>
-                    <input type="number" id="plan-precio" placeholder="Precio ($)" required class="viking-input">
-                </div>
-				<div class="mt-4">
-					<label class="block text-[10px] font-black text-white-500 uppercase italic mb-1 ml-1">Cupos Mensuales (Créditos)</label>
-					<input type="number" id="plan-clases" placeholder="Ej: 8, 12 o 999 para Libre" class="viking-input w-full">
+    <!-- MODAL PLAN (ACTUALIZADO) -->
+	<div id="modal-plan" class="viking-modal hidden fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+		<div class="glass-card p-10 rounded-[3rem] w-full max-w-lg text-left bg-zinc-950 border border-white/5 shadow-2xl">
+			<h3 class="text-2xl font-black uppercase italic mb-8 text-white tracking-tighter" id="modal-plan-title">Configurar Plan</h3>
+			<form id="form-plan" class="space-y-4">
+				<input type="hidden" id="plan-id">
+				
+				<div class="space-y-1">
+					<label class="text-[9px] font-black text-white/30 uppercase tracking-widest italic ml-2">Nombre del Plan</label>
+					<input type="text" id="plan-nombre" placeholder="Ej: Pase Libre" required class="viking-input">
 				</div>
-                <div class="flex gap-4 pt-4">
-                    <button type="button" onclick="closeModal('modal-plan')" class="flex-1 py-4 bg-white/5 rounded-2xl font-black uppercase italic text-[11px]">Cancelar</button>
-                    <button type="button" id="btn-delete-plan" class="hidden py-4 px-4 bg-red-900/40 rounded-2xl font-black uppercase italic text-[11px] text-red-500">Eliminar</button>
-                    <button type="submit" id="btn-save-plan-modal" class="flex-1 py-4 viking-bg-red text-black rounded-2xl font-black uppercase italic text-[11px]">Guardar Plan</button>
-                </div>
-            </form>
-        </div>
-    </div>
+
+				<div class="space-y-1">
+					<label class="text-[9px] font-black text-white/30 uppercase tracking-widest italic ml-2">Tipo de Membresía</label>
+					<select id="plan-tipo" class="viking-input" required></select>
+				</div>
+
+				<!-- GRILLA DE PRECIOS -->
+				<div class="grid grid-cols-1 gap-3 p-4 bg-white/5 rounded-3xl border border-white/5">
+					<p class="text-[10px] font-black text-red-500 uppercase italic mb-1 ml-1 tracking-widest">Lista de Precios</p>
+					
+					<div class="flex items-center gap-3">
+						<div class="w-10 h-10 rounded-xl bg-green-600/20 flex items-center justify-center shrink-0">
+							<i data-lucide="banknote" class="w-5 h-5 text-green-500"></i>
+						</div>
+						<input type="number" id="plan-efectivo" placeholder="Efectivo ($)" required class="viking-input !h-12 !bg-black/40">
+					</div>
+
+					<div class="flex items-center gap-3">
+						<div class="w-10 h-10 rounded-xl bg-blue-600/20 flex items-center justify-center shrink-0">
+							<i data-lucide="send" class="w-5 h-5 text-blue-500"></i>
+						</div>
+						<input type="number" id="plan-transferencia" placeholder="Transferencia ($)" required class="viking-input !h-12 !bg-black/40">
+					</div>
+
+					<div class="flex items-center gap-3">
+						<div class="w-10 h-10 rounded-xl bg-purple-600/20 flex items-center justify-center shrink-0">
+							<i data-lucide="credit-card" class="w-5 h-5 text-purple-500"></i>
+						</div>
+						<input type="number" id="plan-debito" placeholder="Débito / Crédito ($)" required class="viking-input !h-12 !bg-black/40">
+					</div>
+				</div>
+
+				<div class="space-y-1">
+					<label class="text-[9px] font-black text-white/30 uppercase tracking-widest italic ml-2">Cupos Mensuales (Créditos)</label>
+					<input type="number" id="plan-clases" placeholder="Ej: 12 o 999 para Libre" class="viking-input w-full">
+				</div>
+
+				<div class="flex gap-4 pt-4">
+					<button type="button" onclick="closeModal('modal-plan')" class="flex-1 py-4 bg-white/5 hover:bg-white/10 text-white rounded-2xl font-black uppercase italic text-[11px] transition-all">Cancelar</button>
+					<button type="button" id="btn-delete-plan" class="hidden px-6 bg-red-900/20 rounded-2xl font-black uppercase italic text-[11px] text-red-500 border border-red-500/20 hover:bg-red-600 hover:text-black transition-all">Eliminar</button>
+					<button type="submit" id="btn-save-plan-modal" class="flex-[2] py-4 viking-bg-red text-black rounded-2xl font-black uppercase italic text-[11px] shadow-lg shadow-red-900/20">Guardar Plan</button>
+				</div>
+			</form>
+		</div>
+	</div>
 
     <div id="modal-inscriptos" class="viking-modal">
         <div class="glass-card p-10 rounded-[3rem] w-full max-w-lg text-left">
