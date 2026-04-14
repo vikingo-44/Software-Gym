@@ -159,7 +159,7 @@ class PlanRutina(Base):
     nombre_grupo = Column(String, nullable=True) 
     descripcion = Column(Text, nullable=True) 
     objetivo = Column(String)
-    tipo = Column(String, nullable=True) # "normal" o "progresiva"
+    tipo = Column(String, nullable=True)
     tipo_id = Column(Integer, ForeignKey("tipos_rutina.id"), default=1)
     profesor_nombre = Column(String, nullable=True) 
     fecha_creacion = Column(Date, default=datetime.date.today)
@@ -184,7 +184,7 @@ class EjercicioEnRutina(Base):
     dia_id = Column(Integer, ForeignKey("rutina_dias.id"))
     ejercicio_id = Column(Integer, ForeignKey("ejercicios_libreria.id"))
     rutina_id = Column(Integer, ForeignKey("planes_rutina.id"), nullable=True)
-    semana_id = Column(Integer, nullable=True) # Para identificar Semana 1, 2, 3, 4
+    semana_id = Column(Integer, nullable=True) 
     progreso_json = Column(JSON, nullable=True) 
     comentario = Column(Text, nullable=True)
     comentarios = Column(Text, nullable=True) 
@@ -194,7 +194,7 @@ class EjercicioEnRutina(Base):
     series_detalle = relationship("SerieEjercicio", back_populates="ejercicio_en_rutina", cascade="all, delete-orphan")
 
 class SerieEjercicio(Base):
-    __tablename__ = "series_ejercicio"
+    __tablename__ = "series_ejercicios" # CORRECCIÓN CRÍTICA: PLURAL PARA COINCIDIR CON LA DB
     id = Column(Integer, primary_key=True)
     ejercicio_en_rutina_id = Column(Integer, ForeignKey("ejercicios_en_rutina.id"))
     numero_serie = Column(Integer) 
