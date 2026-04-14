@@ -1224,11 +1224,10 @@
 
 				<!-- SELECTOR DE PROFESOR (RESTABLECIDO) -->
 				<div class="w-full">
-					<label class="text-[9px] font-black text-white/30 uppercase tracking-widest italic ml-2">Profesor / Coach</label>
-					<select id="cl-coach-select" class="viking-input mt-1" required>
-						<!-- Cargado por JS -->
-					</select>
-				</div>
+                    <input type="text" id="cl-nombre" placeholder="Nombre de Clase" class="viking-input" required>
+                    <!-- El selector de coach global se elimina visualmente porque elegiremos coach por turno -->
+                    <input type="hidden" id="cl-coach-select" value="Staff">
+                </div>
 
 				<!-- CAMPO DE BOX -->
 				<div class="w-full">
