@@ -673,18 +673,18 @@
 
                                     // CORRECCIÓN INTERNA: Flexbox con leading-tight y gaps eliminados para centrado absoluto
                                     badge.innerHTML = `
-                                        <div class="flex flex-col items-center justify-center h-full w-full leading-tight">
-                                            <span class="text-[9px] font-black uppercase italic truncate w-full px-1 ${colores.text}">
-                                                ${c.nombre}
-                                            </span>
-                                            <span class="text-[8px] font-bold uppercase opacity-80 truncate w-full px-1 ${colores.text}">
-                                                ${slot.coach || 'staff'}
-                                            </span>
-                                            <div class="mt-1 px-2 py-0.5 rounded-full text-[8px] font-black ${colores.bg} ${estaLleno ? 'text-red-500' : colores.text}">
-                                                ${cupoActual}/${cupoMax}
-                                            </div>
-                                        </div>
-                                    `;
+										<div class="flex flex-col items-center justify-center w-full h-full space-y-0.5">
+											<span class="text-[10px] font-black uppercase italic leading-[1.1] ${colores.text}" style="display: block; width: 100%; white-space: normal;">
+												${c.nombre}
+											</span>
+											<span class="text-[8px] font-bold uppercase opacity-90 leading-[1] ${colores.text}">
+												${slot.coach || 'STAFF'}
+											</span>
+											<div class="mt-1 px-2 py-0.5 rounded-full text-[9px] font-black ${colores.bg} ${estaLleno ? 'text-red-500' : colores.text}">
+												${cupoActual}/${cupoMax}
+											</div>
+										</div>
+									`;
                                     
                                     badge.onclick = (e) => {
                                         e.stopPropagation();
