@@ -257,9 +257,16 @@ class PlanUpdate(BaseModel):
     tipo_plan_id: int
     clases_mensuales: Optional[int] = 12 
 
+# --- NUEVO SCHEMA PARA BOXES ---
+class TipoBoxResponse(BaseModel):
+    id: int
+    nombre: str
+    class Config: from_attributes = True
+
 class ClaseUpdate(BaseModel):
     nombre: str
     coach: str
+    box_id: Optional[int] = 1 # Por defecto al Principal
     color: Optional[str] = "#FF0000"
     capacidad_max: Optional[int] = 40
     horarios_detalle: Optional[List[dict]] = None
@@ -1011,15 +1018,38 @@ def get_tipos(db: Session = Depends(database.get_db)):
     return db.query(models.TipoPlan).all()
 
 # --- CLASES ---
+
+@app.get("/api/tipo_box", tags=["Configuracion"])
+def get_tipo_box(db: Session = Depends(database.get_db)):
+    """Retorna la lista de boxes disponibles"""
+    return db.query(models.TipoBox).all()
+
 @app.get("/api/clases", tags=["Clases"])
 def get_clases(db: Session = Depends(database.get_db)):
-    return db.query(models.Clase).all()
+    """Retorna las clases incluyendo el nombre del box para el filtro del frontend"""
+    clases = db.query(models.Clase).options(joinedload(models.Clase.box_rel)).all()
+    # Mapeamos para que el frontend reciba 'box_nombre' directamente
+    result = []
+    for c in clases:
+        c_dict = {
+            "id": c.id,
+            "nombre": c.nombre,
+            "coach": c.coach,
+            "color": c.color,
+            "capacidad_max": c.capacidad_max,
+            "horarios_detalle": c.horarios_detalle,
+            "box_id": c.box_id,
+            "box_nombre": c.box_rel.nombre if c.box_rel else "Principal"
+        }
+        result.append(c_dict)
+    return result
 
 @app.post("/api/clases", tags=["Clases"])
 def create_clase(data: ClaseUpdate, db: Session = Depends(database.get_db)):
     new_c = models.Clase(
         nombre=data.nombre,
         coach=data.coach,
+        box_id=data.box_id,
         color=data.color,
         capacidad_max=data.capacidad_max,
         horarios_detalle=data.horarios_detalle 
@@ -1034,6 +1064,7 @@ def update_clase(id: int, data: ClaseUpdate, db: Session = Depends(database.get_
     if c:
         c.nombre = data.nombre
         c.coach = data.coach
+        c.box_id = data.box_id
         c.color = data.color
         c.capacidad_max = data.capacidad_max
         c.horarios_detalle = data.horarios_detalle 

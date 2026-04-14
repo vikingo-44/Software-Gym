@@ -73,6 +73,12 @@ class Sucursal(Base):
 # GESTIÓN DE CLASES Y RESERVAS
 # =========================================
 
+class TipoBox(Base):
+    __tablename__ = "tipo_box"
+    id = Column(Integer, primary_key=True)
+    nombre = Column(String, unique=True, nullable=False)
+    clases = relationship("Clase", back_populates="box_rel")
+
 class Clase(Base):
     __tablename__ = "clases"
     id = Column(Integer, primary_key=True)
@@ -81,6 +87,9 @@ class Clase(Base):
     capacidad_max = Column(Integer, default=20)
     horarios_detalle = Column(JSON, nullable=True) 
     color = Column(String, default="#FF0000")
+    # Nueva columna para el Box
+    box_id = Column(Integer, ForeignKey("tipo_box.id"), nullable=True)
+    box_rel = relationship("TipoBox", back_populates="clases")
     reservas = relationship("Reserva", back_populates="clase", cascade="all, delete-orphan")
 
 class Reserva(Base):
