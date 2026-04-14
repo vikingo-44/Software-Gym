@@ -871,25 +871,26 @@
             </div>
 
             <div id="view-calendario" class="view-content">
+				<!-- CABECERA DE CONTROL -->
 				<div class="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-8 gap-6">
 					<div>
-						<h3 class="text-4xl font-black italic uppercase text-left tracking-tighter">Agenda de Clases</h3>
+						<h3 class="text-3xl font-black italic uppercase text-left tracking-tighter">Agenda de Clases</h3>
 						<p class="text-[10px] text-white/30 font-bold uppercase tracking-[0.3em] mt-1 italic">Gestión de turnos y Boxes</p>
 					</div>
 
-					<!-- SELECTOR DE BOXES (ESTILO VIKINGO) -->
-					<div class="flex bg-black/40 p-1.5 rounded-[1.5rem] border border-white/5 backdrop-blur-md">
+					<!-- SELECTOR DE BOXES (PEAKFIT STYLE) -->
+					<div class="flex bg-black/40 p-1.5 rounded-2xl border border-white/5 backdrop-blur-md">
 						<button onclick="window.changeCalendarBox('Principal')" id="box-Principal" 
-							class="box-filter-btn px-6 py-2.5 rounded-xl text-[10px] font-black uppercase italic transition-all ${state.calendar.currentBox === 'Principal' ? 'bg-red-600 text-black shadow-lg shadow-red-900/20' : 'text-white/30 hover:text-white'}">
+							class="box-filter-btn px-6 py-2.5 rounded-xl text-[10px] font-black uppercase italic transition-all bg-red-600 text-black shadow-lg shadow-red-900/20">
 							Box Principal
 						</button>
 						<button onclick="window.changeCalendarBox('Calistenia')" id="box-Calistenia" 
-							class="box-filter-btn px-6 py-2.5 rounded-xl text-[10px] font-black uppercase italic transition-all ${state.calendar.currentBox === 'Calistenia' ? 'bg-red-600 text-black shadow-lg shadow-red-900/20' : 'text-white/30 hover:text-white'}">
-							Calistenia
+							class="box-filter-btn px-6 py-2.5 rounded-xl text-[10px] font-black uppercase italic transition-all text-white/30 hover:text-white">
+							Box Calistenia
 						</button>
 						<button onclick="window.changeCalendarBox('Musculacion')" id="box-Musculacion" 
-							class="box-filter-btn px-6 py-2.5 rounded-xl text-[10px] font-black uppercase italic transition-all ${state.calendar.currentBox === 'Musculacion' ? 'bg-red-600 text-black shadow-lg shadow-red-900/20' : 'text-white/30 hover:text-white'}">
-							Musculación
+							class="box-filter-btn px-6 py-2.5 rounded-xl text-[10px] font-black uppercase italic transition-all text-white/30 hover:text-white">
+							Box Musculación
 						</button>
 					</div>
 
@@ -900,7 +901,7 @@
 								<i data-lucide="chevron-left" class="w-5 h-5"></i>
 							</button>
 							<div class="px-6 text-center min-w-[140px]">
-								<span id="label-semana-vikinga" class="text-[11px] font-black uppercase italic text-white tracking-widest">...</span>
+								<span id="label-semana-vikinga" class="text-[11px] font-black uppercase italic text-white tracking-widest">CARGANDO...</span>
 							</div>
 							<button onclick="window.changeCalendarWeek(1)" class="w-10 h-10 flex items-center justify-center text-white/40 hover:text-red-600 transition-all">
 								<i data-lucide="chevron-right" class="w-5 h-5"></i>
@@ -910,13 +911,13 @@
 					</div>
 				</div>
 
-				<!-- CONTENEDOR DEL CALENDARIO (ESTRUCTURA FIJA PARA EVITAR DESFASES) -->
-				<!-- Se agrega overflow-x-auto para que en móviles no se aprete la grilla -->
+				<!-- GRILLA DEL CALENDARIO (ESTRUCTURA DE 7 COLUMNAS FIJA) -->
 				<div class="glass-card rounded-[2.5rem] border border-white/5 bg-zinc-950/40 overflow-hidden shadow-2xl">
 					<div class="overflow-x-auto custom-scrollbar">
 						<div id="calendar-grid" 
-							class="calendar-container min-w-[900px] h-[750px] overflow-y-auto custom-scrollbar grid grid-cols-[80px_repeat(6,1fr)] bg-white/[0.02]">
-							<!-- El JS inyectará el contenido aquí siguiendo estrictamente las 7 columnas -->
+							class="calendar-container min-w-[900px] h-[750px] overflow-y-auto custom-scrollbar grid grid-cols-[80px_repeat(6,1fr)] bg-white/[0.02]"
+							style="grid-auto-rows: 40px;">
+							<!-- El JS inyectará el contenido aquí -->
 						</div>
 					</div>
 				</div>
