@@ -1923,7 +1923,7 @@ window.searchAlumnoRutina = function(query) {
     const filtrados = (state.alumnos || []).filter(a => {
         const matchSearch = (a.nombre_completo || "").toLowerCase().includes(q) || (a.dni || "").includes(q);
         const plan = (a.plan?.nombre || "").toLowerCase();
-        const esMusc = plan.includes('musculacion') || plan.includes('completo') || plan.includes('personalizado');
+        const esMusc = plan.includes('musculacion') || plan.includes('completo') || plan.includes('personalizado') || plan.includes('premium');
         return matchSearch && esMusc;
     });
     window.renderRutinasList(filtrados);
