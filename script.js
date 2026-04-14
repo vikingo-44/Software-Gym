@@ -3964,51 +3964,55 @@ if (editorForm) {
             if(!res.error) { closeModal('modal-stock'); loadStock(); showVikingToast("Stock Actualizado"); }
         };
 
-        function openModalClase() { 
-			// 1. Resetea todos los inputs del formulario (nombre, cupo, color, etc.)
+        /**
+		 * LÓGICA DE CLASES Y DISCIPLINAS
+		 */
+
+		// --- CARGAR LISTA DE BOXES ---
+		async function loadBoxes() {
+			const select = document.getElementById('cl-box');
+			if (!select) return;
+			const boxes = await apiFetch('/tipo_box');
+			if (!boxes.error && Array.isArray(boxes)) {
+				select.innerHTML = boxes.map(b => `<option value="${b.id}">${b.nombre}</option>`).join('');
+			} else {
+				select.innerHTML = '<option value="1">Principal</option><option value="2">Calistenia</option><option value="3">Musculación</option>';
+			}
+		}
+
+		function openModalClase() { 
 			document.getElementById('form-clase').reset(); 
-
-			// 2. Limpia el ID oculto para asegurar que sea un "Alta"
 			document.getElementById('cl-id').value = ""; 
-
-			// 3. Limpia el contenedor de turnos/horarios para que no queden los anteriores
 			document.getElementById('cl-schedule-slots').innerHTML = '<p class="text-[9px] text-gray-600 italic py-4 text-center">No hay horarios definidos</p>';
-
-			// 4. Asegura que el título sea el correcto y abre el modal
 			document.getElementById('modal-clase-title').innerText = "Alta de Clase";
-			document.getElementById('btn-delete-clase').classList.add('hidden'); // Oculta el botón eliminar si existe
+			document.getElementById('btn-delete-clase').classList.add('hidden'); 
 			
+			loadBoxes(); 
 			openModal('modal-clase'); 
 		}
 		
-		// --- 1. GENERAR FILA: DÍA + HORA + PROFESOR ---
 		function addNewScheduleSlot(data = { dia: 1, horario: 7, coach: "" }) {
 			const container = document.getElementById('cl-schedule-slots');
 			if (!container) return;
 
-			// Limpiar mensaje de "vacío" si existe
 			if (container.querySelector('p.italic')) container.innerHTML = "";
 
 			const row = document.createElement('div');
-			// Diseño tipo tarjeta para cada turno
 			row.className = "schedule-slot-row flex flex-col gap-2 bg-white/5 p-3 rounded-xl border border-white/5 mb-3 group hover:border-red-600/30 transition-all";
 			
 			const diasMap = {1: 'Lunes', 2: 'Martes', 3: 'Miércoles', 4: 'Jueves', 5: 'Viernes', 6: 'Sábado'};
 			
-			// 1. Selector de Días
 			let diasOptions = "";
 			for(let d=1; d<=6; d++) {
 				diasOptions += `<option value="${d}" ${data.dia == d ? 'selected' : ''}>${diasMap[d]}</option>`;
 			}
 
-			// 2. Selector de Horas
 			let horasOptions = "";
 			for(let i=7; i<=21.5; i+=0.5) {
 				const label = i % 1 === 0 ? `${i}:00` : `${Math.floor(i)}:30`;
 				horasOptions += `<option value="${i}" ${data.horario == i ? 'selected' : ''}>${label} HS</option>`;
 			}
 
-			// 3. Selector de Profesores (Usando state.profesores cargado previamente)
 			let coachOptions = `<option value="">Asignar Profesor...</option>`;
 			if (state.profesores && state.profesores.length > 0) {
 				coachOptions += state.profesores.map(p => 
@@ -4039,31 +4043,29 @@ if (editorForm) {
 			if(window.lucide) lucide.createIcons();
 		}
 
-		// --- ABRIR EDICIÓN (Cargar slots con sus profes) ---
-		function openEditClase(id) {
+		async function openEditClase(id) {
 			const c = state.clases.find(x => x.id == id); 
 			if(!c) return;
+
+			await loadBoxes(); 
 
 			document.getElementById('cl-id').value = c.id; 
 			document.getElementById('modal-clase-title').innerText = "Editar: " + c.nombre;
 			document.getElementById('cl-nombre').value = c.nombre; 
+			document.getElementById('cl-box').value = c.box_id || 1; 
 			document.getElementById('cl-cupo').value = c.capacidad_max;
 			document.getElementById('cl-color').value = c.color || "#FF0000";
 			
-			// Limpiar y cargar horarios
 			const slotsContainer = document.getElementById('cl-schedule-slots');
 			slotsContainer.innerHTML = "";
 
 			const horarios = Array.isArray(c.horarios_detalle) ? c.horarios_detalle : [];
-			
 			if (horarios.length > 0) {
 				horarios.forEach(h => addNewScheduleSlot(h));
 			} else {
-				// Compatibilidad: si es clase vieja, usamos el coach general
 				addNewScheduleSlot({ dia: 1, horario: 7, coach: c.coach || "" });
 			}
 
-			// Mostrar botón eliminar solo a admin
 			const isAdmin = (state.user?.rol_nombre === "Administrador" || state.user?.rol_nombre === "Supervisor");
 			const delBtn = document.getElementById('btn-delete-clase'); 
 			if(delBtn) {
@@ -4074,27 +4076,25 @@ if (editorForm) {
 			openModal('modal-clase');
 		}
 
-		// --- 3. FUNCIÓN PARA PREPARAR EL MODAL AL CREAR NUEVA ---
 		function openNewClase() {
 			document.getElementById('form-clase').reset();
 			document.getElementById('cl-id').value = "";
 			document.getElementById('cl-schedule-slots').innerHTML = "";
 			document.getElementById('modal-clase-title').innerText = "Nueva Clase";
 			
-			// Añadimos el primer slot vacío
+			loadBoxes();
 			addNewScheduleSlot();
 			openModal('modal-clase');
 		}
 
-		// --- NUEVA FUNCIÓN PARA CARGAR PROFESORES REALES ---
 		async function loadProfesores() {
 			const res = await apiFetch('/profesores');
 			if (!res.error) {
-				state.profesores = res; // Guardamos en el estado global
+				state.profesores = res;
 			}
 		}
 
-		// --- GUARDAR CLASE CON MÚLTIPLES PROFESORES ---
+		// --- GUARDAR CLASE (RESTAURADA COMO FUNCION ASYNC NOMBRADA) ---
 		async function saveClaseVikinga(e) {
 			if(e) e.preventDefault();
 			
@@ -4108,7 +4108,6 @@ if (editorForm) {
 				const coachEl = row.querySelector('.slot-coach'); 
 				
 				if(diaEl && horaEl) {
-					// Capturamos el NOMBRE del profesor como texto
 					let nombreCoach = "Staff";
 					if (coachEl) {
 						nombreCoach = coachEl.tagName === 'SELECT' 
@@ -4128,12 +4127,12 @@ if (editorForm) {
 				return showVikingToast("Añade al menos un horario", true);
 			}
 
-			// Usamos el coach del primer turno como referencia principal
 			const mainCoach = horarios_detalle[0].coach || "Staff";
 
 			const payload = {
 				nombre: document.getElementById('cl-nombre').value,
-				coach: String(mainCoach), // Enviamos el STRING al backend
+				box_id: parseInt(document.getElementById('cl-box').value),
+				coach: String(mainCoach),
 				color: document.getElementById('cl-color').value,
 				capacidad_max: parseInt(document.getElementById('cl-cupo').value) || 20,
 				horarios_detalle: horarios_detalle
@@ -4147,7 +4146,7 @@ if (editorForm) {
 				if(!res.error) {
 					showVikingToast(id ? "¡Clase Actualizada!" : "¡Clase Creada!");
 					closeModal('modal-clase');
-					loadClases();
+					if (typeof loadClases === 'function') loadClases();
 				} else {
 					showVikingToast("Error: " + JSON.stringify(res.detail || res.error), true);
 				}
@@ -4155,6 +4154,11 @@ if (editorForm) {
 				showVikingToast("Fallo en la conexión", true);
 			}
 		}
+
+		window.onload = async () => {
+			await loadProfesores();
+			await loadBoxes();
+		};
 		
 		// --- GESTIÓN DE SUCURSALES ---
 		async function loadSucursales() {
