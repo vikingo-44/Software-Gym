@@ -1158,12 +1158,12 @@
 
 		/**
  * ============================================================
- * MÓDULO DE RUTINAS VIKINGAS - SISTEMA INTEGRAL IRONMOD (DEFINITIVO)
- * Sincronizado con: ejercicios_libreria, rutina_dias, series_ejercicios
+ * MODULO TI VIKING A RUTINA - INTEGRAL A SISTEMA TI IRONMOD (DEFINITIVO)
+ * Sincronisado iti: ejercicios_libreria, rutina_dias, series_ejercicios
  * ============================================================
  */
 
-// 1. EXTENSIÓN Y RESET DEL ESTADO
+// 1. PANNAKAYALAWAS KEN PANNAKAI-RESET TI ESTADO
 if (!state.routineWizard) {
     state.routineWizard = {};
 }
@@ -1176,10 +1176,10 @@ function resetWizardState(alumnoId = null) {
         tipo_id: 1,
         cantDias: 3,
         cantSemanas: 5,
-        nombre_grupo: 'ENTRENAMIENTO A',
-        objetivo: 'Fase de fuerza y potencia',
+        nombre_grupo: 'PANNAGSANAY A',
+        objetivo: 'Fase ti pigsa ken bileg',
         vencimiento: new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0],
-        config: {}, // Estructura IRONMOD: { 'week1_day1': { label: '', exercises: [] } }
+        config: {}, // Estruktura ti IRONMOD: { 'week1_day1': { label: '', exercises: [] } }
         semanaActivaWizard: 1,
         activeDayKey: null,
         isTabSwitching: false,
@@ -1189,7 +1189,7 @@ function resetWizardState(alumnoId = null) {
 }
 
 /**
- * Utilidades de Identidad
+ * Dagiti Utilidad ti Identidad
  */
 function getVikingInitials(a) {
     const nombre = a.nombre_completo || (a.usuario ? a.usuario.nombre_completo : null);
@@ -1200,7 +1200,7 @@ function getVikingInitials(a) {
 }
 
 /**
- * 1. CARGA DE METADATOS (Arsenal Vikingo)
+ * 1. PANNAKAIKARGA TI METADATA (Viking nga Arsenal)
  */
 async function loadMusculacionMetadata() {
     try {
@@ -1211,12 +1211,12 @@ async function loadMusculacionMetadata() {
         state.gruposMusculares = Array.isArray(grupos) ? grupos : [];
         state.ejerciciosLibreria = Array.isArray(ejercicios) ? ejercicios : [];
     } catch (e) {
-        console.error("Error cargando arsenal vikingo:", e);
+        console.error("Biddut iti pannakaikarga ti arsenal:", e);
     }
 }
 
 /**
- * 2. FICHA TÉCNICA (Visualización Estratégica)
+ * 2. FICHA TEKNIKA (Estratigiko a Pannakakita)
  */
 window.openFichaTecnica = async function(alumnoId) {
     const rutinaContainer = document.getElementById('ficha-rutina-container');
@@ -1229,22 +1229,22 @@ window.openFichaTecnica = async function(alumnoId) {
         rutinaContainer.innerHTML = `
             <div class="col-span-2 py-16 flex flex-col items-center justify-center space-y-4">
                 <div class="w-10 h-10 border-2 border-red-600 border-t-transparent rounded-full animate-spin"></div>
-                <p class="text-[10px] text-white/20 italic uppercase tracking-[0.3em] animate-pulse text-center">Sincronizando arsenal vikingo...</p>
+                <p class="text-[10px] text-white/20 italic uppercase tracking-[0.3em] animate-pulse text-center">Sinsinkronisar ti arsenal...</p>
             </div>
         `;
     }
 
     const al = await apiFetch(`/alumnos/${alumnoId}/ficha`);
     if (al.error) {
-        showVikingToast("Error al conectar con el servidor", true);
+        showVikingToast("Biddut iti pannakikonektar iti servidor", true);
         return;
     }
 
     const ids = {
         'ficha-avatar': getVikingInitials(al),
-        'ficha-nombre': al.nombre_completo || 'Sin Nombre',
+        'ficha-nombre': al.nombre_completo || 'Awan Nagan',
         'ficha-dni': "DNI: " + (al.dni || '---'),
-        'ficha-plan': "Plan: " + (al.plan || al.plan_nombre || 'Sin Plan Activo')
+        'ficha-plan': "Plano: " + (al.plan || al.plan_nombre || 'Awan ti Aktibo a Plano')
     };
     Object.entries(ids).forEach(([id, val]) => {
         const el = document.getElementById(id);
@@ -1256,7 +1256,7 @@ window.openFichaTecnica = async function(alumnoId) {
         const hoy = new Date();
         const fechaVenc = al.fecha_vencimiento || al.vencimiento;
         const activa = fechaVenc && new Date(fechaVenc) >= hoy;
-        statusEl.innerText = activa ? "STATUS: ACTIVO" : "STATUS: INACTIVO";
+        statusEl.innerText = activa ? "ESTADO: AKTIBO" : "ESTADO: SAAN NGA AKTIBO";
         statusEl.className = `px-4 py-1.5 rounded-xl text-[10px] font-black uppercase ${activa ? 'bg-green-600/10 text-green-500 border border-green-500/20' : 'bg-red-600/10 text-red-600 border border-red-600/20'}`;
     }
 
@@ -1275,7 +1275,7 @@ window.openFichaTecnica = async function(alumnoId) {
                         <button onclick="window.changeFichaSemana(${id}, ${alumnoId})"
                             class="flex-1 min-w-[100px] py-3 rounded-xl font-black italic uppercase text-[10px] transition-all shrink-0
                             ${semIdActivo === id ? 'bg-red-600 text-black shadow-[0_0_20px_rgba(255,0,0,0.3)]' : 'bg-white/5 text-white/30 hover:bg-white/10 border border-white/10'}">
-                            Semana ${id}
+                            Lawas ${id}
                         </button>
                     `).join('')}
                 </div>
@@ -1298,7 +1298,7 @@ window.openFichaTecnica = async function(alumnoId) {
                             </div>
                             <div>
                                 <span class="text-[13px] font-black italic uppercase tracking-wider text-white group-hover:text-red-500 transition-colors">${d.nombre_dia}</span>
-                                <p class="text-[9px] text-white/30 font-bold uppercase tracking-widest">${ejerciciosFiltrados.length} Items</p>
+                                <p class="text-[9px] text-white/30 font-bold uppercase tracking-widest">${ejerciciosFiltrados.length} Dagiti Ehersisio</p>
                             </div>
                         </div>
                         <i data-lucide="chevron-down" class="w-5 h-5 text-white/20 transition-transform ${isOpen ? 'rotate-180' : ''}" id="icon-${diaId}"></i>
@@ -1335,11 +1335,11 @@ window.openFichaTecnica = async function(alumnoId) {
                             <div class="w-1.5 h-12 viking-bg-red rounded-full"></div>
                             <div>
                                 <h5 class="text-xl font-black italic uppercase text-white leading-none">${rutina.nombre_grupo || rutina.objetivo}</h5>
-                                <p class="text-[9px] text-white/40 font-bold italic mt-2 uppercase tracking-widest">OBJETIVO: ${rutina.descripcion || 'General'}</p>
+                                <p class="text-[9px] text-white/40 font-bold italic mt-2 uppercase tracking-widest">PANGGEP: ${rutina.descripcion || 'Sapasap'}</p>
                             </div>
                         </div>
                         <div class="flex items-center gap-4">
-                            ${isStaff ? `<button onclick="closeModal('modal-ficha-tecnica'); window.openRoutineEditor(${alumnoId}, true)" class="bg-amber-600 text-white px-4 py-2 rounded-xl text-[9px] font-black uppercase italic">Editar</button>` : ''}
+                            ${isStaff ? `<button onclick="closeModal('modal-ficha-tecnica'); window.openRoutineEditor(${alumnoId}, true)" class="bg-amber-600 text-white px-4 py-2 rounded-xl text-[9px] font-black uppercase italic">Urnosen</button>` : ''}
                             <i data-lucide="chevron-down" class="w-6 h-6 text-white/20 transition-transform" id="icon-${objetivoId}" onclick="window.toggleFichaElement('${objetivoId}')"></i>
                         </div>
                     </div>
@@ -1351,7 +1351,7 @@ window.openFichaTecnica = async function(alumnoId) {
             </div>`;
         }).join('');
     } else {
-        rutinaContainer.innerHTML = `<div class="col-span-2 p-20 text-center opacity-20 font-black uppercase italic tracking-widest border-2 border-dashed border-white/5 rounded-3xl">Sin Registros</div>`;
+        rutinaContainer.innerHTML = `<div class="col-span-2 p-20 text-center opacity-20 font-black uppercase italic tracking-widest border-2 border-dashed border-white/5 rounded-3xl">Awan ti Nairehistro</div>`;
     }
 
     if (window.lucide) lucide.createIcons();
@@ -1439,31 +1439,31 @@ window.renderWizardStep = function() {
     if (fill) fill.style.width = step === 1 ? '30%' : '100%';
 
     if (step === 1) {
-        label.innerText = "PASO 1: INTELIGENCIA ESTRATÉGICA";
+        label.innerText = "STEP 1: ESTRATIGIKO A SARIRIT";
         body.innerHTML = `
             <div class="flex-1 p-10 lg:p-20 overflow-y-auto custom-scrollbar animate-in zoom-in-95 duration-500">
                 <div class="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-12">
                     <div class="col-span-full space-y-2">
-                        <label class="text-[10px] font-black text-red-600 uppercase tracking-widest italic ml-2">Nombre del Plan Maestro</label>
-                        <input type="text" value="${state.routineWizard.nombre_grupo}" oninput="state.routineWizard.nombre_grupo = this.value" class="viking-input !h-16 text-2xl font-black italic uppercase" placeholder="Ej: CICLO DE VOLUMEN">
+                        <label class="text-[10px] font-black text-red-600 uppercase tracking-widest italic ml-2">Nagan ti Kangrunaan a Plano</label>
+                        <input type="text" value="${state.routineWizard.nombre_grupo}" oninput="state.routineWizard.nombre_grupo = this.value" class="viking-input !h-16 text-2xl font-black italic uppercase" placeholder="Kas: SIKLO TI VOLUMEN">
                     </div>
                     <div class="col-span-full space-y-2">
-                        <label class="text-[10px] font-black text-white/30 uppercase tracking-widest italic ml-2">Objetivo / Resumen Estratégico</label>
-                        <textarea oninput="state.routineWizard.objetivo = this.value" class="viking-input h-32 py-5 text-sm font-medium" placeholder="Descripción táctica...">${state.routineWizard.objetivo}</textarea>
+                        <label class="text-[10px] font-black text-white/30 uppercase tracking-widest italic ml-2">Panggep / Taktikal a Pakatupagan</label>
+                        <textarea oninput="state.routineWizard.objetivo = this.value" class="viking-input h-32 py-5 text-sm font-medium" placeholder="Deskripsion ti taktika...">${state.routineWizard.objetivo}</textarea>
                     </div>
                     <div class="space-y-2">
-                        <label class="text-[10px] font-black text-white/30 uppercase tracking-widest italic ml-2">Fecha de Vencimiento</label>
+                        <label class="text-[10px] font-black text-white/30 uppercase tracking-widest italic ml-2">Petsa ti Pannakaawan</label>
                         <input type="date" value="${state.routineWizard.vencimiento}" oninput="state.routineWizard.vencimiento = this.value" class="viking-input !h-14">
                     </div>
                     <div class="space-y-2">
-                        <label class="text-[10px] font-black text-white/30 uppercase tracking-widest italic ml-2">Metodología de Carga</label>
+                        <label class="text-[10px] font-black text-white/30 uppercase tracking-widest italic ml-2">Metodolohia ti Kargada</label>
                         <div class="flex gap-4">
                             <button onclick="state.routineWizard.tipo = 'normal'; state.routineWizard.tipo_id = 1; window.renderWizardStep();" class="flex-1 h-14 rounded-2xl border-2 font-black text-[10px] transition-all ${state.routineWizard.tipo_id === 1 ? 'bg-red-600 text-black border-red-600 shadow-xl' : 'bg-white/5 border-white/5 text-white/30'}">NORMAL</button>
-                            <button onclick="state.routineWizard.tipo = 'progresiva'; state.routineWizard.tipo_id = 2; window.renderWizardStep();" class="flex-1 h-14 rounded-2xl border-2 font-black text-[10px] transition-all ${state.routineWizard.tipo_id === 2 ? 'bg-amber-600 text-black border-amber-600 shadow-xl' : 'bg-white/5 border-white/5 text-white/30'}">PROGRESIVA</button>
+                            <button onclick="state.routineWizard.tipo = 'progresiva'; state.routineWizard.tipo_id = 2; window.renderWizardStep();" class="flex-1 h-14 rounded-2xl border-2 font-black text-[10px] transition-all ${state.routineWizard.tipo_id === 2 ? 'bg-amber-600 text-black border-amber-600 shadow-xl' : 'bg-white/5 border-white/5 text-white/30'}">PROGRESIVO</button>
                         </div>
                     </div>
                     <div class="space-y-2">
-                        <label class="text-[10px] font-black text-white/30 uppercase tracking-widest italic ml-2">Días Semanales</label>
+                        <label class="text-[10px] font-black text-white/30 uppercase tracking-widest italic ml-2">Al-aldaw ti Lawas</label>
                         <div class="grid grid-cols-6 gap-2">
                             ${[1,2,3,4,5,6].map(n => `<button onclick="state.routineWizard.cantDias = ${n}; window.renderWizardStep();" class="h-14 rounded-2xl border-2 font-black transition-all ${state.routineWizard.cantDias === n ? 'bg-red-600 text-black border-red-600 shadow-lg' : 'bg-white/5 border-white/5 text-white/20'}">${n}</button>`).join('')}
                         </div>
@@ -1471,18 +1471,18 @@ window.renderWizardStep = function() {
                 </div>
             </div>`;
     } else {
-        label.innerText = "PASO 2: FORJA DE EJERCICIOS";
+        label.innerText = "STEP 2: PANNAKABUKEL TI EHERSISIO";
         body.innerHTML = `
             <div class="w-full lg:w-[380px] border-r border-white/5 flex flex-col bg-black/40">
                 <div class="p-8 border-b border-white/5">
-                    <input type="text" placeholder="Buscar en arsenal..." class="viking-input h-12 text-[10px] font-black italic" oninput="window.renderWizardLib(this.value)">
+                    <input type="text" placeholder="Biruken iti arsenal..." class="viking-input h-12 text-[10px] font-black italic" oninput="window.renderWizardLib(this.value)">
                 </div>
                 <div class="flex-1 overflow-y-auto p-8 space-y-8 custom-scrollbar" id="wizard-lib-results"></div>
             </div>
             <div class="flex-1 flex flex-col bg-zinc-950/50">
                 ${state.routineWizard.tipo === 'progresiva' ? `
                     <div class="p-4 bg-black/60 flex gap-2 border-b border-white/5 overflow-x-auto no-scrollbar">
-                        ${[1,2,3,4,5].map(w => `<button onclick="state.routineWizard.semanaActivaWizard = ${w}; window.renderWizardStep();" class="px-6 py-2.5 rounded-xl font-black italic text-[10px] transition-all whitespace-nowrap ${state.routineWizard.semanaActivaWizard === w ? 'bg-red-600 text-black' : 'bg-white/5 text-white/30 border border-white/10'}">SEMANA ${w}</button>`).join('')}
+                        ${[1,2,3,4,5].map(w => `<button onclick="state.routineWizard.semanaActivaWizard = ${w}; window.renderWizardStep();" class="px-6 py-2.5 rounded-xl font-black italic text-[10px] transition-all whitespace-nowrap ${state.routineWizard.semanaActivaWizard === w ? 'bg-red-600 text-black' : 'bg-white/5 text-white/30 border border-white/10'}">LAWAS ${w}</button>`).join('')}
                     </div>` : ''}
                 <div class="flex-1 overflow-y-auto p-8 lg:p-12 space-y-6 custom-scrollbar">
                     ${Array.from({length: state.routineWizard.cantDias}).map((_, i) => {
@@ -1491,25 +1491,25 @@ window.renderWizardStep = function() {
                         const isOpen = state.routineWizard.activeDayKey === key;
                         const data = state.routineWizard.config[key] || { label: `JORNADA ${dayNum}`, exercises: [] };
                         return `
-                            <div class="border rounded-[2.5rem] overflow-hidden transition-all ${isOpen ? 'border-red-600 bg-red-600/5' : 'border-white/5 bg-white/[0.02]'}">
+                            <div class="border rounded-[2.5rem] overflow-hidden transition-all ${isOpen ? 'border-red-600 bg-red-600/5 ring-1 ring-red-600/20' : 'border-white/5 bg-white/[0.02]'}">
                                 <button onclick="window.toggleWizardDay('${key}')" class="w-full flex items-center justify-between p-8 text-left">
                                     <div class="flex items-center gap-6">
                                         <div class="w-12 h-12 rounded-2xl flex items-center justify-center font-black italic text-sm ${isOpen ? 'bg-red-600 text-black' : 'bg-white/5 text-white/30'}">${dayNum}</div>
                                         <span class="text-xl font-black italic uppercase text-white tracking-tighter">${data.label}</span>
                                     </div>
                                     <div class="flex items-center gap-4">
-                                        ${state.routineWizard.tipo === 'progresiva' && state.routineWizard.semanaActivaWizard > 1 ? `<button onclick="event.stopPropagation(); window.clonePrevWeekDay(${dayNum})" class="text-[9px] font-black uppercase italic bg-amber-600/10 text-amber-500 border border-amber-600/20 px-4 py-2 rounded-xl transition-all">CLONAR SEM. ANT.</button>` : ''}
+                                        ${state.routineWizard.tipo === 'progresiva' && state.routineWizard.semanaActivaWizard > 1 ? `<button onclick="event.stopPropagation(); window.clonePrevWeekDay(${dayNum})" class="text-[9px] font-black uppercase italic bg-amber-600/10 text-amber-500 border border-amber-600/20 px-4 py-2 rounded-xl transition-all">KOPYAAREN TI NAPALABAS</button>` : ''}
                                         <i data-lucide="${isOpen ? 'chevron-up' : 'chevron-down'}" class="w-6 h-6 text-white/20"></i>
                                     </div>
                                 </button>
                                 ${isOpen ? `<div class="p-10 border-t border-white/5 space-y-8 animate-in slide-in-from-top-4">
                                     <div class="grid grid-cols-2 gap-4">
-                                        <input type="text" value="${data.label}" oninput="window.updateSessionData('${key}', 'label', this.value)" class="viking-input !bg-black !h-12 !text-[10px] font-black uppercase italic" placeholder="Título Jornada">
-                                        <input type="text" value="${data.notes || ''}" oninput="window.updateSessionData('${key}', 'notes', this.value)" class="viking-input !bg-black !h-12 !text-[10px]" placeholder="Notas tácticas">
+                                        <input type="text" value="${data.label}" oninput="window.updateSessionData('${key}', 'label', this.value)" class="viking-input !bg-black !h-12 !text-[10px] font-black uppercase italic" placeholder="Titulo ti Jornada">
+                                        <input type="text" value="${data.notes || ''}" oninput="window.updateSessionData('${key}', 'notes', this.value)" class="viking-input !bg-black !h-12 !text-[10px]" placeholder="Taktikal a nota">
                                     </div>
                                     <div class="space-y-4 pt-4 border-t border-white/5">
                                         ${data.exercises.map((ex, exIdx) => window.renderExerciseItemWizard(key, ex, exIdx)).join('')}
-                                        ${data.exercises.length === 0 ? '<p class="text-center py-10 text-white/10 font-black italic text-xs uppercase tracking-widest">Añade ejercicios desde el arsenal.</p>' : ''}
+                                        ${data.exercises.length === 0 ? '<p class="text-center py-10 text-white/10 font-black italic text-xs uppercase tracking-widest">Mangnayon kadagiti ehersisio manipud iti arsenal.</p>' : ''}
                                     </div>
                                 </div>` : ''}
                             </div>`;
@@ -1531,7 +1531,7 @@ window.renderExerciseItemWizard = (key, ex, idx) => `
             <button onclick="window.removeExFromWizard('${key}', '${ex.uid}')" class="text-white/10 hover:text-red-600"><i data-lucide="trash-2" class="w-5 h-5"></i></button>
         </div>
         <div class="grid grid-cols-4 gap-4">
-            ${['reps', 'weight', 'rest'].map(f => `<div class="space-y-1"><label class="text-[8px] font-black text-white/20 uppercase ml-1">${f}</label><input type="text" value="${ex[f]}" oninput="window.updateExFieldWizard('${key}', '${ex.uid}', '${f}', this.value)" class="w-full bg-white/5 border border-white/5 rounded-xl text-[11px] font-black italic text-center text-red-600 h-10 outline-none focus:border-red-600 transition-all"></div>`).join('')}
+            ${['reps', 'weight', 'rest'].map(f => `<div class="space-y-1"><label class="text-[8px] font-black text-white/20 uppercase ml-1">${f === 'reps' ? 'Reps' : f === 'weight' ? 'Timbang' : 'Inana'}</label><input type="text" value="${ex[f]}" oninput="window.updateExFieldWizard('${key}', '${ex.uid}', '${f}', this.value)" class="w-full bg-white/5 border border-white/5 rounded-xl text-[11px] font-black italic text-center text-red-600 h-10 outline-none focus:border-red-600 transition-all"></div>`).join('')}
             <div class="space-y-1"><label class="text-[8px] font-black text-white/20 uppercase ml-1">Nota</label><input type="text" value="${ex.comentario || ''}" oninput="window.updateExFieldWizard('${key}', '${ex.uid}', 'comentario', this.value)" class="w-full bg-white/5 border border-white/5 rounded-xl text-[10px] font-medium text-white/40 px-3 h-10 outline-none focus:border-red-600 transition-all" placeholder="..."></div>
         </div>
     </div>`;
@@ -1541,7 +1541,7 @@ window.renderWizardLib = (query = '') => {
     if (!container) return;
     const filtered = (state.ejerciciosLibreria || []).filter(e => e.nombre.toLowerCase().includes(query.toLowerCase()));
     const groups = {};
-    filtered.forEach(e => { const g = e.grupo_muscular?.nombre || 'General'; if (!groups[g]) groups[g] = []; groups[g].push(e); });
+    filtered.forEach(e => { const g = e.grupo_muscular?.nombre || 'Sapasap'; if (!groups[g]) groups[g] = []; groups[g].push(e); });
     container.innerHTML = Object.entries(groups).map(([name, exs]) => `
         <div>
             <h5 class="text-[9px] font-black text-red-600 uppercase tracking-widest mb-4 ml-2 italic border-l-2 border-red-600 pl-3">${name}</h5>
@@ -1556,7 +1556,7 @@ window.toggleWizardDay = (key) => { state.routineWizard.activeDayKey = (state.ro
 
 window.addExToWizard = (id, nombre) => {
     const key = state.routineWizard.activeDayKey;
-    if (!key) return showVikingToast("Despliega un día para añadir ejercicios", true);
+    if (!key) return showVikingToast("Ilukat ti maysa nga aldaw tapno mangnayon iti ehersisio", true);
     if (!state.routineWizard.config[key]) state.routineWizard.config[key] = { label: `JORNADA`, exercises: [] };
     state.routineWizard.config[key].exercises.push({ id, uid: Math.random().toString(36).substr(2, 9), nombre, reps: '12', weight: '0', rest: '90s', comentario: '' });
     window.renderWizardStep();
@@ -1566,10 +1566,10 @@ window.clonePrevWeekDay = (dayNum) => {
     const curW = state.routineWizard.semanaActivaWizard;
     if (curW <= 1) return;
     const src = state.routineWizard.config[`week${curW-1}_day${dayNum}`];
-    if (!src || src.exercises.length === 0) return showVikingToast("Sin datos en semana anterior", true);
+    if (!src || src.exercises.length === 0) return showVikingToast("Awan ti datos iti napalabas a lawas", true);
     state.routineWizard.config[`week${curW}_day${dayNum}`] = { label: src.label, notes: src.notes, exercises: src.exercises.map(ex => ({ ...ex, uid: Math.random().toString(36).substr(2, 9) })) };
     window.renderWizardStep();
-    showVikingToast(`Semana ${curW-1} clonada correctamente.`);
+    showVikingToast(`Husto a pannakakopya ti Lawas ${curW-1}.`);
 };
 
 window.updateSessionData = (key, f, v) => { if (!state.routineWizard.config[key]) state.routineWizard.config[key] = { label: '', exercises: [] }; state.routineWizard.config[key][f] = v; };
@@ -1578,7 +1578,7 @@ window.removeExFromWizard = (key, uid) => { state.routineWizard.config[key].exer
 
 window.nextStep = () => {
     if (state.routineWizard.currentStep === 1) {
-        if (!state.routineWizard.nombre_grupo) return showVikingToast("Asigna un nombre al plan maestro", true);
+        if (!state.routineWizard.nombre_grupo) return showVikingToast("Mangted iti nagan ti kangrunaan a plano", true);
         state.routineWizard.currentStep = 2;
         state.routineWizard.activeDayKey = state.routineWizard.tipo === 'progresiva' ? 'week1_day1' : 'day_1';
         window.renderWizardStep();
@@ -1588,7 +1588,8 @@ window.nextStep = () => {
 window.prevStep = () => { if (state.routineWizard.currentStep === 2) { state.routineWizard.currentStep = 1; window.renderWizardStep(); } };
 
 /**
- * 4. PERSISTENCIA FINAL (SIN PROGRESO_JSON)
+ * 4. PANNAKAIPERSISTE TI DATOS (AWAN TI PROGRESO_JSON)
+ * Daytoy a function ket siniguradona a ti laeng husto a columnas ti maipatulod.
  */
 window.saveFinalRutina = async function() {
     const config = state.routineWizard.config;
@@ -1602,16 +1603,18 @@ window.saveFinalRutina = async function() {
                 const session = config[`week${wNum}_day${dNum}`];
                 if (session && session.exercises) {
                     session.exercises.forEach(ex => {
+                        // Siguraduen a ti laeng adda iti base de datos ti maipatulod
                         ejerciciosDia.push({
                             ejercicio_id: ex.id,
                             semana_id: wNum,
-                            comentario: `[Semana ${wNum}] ${ex.comentario || ''}`.trim(),
+                            comentario: `[Lawas ${wNum}] ${ex.comentario || ''}`.trim(),
                             series: [{
                                 numero_serie: 1,
                                 repeticiones: ex.reps,
                                 peso: ex.weight,
                                 descanso: ex.rest
                             }]
+                            // TI PROGRESO_JSON KEN COMENTARIOS KET NAIKKAT TAPNO AWAN TI BIDDUT TI SERVIDOR
                         });
                     });
                 }
@@ -1627,7 +1630,7 @@ window.saveFinalRutina = async function() {
                         series: [{
                             numero_serie: 1,
                             repeticiones: ex.reps,
-                            peso: ex.weight,
+                            weight: ex.weight,
                             descanso: ex.rest
                         }]
                     });
@@ -1649,20 +1652,21 @@ window.saveFinalRutina = async function() {
         dias: processedDays
     };
 
-    // ELIMINAR CUALQUIER REFERENCIA A progreso_json DEL PAYLOAD GLOBAL
+    // AWAN TI MAIPATULOD A 'progreso_json' KADAGITI PARAMETROS
     const res = await apiFetch('/rutinas/plan', 'POST', payload);
     if (!res.error) {
-        showVikingToast("¡Arsenal vikingo forjado correctamente! ⚔️");
+        showVikingToast("Husto a pannakabukel ti Viking nga arsenal! ⚔️");
         closeModal('modal-rutina-editor');
         if(typeof fetchAlumnos === 'function') fetchAlumnos();
         window.renderRutinas();
     } else {
+        // Nu agtalinaed ti biddut, kaipapananna a ti backend (main.py) ti masapol a masimpa.
         showVikingToast(res.error, true);
     }
 };
 
 /**
- * 5. VISTAS Y FILTROS
+ * 5. PANNAKAPAKITA KEN DAGITI FILTRO
  */
 window.renderRutinas = async function() {
     const rol = (state.user?.rol_nombre || "").toLowerCase();
@@ -1673,12 +1677,12 @@ window.renderRutinas = async function() {
     if (rol === "alumno") {
         if(list) list.classList.add('hidden');
         if(studentView) studentView.classList.remove('hidden');
-        if(titleEl) titleEl.innerText = "MI ENTRENAMIENTO";
+        if(titleEl) titleEl.innerText = "TI PANNAGSANAYKO";
         window.openFichaTecnica(state.user.id);
     } else {
         if(studentView) studentView.classList.add('hidden');
         if(list) list.classList.remove('hidden');
-        if(titleEl) titleEl.innerText = "CONTROL DE ARSENAL";
+        if(titleEl) titleEl.innerText = "KONTROL TI ARSENAL";
         window.filterRutinas('todos');
     }
 };
@@ -1687,7 +1691,7 @@ window.renderRutinasList = function(listaDatos) {
     const list = document.getElementById('rutinas-lista');
     if(!list) return;
     if (listaDatos.length === 0) {
-        list.innerHTML = `<div class="p-32 text-center opacity-10 font-black uppercase italic tracking-[0.5em] text-4xl">SIN REGISTROS</div>`;
+        list.innerHTML = `<div class="p-32 text-center opacity-10 font-black uppercase italic tracking-[0.5em] text-4xl">AWAN TI NAIREHISTRO</div>`;
         return;
     }
     list.innerHTML = listaDatos.map(a => {
@@ -1701,19 +1705,19 @@ window.renderRutinasList = function(listaDatos) {
                 <div class="w-16 h-16 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center font-black text-white text-xl italic group-hover:bg-red-600 group-hover:text-black transition-all shrink-0">${initials}</div>
                 <div>
                     <h4 class="text-lg font-black uppercase italic text-white group-hover:text-red-500 transition-colors leading-none">${a.nombre_completo}</h4>
-                    <p class="text-[10px] text-white/30 font-black uppercase tracking-[0.2em] mt-2">${a.dni} • ${a.plan?.nombre || 'SIN PLAN'}</p>
+                    <p class="text-[10px] text-white/30 font-black uppercase tracking-[0.2em] mt-2">${a.dni} • ${a.plan?.nombre || 'AWAN TI PLANO'}</p>
                 </div>
             </div>
             <div class="flex-1 flex gap-12">
                 <div>
-                    <p class="text-[9px] text-white/20 font-black uppercase italic mb-2 tracking-widest">Estado Rutina</p>
-                    <span class="text-[10px] font-black uppercase italic ${tieneRutina ? 'text-green-500' : 'text-white/20'}">${tieneRutina ? 'ARSENAL CARGADO' : 'PENDIENTE'}</span>
+                    <p class="text-[9px] text-white/20 font-black uppercase italic mb-2 tracking-widest">Estado ti Rutina</p>
+                    <span class="text-[10px] font-black uppercase italic ${tieneRutina ? 'text-green-500' : 'text-white/20'}">${tieneRutina ? 'NAIKARGA TI ARSENAL' : 'AGUR-URAY'}</span>
                 </div>
-                ${activa ? `<div><p class="text-[9px] text-white/20 font-black uppercase italic mb-2 tracking-widest">Plan Maestro</p><span class="text-[10px] font-black uppercase italic text-white">${activa.nombre_grupo || activa.objetivo}</span></div>` : ''}
+                ${activa ? `<div><p class="text-[9px] text-white/20 font-black uppercase italic mb-2 tracking-widest">Kangrunaan a Plano</p><span class="text-[10px] font-black uppercase italic text-white">${activa.nombre_grupo || activa.objetivo}</span></div>` : ''}
             </div>
             <div class="flex items-center gap-3">
-                <button onclick="window.openFichaTecnica(${a.id})" class="h-14 w-14 bg-white/5 hover:bg-white/10 text-white rounded-2xl transition-all flex items-center justify-center" title="Ficha Técnica"><i data-lucide="clipboard-list" class="w-5 h-5"></i></button>
-                <button onclick="window.openRoutineEditor(${a.id})" class="px-8 h-14 viking-bg-red text-black rounded-2xl text-[10px] font-black uppercase italic hover:scale-105 transition-all flex items-center gap-3 shadow-xl shadow-red-900/20"><i data-lucide="plus-circle" class="w-4 h-4"></i> NUEVO ARSENAL</button>
+                <button onclick="window.openFichaTecnica(${a.id})" class="h-14 w-14 bg-white/5 hover:bg-white/10 text-white rounded-2xl transition-all flex items-center justify-center" title="Ficha Teknila"><i data-lucide="clipboard-list" class="w-5 h-5"></i></button>
+                <button onclick="window.openRoutineEditor(${a.id})" class="px-8 h-14 viking-bg-red text-black rounded-2xl text-[10px] font-black uppercase italic hover:scale-105 transition-all flex items-center gap-3 shadow-xl shadow-red-900/20"><i data-lucide="plus-circle" class="w-4 h-4"></i> BARO NGA ARSENAL</button>
             </div>
         </div>`;
     }).join('');
