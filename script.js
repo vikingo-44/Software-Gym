@@ -3468,23 +3468,92 @@ if (editorForm) {
 		}
 
         async function loadPlanes() {
-            const p = await apiFetch('/planes'); const t = await apiFetch('/tipos-planes');
-            state.planes = Array.isArray(p) ? p : []; state.tiposPlanes = Array.isArray(t) ? t : [];
-            const filterContainer = document.getElementById('planes-filter-container'); filterContainer.innerHTML = ''; 
-            state.tiposPlanes.forEach((t, idx) => { filterContainer.innerHTML += `<button onclick="filterPlanes(${t.id}, this)" class="filter-btn ${idx === 0 ? 'active' : ''}">${t.nombre}</button>`; });
-            if (state.tiposPlanes.length > 0) filterPlanes(state.tiposPlanes[0].id, filterContainer.children[0]);
-            document.getElementById('al-plan').innerHTML = '<option value="">Seleccionar Plan</option>' + state.planes.map(p => `<option value="${p.id}">${p.nombre}</option>`).join('');
-            document.getElementById('plan-tipo').innerHTML = state.tiposPlanes.map(t => `<option value="${t.id}">${t.nombre}</option>`).join('');
-        }
+			const p = await apiFetch('/planes'); 
+			const t = await apiFetch('/tipos-planes');
+			
+			state.planes = Array.isArray(p) ? p : []; 
+			state.tiposPlanes = Array.isArray(t) ? t : [];
+			
+			const filterContainer = document.getElementById('planes-filter-container'); 
+			if (filterContainer) {
+				filterContainer.innerHTML = ''; 
+				state.tiposPlanes.forEach((t, idx) => { 
+					filterContainer.innerHTML += `<button onclick="filterPlanes(${t.id}, this)" class="filter-btn ${idx === 0 ? 'active' : ''}">${t.nombre}</button>`; 
+				});
+				
+				// Carga inicial del primer filtro
+				if (state.tiposPlanes.length > 0) {
+					filterPlanes(state.tiposPlanes[0].id, filterContainer.children[0]);
+				}
+			}
+
+			// Actualizar selectores de planes en otros formularios (Alumnos / Modal Plan)
+			const selectAlumnoPlan = document.getElementById('al-plan');
+			if (selectAlumnoPlan) {
+				selectAlumnoPlan.innerHTML = '<option value="">Seleccionar Plan</option>' + 
+					state.planes.map(p => `<option value="${p.id}">${p.nombre}</option>`).join('');
+			}
+
+			const selectPlanTipo = document.getElementById('plan-tipo');
+			if (selectPlanTipo) {
+				selectPlanTipo.innerHTML = state.tiposPlanes.map(t => `<option value="${t.id}">${t.nombre}</option>`).join('');
+			}
+		}
 
         function filterPlanes(tipoId, btn) {
-            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active');
-            const filtered = state.planes.filter(p => p.tipo_plan_id === tipoId);
-            const hideEdit = (state.user?.rol_nombre === "Profesor" || state.user?.rol_nombre === "Alumno" || state.user?.rol_nombre === "Administracion");
-            document.getElementById('planes-container').innerHTML = filtered.map(p => `<div class="glass-card p-8 rounded-[2.5rem] flex flex-col border-red-600/10 relative text-left">${hideEdit ? '' : `<button onclick="openEditPlan(${p.id})" class="absolute top-4 right-4 text-gray-600 hover:text-red-600"><i data-lucide="edit-3" class="w-4 h-4"></i></button>`}<span class="text-[10px] font-black viking-red uppercase italic tracking-widest mb-2">${p.tipo?.nombre || 'PLAN'}</span><h4 class="text-lg font-black uppercase italic mb-6 leading-tight">${p.nombre}</h4><p class="text-3xl font-black italic mb-8">$ ${p.precio.toLocaleString()}</p></div>`).join('');
-            lucide.createIcons();
-            applyPermissions();
-        }
+			// 1. Manejo de estados visuales de los botones de filtro
+			document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active')); 
+			if(btn) btn.classList.add('active');
+
+			// 2. Filtrado por tipo
+			const filtered = state.planes.filter(p => p.tipo_plan_id === tipoId);
+			
+			// 3. Permisos de edición
+			const hideEdit = (state.user?.rol_nombre === "Profesor" || state.user?.rol_nombre === "Alumno" || state.user?.rol_nombre === "Administracion");
+			
+			// 4. Renderizado de tarjetas con los 3 NUEVOS PRECIOS
+			document.getElementById('planes-container').innerHTML = filtered.map(p => `
+				<div class="glass-card p-8 rounded-[2.5rem] flex flex-col border border-white/5 relative text-left hover:border-red-600/20 transition-all group">
+					${hideEdit ? '' : `
+						<button onclick="openEditPlan(${p.id})" class="absolute top-6 right-6 text-white/20 hover:text-red-600 transition-colors">
+							<i data-lucide="edit-3" class="w-5 h-5"></i>
+						</button>
+					`}
+					
+					<span class="text-[10px] font-black text-red-600 uppercase italic tracking-widest mb-2">
+						${p.tipo?.nombre || 'PLAN'}
+					</span>
+					
+					<h4 class="text-xl font-black uppercase italic mb-6 leading-tight text-white group-hover:text-red-500 transition-colors">
+						${p.nombre}
+					</h4>
+
+					<!-- BLOQUE DE PRECIOS MULTIMODAL -->
+					<div class="space-y-3 bg-black/40 p-5 rounded-3xl border border-white/5 mb-6">
+						<div class="flex justify-between items-center">
+							<span class="text-[10px] font-bold text-white/30 uppercase italic">Efectivo</span>
+							<span class="text-lg font-black text-green-500">$${(p.efectivo || 0).toLocaleString()}</span>
+						</div>
+						<div class="flex justify-between items-center border-t border-white/5 pt-3">
+							<span class="text-[10px] font-bold text-white/30 uppercase italic">Transferencia</span>
+							<span class="text-lg font-black text-blue-400">$${(p.transferencia || 0).toLocaleString()}</span>
+						</div>
+						<div class="flex justify-between items-center border-t border-white/5 pt-3">
+							<span class="text-[10px] font-bold text-white/30 uppercase italic">Tarjeta / Débito</span>
+							<span class="text-lg font-black text-purple-400">$${(p.debito_credito || 0).toLocaleString()}</span>
+						</div>
+					</div>
+
+					<div class="flex items-center gap-2 text-white/20">
+						<i data-lucide="check-circle-2" class="w-3 h-3"></i>
+						<span class="text-[10px] font-bold uppercase italic">${p.clases_mensuales || 0} Créditos mensuales</span>
+					</div>
+				</div>
+			`).join('');
+
+			if (window.lucide) lucide.createIcons();
+			applyPermissions();
+		}
 
         /**
 		 * RENDERIZADO DE STOCK CON IMÁGENES (PUNTO 5)
