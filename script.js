@@ -1788,7 +1788,7 @@ window.renderRutinasList = function(listaDatos) {
     // --- ACTUALIZACIÓN DE ESTADÍSTICAS ---
     const total = state.alumnos.filter(a => {
         const p = (a.plan?.nombre || "").toLowerCase();
-        return p.includes('musculacion') || p.includes('completo') || p.includes('personalizado');
+        return p.includes('musculacion') || p.includes('completo') || p.includes('personalizado') || plan === 'premium';
     }).length;
     
     const conRutina = state.alumnos.filter(a => (a.planes_rutina && a.planes_rutina.length > 0)).length;
@@ -5665,7 +5665,7 @@ if (editorForm) {
 			const filtrados = state.alumnos.filter(a => {
 				const pNombre = (a.plan?.nombre || "").toLowerCase();
 				const norm = pNombre.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-				const esMusculo = norm.includes('musculacion') || norm.includes('completo') || norm.includes('personalizado');
+				const esMusculo = norm.includes('musculacion') || norm.includes('completo') || norm.includes('personalizado') || plan === 'premium';
 				return esMusculo && (a.nombre_completo.toLowerCase().includes(q) || a.dni.includes(q));
 			});
 			renderRutinasList(filtrados);
