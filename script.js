@@ -653,8 +653,9 @@
                                     ).length;
                                     const estaLleno = cupoActual >= cupoMax;
 
+                                    // CORRECCIÓN VISUAL: Aseguramos que el badge sea absoluto para que el flex interno no se rompa
                                     const badge = document.createElement('div');
-                                    badge.className = "class-badge"; 
+                                    badge.className = "absolute inset-0.5 rounded-xl flex flex-col items-center justify-center text-center overflow-hidden transition-transform hover:scale-[1.02] z-10 p-1 shadow-lg"; 
                                     badge.style.backgroundColor = c.color || '#FF0000';
                                     
                                     if (isAdmin) {
@@ -662,21 +663,22 @@
                                         badge.ondragstart = (e) => {
                                             e.dataTransfer.setData("claseId", c.id);
                                             e.dataTransfer.setData("oldDia", slot.dia);
-                                            e.dataTransfer.setData("oldHorario", slot.horario);
+                                           e.dataTransfer.setData("oldHorario", slot.horario);
                                             badge.classList.add('opacity-40');
                                         };
                                         badge.ondragend = () => badge.classList.remove('opacity-40');
                                     }
 
+                                    // CORRECCIÓN VISUAL: Usamos Tailwind directamente para el posicionamiento vertical sin desvíos
                                     badge.innerHTML = `
-                                        <div class="flex flex-col items-center justify-center h-full w-full">
-                                            <span class="badge-title ${colores.text}">
+                                        <div class="flex flex-col items-center justify-center h-full w-full gap-0.5 leading-none">
+                                            <span class="text-[8.5px] font-black uppercase italic truncate w-full px-1 ${colores.text}">
                                                 ${c.nombre}
                                             </span>
-                                            <span class="badge-coach ${colores.sub}">
+                                            <span class="text-[7.5px] font-bold uppercase opacity-70 truncate w-full px-1 ${colores.text}">
                                                 ${slot.coach || 'staff'}
                                             </span>
-                                            <div class="badge-capacity ${colores.bg} ${estaLleno ? 'text-red-500 font-black' : colores.text}">
+                                            <div class="mt-0.5 px-2 py-0.5 rounded-full text-[7px] font-black ${colores.bg} ${estaLleno ? 'text-red-500' : colores.text}">
                                                 ${cupoActual}/${cupoMax}
                                             </div>
                                         </div>
