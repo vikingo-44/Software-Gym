@@ -1,4 +1,3 @@
-
 import os
 import logging
 import hashlib
@@ -297,7 +296,7 @@ class TransactionCreate(BaseModel):
     cuotas: Optional[int] = 1
     descripcion2: Optional[str] = None
 
-# --- SCHEMAS RUTINAS ---
+# --- SCHEMAS RUTINAS (SINCRONIZADOS CON DB_SCHEMA.SQL) ---
 class SerieResponse(BaseModel):
     id: int
     numero_serie: int
@@ -315,6 +314,7 @@ class EjercicioEnRutinaResponse(BaseModel):
     id: int
     ejercicio_id: int
     ejercicio_obj: Optional[EjercicioLibResponse] = None
+    semana_id: Optional[int] = None
     series_detalle: List[SerieResponse] = []
     comentario: Optional[str] = None
     class Config: from_attributes = True
@@ -329,8 +329,11 @@ class PlanRutinaResponse(BaseModel):
     id: int
     usuario_id: int
     nombre_grupo: Optional[str] = None
+    objetivo: Optional[str] = None
     descripcion: Optional[str] = None
-    objetivo: str
+    tipo: Optional[str] = None
+    tipo_id: Optional[int] = None
+    profesor_nombre: Optional[str] = None
     fecha_creacion: date
     fecha_vencimiento: date
     activo: bool
@@ -345,9 +348,10 @@ class SerieCreate(BaseModel):
     
 class EjercicioEnRutinaCreate(BaseModel):
     ejercicio_id: int
+    semana_id: Optional[int] = None
     series: Optional[List[SerieCreate]] = []
     comentario: Optional[str] = ""
-    progreso_json: Optional[str] = None # <--- REQUERIDO PARA RUTINAS PROGRESIVAS
+    progreso_json: Optional[Union[dict, str]] = None 
 
 class DiaRutinaCreate(BaseModel):
     nombre_dia: str
@@ -356,9 +360,9 @@ class DiaRutinaCreate(BaseModel):
 class PlanRutinaCreate(BaseModel):
     usuario_id: int
     nombre_grupo: Optional[str] = "Nueva Rutina"
+    objetivo: Optional[str] = ""
     descripcion: Optional[str] = ""
-    objetivo: str
-    tipo: Optional[str] = "normal" # <--- REQUERIDO PARA IDENTIFICAR EL TIPO
+    tipo: Optional[str] = "normal" 
     fecha_vencimiento: date
     dias: List[DiaRutinaCreate]
 
@@ -518,7 +522,7 @@ def login(data: UsuarioLogin, db: Session = Depends(database.get_db)):
         "sucursal_id": user.sucursal_id
     }
 
-# --- NUEVO: RESET DE CONTRASEÑA (PUNTO 2) ---
+# --- NUEVO: RESET DE CONTRASEÑA ---
 @app.put("/api/usuarios/reset-password", tags=["Autenticacion"])
 def reset_password(data: UsuarioResetPassword, db: Session = Depends(database.get_db)):
     """Permite cambiar la contraseña verificando el DNI."""
@@ -597,7 +601,7 @@ def validar_acceso_qr(data: AccessCheck, db: Session = Depends(database.get_db))
             # --- CORRECCIÓN DE COLORES ---
             if dias_rest <= 3:
                 final_response["message"] = "¡Atención: Próximo a vencer!"
-                final_response["color"] = "yellow"  # <--- Ahora sí avisamos que es amarillo
+                final_response["color"] = "yellow"
             else:
                 final_response["message"] = f"Pase Válido ({dias_rest} días rest.)"
                 final_response["color"] = "green"
@@ -607,7 +611,6 @@ def validar_acceso_qr(data: AccessCheck, db: Session = Depends(database.get_db))
             final_response["color"] = "red"
 
     # --- REGISTRO EN HISTORIAL (SQL) ---
-    # FIX: Se cambia 'estado' por 'accion' para coincidir con el modelo historial_accesos
     try:
         nuevo_acceso = models.Acceso(
             usuario_id=user.id,
@@ -615,8 +618,8 @@ def validar_acceso_qr(data: AccessCheck, db: Session = Depends(database.get_db))
             nombre=user.nombre_completo,
             rol=final_response["rol"],
             metodo="QR SCAN",
-            accion=final_response["status"],  # Campo 'accion' del modelo
-            exitoso=(final_response["status"] == "AUTHORIZED"), # Campo 'exitoso'
+            accion=final_response["status"],
+            exitoso=(final_response["status"] == "AUTHORIZED"),
             fecha=datetime.now()
         )
         db.add(nuevo_acceso)
@@ -663,7 +666,6 @@ def get_historial_accesos(db: Session = Depends(database.get_db)):
         accesos = db.query(models.Acceso).order_by(models.Acceso.id.desc()).limit(50).all()
         
         # PRIORIDAD 0: CORRECCIÓN HORARIA.
-        # Restamos 3 horas al envío para corregir el adelanto del servidor y sincronizar con Argentina.
         offset = timedelta(hours=-3) 
 
         return [{
@@ -992,7 +994,7 @@ def update_plan(id: int, data: PlanUpdate, db: Session = Depends(database.get_db
         p.nombre = data.nombre
         p.precio = data.precio
         p.tipo_plan_id = data.tipo_plan_id
-        p.clases_mensuales = data.clases_mensuales # <--- Actualizamos el valor
+        p.clases_mensuales = data.clases_mensuales
         db.commit()
         return {"status": "success"}
     return {"status": "error", "message": "Plan no encontrado"}
@@ -1017,7 +1019,7 @@ def get_clases(db: Session = Depends(database.get_db)):
 def create_clase(data: ClaseUpdate, db: Session = Depends(database.get_db)):
     new_c = models.Clase(
         nombre=data.nombre,
-        coach=data.coach, # <--- Usamos tu columna original 'coach'
+        coach=data.coach,
         color=data.color,
         capacidad_max=data.capacidad_max,
         horarios_detalle=data.horarios_detalle 
@@ -1031,7 +1033,7 @@ def update_clase(id: int, data: ClaseUpdate, db: Session = Depends(database.get_
     c = db.query(models.Clase).filter(models.Clase.id == id).first()
     if c:
         c.nombre = data.nombre
-        c.coach = data.coach # <--- Cambiado de c.coach a c.profesor_id si corresponde, pero se deja coach según código original
+        c.coach = data.coach
         c.color = data.color
         c.capacidad_max = data.capacidad_max
         c.horarios_detalle = data.horarios_detalle 
@@ -1108,7 +1110,7 @@ def crear_movimiento_caja(mov: MovimientoCreate, db: Session = Depends(database.
         monto=abs(mov.monto),   # Siempre guardamos el monto positivo
         tipo=tipo_final,        # Aquí definimos si entró o salió plata
         metodo_pago=mov.metodo_pago,
-        cuotas=mov.cuotas,      # <--- AGREGADO: Aquí se guarda el valor (3, 6, 12, etc.)
+        cuotas=mov.cuotas,      # <--- AGREGADO
         fecha=datetime.now()
     )
     
@@ -1127,19 +1129,16 @@ def crear_movimiento_caja(mov: MovimientoCreate, db: Session = Depends(database.
 def procesar_cobro(data: TransactionCreate, db: Session = Depends(database.get_db)):
     """
     PRIORIDAD 3: Lógica de cobros con actualización de vencimiento automática.
-    Actualiza la membresía sumando días del plan a la fecha de vencimiento actual (si existe) o desde hoy.
+    Actualiza la membresía sumando días del plan a la fecha de vencimiento actual o desde hoy.
     """
     try:
         # 1. Registro automático en Caja
         monto_positivo = abs(data.monto)
         
-        # Generar descripción más detallada si es posible
-        detalle = data.descripcion
-        if not detalle:
-            detalle = f"Cobro: {data.tipo}"
+        detalle = data.descripcion if data.descripcion else f"Cobro: {data.tipo}"
 
         nueva_transaccion = models.MovimientoCaja(
-            tipo="Ingreso",  # Siempre es ingreso
+            tipo="Ingreso", 
             monto=monto_positivo,
             descripcion=detalle,
             descripcion2=data.descripcion2,
@@ -1147,7 +1146,6 @@ def procesar_cobro(data: TransactionCreate, db: Session = Depends(database.get_d
             cuotas=data.cuotas,
             fecha=datetime.now()
         )
-        
         db.add(nueva_transaccion)
 
         # 2. Lógica de Stock (Si es mercadería)
@@ -1155,28 +1153,18 @@ def procesar_cobro(data: TransactionCreate, db: Session = Depends(database.get_d
             producto = db.query(models.Stock).filter(models.Stock.id == data.producto_id).first()
             if not producto:
                 raise HTTPException(status_code=404, detail="Producto no encontrado")
-            
             producto.stock_actual -= data.cantidad
             
         # 3. Lógica de Planes (Actualización de Vencimiento Automatizada)
         if (data.tipo == "Plan" or "plan" in data.tipo.lower()) and data.alumno_id:
             alumno = db.query(models.Usuario).filter(models.Usuario.id == data.alumno_id).first()
-            
-            # Buscamos el plan para saber la duración de días. 
-            # El producto_id en el cobro de planes se refiere al ID del Plan.
             plan = db.query(models.Plan).options(joinedload(models.Plan.tipo)).filter(models.Plan.id == data.producto_id).first()
 
             if alumno and plan:
                 hoy = date.today()
-                
-                # Definir días de duración (por defecto 30 si el tipo de plan no lo tiene)
-                dias_duracion = 30
-                if plan.tipo and plan.tipo.duracion_dias:
-                    dias_duracion = plan.tipo.duracion_dias
+                dias_duracion = plan.tipo.duracion_dias if (plan.tipo and plan.tipo.duracion_dias) else 30
                 
                 # LÓGICA DE RENOVACIÓN INTELIGENTE:
-                # Si el alumno ya venció (o vence hoy), empezamos a contar desde HOY.
-                # Si aún NO venció, sumamos los días a su fecha de vencimiento actual.
                 base_fecha = hoy
                 if alumno.fecha_vencimiento and alumno.fecha_vencimiento > hoy:
                     base_fecha = alumno.fecha_vencimiento
@@ -1186,7 +1174,6 @@ def procesar_cobro(data: TransactionCreate, db: Session = Depends(database.get_d
                 alumno.estado_cuenta = "Al día"
                 alumno.plan_id = plan.id
                 
-                # Actualizar cupos de clases si el plan los define
                 if plan.clases_mensuales:
                     alumno.clases_restantes = plan.clases_mensuales
 
@@ -1200,7 +1187,7 @@ def procesar_cobro(data: TransactionCreate, db: Session = Depends(database.get_d
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Error interno: {str(e)}")
 
-# --- MUSCULACIÓN ---
+# --- MUSCULACIÓN (MODULO ACTUALIZADO Y SINCRONIZADO) ---
 @app.get("/api/rutinas/grupos-musculares", tags=["Musculación"])
 def get_grupos(db: Session = Depends(database.get_db)):
     return db.query(models.GrupoMuscular).all()
@@ -1226,14 +1213,10 @@ def create_ejercicio_lib(data: EjercicioCreate, db: Session = Depends(database.g
     return nuevo
 
 @app.post("/api/rutinas/plan", tags=["Musculación"])
-def create_plan_rutina(data: models.PlanRutinaCreate, db: Session = Depends(database.get_db), current_user = Depends(get_current_user)):
+def create_plan_rutina(data: PlanRutinaCreate, db: Session = Depends(database.get_db), current_user = Depends(get_current_user)):
     """
-    Crea o actualiza el plan de entrenamiento.
-    Implementa:
-    1. Captura del profesor creador (current_user).
-    2. Asociación por tipo_id (Tabla maestra tipos_rutina).
-    3. Mapeo correcto: nombre_grupo y descripcion (objetivo).
-    4. Explosión de registros: Si es progresiva, el frontend envía una fila por cada semana.
+    Crea un nuevo Plan Maestro de Rutina.
+    Sincronizado con tablas: planes_rutina, rutina_dias, ejercicios_en_rutina, series_ejercicios.
     """
     try:
         # 1. Validar existencia del alumno
@@ -1241,39 +1224,38 @@ def create_plan_rutina(data: models.PlanRutinaCreate, db: Session = Depends(data
         if not user:
             raise HTTPException(status_code=404, detail="Usuario no encontrado")
 
-        # 2. Bloqueo de seguridad Vikinga: No se crean rutinas si el plan de membresía está vencido
+        # 2. Bloqueo de seguridad: No se crean rutinas si está vencido
         if user.fecha_vencimiento and user.fecha_vencimiento < date.today():
             raise HTTPException(
                 status_code=400, 
-                detail="No se puede asignar una rutina a un alumno con el plan vencido. Debe renovar su membresía primero."
+                detail="Membresía vencida. No se puede asignar rutina."
             )
 
-        # 3. Desactivar planes de rutina anteriores para este usuario
+        # 3. Desactivar planes anteriores
         db.query(models.PlanRutina).filter(
             models.PlanRutina.usuario_id == data.usuario_id
         ).update({"activo": False}, synchronize_session=False)
         
-        # 4. Crear la cabecera del Plan
-        # Mapeamos nombre_grupo (título visual) y descripcion (el resumen/objetivo técnico)
+        # 4. Crear planes_rutina
         nuevo_plan = models.PlanRutina(
             usuario_id=data.usuario_id,
             nombre_grupo=data.nombre_grupo,
-            objetivo=data.nombre_grupo,      # Para compatibilidad con vistas viejas
-            descripcion=data.descripcion,    # El "objetivo" real/resumen del wizard
-            # Asociación por PK a tabla maestra: 1=normal, 2=progresiva
+            objetivo=data.objetivo,
+            descripcion=data.descripcion,
+            tipo=data.tipo,
             tipo_id=2 if data.tipo == 'progresiva' else 1,
-            profesor_nombre=current_user.nombre_completo, # Registra quién forjó el plan
+            profesor_nombre=current_user.nombre_completo,
             fecha_vencimiento=data.fecha_vencimiento,
             activo=True,
             fecha_creacion=date.today()
         )
         db.add(nuevo_plan)
-        db.flush() # Generamos ID para vincular los hijos
+        db.flush() 
         
-        # 5. Iterar los Días (Jornadas)
+        # 5. Crear rutina_dias
         for d in data.dias:
             nuevo_dia = models.DiaRutina(
-                plan_rutina_id=nuevo_plan.id, 
+                rutina_id=nuevo_plan.id, 
                 nombre_dia=d.nombre_dia
             )
             db.add(nuevo_dia)
@@ -1281,24 +1263,21 @@ def create_plan_rutina(data: models.PlanRutinaCreate, db: Session = Depends(data
             
             lista_ejercicios = d.ejercicios if d.ejercicios else []
             
-            # 6. Iterar Ejercicios
-            # Si la rutina es progresiva, el frontend ya envía 4 registros por ejercicio 
-            # (uno marcado como [Semana 1], [Semana 2], etc. en el comentario).
             for e in lista_ejercicios:
+                # 6. Crear ejercicios_en_rutina
                 ej_en_rut = models.EjercicioEnRutina(
                     dia_id=nuevo_dia.id,
-                    rutina_id=nuevo_plan.id,
                     ejercicio_id=e.ejercicio_id,
-                    comentario=e.comentario,     # Marker de semana o nota táctica
-                    comentarios=e.comentario,    # Duplicamos por compatibilidad de campos
-                    progreso_json=e.progreso_json # Backup del JSON por si se requiere edición
+                    rutina_id=nuevo_plan.id,
+                    semana_id=e.semana_id,
+                    comentario=e.comentario,
+                    comentarios=e.comentario,
+                    progreso_json=e.progreso_json
                 )
                 db.add(ej_en_rut)
                 db.flush()
 
-                # 7. Guardar las Series del registro
-                # En rutinas progresivas, cada registro suele traer 1 serie que representa 
-                # la carga de esa semana específica.
+                # 7. Crear series_ejercicios
                 if e.series:
                     for s in e.series:
                         nueva_serie = models.SerieEjercicio(
@@ -1311,26 +1290,19 @@ def create_plan_rutina(data: models.PlanRutinaCreate, db: Session = Depends(data
                         db.add(nueva_serie)
         
         db.commit()
-        return {"status": "success", "id": nuevo_plan.id, "message": "¡Arsenal vikingo forjado correctamente!"}
+        return {"status": "success", "id": nuevo_plan.id, "message": "¡Rutina forjada!"}
 
-    except HTTPException as he:
-        db.rollback()
-        raise he
     except Exception as e:
         db.rollback()
-        # Verificamos si existe el logger antes de usarlo para evitar otros errores 500
-        if 'logger' in globals():
-            logger.error(f"Error Grave en Rutinas: {str(e)}")
-        else:
-            print(f"Error Grave en Rutinas: {str(e)}")
+        logger.error(f"Error en Rutinas: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Falla en el servidor: {str(e)}")
 
 @app.get("/api/rutinas/usuario/{id}", response_model=Optional[PlanRutinaResponse], tags=["Musculación"])
 def get_rutina_activa(id: int, db: Session = Depends(database.get_db)):
     # --- VERIFICACIÓN DE PLAN VENCIDO PARA VER RUTINA ---
     user = db.query(models.Usuario).filter(models.Usuario.id == id).first()
-    if not user or not user.plan_id or (user.fecha_vencimiento and user.fecha_vencimiento < date.today()):
-        return None # Si el plan está vencido o no tiene, no se devuelve la rutina
+    if not user or (user.fecha_vencimiento and user.fecha_vencimiento < date.today()):
+        return None 
 
     return db.query(models.PlanRutina).filter(
         models.PlanRutina.usuario_id == id, 
@@ -1342,20 +1314,18 @@ def get_rutina_activa(id: int, db: Session = Depends(database.get_db)):
 
 @app.get("/api/rutinas/historial/{id}", response_model=List[PlanRutinaResponse], tags=["Musculación"])
 def get_historial_rutinas(id: int, db: Session = Depends(database.get_db)):
-    # --- VERIFICACIÓN DE PLAN VENCIDO PARA VER HISTORIAL ---
     user = db.query(models.Usuario).filter(models.Usuario.id == id).first()
-    if not user or not user.plan_id or (user.fecha_vencimiento and user.fecha_vencimiento < date.today()):
-        return [] # Si el plan está vencido, historial vacío por seguridad
+    if not user or (user.fecha_vencimiento and user.fecha_vencimiento < date.today()):
+        return [] 
 
     return db.query(models.PlanRutina).filter(
         models.PlanRutina.usuario_id == id
     ).options(
+        joinedload(models.PlanRutina.dias).joinedload(models.DiaRutina.ejercicios).joinedload(models.EjercicioEnRutina.ejercicio_obj),
         joinedload(models.PlanRutina.dias).joinedload(models.DiaRutina.ejercicios).joinedload(models.EjercicioEnRutina.series_detalle)
     ).order_by(models.PlanRutina.fecha_creacion.desc()).all()
 
 if __name__ == "__main__":
     import uvicorn
     port = int(os.environ.get("PORT", 8000))
-
-
     uvicorn.run(app, host="0.0.0.0", port=port)

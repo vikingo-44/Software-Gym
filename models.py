@@ -1,8 +1,6 @@
 from sqlalchemy import Column, Integer, String, Float, Date, DateTime, ForeignKey, Text, Boolean, JSON
 from sqlalchemy.orm import relationship
 from database import Base
-from pydantic import BaseModel
-from typing import List, Optional
 import datetime
 
 # =========================================
@@ -161,6 +159,7 @@ class PlanRutina(Base):
     nombre_grupo = Column(String, nullable=True) 
     descripcion = Column(Text, nullable=True) 
     objetivo = Column(String)
+    tipo = Column(String, nullable=True) # "normal" o "progresiva"
     tipo_id = Column(Integer, ForeignKey("tipos_rutina.id"), default=1)
     profesor_nombre = Column(String, nullable=True) 
     fecha_creacion = Column(Date, default=datetime.date.today)
@@ -174,7 +173,7 @@ class PlanRutina(Base):
 class DiaRutina(Base):
     __tablename__ = "rutina_dias"
     id = Column(Integer, primary_key=True)
-    plan_rutina_id = Column(Integer, ForeignKey("planes_rutina.id"))
+    rutina_id = Column(Integer, ForeignKey("planes_rutina.id"))
     nombre_dia = Column(String)
     plan_rutina = relationship("PlanRutina", back_populates="dias")
     ejercicios = relationship("EjercicioEnRutina", back_populates="dia", cascade="all, delete-orphan")
@@ -185,6 +184,7 @@ class EjercicioEnRutina(Base):
     dia_id = Column(Integer, ForeignKey("rutina_dias.id"))
     ejercicio_id = Column(Integer, ForeignKey("ejercicios_libreria.id"))
     rutina_id = Column(Integer, ForeignKey("planes_rutina.id"), nullable=True)
+    semana_id = Column(Integer, nullable=True) # Para identificar Semana 1, 2, 3, 4
     progreso_json = Column(JSON, nullable=True) 
     comentario = Column(Text, nullable=True)
     comentarios = Column(Text, nullable=True) 
@@ -202,33 +202,3 @@ class SerieEjercicio(Base):
     peso = Column(String)
     descanso = Column(String)
     ejercicio_en_rutina = relationship("EjercicioEnRutina", back_populates="series_detalle")
-
-# =========================================
-# SCHEMAS DE VALIDACIÓN (PYDANTIC)
-# Necesarios para FastAPI /main.py
-# =========================================
-
-class SerieEjercicioCreate(BaseModel):
-    numero_serie: int
-    repeticiones: str
-    peso: str
-    descanso: Optional[str] = None
-
-class EjercicioEnRutinaCreate(BaseModel):
-    ejercicio_id: int
-    comentario: Optional[str] = ""
-    progreso_json: Optional[str] = None # Viene como string JSON desde el front
-    series: List[SerieEjercicioCreate]
-
-class DiaRutinaCreate(BaseModel):
-    nombre_dia: str
-    ejercicios: List[EjercicioEnRutinaCreate]
-
-class PlanRutinaCreate(BaseModel):
-    usuario_id: int
-    nombre_grupo: str
-    descripcion: str
-    objetivo: Optional[str] = None
-    tipo: str # "normal" o "progresiva"
-    fecha_vencimiento: datetime.date
-    dias: List[DiaRutinaCreate]
