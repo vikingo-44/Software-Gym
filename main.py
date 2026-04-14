@@ -191,7 +191,9 @@ class TipoPlanSchema(BaseModel):
 class PlanSchema(BaseModel):
     id: int
     nombre: str
-    precio: float
+    efectivo: float
+    transferencia: float
+    debito_credito: float
     clases_mensuales: int  
     tipo_plan_id: Optional[int]
     tipo: Optional[TipoPlanSchema] = None
@@ -253,7 +255,9 @@ class StockUpdate(BaseModel):
 
 class PlanUpdate(BaseModel):
     nombre: str
-    precio: float
+    efectivo: float
+    transferencia: float
+    debito_credito: float
     tipo_plan_id: int
     clases_mensuales: Optional[int] = 12 
 
@@ -511,7 +515,9 @@ def login(data: UsuarioLogin, db: Session = Depends(database.get_db)):
         "plan": {
             "id": user.plan.id,
             "nombre": user.plan.nombre,
-            "precio": user.plan.precio,
+            "efectivo": user.plan.efectivo,
+            "transferencia": user.plan.transferencia,
+            "debito_credito": user.plan.debito_credito,
             "clases_mensuales": user.plan.clases_mensuales 
         } if user.plan else None,
         "plan_id": user.plan_id,
@@ -980,7 +986,9 @@ def delete_stock(id: int, db: Session = Depends(database.get_db)):
 # --- PLANES ---
 @app.get("/api/planes", tags=["Planes"])
 def get_planes(db: Session = Depends(database.get_db)):
-    return db.query(models.Plan).options(joinedload(models.Plan.tipo)).all()
+    planes = db.query(models.Plan).options(joinedload(models.Plan.tipo)).all()
+    # Forzamos la estructura para que el frontend reciba los nombres correctos
+    return planes
 
 @app.post("/api/planes", tags=["Planes"])
 def create_plan(data: PlanUpdate, db: Session = Depends(database.get_db)):

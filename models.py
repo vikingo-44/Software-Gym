@@ -25,15 +25,11 @@ class Plan(Base):
     __tablename__ = "planes"
     id = Column(Integer, primary_key=True)
     nombre = Column(String)
-    # Cambiamos precio por efectivo y agregamos los nuevos
     efectivo = Column(Float, default=0.0)
     transferencia = Column(Float, default=0.0)
-    # En Python usamos snake_case, pero mapeamos al nombre real de la DB con barra si es necesario
     debito_credito = Column("Debito/Credito", Float, default=0.0) 
-    
     tipo_plan_id = Column(Integer, ForeignKey("tipos_planes.id"))
     clases_mensuales = Column(Integer, default=12) 
-    
     tipo = relationship("TipoPlan", back_populates="planes")
     usuarios = relationship("Usuario", back_populates="plan")
 

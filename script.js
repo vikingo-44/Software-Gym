@@ -1103,7 +1103,7 @@
 				producto_id: planId,
 				alumno_id: alumnoId,
 				nombre: `${plan.nombre} (${alumno.nombre_completo})`,
-				precio: plan.precio,
+				precio: plan.efectivo,
 				cantidad: 1,
 				descripcion2: comentario // <-- AQUÍ SE GUARDA EL TICKET
 			});
@@ -3781,7 +3781,7 @@ if (editorForm) {
 				document.getElementById('plan-nombre').value = p.nombre; 
 				document.getElementById('plan-tipo').value = p.tipo_plan_id; 
 				
-				// Mapeo de los 3 nuevos campos de precio
+				// CAMBIO CRÍTICO: p.precio ya no existe, ahora es p.efectivo
 				document.getElementById('plan-efectivo').value = p.efectivo || 0;
 				document.getElementById('plan-transferencia').value = p.transferencia || 0;
 				document.getElementById('plan-debito').value = p.debito_credito || 0;
