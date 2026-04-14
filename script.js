@@ -5652,25 +5652,6 @@ if (editorForm) {
 			}
 		};
 
-		// 3. BÚSQUEDA DE RUTINAS
-		window.searchRutinaAlumno = function(query) {
-			if(!query) { filterRutinas('todos'); return; }
-			
-			document.querySelectorAll('.filter-btn-rutina').forEach(btn => {
-				btn.classList.remove('bg-red-600', 'text-black');
-				btn.classList.add('text-white-500');
-			});
-
-			const q = query.toLowerCase();
-			const filtrados = state.alumnos.filter(a => {
-				const pNombre = (a.plan?.nombre || "").toLowerCase();
-				const norm = pNombre.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-				const esMusculo = norm.includes('musculacion') || norm.includes('completo') || norm.includes('personalizado') || plan === 'premium';
-				return esMusculo && (a.nombre_completo.toLowerCase().includes(q) || a.dni.includes(q));
-			});
-			renderRutinasList(filtrados);
-		};
-
 		// --- FILTROS SECCIÓN RUTINAS ---
 		window.filterRutinas = function(filtro) {
 			if(!state.alumnos) return;
@@ -5719,7 +5700,7 @@ if (editorForm) {
 				// Primero que sea de musculación
 				const planNombre = (a.plan?.nombre || "").toLowerCase();
 				const normalized = planNombre.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-				const esMusculo = normalized.includes('musculacion') || normalized.includes('completo') || normalized.includes('personalizado') || plan === 'premium';
+				const esMusculo = normalized.includes('musculacion') || normalized.includes('completo') || normalized.includes('personalizado') || planNombre === 'premium';
 				
 				// Luego buscamos por nombre o dni
 				return esMusculo && (a.nombre_completo.toLowerCase().includes(q) || a.dni.includes(q));
