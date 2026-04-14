@@ -1785,47 +1785,41 @@ window.renderRutinasList = function(listaDatos) {
         return;
     }
 
+    // DISEÑO LINEAL SINCRONIZADO CON SECCIÓN ALUMNOS
     list.innerHTML = listaDatos.map(a => {
         const initials = getVikingInitials(a);
         const tieneRutina = a.planes_rutina && a.planes_rutina.length > 0;
         const activa = tieneRutina ? a.planes_rutina.find(r => r.activo) : null;
         
         return `
-        <div class="p-8 border-b border-white/5 flex flex-col lg:flex-row lg:items-center gap-10 hover:bg-white/[0.02] group relative overflow-hidden transition-all">
-            <div class="absolute left-0 top-0 bottom-0 w-1 ${tieneRutina ? 'bg-red-600 shadow-[0_0_15px_#ef4444]' : 'bg-white/10'}"></div>
+        <div class="px-6 py-4 border-b border-white/5 flex items-center gap-4 hover:bg-white/[0.02] group relative transition-all">
+            <div class="absolute left-0 top-0 bottom-0 w-1 ${tieneRutina ? 'bg-red-600 shadow-[0_0_10px_#ef4444]' : 'bg-white/10'}"></div>
             
-            <div class="flex items-center gap-6 w-full lg:w-1/3">
-                <div class="w-16 h-16 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center font-black text-white text-xl italic group-hover:bg-red-600 group-hover:text-black transition-all">
+            <div class="flex items-center gap-4 flex-1">
+                <div class="w-12 h-12 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center font-black text-white text-lg italic group-hover:bg-red-600 group-hover:text-black transition-all">
                     ${initials}
                 </div>
                 <div class="text-left">
-                    <h4 class="text-lg font-black uppercase italic text-white group-hover:text-red-500 leading-none">${a.nombre_completo}</h4>
-                    <p class="text-[10px] text-white/30 font-black uppercase tracking-[0.2em] mt-2">${a.dni} • ${a.plan?.nombre || 'SIN PLAN'}</p>
+                    <h4 class="text-[14px] font-black uppercase italic text-white group-hover:text-red-500 leading-none">${a.nombre_completo}</h4>
+                    <p class="text-[9px] text-white/30 font-bold uppercase tracking-widest mt-1.5">${a.dni} • ${a.plan?.nombre || 'SIN PLAN'}</p>
                 </div>
             </div>
 
-            <div class="flex-1 flex gap-12 text-left">
-                <div>
-                    <p class="text-[9px] text-white/20 font-black uppercase italic mb-2 tracking-widest">Estado</p>
-                    <span class="text-[10px] font-black uppercase italic ${tieneRutina ? 'text-green-500' : 'text-white/20'}">
-                        ${tieneRutina ? 'CARGADO' : 'PENDIENTE'}
-                    </span>
-                </div>
-                ${activa ? `
-                <div>
-                    <p class="text-[9px] text-white/20 font-black uppercase italic mb-2 tracking-widest">Plan Activo</p>
-                    <span class="text-[10px] font-black uppercase italic text-white">${activa.nombre_grupo || activa.objetivo}</span>
-                </div>` : ''}
+            <div class="hidden md:flex flex-col text-left w-48">
+                <p class="text-[8px] text-white/20 font-black uppercase italic mb-1 tracking-widest">Plan Musculación</p>
+                <span class="text-[10px] font-black uppercase italic ${tieneRutina ? 'text-white' : 'text-white/20'}">
+                    ${activa ? (activa.nombre_grupo || activa.objetivo) : 'SIN ASIGNAR'}
+                </span>
             </div>
 
-            <div class="flex items-center gap-3">
+            <div class="flex items-center gap-2">
                 <button onclick="window.openFichaTecnica(${a.id})" 
-                    class="h-14 w-14 bg-white/5 hover:bg-white/10 text-white rounded-2xl flex items-center justify-center transition-all">
-                    <i data-lucide="clipboard-list" class="w-5 h-5"></i>
+                    class="h-10 w-10 bg-white/5 hover:bg-white/10 text-white rounded-xl flex items-center justify-center transition-all">
+                    <i data-lucide="clipboard-list" class="w-4 h-4"></i>
                 </button>
                 <button onclick="window.openRoutineEditor(${a.id})" 
-                    class="px-8 h-14 viking-bg-red text-black rounded-2xl text-[10px] font-black uppercase italic hover:scale-105 flex items-center gap-3 shadow-xl shadow-red-900/20 transition-all">
-                    <i data-lucide="plus-circle" class="w-4 h-4"></i> NUEVA RUTINA
+                    class="px-5 h-10 viking-bg-red text-black rounded-xl text-[9px] font-black uppercase italic hover:scale-105 flex items-center gap-2 shadow-lg shadow-red-900/10 transition-all">
+                    <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i> ASIGNAR
                 </button>
             </div>
         </div>`;
