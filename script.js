@@ -3722,6 +3722,8 @@ if (editorForm) {
 			document.getElementById('al-nombre').value = al.nombre_completo; 
 			document.getElementById('al-dni').value = al.dni;
 			document.getElementById('al-email').value = al.email || ""; 
+			document.getElementById('al-telefono').value = al.telefono || "";
+			document.getElementById('al-genero').value = al.genero || "";  
 			document.getElementById('al-plan').value = al.plan_id || ""; 
 			
 			// Asignar sucursal en edición
@@ -3755,7 +3757,9 @@ if (editorForm) {
 			const data = { 
 				nombre_completo: document.getElementById('al-nombre').value, 
 				dni: document.getElementById('al-dni').value, 
-				email: document.getElementById('al-email').value, 
+				email: document.getElementById('al-email').value,
+				telefono: document.getElementById('al-telefono').value,
+				genero: document.getElementById('al-genero').value,
 				
 				// Conversión a enteros para las claves foráneas (Planes y Sucursales)
 				plan_id: parseInt(document.getElementById('al-plan').value) || null, 
