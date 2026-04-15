@@ -177,6 +177,8 @@ class TokenResponse(BaseModel):
     certificado_entregado: bool = False
     fecha_certificado: Optional[str] = None
     sucursal_id: Optional[int] = None
+    telefono: Optional[str] = None
+    genero: Optional[str] = None
 
 # --- NUEVO: Schema para Validación de QR ---
 class AccessCheck(BaseModel):
@@ -207,7 +209,7 @@ class UsuarioResponse(BaseModel):
     rol_nombre: Optional[str] = None
     plan: Optional[PlanSchema] = None
     plan_id: Optional[int] = None
-    estado_cuenta: Optional[str] = "Al día"
+    estado_cuenta: Optional[str] = "Activo"
     fecha_vencimiento: Optional[date] = None
     fecha_ultima_renovacion: Optional[date] = None
     especialidad: Optional[str] = None
@@ -219,6 +221,8 @@ class UsuarioResponse(BaseModel):
     certificado_entregado: bool = False
     fecha_certificado: Optional[date] = None
     sucursal_id: Optional[int] = None
+    telefono: Optional[str] = None
+    genero: Optional[str] = None
     
     class Config: from_attributes = True
 
@@ -238,6 +242,8 @@ class AlumnoUpdate(BaseModel):
     fecha_ultima_renovacion: Optional[date] = None
     fecha_vencimiento: Optional[date] = None
     sucursal_id: Optional[int] = None
+    telefono: Optional[str] = None
+    genero: Optional[str] = None
 
 class StaffUpdate(BaseModel):
     nombre_completo: Optional[str] = None
@@ -706,7 +712,7 @@ def get_alumnos(db: Session = Depends(database.get_db)):
     for al in alumnos:
         al.rol_nombre = al.perfil.nombre if al.perfil else "Alumno"
         if al.fecha_vencimiento and al.fecha_vencimiento < date.today():
-            al.estado_cuenta = "Vencido"
+            al.estado_cuenta = "Inactivo"
         
     return alumnos
 
@@ -718,7 +724,7 @@ def get_ficha_tecnica(id: int, db: Session = Depends(database.get_db)):
     
     estado = al.estado_cuenta
     if al.fecha_vencimiento and al.fecha_vencimiento < date.today():
-        estado = "Vencido"
+        estado = "Inactivo"
 
     return {
         "nombre_completo": al.nombre_completo,
@@ -760,7 +766,9 @@ def create_alumno(alumno: AlumnoUpdate, db: Session = Depends(database.get_db)):
             imc=alumno.imc,
             certificado_entregado=alumno.certificado_entregado or False,
             fecha_certificado=alumno.fecha_certificado,
-            sucursal_id=alumno.sucursal_id
+            sucursal_id=alumno.sucursal_id,
+            telefono=alumno.telefono,
+            genero=alumno.genero
         )
         
         db.add(new_al)

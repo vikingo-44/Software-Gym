@@ -52,7 +52,8 @@ class Usuario(Base):
     perfil_id = Column(Integer, ForeignKey("perfiles.id"))
     plan_id = Column(Integer, ForeignKey("planes.id"), nullable=True)
     sucursal_id = Column(Integer, ForeignKey("sucursales.id"), nullable=True)
-    
+    telefono = Column(String, nullable=True)
+    genero = Column(String, nullable=True)
     fecha_nacimiento = Column(Date, nullable=True)
     edad = Column(Integer, nullable=True)
     peso = Column(Float, nullable=True)
