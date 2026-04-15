@@ -714,7 +714,7 @@ def get_alumnos(db: Session = Depends(database.get_db)):
     for al in alumnos:
         al.rol_nombre = al.perfil.nombre if al.perfil else "Alumno"
         if al.fecha_vencimiento and al.fecha_vencimiento < date.today(): 
-            al.estado_cuenta = "Inactivo"
+            al.estado_cuenta = "Caducado"
         else:
             al.estado_cuenta = "Activo"
     return alumnos
@@ -727,7 +727,7 @@ def get_ficha_tecnica(id: int, db: Session = Depends(database.get_db)):
     
     estado = al.estado_cuenta
     if al.fecha_vencimiento and al.fecha_vencimiento < date.today():
-        estado = "Inactivo"
+        estado = "Caducado"
 
     return {
         "nombre_completo": al.nombre_completo,
@@ -1236,7 +1236,7 @@ def procesar_cobro(data: TransactionCreate, db: Session = Depends(database.get_d
                 
                 alumno.fecha_ultima_renovacion = hoy
                 alumno.fecha_vencimiento = base_fecha + timedelta(days=dias_duracion)
-                alumno.estado_cuenta = "Al día"
+                alumno.estado_cuenta = "Activo"
                 alumno.plan_id = plan.id
                 
                 if plan.clases_mensuales:

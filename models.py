@@ -65,7 +65,7 @@ class Usuario(Base):
     
     fecha_ultima_renovacion = Column(Date, nullable=True)
     fecha_vencimiento = Column(Date, nullable=True)
-    estado_cuenta = Column(String, default="Al día")
+    estado_cuenta = Column(String, default="Activo")
     
     perfil = relationship("Perfil", back_populates="usuarios")
     plan = relationship("Plan", back_populates="usuarios")
