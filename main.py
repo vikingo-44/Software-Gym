@@ -517,6 +517,8 @@ def login(data: UsuarioLogin, db: Session = Depends(database.get_db)):
         "nombre_completo": user.nombre_completo, 
         "dni": user.dni, 
         "email": user.email,
+        "telefono": user.telefono,
+        "genero": user.genero,
         "rol_nombre": user.perfil.nombre if user.perfil else "Usuario",
         "plan": {
             "id": user.plan.id,
@@ -711,9 +713,10 @@ def get_alumnos(db: Session = Depends(database.get_db)):
     
     for al in alumnos:
         al.rol_nombre = al.perfil.nombre if al.perfil else "Alumno"
-        if al.fecha_vencimiento and al.fecha_vencimiento < date.today():
+        if al.fecha_vencimiento and al.fecha_vencimiento < date.today(): 
             al.estado_cuenta = "Inactivo"
-        
+        else:
+            al.estado_cuenta = "Activo"
     return alumnos
 
 @app.get("/api/alumnos/{id}/ficha", tags=["Alumnos"])
@@ -741,47 +744,58 @@ def get_ficha_tecnica(id: int, db: Session = Depends(database.get_db)):
     }
 
 @app.post("/api/alumnos", tags=["Alumnos"])
-def create_alumno(alumno: AlumnoUpdate, db: Session = Depends(database.get_db)):
+def create_alumno(alumno: Union[AlumnoUpdate, List[AlumnoUpdate]], db: Session = Depends(database.get_db)):
     try:
         perfil = db.query(models.Perfil).filter(func.lower(models.Perfil.nombre) == "alumno").first()
         if not perfil:
             raise HTTPException(status_code=500, detail="Perfil Alumno no encontrado")
             
-        raw_password = str(alumno.password).strip() if alumno.password else str(alumno.dni).strip()
-        hashed_pass = get_password_hash(raw_password)
-
-        new_al = models.Usuario(
-            nombre_completo=alumno.nombre_completo, 
-            dni=alumno.dni, 
-            email=alumno.email,
-            plan_id=alumno.plan_id, 
-            perfil_id=perfil.id, 
-            password_hash=hashed_pass,
-            fecha_ultima_renovacion=alumno.fecha_ultima_renovacion or date.today(), 
-            fecha_vencimiento=alumno.fecha_vencimiento,
-            fecha_nacimiento=alumno.fecha_nacimiento,
-            edad=alumno.edad,
-            peso=alumno.peso,
-            altura=alumno.altura,
-            imc=alumno.imc,
-            certificado_entregado=alumno.certificado_entregado or False,
-            fecha_certificado=alumno.fecha_certificado,
-            sucursal_id=alumno.sucursal_id,
-            telefono=alumno.telefono,
-            genero=alumno.genero
-        )
+        # Normalizamos la entrada a una lista para procesar uniformemente
+        alumnos_a_procesar = alumno if isinstance(alumno, list) else [alumno]
         
-        db.add(new_al)
+        for item in alumnos_a_procesar:
+            # Determinamos password (password enviado o DNI por defecto)
+            raw_password = str(item.password).strip() if item.password else str(item.dni).strip()
+            hashed_pass = get_password_hash(raw_password)
+
+            new_al = models.Usuario(
+                nombre_completo=item.nombre_completo, 
+                dni=item.dni, 
+                email=item.email,
+                plan_id=item.plan_id, 
+                perfil_id=perfil.id, 
+                password_hash=hashed_pass,
+                fecha_ultima_renovacion=item.fecha_ultima_renovacion or date.today(), 
+                fecha_vencimiento=item.fecha_vencimiento,
+                fecha_nacimiento=item.fecha_nacimiento,
+                edad=item.edad or 0,
+                peso=item.peso or 0,
+                altura=item.altura or 0,
+                imc=item.imc or 0,
+                certificado_entregado=item.certificado_entregado or False,
+                fecha_certificado=item.fecha_certificado,
+                sucursal_id=item.sucursal_id,
+                telefono=item.telefono,
+                genero=item.genero
+            )
+            db.add(new_al)
+        
         db.commit()
-        return {"status": "success", "message": "Alumno creado correctamente"}
+        return {
+            "status": "success", 
+            "message": f"Se procesaron {len(alumnos_a_procesar)} alumno(s) correctamente"
+        }
 
     except IntegrityError:
         db.rollback()
-        raise HTTPException(status_code=400, detail="El DNI o Email ya se encuentra registrado")
+        raise HTTPException(
+            status_code=400, 
+            detail="Error de integridad: El DNI o Email ya se encuentra registrado en el sistema"
+        )
     except Exception as e:
         db.rollback()
-        logger.error(f"Error crítico al crear alumno: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Error interno: {str(e)}")
+        logger.error(f"Error crítico al crear alumno(s): {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error interno del servidor: {str(e)}")
 
 @app.put("/api/alumnos/{id}", tags=["Alumnos"])
 def update_alumno(id: int, data: AlumnoUpdate, db: Session = Depends(database.get_db)):
