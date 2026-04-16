@@ -546,6 +546,13 @@ async def importar_alumnos(alumnos_data: List[BulkAlumnoSchema], db: Session = D
             if not plan_final:
                 plan_final = db.query(models.Plan).filter(models.Plan.tipo_plan_id == tipo_match.id).first()
 
+            f_nac_dt = None
+            if data.fecha_nacimiento:
+                try:
+                    f_nac_dt = datetime.strptime(data.fecha_nacimiento, "%Y-%m-%d").date()
+                except:
+                    f_nac_dt = None
+
             # 5. Crear el Usuario (Alumno)
             nuevo = models.Usuario(
                 nombre_completo=data.nombre_completo.upper(),
@@ -553,6 +560,7 @@ async def importar_alumnos(alumnos_data: List[BulkAlumnoSchema], db: Session = D
                 email=data.email,
                 telefono=data.telefono,
                 genero=data.genero,
+                fecha_nacimiento=f_nac_dt,
                 password_hash=get_password_hash(data.password),
                 perfil_id=perfil_alumno.id if perfil_alumno else None,
                 sucursal_id=data.sucursal_id,
