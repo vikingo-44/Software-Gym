@@ -10,7 +10,7 @@ from sqlalchemy.exc import IntegrityError, ProgrammingError
 from sqlalchemy import func, extract, text
 from sqlalchemy.orm.attributes import flag_modified
 from typing import List, Optional, Union
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, ConfigDict
 from datetime import datetime, timedelta, date
 
 # Librerías para Seguridad (JWT y Hashing de contraseñas)
@@ -209,45 +209,40 @@ class AccessCheck(BaseModel):
 class TipoPlanSchema(BaseModel):
     id: int
     nombre: str
-    duracion_dias: int
-    class Config: from_attributes = True
+    duracion_dias: Optional[int] = 30
+    model_config = ConfigDict(from_attributes=True)
 
 class PlanSchema(BaseModel):
     id: int
     nombre: str
-    efectivo: float
-    transferencia: float
-    debito_credito: float
-    clases_mensuales: int  
-    tipo_plan_id: Optional[int]
-    tipo: Optional[TipoPlanSchema] = None
-    dias: Optional[int]
-    class Config: from_attributes = True
+    efectivo: Optional[float] = 0.0
+    transferencia: Optional[float] = 0.0
+    debito_credito: Optional[float] = 0.0
+    clases_mensuales: Optional[int] = 12
+    tipo_plan_id: Optional[int] = None
+    tipo: Optional[TipoPlanSchema] = None # Si el tipo no existe, no rompe
+    model_config = ConfigDict(from_attributes=True)
 
 class UsuarioResponse(BaseModel):
     id: int
-    nombre_completo: str
     dni: str
-    email: Optional[str]
-    rol_nombre: Optional[str] = None
-    plan: Optional[PlanSchema] = None
-    plan_id: Optional[int] = None
-    estado_cuenta: Optional[str] = "Activo"
-    fecha_vencimiento: Optional[date] = None
-    fecha_ultima_renovacion: Optional[date] = None
-    especialidad: Optional[str] = None
-    fecha_nacimiento: Optional[date] = None
-    edad: Optional[int] = None
-    peso: Optional[float] = None
-    altura: Optional[float] = None
-    imc: Optional[float] = None
-    certificado_entregado: bool = False
-    fecha_certificado: Optional[date] = None
-    sucursal_id: Optional[int] = None
+    nombre_completo: str
+    email: Optional[str] = None
     telefono: Optional[str] = None
     genero: Optional[str] = None
-    
-    class Config: from_attributes = True
+    estado_cuenta: Optional[str] = "Activo"
+    rol_nombre: Optional[str] = "Alumno"
+    plan: Optional[PlanSchema] = None # Si el plan está huérfano, devuelve null
+    plan_id: Optional[int] = None
+    fecha_vencimiento: Optional[date] = None
+    fecha_ultima_renovacion: Optional[date] = None
+    peso: Optional[float] = 0.0
+    altura: Optional[float] = 0.0
+    imc: Optional[float] = 0.0
+    certificado_entregado: Optional[bool] = False
+    fecha_certificado: Optional[date] = None
+    sucursal_id: Optional[int] = None
+    model_config = ConfigDict(from_attributes=True)
 
 class AlumnoUpdate(BaseModel):
     nombre_completo: Optional[str] = None
@@ -813,31 +808,30 @@ def get_historial_accesos(db: Session = Depends(database.get_db)):
 @app.get("/api/alumnos", response_model=List[UsuarioResponse], tags=["Alumnos"])
 def get_alumnos(db: Session = Depends(database.get_db)):
     try:
-        # Usamos joinedload para traer el perfil y el plan de un solo golpe
+        # Cargamos alumnos con sus relaciones de forma segura
         alumnos = db.query(models.Usuario).options(
             joinedload(models.Usuario.perfil),
-            joinedload(models.Usuario.plan)
+            joinedload(models.Usuario.plan).joinedload(models.Plan.tipo)
         ).join(models.Perfil).filter(func.lower(models.Perfil.nombre) == "alumno").all()
         
+        hoy = date.today()
+        
         for al in alumnos:
-            # Forzamos valores por defecto si falta algo
+            # Forzar valores por defecto si las relaciones fallan
             al.rol_nombre = al.perfil.nombre if al.perfil else "Alumno"
             
-            # Si el plan existe pero el objeto no se cargó, evitamos que rompa el JSON
-            if not al.plan:
-                al.plan = None 
-                
-            # Validación de fechas segura
-            hoy = date.today()
+            # Recálculo de estado sin depender de lógica externa
             if al.fecha_vencimiento:
-                al.estado_cuenta = "Caducado" if al.fecha_vencimiento < hoy else "Activo"
+                al.estado_cuenta = "Activo" if al.fecha_vencimiento >= hoy else "Caducado"
             else:
                 al.estado_cuenta = "Inactivo"
-                
+
         return alumnos
     except Exception as e:
-        logger.error(f"Error fatal en lista de alumnos: {str(e)}")
-        raise HTTPException(status_code=500, detail="Error al procesar la lista de guerreros")
+        logger.error(f"Error Crítico Alumnos: {str(e)}")
+        # No devolvemos 500, devolvemos una lista vacía para que la app no muera
+        return []
+
 
 @app.get("/api/alumnos/{id}/ficha", tags=["Alumnos"])
 def get_ficha_tecnica(id: int, db: Session = Depends(database.get_db)):
@@ -1142,10 +1136,13 @@ def delete_stock(id: int, db: Session = Depends(database.get_db)):
 # --- PLANES ---
 @app.get("/api/planes", response_model=List[PlanSchema], tags=["Planes"])
 def get_planes(db: Session = Depends(database.get_db)):
-    """Obtiene todos los planes con la información de su tipo cargada"""
-    planes = db.query(models.Plan).options(joinedload(models.Plan.tipo)).all()
-    # Forzamos la estructura para que el frontend reciba los nombres correctos
-    return planes
+    try:
+        # Traemos los planes y sus tipos
+        planes = db.query(models.Plan).options(joinedload(models.Plan.tipo)).all()
+        return planes
+    except Exception as e:
+        logger.error(f"Error Crítico Planes: {str(e)}")
+        return []
 
 @app.post("/api/planes", tags=["Planes"])
 def create_plan(data: PlanUpdate, db: Session = Depends(database.get_db)):
@@ -1284,9 +1281,15 @@ def get_caja_resumen(db: Session = Depends(database.get_db)):
     egr = db.query(func.sum(models.MovimientoCaja.monto)).filter(models.MovimientoCaja.tipo == "Egreso").scalar() or 0
     return {"ingresos": float(ing), "gastos": float(egr), "balance": float(ing - egr)}
 
-@app.get("/api/caja/movimientos", tags=["Finanzas"])
+@app.get("/api/caja/movimientos", tags=["Caja"])
 def get_movimientos(db: Session = Depends(database.get_db)):
-    return db.query(models.MovimientoCaja).order_by(models.MovimientoCaja.fecha.desc()).limit(50).all()
+    try:
+        # Traemos data plana para evitar que fallas en relaciones rompan el JSON
+        movs = db.query(models.MovimientoCaja).order_by(models.MovimientoCaja.fecha.desc()).limit(150).all()
+        return movs
+    except Exception as e:
+        logger.error(f"Error Crítico Caja: {str(e)}")
+        return []
 
 @app.post("/api/caja/movimiento", tags=["Finanzas"])
 def create_movimiento(data: MovimientoCajaCreate, db: Session = Depends(database.get_db)):
