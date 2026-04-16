@@ -1,7 +1,7 @@
 import os
 import logging
 import hashlib
-from fastapi import AP_Router, FastAPI, Depends, HTTPException, status
+from fastapi import APIRouter, FastAPI, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -25,7 +25,7 @@ import models
 import database
 from database import Base
 
-router = AP_Router()
+router = APIRouter()
 
 # ==========================================
 # CONFIGURACIÓN DE SEGURIDAD
@@ -491,10 +491,10 @@ def update_db_user(user_id: int, data: Union[AlumnoUpdate, StaffUpdate], db: Ses
 
 @router.post("/api/alumnos/importar-masivo", tags=["Migración"])
 async def importar_alumnos(alumnos_data: List[BulkAlumnoSchema], db: Session = Depends(database.get_db)):
-    # Ahora 'detalles' se usará para listar los nombres procesados con éxito
+    # detalles se usa para listar los nombres procesados con éxito
     resumen = {"creados": 0, "errores": [], "detalles": []}
     
-    # 1. Traemos todos los tipos de planes para tenerlos en memoria (cache rápido)
+    # 1. Traemos todos los tipos de planes para tenerlos en memoria
     tipos_plan = db.query(models.TipoPlan).all()
     # Mapeo de duración -> Palabra clave en el nombre del TipoPlan
     mapa_duracion = {1: "Mensual", 3: "Trimestral", 6: "Semestral", 12: "Anual"}
@@ -504,10 +504,11 @@ async def importar_alumnos(alumnos_data: List[BulkAlumnoSchema], db: Session = D
     for data in alumnos_data:
         try:
             # Verificar si ya existe por DNI
-            existe = db.query(models.Alumno).filter(models.Alumno.dni == data.dni).first()
-            if existe:
-                resumen["errores"].append(f"DNI {data.dni} ya existe: {data.nombre_completo}")
-                continue
+            if data.dni:
+                existe = db.query(models.Alumno).filter(models.Alumno.dni == data.dni).first()
+                if existe:
+                    resumen["errores"].append(f"DNI {data.dni} ya existe: {data.nombre_completo}")
+                    continue
 
             # 2. Calcular duración y buscar TipoPlan
             meses = calcular_meses(data.fecha_inicio, data.fecha_fin)
@@ -517,10 +518,12 @@ async def importar_alumnos(alumnos_data: List[BulkAlumnoSchema], db: Session = D
             tipo_plan = next((t for t in tipos_plan if nombre_tipo_buscado.lower() in t.nombre.lower()), None)
             
             if not tipo_plan:
-                tipo_plan = tipos_plan[0] # Fallback al primero si no encuentra
+                tipo_plan = tipos_plan[0] if tipos_plan else None
             
             # 3. Buscar el primer plan disponible que pertenezca a ese TipoPlan
-            plan_asignado = db.query(models.Plan).filter(models.Plan.tipo_plan_id == tipo_plan.id).first()
+            plan_asignado = None
+            if tipo_plan:
+                plan_asignado = db.query(models.Plan).filter(models.Plan.tipo_plan_id == tipo_plan.id).first()
             
             if not plan_asignado:
                 plan_asignado = db.query(models.Plan).first()
@@ -537,10 +540,10 @@ async def importar_alumnos(alumnos_data: List[BulkAlumnoSchema], db: Session = D
                 peso=data.peso,
                 altura=data.altura,
                 imc=data.imc,
-                certificado_entregado=data.certificado_entregado,
+                certificado_entregado=data.certified_entregado,
                 fecha_certificado=data.fecha_certificado,
                 sucursal_id=data.sucursal_id,
-                plan_id=plan_asignado.id,
+                plan_id=plan_asignado.id if plan_asignado else None,
                 fecha_ultima_renovacion=data.fecha_inicio,
                 fecha_vencimiento=data.fecha_fin,
                 activo=True if data.fecha_fin >= hoy_str else False
@@ -548,8 +551,7 @@ async def importar_alumnos(alumnos_data: List[BulkAlumnoSchema], db: Session = D
             
             db.add(nuevo_alumno)
             resumen["creados"] += 1
-            # Usamos 'detalles' para que deje de estar en amarillo y sea informativo
-            resumen["detalles"].append(f"Creado: {data.nombre_completo} (Plan: {plan_asignado.nombre})")
+            resumen["detalles"].append(f"Creado: {data.nombre_completo} (Plan: {plan_asignado.nombre if plan_asignado else 'N/A'})")
             
         except Exception as e:
             resumen["errores"].append(f"Error en {data.nombre_completo}: {str(e)}")
