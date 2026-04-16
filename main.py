@@ -103,42 +103,44 @@ def get_current_user(db: Session = Depends(database.get_db), auth: HTTPAuthoriza
 @app.on_event("startup")
 def startup_event():
     """
-    Este script se ejecuta al iniciar el servidor.
-    Intenta eliminar las restricciones UNIQUE antiguas de la tabla reservas
-    que impiden reservar la misma clase en diferentes días.
+    Parche automático: Agrega columnas faltantes y limpia restricciones de reservas.
     """
     db = database.SessionLocal()
     try:
-        # PARCHE PARA LA COLUMNA descripcion2 (FIX ROBUSTO)
+        logger.info("--- INICIANDO MANTENIMIENTO DE BD ---")
+        
+        # 1. Parche para descripcion2
         try:
-            # Intentamos agregar la columna. Si ya existe, fallará y el 'except' lo manejará.
-            db.execute(text("ALTER TABLE caja ADD COLUMN descripcion2 VARCHAR"))
+            db.execute(text("ALTER TABLE caja ADD COLUMN IF NOT EXISTS descripcion2 VARCHAR"))
             db.commit()
-            logger.info("Columna descripcion2 agregada correctamente.")
+            logger.info("Columna descripcion2 verificada.")
+        except Exception: db.rollback()
+
+        # 2. PARCHE CRÍTICO: Agregar alumno_id a la tabla caja (Para que funcione el historial)
+        try:
+            db.execute(text("ALTER TABLE caja ADD COLUMN IF NOT EXISTS alumno_id INTEGER REFERENCES usuarios(id)"))
+            db.commit()
+            logger.info("Columna alumno_id verificada.")
         except Exception:
             db.rollback()
-            logger.info("Columna descripcion2 ya existente, omitiendo parche.")
+            logger.info("La columna alumno_id ya existe o no se pudo crear.")
 
+        # 3. Tu limpieza de restricciones de reservas original
         constraints_to_drop = [
-            "reservas_usuario_id_clase_id_key",             # Nombre default común
-            "reservas_usuario_id_clase_id_fecha_reserva_key", # Variante con fecha
-            "_usuario_clase_uc"                             # Nombre custom si se usó models
+            "reservas_usuario_id_clase_id_key",
+            "reservas_usuario_id_clase_id_fecha_reserva_key",
+            "_usuario_clase_uc"
         ]
         
-        logger.info("--- INICIANDO CORRECCIÓN DE RESTRICCIONES DE BD ---")
         for constraint in constraints_to_drop:
             try:
                 db.execute(text(f"ALTER TABLE reservas DROP CONSTRAINT IF EXISTS {constraint}"))
                 db.commit()
-                logger.info(f"Restricción eliminada (si existía): {constraint}")
-            except (ProgrammingError, IntegrityError) as e:
+                logger.info(f"Restricción eliminada: {constraint}")
+            except Exception:
                 db.rollback()
-                logger.info(f"No se pudo eliminar {constraint} (probablemente no existe o nombre incorrecto).")
-            except Exception as e:
-                db.rollback()
-                logger.warning(f"Error genérico al intentar limpiar constraint {constraint}: {e}")
                 
-        logger.info("--- CORRECCIÓN DE BD COMPLETADA ---")
+        logger.info("--- MANTENIMIENTO DE BD COMPLETADO ---")
     finally:
         db.close()
 
@@ -920,20 +922,25 @@ def delete_alumno(id: int, db: Session = Depends(database.get_db)):
 
 @app.get("/api/alumnos/{id}/historial-pagos", tags=["Alumnos"])
 def get_alumno_pagos(id: int, db: Session = Depends(database.get_db)):
-    """Trae todos los ingresos de caja vinculados a este alumno."""
-    pagos = db.query(models.MovimientoCaja).filter(
-        models.MovimientoCaja.alumno_id == id,
-        models.MovimientoCaja.tipo == "Ingreso"
-    ).order_by(models.MovimientoCaja.fecha.desc()).all()
-    
-    return [{
-        "id": p.id,
-        "fecha": p.fecha.strftime("%d/%m/%Y"),
-        "descripcion": p.descripcion,
-        "monto": p.monto,
-        "metodo": p.metodo_pago,
-        "nota": p.descripcion2
-    } for p in pagos]
+    """Trae todos los ingresos de caja vinculados a este alumno con manejo de errores."""
+    try:
+        pagos = db.query(models.MovimientoCaja).filter(
+            models.MovimientoCaja.alumno_id == id,
+            models.MovimientoCaja.tipo == "Ingreso"
+        ).order_by(models.MovimientoCaja.fecha.desc()).all()
+        
+        return [{
+            "id": p.id,
+            "fecha": p.fecha.strftime("%d/%m/%Y") if p.fecha else "S/F",
+            "descripcion": p.descripcion or "Cobro de Plan",
+            "monto": float(p.monto) if p.monto else 0.0,
+            "metodo": p.metodo_pago or "Efectivo",
+            "nota": p.descripcion2 or ""
+        } for p in pagos]
+    except Exception as e:
+        logger.error(f"Error al obtener historial del alumno {id}: {e}")
+        # En lugar de 500, devolvemos lista vacía para que la app siga funcionando
+        return []
 
 # --- RESERVAS ---
 @app.get("/api/reservas", tags=["Reservas"])

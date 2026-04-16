@@ -3883,22 +3883,45 @@ if (editorForm) {
 
 			contenedor.innerHTML = '<p class="text-[10px] italic text-white/20">Cargando historial...</p>';
 			
-			const pagos = await apiFetch(`/alumnos/${alumnoId}/historial-pagos`);
+			// Llamada a la API
+			const res = await apiFetch(`/alumnos/${alumnoId}/historial-pagos`);
 			
-			if(!pagos || pagos.length === 0) {
-				contenedor.innerHTML = '<p class="text-[10px] italic text-white/20">Sin historial de pagos registrados.</p>';
+			// Si res no es un array, lo convertimos en lista vacía (evita error .map)
+			const pagos = Array.isArray(res) ? res : [];
+			
+			if(pagos.length === 0) {
+				contenedor.innerHTML = `
+					<div class="py-10 text-center opacity-20">
+						<i data-lucide="receipt-text" class="w-8 h-8 mx-auto mb-2"></i>
+						<p class="text-[10px] italic uppercase font-black tracking-widest">Sin registros de pago</p>
+					</div>`;
+				if(window.lucide) lucide.createIcons();
 				return;
 			}
 
-			contenedor.innerHTML = pagos.map(p => `
-				<div class="flex justify-between items-center p-3 bg-white/5 rounded-xl border border-white/5 mb-2">
-					<div class="text-left">
-						<p class="text-[10px] font-black uppercase italic text-white">${p.descripcion}</p>
-						<p class="text-[8px] text-white/40 uppercase font-bold">${p.fecha} - ${p.metodo}</p>
+			contenedor.innerHTML = pagos.map(p => {
+				// Aseguramos que el monto sea un número para que no rompa el toLocaleString
+				const montoNum = parseFloat(p.monto) || 0;
+				
+				return `
+					<div class="flex justify-between items-center p-4 bg-white/[0.03] rounded-2xl border border-white/5 mb-2 hover:border-green-500/30 transition-all">
+						<div class="text-left">
+							<p class="text-[10px] font-black uppercase italic text-white">${p.descripcion}</p>
+							<div class="flex items-center gap-2 mt-1">
+								<span class="text-[8px] text-white/40 uppercase font-bold">${p.fecha}</span>
+								<span class="w-1 h-1 rounded-full bg-white/10"></span>
+								<span class="text-[8px] text-green-500/60 uppercase font-black">${p.metodo}</span>
+							</div>
+							${p.nota ? `<p class="text-[8px] text-red-600/60 italic mt-1 font-bold">Nota: ${p.nota}</p>` : ''}
+						</div>
+						<div class="text-right">
+							<p class="text-[12px] font-black text-green-500 italic">$ ${montoNum.toLocaleString()}</p>
+						</div>
 					</div>
-					<p class="text-[11px] font-black text-green-500">$ ${p.monto.toLocaleString()}</p>
-				</div>
-			`).join('');
+				`;
+			}).join('');
+			
+			if(window.lucide) lucide.createIcons();
 		}
 
         document.getElementById('form-alumno').onsubmit = async (e) => {
