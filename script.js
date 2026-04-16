@@ -3799,30 +3799,13 @@ if (editorForm) {
 			document.getElementById('al-email').value = al.email || ""; 
 			document.getElementById('al-telefono').value = al.telefono || "";
 			document.getElementById('al-genero').value = al.genero || "";
-			
-			// CORRECCIÓN CLAVE: Sincronizar los dos selects
-			const planActual = state.planes.find(p => p.id == al.plan_id);
-			if (planActual) {
-				// 1. Ponemos el tipo de plan
-				document.getElementById('al-tipo-plan').value = planActual.tipo_plan_id || "";
-				// 2. Ejecutamos el filtro para crear los <option> del segundo select
-				filterPlanesByTipo(); 
-				// 3. Recién ahora podemos seleccionar el plan específico
-				document.getElementById('al-plan').value = al.plan_id;
-				// 4. Mostramos el visor de precios
-				showPlanValue();
-			} else {
-				initAlumnoPlanSelectors();
-			}
-			
+
 			const selSuc = document.getElementById('al-sucursal');
 			if(selSuc) selSuc.value = al.sucursal_id || "";
 			
 			document.getElementById('al-peso').value = al.peso || "";
 			document.getElementById('al-altura').value = al.altura || ""; 
 			document.getElementById('al-imc').value = al.imc || ""; 
-			document.getElementById('al-fecha-renovacion').value = al.fecha_ultima_renovacion || "";
-			document.getElementById('al-fecha-vencimiento').value = al.fecha_vencimiento || "";
 			document.getElementById('al-fecha-nacimiento').value = al.fecha_nacimiento || "";
 			document.getElementById('al-fecha-certificado').value = al.fecha_certificado || "";
 			document.getElementById('al-certificado-entregado').checked = al.certificado_entregado || false;
@@ -3836,7 +3819,64 @@ if (editorForm) {
 			delBtn.onclick = () => deleteRecord('alumnos', id, 'modal-alumno', fetchAlumnos);
 			
 			loadSucursales();
+			setAlumnoTab('personal'); // Siempre abrir en la pestaña de info básica
 			if (typeof openModal === 'function') openModal('modal-alumno');
+		}
+
+		// Función para cambiar de solapa en el modal
+		window.setAlumnoTab = function(tabName) {
+			// 1. Ocultar todos los contenidos de solapas
+			document.querySelectorAll('.alumno-tab-content').forEach(el => el.classList.add('hidden'));
+			// 2. Quitar estilos activos de los botones
+			document.querySelectorAll('.alumno-tab-btn').forEach(el => {
+				el.classList.remove('border-red-600', 'text-white');
+				el.classList.add('text-white/20', 'border-transparent');
+			});
+
+			// 3. Mostrar la solapa seleccionada
+			document.getElementById(`tab-alumno-${tabName}`).classList.remove('hidden');
+			// 4. Activar el botón
+			const btn = document.querySelector(`[onclick="setAlumnoTab('${tabName}')"]`);
+			if(btn) btn.classList.add('border-red-600', 'text-white');
+
+			// 5. Si es la solapa de suscripción, cargar datos y el historial
+			if(tabName === 'suscripcion') {
+				const alId = document.getElementById('al-id').value;
+				const al = state.alumnos.find(x => x.id == alId);
+				
+				// Llenar datos de la solapa suscripción
+				if(al) {
+					const planActual = state.planes.find(p => p.id == al.plan_id);
+					document.getElementById('info-plan-nombre').innerText = planActual ? planActual.nombre : "SIN PLAN";
+					document.getElementById('info-plan-vence').innerText = al.fecha_vencimiento || "N/A";
+				}
+				
+				loadAlumnoHistorial(alId);
+			}
+		};
+
+		async function loadAlumnoHistorial(alumnoId) {
+			const contenedor = document.getElementById('historial-pagos-lista');
+			if(!contenedor) return;
+
+			contenedor.innerHTML = '<p class="text-[10px] italic text-white/20">Cargando historial...</p>';
+			
+			const pagos = await apiFetch(`/alumnos/${alumnoId}/historial-pagos`);
+			
+			if(!pagos || pagos.length === 0) {
+				contenedor.innerHTML = '<p class="text-[10px] italic text-white/20">Sin historial de pagos registrados.</p>';
+				return;
+			}
+
+			contenedor.innerHTML = pagos.map(p => `
+				<div class="flex justify-between items-center p-3 bg-white/5 rounded-xl border border-white/5 mb-2">
+					<div class="text-left">
+						<p class="text-[10px] font-black uppercase italic text-white">${p.descripcion}</p>
+						<p class="text-[8px] text-white/40 uppercase font-bold">${p.fecha} - ${p.metodo}</p>
+					</div>
+					<p class="text-[11px] font-black text-green-500">$ ${p.monto.toLocaleString()}</p>
+				</div>
+			`).join('');
 		}
 
         document.getElementById('form-alumno').onsubmit = async (e) => {
@@ -3850,13 +3890,10 @@ if (editorForm) {
 				email: document.getElementById('al-email').value,
 				telefono: document.getElementById('al-telefono').value,
 				genero: document.getElementById('al-genero').value,
-				plan_id: parseInt(document.getElementById('al-plan').value) || null, 
 				sucursal_id: parseInt(document.getElementById('al-sucursal').value) || null, 
 				peso: parseFloat(document.getElementById('al-peso').value) || null, 
 				altura: parseFloat(document.getElementById('al-altura').value) || null, 
-				imc: parseFloat(document.getElementById('al-imc').value) || null, 
-				fecha_ultima_renovacion: document.getElementById('al-fecha-renovacion').value, 
-				fecha_vencimiento: document.getElementById('al-fecha-vencimiento').value, 
+				imc: parseFloat(document.getElementById('al-imc').value) || null,  
 				fecha_nacimiento: document.getElementById('al-fecha-nacimiento').value || null, 
 				fecha_certificado: document.getElementById('al-fecha-certificado').value || null, 
 				certificado_entregado: document.getElementById('al-certificado-entregado').checked 

@@ -231,7 +231,6 @@ class AlumnoUpdate(BaseModel):
     nombre_completo: Optional[str] = None
     dni: Optional[str] = None
     email: Optional[str] = None
-    plan_id: Optional[int] = None
     password: Optional[str] = None
     fecha_nacimiento: Optional[date] = None
     edad: Optional[int] = None
@@ -240,8 +239,6 @@ class AlumnoUpdate(BaseModel):
     imc: Optional[float] = None
     certificado_entregado: Optional[bool] = None
     fecha_certificado: Optional[date] = None
-    fecha_ultima_renovacion: Optional[date] = None
-    fecha_vencimiento: Optional[date] = None
     sucursal_id: Optional[int] = None
     telefono: Optional[str] = None
     genero: Optional[str] = None
@@ -764,11 +761,8 @@ def create_alumno(alumno: Union[AlumnoUpdate, List[AlumnoUpdate]], db: Session =
                 nombre_completo=item.nombre_completo, 
                 dni=item.dni, 
                 email=item.email,
-                plan_id=item.plan_id, 
                 perfil_id=perfil.id, 
                 password_hash=hashed_pass,
-                fecha_ultima_renovacion=item.fecha_ultima_renovacion or date.today(), 
-                fecha_vencimiento=item.fecha_vencimiento,
                 fecha_nacimiento=item.fecha_nacimiento,
                 edad=item.edad or 0,
                 peso=item.peso or 0,
@@ -808,6 +802,23 @@ def delete_alumno(id: int, db: Session = Depends(database.get_db)):
     db.query(models.Usuario).filter(models.Usuario.id == id).delete()
     db.commit()
     return {"status": "success"}
+
+@app.get("/api/alumnos/{id}/historial-pagos", tags=["Alumnos"])
+def get_alumno_pagos(id: int, db: Session = Depends(database.get_db)):
+    """Trae todos los ingresos de caja vinculados a este alumno."""
+    pagos = db.query(models.MovimientoCaja).filter(
+        models.MovimientoCaja.alumno_id == id,
+        models.MovimientoCaja.tipo == "Ingreso"
+    ).order_by(models.MovimientoCaja.fecha.desc()).all()
+    
+    return [{
+        "id": p.id,
+        "fecha": p.fecha.strftime("%d/%m/%Y"),
+        "descripcion": p.descripcion,
+        "monto": p.monto,
+        "metodo": p.metodo_pago,
+        "nota": p.descripcion2
+    } for p in pagos]
 
 # --- RESERVAS ---
 @app.get("/api/reservas", tags=["Reservas"])
@@ -1218,6 +1229,7 @@ def procesar_cobro(data: TransactionCreate, db: Session = Depends(database.get_d
             descripcion2=data.descripcion2,
             metodo_pago=data.metodo_pago,
             cuotas=data.cuotas,
+            alumno_id=data.alumno_id,
             fecha=datetime.now()
         )
         db.add(nueva_transaccion)

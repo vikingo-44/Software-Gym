@@ -135,6 +135,8 @@ class MovimientoCaja(Base):
     metodo_pago = Column(String, default="Efectivo") 
     fecha = Column(DateTime, default=datetime.datetime.now)
     cuotas = Column(Integer, default=1)
+    alumno_id = Column(Integer, ForeignKey("usuarios.id"), nullable=True)
+    producto_id = Column(Integer, nullable=True)
 
 class Acceso(Base):
     __tablename__ = "historial_accesos"
