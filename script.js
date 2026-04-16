@@ -821,7 +821,7 @@ function renderCobrar() {
                         const isActive = a.fecha_vencimiento && a.fecha_vencimiento >= hoy;
                         const statusColor = isActive ? 'text-green-500' : 'text-red-500';
                         const statusBg = isActive ? 'bg-green-500/10' : 'bg-red-500/10';
-                        const statusText = isActive ? 'Al día' : 'Vencido';
+                        const statusText = isActive ? 'Activo' : 'Caducado';
 
                         return `
                         <div class="flex flex-col gap-3 p-5 bg-white/2 rounded-[2rem] border border-white/5 hover:border-red-600/30 transition-all text-left group">
@@ -3197,7 +3197,7 @@ if (editorForm) {
 				
 				let matchesStatus = true;
 				if (state.alumnosStatusFilter === "activos") matchesStatus = isActive;
-				if (state.alumnosStatusFilter === "vencidos") matchesStatus = !isActive;
+				if (state.alumnosStatusFilter === "Caducado") matchesStatus = !isActive;
 
 				return matchesSearch && matchesStatus;
 			});
@@ -3367,7 +3367,7 @@ if (editorForm) {
 			const isActive = a.fecha_vencimiento && a.fecha_vencimiento >= hoy;
 			
 			const statusColor = isActive ? 'text-green-500' : 'text-red-500';
-			const statusText = isActive ? 'ACTIVO' : 'VENCIDO';
+			const statusText = isActive ? 'ACTIVO' : 'CADUCADO';
 			const statusBg = isActive ? 'bg-green-500/10 border-green-500/20' : 'bg-red-500/10 border-red-500/20';
 
 			if (type === 'dashboard') {
@@ -5457,11 +5457,11 @@ if (editorForm) {
                 const listaSegura = state.alumnos || [];
 				const total = listaSegura.length;
 				const activos = listaSegura.filter(a => a.fecha_vencimiento && a.fecha_vencimiento >= hoy).length;
-                const vencidos = total - activos;
+                const Caducado = total - activos;
 
                 if (document.getElementById('stats-total')) document.getElementById('stats-total').innerText = total;
                 if (document.getElementById('stats-activos')) document.getElementById('stats-activos').innerText = activos;
-                if (document.getElementById('stats-vencidos')) document.getElementById('stats-vencidos').innerText = vencidos;
+                if (document.getElementById('stats-Caducado')) document.getElementById('stats-Caducado').innerText = Caducado;
                 if (document.getElementById('stats-pagina')) document.getElementById('stats-pagina').innerText = state.currentPageAlumnos;
 
                 // --- LÓGICA DE PAGINACIÓN ---
@@ -5488,7 +5488,7 @@ if (editorForm) {
                     // Lógica de Estado
                     const estaVencido = !a.fecha_vencimiento || a.fecha_vencimiento < hoy;
                     const colorEstado = estaVencido ? 'bg-red-600' : 'bg-green-600'; 
-                    const textoEstado = estaVencido ? 'VENCIDO' : 'AL DÍA';
+                    const textoEstado = estaVencido ? 'CADUCADO' : 'ACTIVO';
                     const colorBadge = estaVencido ? 'text-red-500 bg-red-500/10 border-red-500/20' : 'text-green-500 bg-green-500/10 border-green-500/20';
 
                     const initials = a.nombre_completo ? a.nombre_completo.substring(0,2).toUpperCase() : "??";
@@ -5896,7 +5896,7 @@ if (editorForm) {
 				// Lógica de Estado de Plan (Identica a Alumnos)
 				const estaVencido = !a.fecha_vencimiento || a.fecha_vencimiento < hoy;
 				const colorEstado = estaVencido ? 'bg-red-600' : 'bg-green-600'; 
-				const textoEstado = estaVencido ? 'VENCIDO' : 'AL DÍA';
+				const textoEstado = estaVencido ? 'CADUCADO' : 'ACTIVO';
 				const colorBadge = estaVencido ? 'text-red-500 bg-red-500/10 border-red-500/20' : 'text-green-500 bg-green-500/10 border-green-500/20';
 
 				const initials = a.nombre_completo ? a.nombre_completo.substring(0,2).toUpperCase() : "??";
