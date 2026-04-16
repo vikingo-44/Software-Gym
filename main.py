@@ -489,7 +489,7 @@ def update_db_user(user_id: int, data: Union[AlumnoUpdate, StaffUpdate], db: Ses
 # ENDPOINTS
 # ==========================================
 
-@router.post("/api/alumnos/importar-masivo", tags=["Migración"])
+@app.post("/api/alumnos/importar-masivo", tags=["Migración"])
 async def importar_alumnos(alumnos_data: List[BulkAlumnoSchema], db: Session = Depends(database.get_db)):
     # detalles se usa para listar los nombres procesados con éxito
     resumen = {"creados": 0, "errores": [], "detalles": []}
