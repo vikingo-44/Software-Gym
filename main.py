@@ -1513,6 +1513,8 @@ def get_historial_rutinas(id: int, db: Session = Depends(database.get_db)):
         joinedload(models.PlanRutina.dias).joinedload(models.DiaRutina.ejercicios).joinedload(models.EjercicioEnRutina.series_detalle)
     ).order_by(models.PlanRutina.fecha_creacion.desc()).all()
 
+app.include_router(router)
+
 if __name__ == "__main__":
     import uvicorn
     port = int(os.environ.get("PORT", 8000))
