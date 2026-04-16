@@ -5431,8 +5431,9 @@ if (editorForm) {
 
                 // --- ACTUALIZACIÓN DE ESTADÍSTICAS VIKINGAS ---
                 const hoy = new Date().toISOString().split('T')[0];
-                const total = state.alumnos.length;
-                const activos = state.alumnos.filter(a => a.fecha_vencimiento && a.fecha_vencimiento >= hoy).length;
+                const listaSegura = state.alumnos || [];
+				const total = listaSegura.length;
+				const activos = listaSegura.filter(a => a.fecha_vencimiento && a.fecha_vencimiento >= hoy).length;
                 const vencidos = total - activos;
 
                 if (document.getElementById('stats-total')) document.getElementById('stats-total').innerText = total;

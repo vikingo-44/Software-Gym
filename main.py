@@ -812,18 +812,32 @@ def get_historial_accesos(db: Session = Depends(database.get_db)):
 # --- ALUMNOS ---
 @app.get("/api/alumnos", response_model=List[UsuarioResponse], tags=["Alumnos"])
 def get_alumnos(db: Session = Depends(database.get_db)):
-    alumnos = db.query(models.Usuario).options(
-        joinedload(models.Usuario.perfil),
-        joinedload(models.Usuario.plan).joinedload(models.Plan.tipo)
-    ).join(models.Perfil).filter(func.lower(models.Perfil.nombre) == "alumno").all()
-    
-    for al in alumnos:
-        al.rol_nombre = al.perfil.nombre if al.perfil else "Alumno"
-        if al.fecha_vencimiento and al.fecha_vencimiento < date.today(): 
-            al.estado_cuenta = "Caducado"
-        else:
-            al.estado_cuenta = "Activo"
-    return alumnos
+    try:
+        # Usamos joinedload para traer el perfil y el plan de un solo golpe
+        alumnos = db.query(models.Usuario).options(
+            joinedload(models.Usuario.perfil),
+            joinedload(models.Usuario.plan)
+        ).join(models.Perfil).filter(func.lower(models.Perfil.nombre) == "alumno").all()
+        
+        for al in alumnos:
+            # Forzamos valores por defecto si falta algo
+            al.rol_nombre = al.perfil.nombre if al.perfil else "Alumno"
+            
+            # Si el plan existe pero el objeto no se cargó, evitamos que rompa el JSON
+            if not al.plan:
+                al.plan = None 
+                
+            # Validación de fechas segura
+            hoy = date.today()
+            if al.fecha_vencimiento:
+                al.estado_cuenta = "Caducado" if al.fecha_vencimiento < hoy else "Activo"
+            else:
+                al.estado_cuenta = "Inactivo"
+                
+        return alumnos
+    except Exception as e:
+        logger.error(f"Error fatal en lista de alumnos: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error al procesar la lista de guerreros")
 
 @app.get("/api/alumnos/{id}/ficha", tags=["Alumnos"])
 def get_ficha_tecnica(id: int, db: Session = Depends(database.get_db)):
