@@ -3448,27 +3448,28 @@ if (editorForm) {
 			state.planes = Array.isArray(p) ? p : []; 
 			state.tiposPlanes = Array.isArray(t) ? t : [];
 			
+			// Configuración de los filtros de la pestaña de Planes
 			const filterContainer = document.getElementById('planes-filter-container'); 
 			if (filterContainer) {
 				filterContainer.innerHTML = ''; 
 				state.tiposPlanes.forEach((tipo, idx) => { 
 					filterContainer.innerHTML += `<button onclick="filterPlanes(${tipo.id}, this)" class="filter-btn ${idx === 0 ? 'active' : ''}">${tipo.nombre.toUpperCase()}</button>`; 
 				});
-				
-				// Carga inicial del primer filtro de la lista de configuración
 				if (state.tiposPlanes.length > 0) {
 					filterPlanes(state.tiposPlanes[0].id, filterContainer.children[0]);
 				}
 			}
 
-			// Actualizar selectores en el modal de Alumnos (Iniciamos el flujo de 2 pasos)
+			// Llenar el primer paso del modal de alumnos (Tipo de Membresía)
 			initAlumnoPlanSelectors();
 
+			// Actualizar selector de tipos en el modal de edición de planes
 			const selectPlanTipo = document.getElementById('plan-tipo');
 			if (selectPlanTipo) {
 				selectPlanTipo.innerHTML = state.tiposPlanes.map(t => `<option value="${t.id}">${t.nombre.toUpperCase()}</option>`).join('');
 			}
 		}
+
 		/**
 		 * 2. FLUJO DE SELECCIÓN DE PLAN (MODAL ALUMNO)
 		 * Reemplaza la selección simple por una filtrada por Tipo.
@@ -3494,13 +3495,14 @@ if (editorForm) {
 				return;
 			}
 
+			// Filtramos los planes del estado global por el ID del tipo seleccionado
 			const filtrados = state.planes.filter(p => p.tipo_plan_id == tipoId);
+			
 			planSelect.innerHTML = '<option value="">2. SELECCIONAR PLAN...</option>' + 
 				filtrados.map(p => `<option value="${p.id}">${p.nombre.toUpperCase()}</option>`).join('');
 			
 			if (valorDisplay) valorDisplay.classList.add('hidden');
 		}
-
 		/**
 		 * Muestra el cuadro de precios para confirmar antes de guardar
 		 */
@@ -3534,7 +3536,6 @@ if (editorForm) {
 				container.classList.remove('hidden');
 			}
 			
-			// Al elegir el plan, disparamos el cálculo de fecha
 			updateExpirationDate();
 		}
 
@@ -3799,13 +3800,17 @@ if (editorForm) {
 			document.getElementById('al-telefono').value = al.telefono || "";
 			document.getElementById('al-genero').value = al.genero || "";
 			
-			// Sincronización del Plan (Buscamos el tipo para pre-cargar los selects)
+			// CORRECCIÓN CLAVE: Sincronizar los dos selects
 			const planActual = state.planes.find(p => p.id == al.plan_id);
 			if (planActual) {
+				// 1. Ponemos el tipo de plan
 				document.getElementById('al-tipo-plan').value = planActual.tipo_plan_id || "";
-				filterPlanesByTipo(); // Cargamos las opciones del segundo select
+				// 2. Ejecutamos el filtro para crear los <option> del segundo select
+				filterPlanesByTipo(); 
+				// 3. Recién ahora podemos seleccionar el plan específico
 				document.getElementById('al-plan').value = al.plan_id;
-				showPlanValue(); // Mostramos los precios del plan actual
+				// 4. Mostramos el visor de precios
+				showPlanValue();
 			} else {
 				initAlumnoPlanSelectors();
 			}
