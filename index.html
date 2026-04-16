@@ -1334,10 +1334,10 @@
 
                 <!-- NAVEGACIÓN DE SOLAPAS -->
                 <div class="flex gap-6 border-b border-white/5">
-                    <button onclick="setAlumnoTab('personal')" class="alumno-tab-btn border-b-2 border-red-600 text-white pb-3 text-[10px] font-black uppercase italic transition-all">
+                    <button type="button" onclick="setAlumnoTab('personal')" class="alumno-tab-btn border-b-2 border-red-600 text-white pb-3 text-[10px] font-black uppercase italic transition-all">
                         Información Personal
                     </button>
-                    <button onclick="setAlumnoTab('suscripcion')" class="alumno-tab-btn border-b-2 border-transparent text-white/20 pb-3 text-[10px] font-black uppercase italic transition-all">
+                    <button type="button" onclick="setAlumnoTab('suscripcion')" class="alumno-tab-btn border-b-2 border-transparent text-white/20 pb-3 text-[10px] font-black uppercase italic transition-all">
                         Plan y Pagos
                     </button>
                 </div>
@@ -1350,6 +1350,13 @@
                 <div id="tab-alumno-personal" class="alumno-tab-content space-y-4">
                     <form id="form-alumno" class="space-y-4">
                         <input type="hidden" id="al-id">
+                        
+                        <!-- CAMPOS OCULTOS PARA QUE EL SCRIPT NO DE ERROR -->
+                        <input type="hidden" id="al-fecha-renovacion">
+                        <input type="hidden" id="al-fecha-vencimiento">
+                        <select id="al-tipo-plan" class="hidden"></select>
+                        <select id="al-plan" class="hidden"></select>
+                        <div id="al-plan-valor-display" class="hidden"></div>
                         
                         <div class="space-y-1">
                             <label class="text-[9px] font-black text-white/30 uppercase tracking-widest italic ml-2">Nombre Completo</label>
@@ -1399,7 +1406,6 @@
                             </div>
                         </div>
 
-                        <!-- Salud -->
                         <div class="grid grid-cols-2 gap-4 border-t border-white/5 pt-4">
                             <div class="space-y-1">
                                 <label class="text-[9px] font-black text-white/30 uppercase italic ml-2">Nacimiento</label>
@@ -1416,13 +1422,11 @@
                             <label for="al-certificado-entregado" class="text-[10px] font-black uppercase italic text-white-300">¿Certificado Entregado?</label>
                         </div>
 
-                        <!-- Sucursal -->
                         <div class="space-y-1">
                             <label class="text-[9px] font-black text-white/30 uppercase tracking-widest italic ml-2">Sede Principal</label>
                             <select id="al-sucursal" class="viking-input" required></select>
                         </div>
 
-                        <!-- Password -->
                         <div class="space-y-1">
                             <label class="text-[9px] font-black text-white/30 uppercase tracking-widest italic ml-2">Nueva Contraseña</label>
                             <input type="password" id="al-pass" placeholder="Dejar vacío para no cambiar" class="viking-input">
@@ -1430,10 +1434,8 @@
                     </form>
                 </div>
 
-                <!-- SOLAPA 2: SUSCRIPCIÓN Y PAGOS (Solo Lectura / Historial) -->
+                <!-- SOLAPA 2: SUSCRIPCIÓN Y PAGOS -->
                 <div id="tab-alumno-suscripcion" class="alumno-tab-content hidden space-y-6">
-                    
-                    <!-- Resumen Plan Actual -->
                     <div class="bg-red-600/5 p-6 rounded-[2rem] border border-red-600/20">
                         <p class="text-[9px] font-black text-red-600 uppercase italic mb-3 tracking-widest">Estado de Membresía</p>
                         <div class="flex justify-between items-end">
@@ -1441,29 +1443,28 @@
                                 <h4 class="text-xl font-black italic uppercase text-white" id="info-plan-nombre">---</h4>
                                 <p class="text-[10px] text-white/40 mt-1">Vencimiento: <span id="info-plan-vence" class="text-white font-bold">---</span></p>
                             </div>
-                            <button onclick="closeModal('modal-alumno'); switchView('cobrar');" class="px-4 py-2 bg-red-600 text-black rounded-xl text-[9px] font-black uppercase italic">
+                            <button type="button" onclick="closeModal('modal-alumno'); switchView('cobrar');" class="px-4 py-2 bg-red-600 text-black rounded-xl text-[9px] font-black uppercase italic">
                                 Cobrar Cuota
                             </button>
                         </div>
                     </div>
 
-                    <!-- Historial de Pagos -->
                     <div class="space-y-4">
                         <p class="text-[10px] font-black text-white/20 uppercase tracking-widest border-b border-white/5 pb-2">Historial Reciente de Pagos</p>
                         <div id="historial-pagos-lista" class="space-y-2">
-                            <!-- Inyectado por JS -->
+                            <p class="text-[10px] italic text-white/20 text-center py-4">No hay pagos registrados</p>
                         </div>
                     </div>
                 </div>
 
             </div>
 
-            <!-- FOOTER DE ACCIÓN (Solo visible en Solapa Personal) -->
+            <!-- FOOTER -->
             <div id="modal-alumno-footer" class="p-8 border-t border-white/5 bg-zinc-900/50 flex gap-3">
                 <button type="button" id="btn-delete-alumno" class="hidden py-4 px-6 bg-red-900/20 rounded-2xl font-black uppercase italic text-[11px] text-red-500 border border-red-500/20 hover:bg-red-600 hover:text-black transition-all">
                     Eliminar
                 </button>
-                <button type="submit" form="form-alumno" class="flex-1 py-4 viking-bg-red text-black rounded-2xl font-black uppercase italic text-[11px] shadow-lg shadow-red-900/20">
+                <button type="submit" form="form-alumno" id="btn-save-alumno-modal" class="flex-1 py-4 viking-bg-red text-black rounded-2xl font-black uppercase italic text-[11px] shadow-lg shadow-red-900/20">
                     Guardar Cambios
                 </button>
             </div>
