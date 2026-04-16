@@ -3823,6 +3823,28 @@ if (editorForm) {
 			if (typeof openModal === 'function') openModal('modal-alumno');
 		}
 
+		function setAlumnoTab(tab) {
+            // 1. Ocultar todos los contenidos de solapa
+            document.querySelectorAll('.alumno-tab-content').forEach(content => content.classList.add('hidden'));
+            
+            // 2. Mostrar el contenido de la solapa seleccionada
+            const selectedContent = document.getElementById('tab-alumno-' + tab);
+            if(selectedContent) selectedContent.classList.remove('hidden');
+
+            // 3. Resetear estilos de todos los botones de solapa (Inactivos)
+            document.querySelectorAll('.alumno-tab-btn').forEach(btn => {
+                btn.classList.remove('border-red-600', 'text-white');
+                btn.classList.add('border-transparent', 'text-white/20');
+            });
+
+            // 4. Aplicar estilo resaltado al botón seleccionado (Activo)
+            const activeBtn = document.getElementById('btn-tab-' + tab);
+            if (activeBtn) {
+                activeBtn.classList.remove('border-transparent', 'text-white/20');
+                activeBtn.classList.add('border-red-600', 'text-white');
+            }
+        }
+
 		// Función para cambiar de solapa en el modal
 		window.setAlumnoTab = function(tabName) {
 			// 1. Ocultar todos los contenidos de solapas

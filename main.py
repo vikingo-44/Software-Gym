@@ -1,7 +1,7 @@
 import os
 import logging
 import hashlib
-from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi import AP_Router, FastAPI, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -10,7 +10,7 @@ from sqlalchemy.exc import IntegrityError, ProgrammingError
 from sqlalchemy import func, extract, text
 from sqlalchemy.orm.attributes import flag_modified
 from typing import List, Optional, Union
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr
 from datetime import datetime, timedelta, date
 
 # Librerías para Seguridad (JWT y Hashing de contraseñas)
@@ -24,6 +24,8 @@ logger = logging.getLogger(__name__)
 import models
 import database
 from database import Base
+
+router = AP_Router()
 
 # ==========================================
 # CONFIGURACIÓN DE SEGURIDAD
@@ -179,6 +181,25 @@ class TokenResponse(BaseModel):
     sucursal_id: Optional[int] = None
     telefono: Optional[str] = None
     genero: Optional[str] = None
+
+# --- SCHEMA PARA LA CARGA MASIVA ---
+class BulkAlumnoSchema(BaseModel):
+    nombre_completo: str
+    dni: str
+    email: Optional[EmailStr] = None
+    telefono: Optional[str] = None
+    genero: Optional[str] = None
+    password: str = "GymApp2026!"
+    fecha_nacimiento: Optional[str] = "2000-01-01"
+    peso: float = 0.0
+    altura: float = 0.0
+    imc: float = 0.0
+    certificado_entregado: bool = False
+    fecha_certificado: Optional[str] = None
+    # Fechas críticas para determinar el plan
+    fecha_inicio: str # Formato YYYY-MM-DD
+    fecha_fin: str    # Formato YYYY-MM-DD
+    sucursal_id: int = 1
 
 # --- NUEVO: Schema para Validación de QR ---
 class AccessCheck(BaseModel):
@@ -407,6 +428,17 @@ class SucursalResponse(BaseModel):
     direccion: str
     class Config: from_attributes = True
 
+def calcular_meses(inicio_str, fin_str):
+    """Calcula la diferencia en meses redondeada para matchear con TipoPlan"""
+    try:
+        # Corregido el formato de fecha a %Y-%m-%d
+        inicio = datetime.strptime(inicio_str, "%Y-%m-%d")
+        fin = datetime.strptime(fin_str, "%Y-%m-%d")
+        diff = (fin.year - inicio.year) * 12 + (fin.month - inicio.month)
+        return max(1, diff)
+    except:
+        return 1
+
 # ==========================================
 # LÓGICA DE ACTUALIZACIÓN GENÉRICA (FIX 500)
 # ==========================================
@@ -456,6 +488,74 @@ def update_db_user(user_id: int, data: Union[AlumnoUpdate, StaffUpdate], db: Ses
 # ==========================================
 # ENDPOINTS
 # ==========================================
+
+@router.post("/api/alumnos/importar-masivo", tags=["Migración"])
+async def importar_alumnos(alumnos_data: List[BulkAlumnoSchema], db: Session = Depends(database.get_db)):
+    # Ahora 'detalles' se usará para listar los nombres procesados con éxito
+    resumen = {"creados": 0, "errores": [], "detalles": []}
+    
+    # 1. Traemos todos los tipos de planes para tenerlos en memoria (cache rápido)
+    tipos_plan = db.query(models.TipoPlan).all()
+    # Mapeo de duración -> Palabra clave en el nombre del TipoPlan
+    mapa_duracion = {1: "Mensual", 3: "Trimestral", 6: "Semestral", 12: "Anual"}
+    
+    hoy_str = datetime.now().strftime("%Y-%m-%d")
+    
+    for data in alumnos_data:
+        try:
+            # Verificar si ya existe por DNI
+            existe = db.query(models.Alumno).filter(models.Alumno.dni == data.dni).first()
+            if existe:
+                resumen["errores"].append(f"DNI {data.dni} ya existe: {data.nombre_completo}")
+                continue
+
+            # 2. Calcular duración y buscar TipoPlan
+            meses = calcular_meses(data.fecha_inicio, data.fecha_fin)
+            nombre_tipo_buscado = mapa_duracion.get(meses, "Mensual")
+            
+            # Buscar coincidencia en los tipos de plan de la DB
+            tipo_plan = next((t for t in tipos_plan if nombre_tipo_buscado.lower() in t.nombre.lower()), None)
+            
+            if not tipo_plan:
+                tipo_plan = tipos_plan[0] # Fallback al primero si no encuentra
+            
+            # 3. Buscar el primer plan disponible que pertenezca a ese TipoPlan
+            plan_asignado = db.query(models.Plan).filter(models.Plan.tipo_plan_id == tipo_plan.id).first()
+            
+            if not plan_asignado:
+                plan_asignado = db.query(models.Plan).first()
+
+            # 4. Crear el registro
+            nuevo_alumno = models.Alumno(
+                nombre_completo=data.nombre_completo.upper(),
+                dni=data.dni,
+                email=data.email,
+                telefono=data.telefono,
+                genero=data.genero,
+                password=data.password, 
+                fecha_nacimiento=data.fecha_nacimiento,
+                peso=data.peso,
+                altura=data.altura,
+                imc=data.imc,
+                certificado_entregado=data.certificado_entregado,
+                fecha_certificado=data.fecha_certificado,
+                sucursal_id=data.sucursal_id,
+                plan_id=plan_asignado.id,
+                fecha_ultima_renovacion=data.fecha_inicio,
+                fecha_vencimiento=data.fecha_fin,
+                activo=True if data.fecha_fin >= hoy_str else False
+            )
+            
+            db.add(nuevo_alumno)
+            resumen["creados"] += 1
+            # Usamos 'detalles' para que deje de estar en amarillo y sea informativo
+            resumen["detalles"].append(f"Creado: {data.nombre_completo} (Plan: {plan_asignado.nombre})")
+            
+        except Exception as e:
+            resumen["errores"].append(f"Error en {data.nombre_completo}: {str(e)}")
+
+    db.commit()
+    return resumen
 
 # 1. ROOT: Carga tu web directamente al entrar a la URL
 @app.get("/")

@@ -1327,13 +1327,13 @@
                         <h3 class="text-2xl font-black uppercase italic text-white tracking-tighter" id="modal-alumno-title">Guerrero</h3>
                         <p class="text-[9px] text-white/30 font-black uppercase tracking-widest mt-1">Gestión de Legajo</p>
                     </div>
-                    <!-- Al cerrar, reseteamos a la pestaña personal -->
+                    <!-- Al cerrar, reseteamos visualmente a la pestaña personal -->
                     <button type="button" onclick="closeModal('modal-alumno'); setAlumnoTab('personal');" class="text-white/20 hover:text-white transition-colors">
                         <i data-lucide="x" class="w-6 h-6"></i>
                     </button>
                 </div>
 
-                <!-- NAVEGACIÓN DE SOLAPAS -->
+                <!-- NAVEGACIÓN DE SOLAPAS (Con IDs para el resaltado) -->
                 <div class="flex gap-6 border-b border-white/5">
                     <button type="button" id="btn-tab-personal" onclick="setAlumnoTab('personal')" class="alumno-tab-btn border-b-2 border-red-600 text-white pb-3 text-[10px] font-black uppercase italic transition-all hover:text-red-500">
                         Información Personal
@@ -1352,7 +1352,7 @@
                     <form id="form-alumno" class="space-y-4">
                         <input type="hidden" id="al-id">
                         
-                        <!-- CAMPOS OCULTOS PARA QUE EL SCRIPT NO DE ERROR -->
+                        <!-- CAMPOS OCULTOS PARA COMPATIBILIDAD CON SCRIPT ANTIGUO -->
                         <input type="hidden" id="al-fecha-renovacion">
                         <input type="hidden" id="al-fecha-vencimiento">
                         <select id="al-tipo-plan" class="hidden"></select>
@@ -1391,7 +1391,6 @@
                             </div>
                         </div>
 
-                        <!-- Físico -->
                         <div class="grid grid-cols-3 gap-4 p-4 bg-white/5 rounded-3xl border border-white/5">
                             <div class="space-y-1 text-center">
                                 <label class="text-[8px] font-black text-white-500 uppercase">Peso</label>
@@ -1444,7 +1443,7 @@
                                 <h4 class="text-xl font-black italic uppercase text-white" id="info-plan-nombre">---</h4>
                                 <p class="text-[10px] text-white/40 mt-1">Vencimiento: <span id="info-plan-vence" class="text-white font-bold">---</span></p>
                             </div>
-                            <!-- Redirección corregida a sección cobrar y solapa planes -->
+                            <!-- Redirección completa a Cobrar > Planes -->
                             <button type="button" onclick="closeModal('modal-alumno'); setAlumnoTab('personal'); switchView('cobrar'); setCobrarTab('planes');" class="px-4 py-2 bg-red-600 text-black rounded-xl text-[9px] font-black uppercase italic hover:scale-105 transition-all shadow-lg shadow-red-600/20">
                                 Cobrar Cuota
                             </button>
