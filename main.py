@@ -103,27 +103,43 @@ def get_current_user(db: Session = Depends(database.get_db), auth: HTTPAuthoriza
 @app.on_event("startup")
 def startup_event():
     """
-    Parche automático: Agrega columnas faltantes y limpia restricciones de reservas.
+    Parche automático: Corrige la tabla caja, agrega columnas faltantes y limpia restricciones.
     """
     db = database.SessionLocal()
     try:
         logger.info("--- INICIANDO MANTENIMIENTO DE BD ---")
         
-        # 1. Parche para descripcion2
+        # 1. PARCHE DE UNIFICACIÓN: Si existe 'usuario', mover datos a 'alumno_id' o renombrar.
+        # Esto soluciona el conflicto de nombres que te causó el Error 500.
         try:
-            db.execute(text("ALTER TABLE caja ADD COLUMN IF NOT EXISTS descripcion2 VARCHAR"))
+            # Intentamos agregar la columna alumno_id primero por seguridad
+            db.execute(text("ALTER TABLE caja ADD COLUMN IF NOT EXISTS alumno_id INTEGER"))
             db.commit()
-            logger.info("Columna descripcion2 verificada.")
-        except Exception: db.rollback()
-
-        # 2. PARCHE CRÍTICO: Agregar alumno_id a la tabla caja (Para que funcione el historial)
-        try:
-            db.execute(text("ALTER TABLE caja ADD COLUMN IF NOT EXISTS alumno_id INTEGER REFERENCES usuarios(id)"))
+            
+            # Si existe la columna vieja 'usuario', pasamos los datos a 'alumno_id'
+            db.execute(text("UPDATE caja SET alumno_id = usuario WHERE alumno_id IS NULL AND usuario IS NOT NULL"))
             db.commit()
-            logger.info("Columna alumno_id verificada.")
+            logger.info("Migración de datos de 'usuario' a 'alumno_id' completada.")
         except Exception:
             db.rollback()
-            logger.info("La columna alumno_id ya existe o no se pudo crear.")
+
+        # 2. AGREGAR COLUMNAS FALTANTES (Crítico para ventas de productos)
+        columnas_extras = [
+            ("descripcion2", "VARCHAR"),
+            ("producto_id", "INTEGER"),
+            ("cantidad", "INTEGER"),
+            ("cuotas", "INTEGER"),
+            ("metodo_pago", "VARCHAR")
+        ]
+        
+        for col, tipo in columnas_extras:
+            try:
+                db.execute(text(f"ALTER TABLE caja ADD COLUMN IF NOT EXISTS {col} {tipo}"))
+                db.commit()
+                logger.info(f"Columna verificada: {col}")
+            except Exception as e:
+                db.rollback()
+                logger.warning(f"No se pudo crear columna {col}: {e}")
 
         # 3. Tu limpieza de restricciones de reservas original
         constraints_to_drop = [
@@ -1348,7 +1364,7 @@ def procesar_cobro(data: TransactionCreate, db: Session = Depends(database.get_d
     Actualiza la membresía sumando días del plan a la fecha de vencimiento actual o desde hoy.
     """
     try:
-        # 1. Registro automático en Caja
+        # 1. Registro automático en Caja (USANDO alumno_id Y producto_id CORRECTAMENTE)
         monto_positivo = abs(data.monto)
         
         detalle = data.descripcion if data.descripcion else f"Cobro: {data.tipo}"
@@ -1361,6 +1377,8 @@ def procesar_cobro(data: TransactionCreate, db: Session = Depends(database.get_d
             metodo_pago=data.metodo_pago,
             cuotas=data.cuotas,
             alumno_id=data.alumno_id,
+            producto_id=data.producto_id, # <--- AGREGADO FIX 500
+            cantidad=data.cantidad,       # <--- AGREGADO FIX 500
             fecha=datetime.now()
         )
         db.add(nueva_transaccion)
@@ -1375,6 +1393,7 @@ def procesar_cobro(data: TransactionCreate, db: Session = Depends(database.get_d
         # 3. Lógica de Planes (Actualización de Vencimiento Automatizada)
         if (data.tipo == "Plan" or "plan" in data.tipo.lower()) and data.alumno_id:
             alumno = db.query(models.Usuario).filter(models.Usuario.id == data.alumno_id).first()
+            # En cobros de planes, el 'producto_id' del payload suele ser el ID del Plan maestro
             plan = db.query(models.Plan).options(joinedload(models.Plan.tipo)).filter(models.Plan.id == data.producto_id).first()
 
             if alumno and plan:
@@ -1391,7 +1410,8 @@ def procesar_cobro(data: TransactionCreate, db: Session = Depends(database.get_d
                 alumno.estado_cuenta = "Activo"
                 alumno.plan_id = plan.id
                 
-                if plan.clases_mensuales:
+                # Sincronizamos clases si el plan tiene límite
+                if hasattr(alumno, 'clases_restantes') and plan.clases_mensuales:
                     alumno.clases_restantes = plan.clases_mensuales
 
         db.commit()
@@ -1402,6 +1422,7 @@ def procesar_cobro(data: TransactionCreate, db: Session = Depends(database.get_d
         raise he
     except Exception as e:
         db.rollback()
+        logger.error(f"Error procesando cobro: {e}")
         raise HTTPException(status_code=500, detail=f"Error interno: {str(e)}")
 
 # --- MUSCULACIÓN (MODULO ACTUALIZADO Y SINCRONIZADO) ---

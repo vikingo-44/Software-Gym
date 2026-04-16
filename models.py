@@ -69,10 +69,12 @@ class Usuario(Base):
     
     perfil = relationship("Perfil", back_populates="usuarios")
     plan = relationship("Plan", back_populates="usuarios")
-    sucursal = relationship("Sucursal", back_populates="usuarios")
+    sucursal = relationship("Sucursal", back_populates="sucursal_usuarios")
     reservas = relationship("Reserva", back_populates="usuario", cascade="all, delete-orphan")
     planes_rutina = relationship("PlanRutina", back_populates="usuario", cascade="all, delete-orphan")
     accesos = relationship("Acceso", back_populates="usuario")
+    # Nueva relación para historial de pagos en la ficha del alumno
+    movimientos = relationship("MovimientoCaja", back_populates="alumno_rel")
 
 class Sucursal(Base):
     __tablename__ = "sucursales"
@@ -80,7 +82,7 @@ class Sucursal(Base):
     sucursal = Column(String, nullable=False)
     direccion = Column(String, nullable=True)
     fecha_creacion = Column(DateTime, default=datetime.datetime.now)
-    usuarios = relationship("Usuario", back_populates="sucursal")
+    sucursal_usuarios = relationship("Usuario", back_populates="sucursal")
 
 # =========================================
 # GESTIÓN DE CLASES Y RESERVAS
@@ -137,6 +139,9 @@ class MovimientoCaja(Base):
     cuotas = Column(Integer, default=1)
     alumno_id = Column(Integer, ForeignKey("usuarios.id"), nullable=True)
     producto_id = Column(Integer, nullable=True)
+    cantidad = Column(Integer, default=1) # FIX: Necesario para procesar ventas de mercadería
+    
+    alumno_rel = relationship("Usuario", back_populates="movimientos")
 
 class Acceso(Base):
     __tablename__ = "historial_accesos"
