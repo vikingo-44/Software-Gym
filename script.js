@@ -2138,23 +2138,6 @@ if (editorForm) {
             } else document.getElementById('prof-input-imc').value = "";
         }
 
-        function autoCalculateExpiry() {
-            const planId = document.getElementById('al-plan').value;
-            const renovDate = document.getElementById('al-fecha-renovacion').value;
-            if(!planId || !renovDate) return;
-            const plan = state.planes.find(p => p.id == planId);
-            let months = 1;
-            if (plan) {
-                const n = plan.nombre.toLowerCase();
-                if (n.includes('trimestral')) months = 3;
-                else if (n.includes('semestral')) months = 6;
-                else if (n.includes('anual')) months = 12;
-            }
-            let d = new Date(renovDate + 'T00:00:00');
-            d.setMonth(d.getMonth() + months);
-            document.getElementById('al-fecha-vencimiento').value = d.toISOString().split('T')[0];
-        }
-
         function toggleSidebar() { document.getElementById('sidebar').classList.toggle('sidebar-collapsed'); lucide.createIcons(); }
         function toggleSub(id) { document.getElementById(id).classList.toggle('hidden'); }
         function openModal(id) { document.getElementById(id).style.display = 'flex'; }
@@ -3454,6 +3437,10 @@ if (editorForm) {
 			}
 		}
 
+		/**
+		 * 1. CARGA DE PLANES Y TIPOS
+		 * Mantiene tu lógica de filtros pero agrega la inicialización de los selectores del modal.
+		 */
         async function loadPlanes() {
 			const p = await apiFetch('/planes'); 
 			const t = await apiFetch('/tipos-planes');
@@ -3464,27 +3451,114 @@ if (editorForm) {
 			const filterContainer = document.getElementById('planes-filter-container'); 
 			if (filterContainer) {
 				filterContainer.innerHTML = ''; 
-				state.tiposPlanes.forEach((t, idx) => { 
-					filterContainer.innerHTML += `<button onclick="filterPlanes(${t.id}, this)" class="filter-btn ${idx === 0 ? 'active' : ''}">${t.nombre}</button>`; 
+				state.tiposPlanes.forEach((tipo, idx) => { 
+					filterContainer.innerHTML += `<button onclick="filterPlanes(${tipo.id}, this)" class="filter-btn ${idx === 0 ? 'active' : ''}">${tipo.nombre.toUpperCase()}</button>`; 
 				});
 				
-				// Carga inicial del primer filtro
+				// Carga inicial del primer filtro de la lista de configuración
 				if (state.tiposPlanes.length > 0) {
 					filterPlanes(state.tiposPlanes[0].id, filterContainer.children[0]);
 				}
 			}
 
-			// Actualizar selectores de planes en otros formularios (Alumnos / Modal Plan)
-			const selectAlumnoPlan = document.getElementById('al-plan');
-			if (selectAlumnoPlan) {
-				selectAlumnoPlan.innerHTML = '<option value="">Seleccionar Plan</option>' + 
-					state.planes.map(p => `<option value="${p.id}">${p.nombre}</option>`).join('');
-			}
+			// Actualizar selectores en el modal de Alumnos (Iniciamos el flujo de 2 pasos)
+			initAlumnoPlanSelectors();
 
 			const selectPlanTipo = document.getElementById('plan-tipo');
 			if (selectPlanTipo) {
-				selectPlanTipo.innerHTML = state.tiposPlanes.map(t => `<option value="${t.id}">${t.nombre}</option>`).join('');
+				selectPlanTipo.innerHTML = state.tiposPlanes.map(t => `<option value="${t.id}">${t.nombre.toUpperCase()}</option>`).join('');
 			}
+		}
+		/**
+		 * 2. FLUJO DE SELECCIÓN DE PLAN (MODAL ALUMNO)
+		 * Reemplaza la selección simple por una filtrada por Tipo.
+		 */
+		function initAlumnoPlanSelectors() {
+			const selectTipo = document.getElementById('al-tipo-plan');
+			if (selectTipo) {
+				selectTipo.innerHTML = '<option value="">1. SELECCIONAR TIPO...</option>' + 
+					state.tiposPlanes.map(t => `<option value="${t.id}">${t.nombre.toUpperCase()}</option>`).join('');
+			}
+			const selectPlan = document.getElementById('al-plan');
+			if (selectPlan) selectPlan.innerHTML = '<option value="">2. ESPERANDO TIPO...</option>';
+		}
+
+		function filterPlanesByTipo() {
+			const tipoId = document.getElementById('al-tipo-plan').value;
+			const planSelect = document.getElementById('al-plan');
+			const valorDisplay = document.getElementById('al-plan-valor-display');
+			
+			if (!tipoId) {
+				planSelect.innerHTML = '<option value="">2. ESPERANDO TIPO...</option>';
+				if (valorDisplay) valorDisplay.classList.add('hidden');
+				return;
+			}
+
+			const filtrados = state.planes.filter(p => p.tipo_plan_id == tipoId);
+			planSelect.innerHTML = '<option value="">2. SELECCIONAR PLAN...</option>' + 
+				filtrados.map(p => `<option value="${p.id}">${p.nombre.toUpperCase()}</option>`).join('');
+			
+			if (valorDisplay) valorDisplay.classList.add('hidden');
+		}
+
+		/**
+		 * Muestra el cuadro de precios para confirmar antes de guardar
+		 */
+		function showPlanValue() {
+			const planId = document.getElementById('al-plan').value;
+			const container = document.getElementById('al-plan-valor-display');
+			
+			if (!planId) {
+				if (container) container.classList.add('hidden');
+				return;
+			}
+
+			const plan = state.planes.find(p => p.id == planId);
+			if (plan && container) {
+				container.innerHTML = `
+					<div class="flex flex-wrap gap-4 p-4 bg-red-600/10 border border-red-600/20 rounded-2xl animate-in fade-in zoom-in-95">
+						<div class="flex-1 min-w-[80px]">
+							<p class="text-[8px] font-black text-white/40 uppercase">Efectivo</p>
+							<p class="text-sm font-black text-green-500">$${(plan.efectivo || 0).toLocaleString()}</p>
+						</div>
+						<div class="flex-1 min-w-[80px]">
+							<p class="text-[8px] font-black text-white/40 uppercase">Transf.</p>
+							<p class="text-sm font-black text-blue-400">$${(plan.transferencia || 0).toLocaleString()}</p>
+						</div>
+						<div class="flex-1 min-w-[80px]">
+							<p class="text-[8px] font-black text-white/40 uppercase">Tarjeta</p>
+							<p class="text-sm font-black text-purple-400">$${(plan.debito_credito || 0).toLocaleString()}</p>
+						</div>
+					</div>
+				`;
+				container.classList.remove('hidden');
+			}
+			
+			// Al elegir el plan, disparamos el cálculo de fecha
+			updateExpirationDate();
+		}
+
+		/**
+		 * 3. CÁLCULO DE VENCIMIENTO
+		 * Reemplaza a 'autoCalculateExpiry'. Ahora usa los días exactos de la DB.
+		 */
+		function updateExpirationDate() {
+			const planId = document.getElementById('al-plan').value;
+			const renovDate = document.getElementById('al-fecha-renovacion').value;
+			const inputVenc = document.getElementById('al-fecha-vencimiento');
+
+			if(!planId || !renovDate || !inputVenc) return;
+
+			const plan = state.planes.find(p => p.id == planId);
+			if (!plan) return;
+
+			// Obtenemos los días desde el tipo de plan cargado en la relación
+			const dias = plan.tipo?.duracion_dias || 30;
+			
+			let d = new Date(renovDate + 'T12:00:00'); // T12 para evitar errores de zona horaria
+			d.setDate(d.getDate() + dias);
+			
+			inputVenc.value = d.toISOString().split('T')[0];
 		}
 
         function filterPlanes(tipoId, btn) {
@@ -3723,10 +3797,19 @@ if (editorForm) {
 			document.getElementById('al-dni').value = al.dni;
 			document.getElementById('al-email').value = al.email || ""; 
 			document.getElementById('al-telefono').value = al.telefono || "";
-			document.getElementById('al-genero').value = al.genero || "";  
-			document.getElementById('al-plan').value = al.plan_id || ""; 
+			document.getElementById('al-genero').value = al.genero || "";
 			
-			// Asignar sucursal en edición
+			// Sincronización del Plan (Buscamos el tipo para pre-cargar los selects)
+			const planActual = state.planes.find(p => p.id == al.plan_id);
+			if (planActual) {
+				document.getElementById('al-tipo-plan').value = planActual.tipo_plan_id || "";
+				filterPlanesByTipo(); // Cargamos las opciones del segundo select
+				document.getElementById('al-plan').value = al.plan_id;
+				showPlanValue(); // Mostramos los precios del plan actual
+			} else {
+				initAlumnoPlanSelectors();
+			}
+			
 			const selSuc = document.getElementById('al-sucursal');
 			if(selSuc) selSuc.value = al.sucursal_id || "";
 			
@@ -3740,7 +3823,11 @@ if (editorForm) {
 			document.getElementById('al-certificado-entregado').checked = al.certificado_entregado || false;
 			
 			const delBtn = document.getElementById('btn-delete-alumno'); 
-			if(state.user.rol_nombre === "Administrador" || state.user.rol_nombre === "Supervisor") delBtn.classList.remove('hidden');
+			if(state.user.rol_nombre === "Administrador" || state.user.rol_nombre === "Supervisor") {
+				delBtn.classList.remove('hidden');
+			} else {
+				delBtn.classList.add('hidden');
+			}
 			delBtn.onclick = () => deleteRecord('alumnos', id, 'modal-alumno', fetchAlumnos);
 			
 			loadSucursales();
@@ -3750,27 +3837,19 @@ if (editorForm) {
         document.getElementById('form-alumno').onsubmit = async (e) => {
 			e.preventDefault(); 
 			
-			// Obtenemos el ID para saber si es una edición (PUT) o un alta (POST)
 			const id = document.getElementById('al-id').value;
 			
-			// Construcción del objeto de datos con todos los campos necesarios
 			const data = { 
 				nombre_completo: document.getElementById('al-nombre').value, 
 				dni: document.getElementById('al-dni').value, 
 				email: document.getElementById('al-email').value,
 				telefono: document.getElementById('al-telefono').value,
 				genero: document.getElementById('al-genero').value,
-				
-				// Conversión a enteros para las claves foráneas (Planes y Sucursales)
 				plan_id: parseInt(document.getElementById('al-plan').value) || null, 
 				sucursal_id: parseInt(document.getElementById('al-sucursal').value) || null, 
-				
-				// Conversión a decimales para métricas físicas
 				peso: parseFloat(document.getElementById('al-peso').value) || null, 
 				altura: parseFloat(document.getElementById('al-altura').value) || null, 
 				imc: parseFloat(document.getElementById('al-imc').value) || null, 
-				
-				// Manejo de fechas y estados
 				fecha_ultima_renovacion: document.getElementById('al-fecha-renovacion').value, 
 				fecha_vencimiento: document.getElementById('al-fecha-vencimiento').value, 
 				fecha_nacimiento: document.getElementById('al-fecha-nacimiento').value || null, 
@@ -3778,26 +3857,27 @@ if (editorForm) {
 				certificado_entregado: document.getElementById('al-certificado-entregado').checked 
 			};
 			
-			// Agregamos la contraseña solo si el usuario escribió algo en el campo
 			const pass = document.getElementById('al-pass').value; 
 			if (pass) data.password = pass;
 			
-			// Envío de datos al servidor
 			const res = await apiFetch(id ? `/alumnos/${id}` : '/alumnos', id ? 'PUT' : 'POST', data);
 			
-			// Si la operación fue exitosa, limpiamos la interfaz
 			if (!res.error) { 
 				closeModal('modal-alumno'); 
 				fetchAlumnos(); 
 				
-				// Verificamos cuál función de notificación está disponible en tu script
+				// Notificación Vikinga
+				const msg = id ? "Guerrero Actualizado" : "Nuevo Guerrero Reclutado";
 				if (typeof showVikingToast === 'function') {
-					showVikingToast("Alumno Guardado"); 
+					showVikingToast(msg); 
 				} else if (typeof showToast === 'function') {
-					showToast("Alumno Guardado");
+					showToast(msg);
 				}
+			} else {
+				if (typeof showVikingToast === 'function') showVikingToast(res.error, true);
 			}
 		};
+
         function openModalStaff(rol) { document.getElementById('modal-staff-title').innerText = "Alta " + rol; document.getElementById('stf-id').value = ""; document.getElementById('stf-rol').value = rol; openModal('modal-staff'); }
         function openEditStaff(id, rol) {
             const user = (rol === 'Profesor' ? state.profesores : state.administrativos).find(x => x.id == id); if(!user) return;
@@ -5415,7 +5495,7 @@ if (editorForm) {
                 let filtrados = state.alumnos;
                 
                 if(filtro === 'activos') filtrados = state.alumnos.filter(a => a.fecha_vencimiento && a.fecha_vencimiento >= hoy);
-                if(filtro === 'inactivos') filtrados = state.alumnos.filter(a => !a.fecha_vencimiento || a.fecha_vencimiento < hoy);
+                if(filtro === 'Caducados') filtrados = state.alumnos.filter(a => !a.fecha_vencimiento || a.fecha_vencimiento < hoy);
                 
                 renderAlumnosList(filtrados);
             }

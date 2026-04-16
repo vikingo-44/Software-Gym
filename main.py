@@ -199,6 +199,7 @@ class PlanSchema(BaseModel):
     clases_mensuales: int  
     tipo_plan_id: Optional[int]
     tipo: Optional[TipoPlanSchema] = None
+    dias: Optional[int]
     class Config: from_attributes = True
 
 class UsuarioResponse(BaseModel):
@@ -265,7 +266,8 @@ class PlanUpdate(BaseModel):
     transferencia: float
     debito_credito: float
     tipo_plan_id: int
-    clases_mensuales: Optional[int] = 12 
+    clases_mensuales: Optional[int] = 12
+    dias: Optional[int] = 30 
 
 # --- NUEVO SCHEMA PARA BOXES ---
 class TipoBoxResponse(BaseModel):
@@ -1006,21 +1008,24 @@ def delete_stock(id: int, db: Session = Depends(database.get_db)):
     return {"status": "success"}
 
 # --- PLANES ---
-@app.get("/api/planes", tags=["Planes"])
+@app.get("/api/planes", response_model=List[PlanSchema], tags=["Planes"])
 def get_planes(db: Session = Depends(database.get_db)):
+    """Obtiene todos los planes con la información de su tipo cargada"""
     planes = db.query(models.Plan).options(joinedload(models.Plan.tipo)).all()
     # Forzamos la estructura para que el frontend reciba los nombres correctos
     return planes
 
 @app.post("/api/planes", tags=["Planes"])
 def create_plan(data: PlanUpdate, db: Session = Depends(database.get_db)):
+    """Crea un nuevo plan maestro"""
     new_p = models.Plan(
         nombre=data.nombre,
         efectivo=data.efectivo,
         transferencia=data.transferencia,
         debito_credito=data.debito_credito,
         tipo_plan_id=data.tipo_plan_id,
-        clases_mensuales=data.clases_mensuales 
+        clases_mensuales=data.clases_mensuales,
+        dias=data.dias 
     )
     db.add(new_p)
     db.commit()
@@ -1028,6 +1033,7 @@ def create_plan(data: PlanUpdate, db: Session = Depends(database.get_db)):
 
 @app.put("/api/planes/{id}", tags=["Planes"])
 def update_plan(id: int, data: PlanUpdate, db: Session = Depends(database.get_db)):
+    """Actualiza la configuración de un plan existente"""
     p = db.query(models.Plan).filter(models.Plan.id == id).first()
     if p:
         p.nombre = data.nombre
@@ -1036,19 +1042,22 @@ def update_plan(id: int, data: PlanUpdate, db: Session = Depends(database.get_db
         p.debito_credito = data.debito_credito
         p.tipo_plan_id = data.tipo_plan_id
         p.clases_mensuales = data.clases_mensuales
+        p.dias = data.dias
         db.commit()
         return {"status": "success"}
     return {"status": "error", "message": "Plan no encontrado"}
 
 @app.delete("/api/planes/{id}", tags=["Planes"])
 def delete_plan(id: int, db: Session = Depends(database.get_db)):
+    """Elimina un plan y limpia la referencia en los alumnos"""
     db.query(models.Usuario).filter(models.Usuario.plan_id == id).update({"plan_id": None}) 
     db.query(models.Plan).filter(models.Plan.id == id).delete()
     db.commit()
     return {"status": "success"}
 
-@app.get("/api/tipos-planes", tags=["Planes"])
+@app.get("/api/tipos-planes", response_model=List[TipoPlanSchema], tags=["Planes"])
 def get_tipos(db: Session = Depends(database.get_db)):
+    """Obtiene la lista de tipos (Mensual, Trimestral, etc)"""
     return db.query(models.TipoPlan).all()
 
 # --- CLASES ---

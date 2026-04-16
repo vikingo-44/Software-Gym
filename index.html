@@ -1317,17 +1317,32 @@
 		</div>
 	</div>
 
-    <div id="modal-alumno" class="viking-modal">
-        <div class="glass-card p-10 rounded-[3rem] w-full max-w-lg text-left">
-            <h3 class="text-2xl font-black uppercase italic mb-8" id="modal-alumno-title">Alumno</h3>
-            <form id="form-alumno" class="space-y-4">
-                <input type="hidden" id="al-id">
-                <input type="text" id="al-nombre" placeholder="Nombre Completo" required class="viking-input">
-                <div class="grid grid-cols-2 gap-4">
-                    <input type="text" id="al-dni" placeholder="DNI / Usuario" required class="viking-input">
-                    <input type="email" id="al-email" placeholder="Email" required class="viking-input">
-                </div>
+    <div id="modal-alumno" class="viking-modal hidden fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+		<div class="glass-card p-10 rounded-[3rem] w-full max-w-lg text-left bg-zinc-950 border border-white/5 shadow-2xl overflow-y-auto max-h-[90vh] custom-scrollbar">
+			<h3 class="text-2xl font-black uppercase italic mb-8 text-white tracking-tighter" id="modal-alumno-title">Alumno</h3>
+			
+			<form id="form-alumno" class="space-y-4">
+				<input type="hidden" id="al-id">
+				
+				<!-- Nombre -->
+				<div class="space-y-1">
+					<label class="text-[9px] font-black text-white/30 uppercase tracking-widest italic ml-2">Nombre Completo</label>
+					<input type="text" id="al-nombre" placeholder="Nombre Completo" required class="viking-input">
+				</div>
 
+				<!-- DNI y Email -->
+				<div class="grid grid-cols-2 gap-4">
+					<div class="space-y-1">
+						<label class="text-[9px] font-black text-white/30 uppercase tracking-widest italic ml-2">DNI / Usuario</label>
+						<input type="text" id="al-dni" placeholder="DNI / Usuario" required class="viking-input">
+					</div>
+					<div class="space-y-1">
+						<label class="text-[9px] font-black text-white/30 uppercase tracking-widest italic ml-2">Email</label>
+						<input type="email" id="al-email" placeholder="Email" required class="viking-input">
+					</div>
+				</div>
+
+				<!-- Género y Teléfono -->
 				<div class="grid grid-cols-2 gap-4">
 					<div class="space-y-1">
 						<label class="text-[9px] font-black text-white/30 uppercase tracking-widest italic ml-2">Género</label>
@@ -1344,63 +1359,97 @@
 					</div>
 				</div>
 
-                <div class="grid grid-cols-3 gap-4">
-                    <div class="space-y-1">
-                        <label class="text-[9px] font-black text-white-500 uppercase italic">Peso (kg)</label>
-                        <input type="number" step="0.01" id="al-peso" placeholder="0.00" class="viking-input" oninput="calculateIMC()">
-                    </div>
-                    <div class="space-y-1">
-                        <label class="text-[9px] font-black text-white-500 uppercase italic">Altura (cm)</label>
-                        <input type="number" step="0.01" id="al-altura" placeholder="0.00" class="viking-input" oninput="calculateIMC()">
-                    </div>
-                    <div class="space-y-1">
-                        <label class="text-[9px] font-black text-red-600 uppercase italic">IMC</label>
-                        <input type="text" id="al-imc" placeholder="-" readonly class="viking-input opacity-60">
-                    </div>
-                </div>
-				
-                <div class="grid grid-cols-2 gap-4">
-                    <div class="space-y-1">
-                        <label class="text-[9px] font-black text-white-500 uppercase italic">Fecha Renovación</label>
-                        <input type="date" id="al-fecha-renovacion" class="viking-input" onchange="autoCalculateExpiry()">
-                    </div>
-                    <div class="space-y-1">
-                        <label class="text-[9px] font-black text-white-500 uppercase italic">Fecha Vencimiento</label>
-                        <input type="date" id="al-fecha-vencimiento" class="viking-input">
-                    </div>
-                </div>
-				<!-- NUEVA SECCIÓN: SALUD Y EDAD -->
-				<div class="grid grid-cols-2 gap-4 border-t border-white/5 pt-4 mt-2">
+				<!-- Datos Físicos -->
+				<div class="grid grid-cols-3 gap-4 p-4 bg-white/5 rounded-3xl border border-white/5">
 					<div class="space-y-1">
-						<label class="text-[9px] font-black text-red-600 uppercase italic">Fecha de Nacimiento</label>
+						<label class="text-[9px] font-black text-white-500 uppercase italic ml-1">Peso (kg)</label>
+						<input type="number" step="0.01" id="al-peso" placeholder="0.00" class="viking-input !h-10 !bg-black/40" oninput="calculateIMC()">
+					</div>
+					<div class="space-y-1">
+						<label class="text-[9px] font-black text-white-500 uppercase italic ml-1">Altura (cm)</label>
+						<input type="number" step="0.01" id="al-altura" placeholder="0.00" class="viking-input !h-10 !bg-black/40" oninput="calculateIMC()">
+					</div>
+					<div class="space-y-1 text-center">
+						<label class="text-[9px] font-black text-red-600 uppercase italic ml-1">IMC</label>
+						<input type="text" id="al-imc" placeholder="-" readonly class="viking-input !h-10 opacity-60 text-center !bg-black/20 border-none">
+					</div>
+				</div>
+
+				<!-- Fechas de Plan -->
+				<div class="grid grid-cols-2 gap-4">
+					<div class="space-y-1">
+						<label class="text-[9px] font-black text-white-500 uppercase italic ml-2">Fecha Renovación</label>
+						<input type="date" id="al-fecha-renovacion" class="viking-input" onchange="updateExpirationDate()">
+					</div>
+					<div class="space-y-1">
+						<label class="text-[9px] font-black text-red-600 uppercase italic ml-2">Fecha Vencimiento</label>
+						<input type="date" id="al-fecha-vencimiento" class="viking-input border-red-600/30 font-bold text-red-500">
+					</div>
+				</div>
+
+				<!-- Salud y Nacimiento -->
+				<div class="grid grid-cols-2 gap-4 border-t border-white/5 pt-4">
+					<div class="space-y-1">
+						<label class="text-[9px] font-black text-white/30 uppercase italic ml-2">Fecha de Nacimiento</label>
 						<input type="date" id="al-fecha-nacimiento" class="viking-input">
 					</div>
 					<div class="space-y-1">
-						<label class="text-[9px] font-black text-white-500 uppercase italic">Certificado Médico (Fecha)</label>
+						<label class="text-[9px] font-black text-white/30 uppercase italic ml-2">Certificado (Fecha)</label>
 						<input type="date" id="al-fecha-certificado" class="viking-input">
 					</div>
 				</div>
-				<div class="flex items-center gap-3 bg-white/5 p-3 rounded-xl border border-white/5 mt-2">
+
+				<div class="flex items-center gap-3 bg-white/5 p-3 rounded-xl border border-white/5">
 					<input type="checkbox" id="al-certificado-entregado" class="w-4 h-4 accent-red-600">
 					<label for="al-certificado-entregado" class="text-[10px] font-black uppercase italic text-white-300">¿Certificado Físico Entregado?</label>
 				</div>
-				<div class="grid grid-cols-1 gap-4">
+
+				<!-- Sucursal -->
+				<div class="space-y-1">
+					<label class="text-[9px] font-black text-white/30 uppercase tracking-widest italic ml-2">Sucursal de Entrenamiento</label>
 					<select id="al-sucursal" class="viking-input" required>
 						<option value="">Seleccionar Sucursal...</option>
 					</select>
 				</div>
-                <div class="grid grid-cols-2 gap-4">
-                    <select id="al-plan" class="viking-input" required onchange="autoCalculateExpiry()"></select>
-                    <input type="password" id="al-pass" placeholder="Contraseña de Acceso" class="viking-input">
-                </div>
-                <div class="flex gap-4 pt-4">
-                    <button type="button" onclick="closeModal('modal-alumno')" class="flex-1 py-4 bg-white/5 rounded-2xl font-black uppercase italic text-[11px]">Cancelar</button>
-                    <button type="button" id="btn-delete-alumno" class="hidden py-4 px-4 bg-red-900/40 rounded-2xl font-black uppercase italic text-[11px] text-red-500">Eliminar</button>
-                    <button type="submit" id="btn-save-alumno-modal" class="flex-1 py-4 viking-bg-red text-black rounded-2xl font-black uppercase italic text-[11px]">Guardar</button>
-                </div>
-            </form>
-        </div>
-    </div>
+
+				<!-- SECCIÓN MAESTRA DE PLANES (2 PASOS) -->
+				<div class="grid grid-cols-1 gap-3 p-4 bg-red-600/5 rounded-[2rem] border border-red-600/10">
+					<div class="grid grid-cols-2 gap-3">
+						<div class="space-y-1">
+							<label class="text-[9px] font-black text-red-600 uppercase italic ml-2">Membresía</label>
+							<select id="al-tipo-plan" class="viking-input !h-10 !text-[10px] !bg-black/60" onchange="filterPlanesByTipo()">
+								<!-- Se llena vía JS -->
+							</select>
+						</div>
+						<div class="space-y-1">
+							<label class="text-[9px] font-black text-red-600 uppercase italic ml-2">Plan Específico</label>
+							<select id="al-plan" class="viking-input !h-10 !text-[10px] !bg-black/60" required onchange="showPlanValue()">
+								<option value="">Esperando tipo...</option>
+							</select>
+						</div>
+					</div>
+					
+					<!-- Visor de Precios Dinámico -->
+					<div id="al-plan-valor-display" class="hidden animate-in fade-in zoom-in-95 duration-300">
+						<!-- Inyectado por JS -->
+					</div>
+				</div>
+
+				<!-- Contraseña -->
+				<div class="space-y-1">
+					<label class="text-[9px] font-black text-white/30 uppercase tracking-widest italic ml-2">Contraseña de Acceso</label>
+					<input type="password" id="al-pass" placeholder="Dejar vacío para mantener actual" class="viking-input">
+				</div>
+
+				<!-- Botones -->
+				<div class="flex gap-4 pt-6">
+					<button type="button" onclick="closeModal('modal-alumno')" class="flex-1 py-4 bg-white/5 rounded-2xl font-black uppercase italic text-[11px] hover:bg-white/10 transition-colors">Cancelar</button>
+					<button type="button" id="btn-delete-alumno" class="hidden py-4 px-6 bg-red-900/20 rounded-2xl font-black uppercase italic text-[11px] text-red-500 border border-red-500/20 hover:bg-red-600 hover:text-black transition-all">Eliminar</button>
+					<button type="submit" id="btn-save-alumno-modal" class="flex-[2] py-4 viking-bg-red text-black rounded-2xl font-black uppercase italic text-[11px] shadow-lg shadow-red-900/20">Guardar Guerrero</button>
+				</div>
+			</form>
+		</div>
+	</div>
 
     <!-- REEMPLAZA TU DIV "modal-gasto" POR ESTE COMPLETO Y FUNCIONAL -->
 		<div id="modal-gasto" class="fixed inset-0 bg-black/80 hidden flex items-center justify-center z-50 backdrop-blur-sm animate-fade-in">
