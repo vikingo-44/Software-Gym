@@ -186,7 +186,7 @@ class TokenResponse(BaseModel):
 class BulkAlumnoSchema(BaseModel):
     nombre_completo: str
     dni: str
-    email: Optional[EmailStr] = None
+    email: Optional[str] = None
     telefono: Optional[str] = None
     genero: Optional[str] = None
     password: str = "GymApp2026!"
@@ -196,7 +196,8 @@ class BulkAlumnoSchema(BaseModel):
     imc: float = 0.0
     certificado_entregado: bool = False
     fecha_certificado: Optional[str] = None
-    # Fechas críticas para determinar el plan
+    # CAMPOS CLAVE PARA EL MATCH
+    plan_nombre: str  # Ejemplo: "Basic"
     fecha_inicio: str # Formato YYYY-MM-DD
     fecha_fin: str    # Formato YYYY-MM-DD
     sucursal_id: int = 1
@@ -491,68 +492,72 @@ def update_db_user(user_id: int, data: Union[AlumnoUpdate, StaffUpdate], db: Ses
 
 @app.post("/api/alumnos/importar-masivo", tags=["Migración"])
 async def importar_alumnos(alumnos_data: List[BulkAlumnoSchema], db: Session = Depends(database.get_db)):
-    # detalles se usa para listar los nombres procesados con éxito
     resumen = {"creados": 0, "errores": [], "detalles": []}
+    hoy_str = date.today().isoformat()
     
-    # 1. Traemos todos los tipos de planes para tenerlos en memoria
+    # Traemos todos los tipos para comparar duraciones (30, 90, 180, etc.)
     tipos_plan = db.query(models.TipoPlan).all()
-    # Mapeo de duración -> Palabra clave en el nombre del TipoPlan
-    mapa_duracion = {1: "Mensual", 3: "Trimestral", 6: "Semestral", 12: "Anual"}
-    
-    hoy_str = datetime.now().strftime("%Y-%m-%d")
-    
+    perfil_alumno = db.query(models.Perfil).filter(func.lower(models.Perfil.nombre) == "alumno").first()
+
     for data in alumnos_data:
         try:
-            # Verificar si ya existe por DNI
-            if data.dni:
-                existe = db.query(models.Alumno).filter(models.Alumno.dni == data.dni).first()
-                if existe:
-                    resumen["errores"].append(f"DNI {data.dni} ya existe: {data.nombre_completo}")
-                    continue
+            # 1. Evitar duplicados por DNI
+            existe = db.query(models.Usuario).filter(models.Usuario.dni == data.dni).first()
+            if existe:
+                resumen["errores"].append(f"DNI {data.dni} ya existe")
+                continue
 
-            # 2. Calcular duración y buscar TipoPlan
-            meses = calcular_meses(data.fecha_inicio, data.fecha_fin)
-            nombre_tipo_buscado = mapa_duracion.get(meses, "Mensual")
-            
-            # Buscar coincidencia en los tipos de plan de la DB
-            tipo_plan = next((t for t in tipos_plan if nombre_tipo_buscado.lower() in t.nombre.lower()), None)
-            
-            if not tipo_plan:
-                tipo_plan = tipos_plan[0] if tipos_plan else None
-            
-            # 3. Buscar el primer plan disponible que pertenezca a ese TipoPlan
-            plan_asignado = None
-            if tipo_plan:
-                plan_asignado = db.query(models.Plan).filter(models.Plan.tipo_plan_id == tipo_plan.id).first()
-            
-            if not plan_asignado:
-                plan_asignado = db.query(models.Plan).first()
+            # 2. Convertir fechas y calcular días reales de diferencia
+            f_inicio = datetime.strptime(data.fecha_inicio, "%Y-%m-%d").date()
+            f_fin = datetime.strptime(data.fecha_fin, "%Y-%m-%d").date()
+            dias_diferencia = (f_fin - f_inicio).days
 
-            # 4. Crear el registro
-            nuevo_alumno = models.Alumno(
+            # 3. Encontrar el Tipo de Plan por duración
+            # Ordenamos de mayor a menor para que el match sea exacto
+            tipo_match = None
+            for t in sorted(tipos_plan, key=lambda x: x.duracion_dias, reverse=True):
+                # Usamos un margen de 5 días por si el mes tiene 28 o 31
+                if dias_diferencia >= (t.duracion_dias - 5):
+                    tipo_match = t
+                    break
+            
+            if not tipo_match: tipo_match = tipos_plan[0]
+
+            # 4. BUSQUEDA POR NOMBRE + TIPO (Aquí resolvemos lo de los nombres repetidos)
+            plan_final = db.query(models.Plan).filter(
+                func.lower(models.Plan.nombre) == data.plan_nombre.lower(),
+                models.Plan.tipo_plan_id == tipo_match.id
+            ).first()
+
+            # Si no encuentra ese nombre específico en ese tipo, usamos el primero de ese tipo
+            if not plan_final:
+                plan_final = db.query(models.Plan).filter(models.Plan.tipo_plan_id == tipo_match.id).first()
+
+            # 5. Crear el Usuario (Alumno)
+            nuevo = models.Usuario(
                 nombre_completo=data.nombre_completo.upper(),
                 dni=data.dni,
                 email=data.email,
                 telefono=data.telefono,
                 genero=data.genero,
-                password=data.password, 
-                fecha_nacimiento=data.fecha_nacimiento,
+                password_hash=get_password_hash(data.password),
+                perfil_id=perfil_alumno.id if perfil_alumno else None,
+                sucursal_id=data.sucursal_id,
+                plan_id=plan_final.id if plan_final else None,
+                fecha_ultima_renovacion=f_inicio,
+                fecha_vencimiento=f_fin,
+                estado_cuenta="Activo" if data.fecha_fin >= hoy_str else "Caducado",
                 peso=data.peso,
                 altura=data.altura,
                 imc=data.imc,
-                certificado_entregado=data.certified_entregado,
-                fecha_certificado=data.fecha_certificado,
-                sucursal_id=data.sucursal_id,
-                plan_id=plan_asignado.id if plan_asignado else None,
-                fecha_ultima_renovacion=data.fecha_inicio,
-                fecha_vencimiento=data.fecha_fin,
-                activo=True if data.fecha_fin >= hoy_str else False
+                certificado_entregado=data.certificado_entregado,
+                fecha_certificado=datetime.strptime(data.fecha_certificado, "%Y-%m-%d").date() if data.fecha_certificado else None
             )
             
-            db.add(nuevo_alumno)
+            db.add(nuevo)
             resumen["creados"] += 1
-            resumen["detalles"].append(f"Creado: {data.nombre_completo} (Plan: {plan_asignado.nombre if plan_asignado else 'N/A'})")
-            
+            resumen["detalles"].append(f"{data.nombre_completo} -> {plan_final.nombre} ({tipo_match.nombre})")
+
         except Exception as e:
             resumen["errores"].append(f"Error en {data.nombre_completo}: {str(e)}")
 
