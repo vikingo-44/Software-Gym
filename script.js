@@ -4145,10 +4145,14 @@ if (editorForm) {
 			document.getElementById('stock-img-placeholder').classList.remove('hidden');
 			document.getElementById('modal-stock-title').innerText = "Alta de Mercadería";
 			
+			// MOSTRAR sección de gasto porque es nuevo
+			document.getElementById('seccion-gasto-inicial').classList.remove('hidden');
+
 			const delBtn = document.getElementById('btn-delete-stock');
 			if(delBtn) delBtn.classList.add('hidden');
 
 			openModal('modal-stock');
+			if (window.lucide) lucide.createIcons();
 		}
 		
 		function openEditStock(id) {
@@ -4160,17 +4164,21 @@ if (editorForm) {
 			document.getElementById('stock-cant').value = s.stock_actual;
 			document.getElementById('stock-precio').value = s.precio_venta;
 			
+			// OCULTAR sección de gasto al editar
+			document.getElementById('seccion-gasto-inicial').classList.add('hidden');
+
 			const base64 = s.url_imagen || s.imagen || "";
 			document.getElementById('stock-imagen-base64').value = base64;
 			
 			const preview = document.getElementById('stock-img-preview');
+			const placeholder = document.getElementById('stock-img-placeholder');
 			if(base64 && base64.length > 100) {
 				preview.src = base64;
 				preview.classList.remove('hidden');
-				document.getElementById('stock-img-placeholder').classList.add('hidden');
+				placeholder.classList.add('hidden');
 			} else {
 				preview.classList.add('hidden');
-				document.getElementById('stock-img-placeholder').classList.remove('hidden');
+				placeholder.classList.remove('hidden');
 			}
 
 			document.getElementById('modal-stock-title').innerText = "Editar Mercadería";
@@ -4181,18 +4189,22 @@ if (editorForm) {
 			}
 
 			openModal('modal-stock');
+			if (window.lucide) lucide.createIcons();
 		}
 
 		window.openEditStock = openEditStock;
 				
-		// 4. GUARDAR CAMBIOS (Vincular al onsubmit del form)
+		// 1. Definimos la función única de guardado
 		async function saveStockVikingo(e) {
 			if(e && e.preventDefault) e.preventDefault();
 			
 			const id = document.getElementById('stock-id').value;
+			const nombre = document.getElementById('stock-nombre').value;
+			const cantidad = parseInt(document.getElementById('stock-cant').value);
+			
 			const payload = {
-				nombre_producto: document.getElementById('stock-nombre').value,
-				stock_actual: parseInt(document.getElementById('stock-cant').value),
+				nombre_producto: nombre,
+				stock_actual: cantidad,
 				precio_venta: parseFloat(document.getElementById('stock-precio').value),
 				url_imagen: document.getElementById('stock-imagen-base64').value 
 			};
@@ -4206,22 +4218,42 @@ if (editorForm) {
 			const res = await apiFetch(endpoint, method, payload);
 			
 			if(!res.error) {
-				showVikingToast(id ? "Producto Actualizado" : "Producto Registrado");
+				// --- LÓGICA DE GASTO AUTOMÁTICO EN CAJA ---
+				const montoCosto = parseFloat(document.getElementById('stock-costo-total').value);
+				
+				if (!id && montoCosto > 0) {
+					const notaCosto = document.getElementById('stock-costo-nota').value || `Compra inicial: ${nombre}`;
+					const metodoPago = document.getElementById('stock-costo-metodo').value;
+
+					// Enviamos el egreso a la caja
+					await apiFetch('/caja/movimientos', 'POST', {
+						descripcion: notaCosto,
+						monto: montoCosto,
+						tipo: 'Egreso',
+						metodo_pago: metodoPago,
+						descripcion2: `Carga automática de stock: ${cantidad} unidades`
+					});
+					showVikingToast("Mercadería y Gasto de Caja registrados");
+				} else {
+					showVikingToast(id ? "Producto Actualizado" : "Producto Registrado");
+				}
+
 				closeModal('modal-stock');
+				// Pequeño delay para que la DB impacte antes de recargar la lista
 				setTimeout(loadStock, 300); 
 			} else {
 				showVikingToast("Error: " + res.error, true);
 			}
 		}
 
+		// 2. Exportamos a window por si lo usás en atributos onclick del HTML
 		window.saveStockVikingo = saveStockVikingo;
 
-        document.getElementById('form-stock').onsubmit = async (e) => {
-            e.preventDefault(); const id = document.getElementById('stock-id').value;
-            const data = { nombre_producto: document.getElementById('stock-nombre').value, stock_actual: parseInt(document.getElementById('stock-cant').value), precio_venta: parseFloat(document.getElementById('stock-precio').value) };
-            const res = await apiFetch(id ? `/stock/${id}` : '/stock', id ? 'PUT' : 'POST', data);
-            if(!res.error) { closeModal('modal-stock'); loadStock(); showVikingToast("Stock Actualizado"); }
-        };
+		// 3. Vinculamos el evento submit de forma limpia
+		const stockForm = document.getElementById('form-stock');
+		if (stockForm) {
+			stockForm.onsubmit = saveStockVikingo;
+		}
 
         /**
 		 * LÓGICA DE CLASES Y DISCIPLINAS
