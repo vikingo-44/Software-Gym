@@ -838,7 +838,7 @@ def get_alumnos(db: Session = Depends(database.get_db)):
         alumnos = db.query(models.Usuario).options(
             joinedload(models.Usuario.perfil),
             joinedload(models.Usuario.plan).joinedload(models.Plan.tipo)
-        ).join(models.Perfil).filter(func.lower(models.Perfil.nombre) == "alumno").all()
+        ).join(models.Perfil).filter(func.lower(models.Perfil.nombre) == "alumno").order_by(models.Usuario.nombre_completo.asc()).all()
         
         hoy = date.today()
         
@@ -850,7 +850,7 @@ def get_alumnos(db: Session = Depends(database.get_db)):
             if al.fecha_vencimiento:
                 al.estado_cuenta = "Activo" if al.fecha_vencimiento >= hoy else "Caducado"
             else:
-                al.estado_cuenta = "Inactivo"
+                al.estado_cuenta = "Caducado"
 
         return alumnos
     except Exception as e:
