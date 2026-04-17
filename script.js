@@ -795,19 +795,6 @@ function actualizarPlanesPorDuracion(alumnoId) {
     `).join('') || '<option value="">Elegí duración...</option>';
 }
 
-// Función auxiliar para filtrar planes en tiempo real
-function actualizarPlanesPorDuracion(alumnoId) {
-    const tipoId = parseInt(document.getElementById(`tipo-select-${alumnoId}`).value);
-    const planSelect = document.getElementById(`plan-select-${alumnoId}`);
-    
-    // Filtramos los planes que coinciden con el tipo_plan_id (1:Mensual, 2:Trimestral, etc)
-    const filtrados = state.planes.filter(p => p.tipo_plan_id === tipoId);
-    
-    planSelect.innerHTML = filtrados.map(p => `
-        <option value="${p.id}">${p.nombre}</option>
-    `).join('') || '<option value="">Elegí duración...</option>';
-}
-
 function renderCobrar() {
     const displayArea = document.getElementById('cobrar-display-area');
     if (!displayArea) return;
@@ -5611,7 +5598,7 @@ if (editorForm) {
                 let filtrados = state.alumnos;
                 
                 if(filtro === 'activos') filtrados = state.alumnos.filter(a => a.fecha_vencimiento && a.fecha_vencimiento >= hoy);
-                if(filtro === 'Caducados') filtrados = state.alumnos.filter(a => !a.fecha_vencimiento || a.fecha_vencimiento < hoy);
+                if(filtro === 'caducados') filtrados = state.alumnos.filter(a => !a.fecha_vencimiento || a.fecha_vencimiento < hoy);
                 
                 renderAlumnosList(filtrados);
             }
