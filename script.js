@@ -809,14 +809,16 @@ function renderCobrar() {
         displayArea.innerHTML = `<div class="grid grid-cols-2 md:grid-cols-4 gap-4 overflow-y-auto max-h-[600px] pr-2 custom-scrollbar" id="cobrar-catalogo"></div>`;
         const catalog = document.getElementById('cobrar-catalogo');
         catalog.innerHTML = filtered.map(s => `
-            <div class="glass-card p-4 rounded-3xl relative group cursor-pointer hover:border-red-600/50" onclick="addToCart(${s.id}, 'stock')">
-                <div class="w-full h-20 viking-bg-red/10 rounded-2xl mb-3 flex items-center justify-center"><i data-lucide="package" class="w-6 h-6 opacity-20 text-white"></i></div>
-                <h4 class="text-[10px] font-black uppercase italic mb-1 truncate">${s.nombre_producto}</h4>
-                <div class="flex items-center justify-between">
-                    <p class="text-[12px] font-black italic">$ ${(s.precio_venta || 0).toLocaleString()}</p>
-                    <span class="text-[9px] font-bold ${s.stock_actual < 5 ? 'text-red-500' : 'text-gray-500'}">S: ${s.stock_actual}</span>
-                </div>
-            </div>`).join('');
+			<div class="glass-card p-4 rounded-3xl relative group cursor-pointer hover:border-red-600/50" onclick="addToCart(${s.id}, 'stock')">
+				<div class="w-full h-24 bg-white/5 rounded-2xl mb-3 flex items-center justify-center overflow-hidden">
+					${s.url_imagen ? 
+						`<img src="${s.url_imagen}" class="w-full h-full object-cover" onerror="this.parentElement.innerHTML='<i data-lucide=\'package\' class=\'w-6 h-6 opacity-20\'></i>'">` : 
+						`<i data-lucide="package" class="w-6 h-6 opacity-20 text-white"></i>`
+					}
+				</div>
+				<h4 class="text-[10px] font-black uppercase italic mb-1 truncate">${s.nombre_producto}</h4>
+				...
+			</div>`).join('');
     } else {
         const hoy = new Date().toISOString().split('T')[0];
         const filteredAl = state.alumnos.filter(a => 
@@ -3676,12 +3678,18 @@ if (editorForm) {
 
 					return `
 					<div class="glass-card p-4 rounded-[2.5rem] border-white/5 flex flex-col gap-4 hover:border-red-600/30 transition-all group relative overflow-hidden shadow-xl">
-						<div class="w-full h-40 rounded-[1.8rem] overflow-hidden bg-black/40 relative">
+						<div class="w-full h-40 rounded-[1.8rem] overflow-hidden bg-black/40 relative group">
 							<img src="${finalImgUrl}" 
 								class="w-full h-full object-cover opacity-70 group-hover:opacity-100 transition-all duration-700"
-								onerror="this.src='https://via.placeholder.com/400x300/111/333?text=Sin+Imagen'">
+								onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+							
+							<div class="hidden absolute inset-0 bg-zinc-900 items-center justify-center flex-col gap-2">
+								<i data-lucide="package" class="w-8 h-8 text-white/10"></i>
+								<span class="text-[8px] font-black uppercase text-white/20">Sin Imagen</span>
+							</div>
+
 							<div class="absolute top-3 right-3 bg-black/70 backdrop-blur-xl px-3 py-1.5 rounded-xl border border-white/10 text-[11px] font-black text-white italic">
-								$${s.precio_venta}
+								$ ${s.precio_venta.toLocaleString()}
 							</div>
 						</div>
 						<div class="px-2 pb-2">
