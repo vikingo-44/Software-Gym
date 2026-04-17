@@ -3212,7 +3212,7 @@ if (editorForm) {
 				
 				let matchesStatus = true;
 				if (state.alumnosStatusFilter === "activos") matchesStatus = isActive;
-				if (state.alumnosStatusFilter === "Caducado") matchesStatus = !isActive;
+				if (state.alumnosStatusFilter === "caducados") matchesStatus = !isActive;
 
 				return matchesSearch && matchesStatus;
 			});
@@ -5472,11 +5472,11 @@ if (editorForm) {
                 const listaSegura = state.alumnos || [];
 				const total = listaSegura.length;
 				const activos = listaSegura.filter(a => a.fecha_vencimiento && a.fecha_vencimiento >= hoy).length;
-                const Caducado = total - activos;
+                const caducados = total - activos;
 
                 if (document.getElementById('stats-total')) document.getElementById('stats-total').innerText = total;
                 if (document.getElementById('stats-activos')) document.getElementById('stats-activos').innerText = activos;
-                if (document.getElementById('stats-Caducado')) document.getElementById('stats-Caducado').innerText = Caducado;
+                if (document.getElementById('stats-caducado')) document.getElementById('stats-caducado').innerText = caducados;
                 if (document.getElementById('stats-pagina')) document.getElementById('stats-pagina').innerText = state.currentPageAlumnos;
 
                 // --- LÓGICA DE PAGINACIÓN ---
