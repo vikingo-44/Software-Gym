@@ -782,11 +782,36 @@ function setCobrarTab(tab) {
     window.updatePaymentButtons();
 }
 
+// Función auxiliar para filtrar planes en tiempo real
+function actualizarPlanesPorDuracion(alumnoId) {
+    const tipoId = parseInt(document.getElementById(`tipo-select-${alumnoId}`).value);
+    const planSelect = document.getElementById(`plan-select-${alumnoId}`);
+    
+    // Filtramos los planes que coinciden con el tipo_plan_id (1:Mensual, 2:Trimestral, etc)
+    const filtrados = state.planes.filter(p => p.tipo_plan_id === tipoId);
+    
+    planSelect.innerHTML = filtrados.map(p => `
+        <option value="${p.id}">${p.nombre}</option>
+    `).join('') || '<option value="">Elegí duración...</option>';
+}
+
+// Función auxiliar para filtrar planes en tiempo real
+function actualizarPlanesPorDuracion(alumnoId) {
+    const tipoId = parseInt(document.getElementById(`tipo-select-${alumnoId}`).value);
+    const planSelect = document.getElementById(`plan-select-${alumnoId}`);
+    
+    // Filtramos los planes que coinciden con el tipo_plan_id (1:Mensual, 2:Trimestral, etc)
+    const filtrados = state.planes.filter(p => p.tipo_plan_id === tipoId);
+    
+    planSelect.innerHTML = filtrados.map(p => `
+        <option value="${p.id}">${p.nombre}</option>
+    `).join('') || '<option value="">Elegí duración...</option>';
+}
+
 function renderCobrar() {
     const displayArea = document.getElementById('cobrar-display-area');
     if (!displayArea) return;
 
-    // FIX: Inicializar la pestaña por defecto si no existe y forzar el dibujo de botones de pago
     if (!state.cobrarTab) state.cobrarTab = 'mercaderia';
     if (window.updatePaymentButtons) window.updatePaymentButtons();
 
@@ -812,7 +837,7 @@ function renderCobrar() {
         );
 
         displayArea.innerHTML = `
-            <div class="glass-card p-8 rounded-[2.5rem] h-[800px] flex flex-col border-white/5">
+            <div class="glass-card p-8 rounded-[2.5rem] h-[800px] flex flex-col border border-white/5">
                 <h4 class="text-[11px] font-black uppercase italic text-red-600 mb-6 tracking-widest border-b border-white/5 pb-4">
                     Guerreros para Renovación
                 </h4>
@@ -824,15 +849,15 @@ function renderCobrar() {
                         const statusText = isActive ? 'Activo' : 'Caducado';
 
                         return `
-                        <div class="flex flex-col gap-3 p-5 bg-white/2 rounded-[2rem] border border-white/5 hover:border-red-600/30 transition-all text-left group">
+                        <div class="flex flex-col gap-3 p-5 bg-white/2 rounded-[2rem] border border-white/5 hover:border-red-600/30 transition-all text-left">
                             <div class="flex justify-between items-center">
                                 <div class="flex items-center gap-3">
-                                    <div class="w-10 h-10 rounded-xl viking-bg-red flex items-center justify-center font-black text-black text-xs italic shadow-lg">
+                                    <div class="w-10 h-10 rounded-xl viking-bg-red flex items-center justify-center font-black text-black text-xs italic">
                                         ${a.nombre_completo[0].toUpperCase()}
                                     </div>
                                     <div>
-                                        <p class="text-[13px] font-black italic uppercase leading-tight text-white group-hover:text-red-500 transition-colors">${a.nombre_completo}</p>
-                                        <p class="text-[9px] text-white-500 font-bold uppercase tracking-widest mt-1">DNI: ${a.dni}</p>
+                                        <p class="text-[13px] font-black italic uppercase text-white">${a.nombre_completo}</p>
+                                        <p class="text-[9px] text-white/50 font-bold uppercase tracking-widest">DNI: ${a.dni}</p>
                                     </div>
                                 </div>
                                 <span class="text-[8px] px-3 py-1 rounded-full ${statusBg} ${statusColor} font-black uppercase italic border border-white/5">
@@ -840,29 +865,32 @@ function renderCobrar() {
                                 </span>
                             </div>
 
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 items-end mt-2 pt-3 border-t border-white/5">
-                                <!-- Selección de Plan -->
-                                <div class="space-y-1">
-                                    <p class="text-[8px] text-white-600 font-black uppercase italic px-2">Elegir Plan</p>
-                                    <select id="plan-select-${a.id}" class="viking-input !py-2 !text-[10px] h-10 bg-black/60 border-white/10">
-                                        ${state.planes.map(p => `
-                                            <option value="${p.id}" ${p.id === a.plan_id ? 'selected' : ''}>
-                                                ${p.nombre} — $${(p.efectivo || 0).toLocaleString()}
-                                            </option>
-                                        `).join('')}
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-3 items-end mt-2 pt-3 border-t border-white/5">
+                                <div>
+                                    <p class="text-[8px] text-white/40 font-black uppercase italic px-2 mb-1">Duración</p>
+                                    <select id="tipo-select-${a.id}" onchange="actualizarPlanesPorDuracion(${a.id})" class="viking-input !py-2 !text-[10px] h-10 bg-black/60 border-white/10">
+                                        <option value="">Elegir...</option>
+                                        <option value="1">Mensual</option>
+                                        <option value="2">Trimestral</option>
+                                        <option value="3">Semestral</option>
+                                        <option value="4">Anual</option>
                                     </select>
                                 </div>
-                                
-                                <!-- Campo de Comentario -->
-                                <div class="space-y-1">
-                                    <p class="text-[8px] text-white-600 font-black uppercase italic px-2">Ticket / Factura / Nota</p>
-                                    <input type="text" id="plan-comment-${a.id}" placeholder="Ej: Ticket #1234" 
-                                        class="viking-input !py-2 !text-[10px] h-10 bg-black/60 border-white/10 focus:border-red-600">
+                                <div>
+                                    <p class="text-[8px] text-white/40 font-black uppercase italic px-2 mb-1">Plan</p>
+                                    <select id="plan-select-${a.id}" class="viking-input !py-2 !text-[10px] h-10 bg-black/60 border-white/10">
+                                        <option value="">Esperando duración...</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <p class="text-[8px] text-white/40 font-black uppercase italic px-2 mb-1">Nro Ticket</p>
+                                    <input type="text" id="plan-comment-${a.id}" placeholder="Nota..." 
+                                        class="viking-input !py-2 !text-[10px] h-10 bg-black/60 border-white/10">
                                 </div>
                             </div>
 
-                            <button onclick="preparePlanCharge(${a.id})" class="mt-2 w-full h-10 rounded-xl text-[10px] font-black italic bg-green-600/20 text-green-500 border border-green-500/20 hover:bg-green-600 hover:text-black transition-all flex items-center justify-center gap-2 shadow-lg">
-                                <i data-lucide="shopping-cart" class="w-3 h-3"></i> CONFIRMAR COBRO
+                            <button onclick="preparePlanCharge(${a.id})" class="mt-2 w-full h-10 rounded-xl text-[10px] font-black italic bg-green-600/20 text-green-500 border border-green-500/20 hover:bg-green-600 hover:text-black transition-all flex items-center justify-center gap-2">
+                                <i data-lucide="shopping-cart" class="w-3 h-3"></i> CONFIRMAR PARA CARRITO
                             </button>
                         </div>`;
                     }).join('')}
