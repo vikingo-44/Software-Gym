@@ -3807,13 +3807,13 @@ if (editorForm) {
 			const al = state.alumnos.find(x => x.id == id); 
 			if(!al) return;
 			
-			document.getElementById('modal-alumno-title').innerText = "Editar Alumno";
+			document.getElementById('modal-alumno-title').innerText = al.nombre_completo;
 			document.getElementById('al-id').value = al.id; 
 			document.getElementById('al-nombre').value = al.nombre_completo; 
 			document.getElementById('al-dni').value = al.dni;
 			document.getElementById('al-email').value = al.email || ""; 
 			document.getElementById('al-telefono').value = al.telefono || "";
-			document.getElementById('al-genero').value = al.genero || "";
+			document.getElementById('al-genero').value = al.genero || "Masculino";
 
 			const selSuc = document.getElementById('al-sucursal');
 			if(selSuc) selSuc.value = al.sucursal_id || "";
@@ -3825,8 +3825,9 @@ if (editorForm) {
 			document.getElementById('al-fecha-certificado').value = al.fecha_certificado || "";
 			document.getElementById('al-certificado-entregado').checked = al.certificado_entregado || false;
 			
+			// Control de botón eliminar
 			const delBtn = document.getElementById('btn-delete-alumno'); 
-			if(state.user.rol_nombre === "Administrador" || state.user.rol_nombre === "Supervisor") {
+			if(state.user && (state.user.rol_nombre === "Administrador" || state.user.rol_nombre === "Supervisor")) {
 				delBtn.classList.remove('hidden');
 			} else {
 				delBtn.classList.add('hidden');
@@ -3834,61 +3835,61 @@ if (editorForm) {
 			delBtn.onclick = () => deleteRecord('alumnos', id, 'modal-alumno', fetchAlumnos);
 			
 			loadSucursales();
-			setAlumnoTab('personal'); // Siempre abrir en la pestaña de info básica
+			setAlumnoTab('personal'); // Resetear a la primera pestaña siempre
 			if (typeof openModal === 'function') openModal('modal-alumno');
 		}
 
-		function setAlumnoTab(tab) {
-            // 1. Ocultar todos los contenidos de solapa
-            document.querySelectorAll('.alumno-tab-content').forEach(content => content.classList.add('hidden'));
-            
-            // 2. Mostrar el contenido de la solapa seleccionada
-            const selectedContent = document.getElementById('tab-alumno-' + tab);
-            if(selectedContent) selectedContent.classList.remove('hidden');
+		window.setAlumnoTab = function(tab) {
+			// 1. Ocultar todos los contenidos de las solapas
+			document.querySelectorAll('.alumno-tab-content').forEach(content => {
+				content.classList.add('hidden');
+			});
+			
+			// 2. Mostrar la solapa seleccionada
+			const selectedContent = document.getElementById('tab-alumno-' + tab);
+			if (selectedContent) {
+				selectedContent.classList.remove('hidden');
+			}
 
-            // 3. Resetear estilos de todos los botones de solapa (Inactivos)
-            document.querySelectorAll('.alumno-tab-btn').forEach(btn => {
-                btn.classList.remove('border-red-600', 'text-white');
-                btn.classList.add('border-transparent', 'text-white/20');
-            });
-
-            // 4. Aplicar estilo resaltado al botón seleccionado (Activo)
-            const activeBtn = document.getElementById('btn-tab-' + tab);
-            if (activeBtn) {
-                activeBtn.classList.remove('border-transparent', 'text-white/20');
-                activeBtn.classList.add('border-red-600', 'text-white');
-            }
-        }
-
-		// Función para cambiar de solapa en el modal
-		window.setAlumnoTab = function(tabName) {
-			// 1. Ocultar todos los contenidos de solapas
-			document.querySelectorAll('.alumno-tab-content').forEach(el => el.classList.add('hidden'));
-			// 2. Quitar estilos activos de los botones
-			document.querySelectorAll('.alumno-tab-btn').forEach(el => {
-				el.classList.remove('border-red-600', 'text-white');
-				el.classList.add('text-white/20', 'border-transparent');
+			// 3. Resetear estilos de los botones (Todos opacos y sin borde)
+			document.querySelectorAll('.alumno-tab-btn').forEach(btn => {
+				btn.classList.remove('border-red-600', 'text-white');
+				btn.classList.add('border-transparent', 'text-white/20');
 			});
 
-			// 3. Mostrar la solapa seleccionada
-			document.getElementById(`tab-alumno-${tabName}`).classList.remove('hidden');
-			// 4. Activar el botón
-			const btn = document.querySelector(`[onclick="setAlumnoTab('${tabName}')"]`);
-			if(btn) btn.classList.add('border-red-600', 'text-white');
+			// 4. Resaltar el botón activo (Buscamos por ID)
+			const activeBtn = document.getElementById('btn-tab-' + tab);
+			if (activeBtn) {
+				activeBtn.classList.remove('border-transparent', 'text-white/20');
+				activeBtn.classList.add('border-red-600', 'text-white');
+			}
 
-			// 5. Si es la solapa de suscripción, cargar datos y el historial
-			if(tabName === 'suscripcion') {
+			// 5. Lógica específica para la pestaña de Suscripción/Pagos
+			if (tab === 'suscripcion') {
 				const alId = document.getElementById('al-id').value;
+				if (!alId) return; // Si es un alumno nuevo, no hay historial que cargar
+
 				const al = state.alumnos.find(x => x.id == alId);
 				
-				// Llenar datos de la solapa suscripción
-				if(al) {
+				if (al) {
+					// Buscamos el plan y el TIPO de membresía (Mensual, Trimestral, etc.)
 					const planActual = state.planes.find(p => p.id == al.plan_id);
-					document.getElementById('info-plan-nombre').innerText = planActual ? planActual.nombre : "SIN PLAN";
-					document.getElementById('info-plan-vence').innerText = al.fecha_vencimiento || "N/A";
+					
+					// Si el plan existe y tiene la propiedad 'tipo', extraemos el nombre (Mensual, etc.)
+					const nombreMembresia = (planActual && planActual.tipo) ? planActual.tipo.nombre : "MEMBRESÍA";
+					
+					// Actualizamos los textos en el modal
+					const elTipo = document.getElementById('info-plan-tipo');
+					const elNombre = document.getElementById('info-plan-nombre');
+					const elVence = document.getElementById('info-plan-vence');
+
+					if(elTipo) elTipo.innerText = nombreMembresia.toUpperCase();
+					if(elNombre) elNombre.innerText = planActual ? planActual.nombre : "SIN PLAN ASIGNADO";
+					if(elVence) elVence.innerText = al.fecha_vencimiento || "---";
+					
+					// Cargamos el historial de pagos desde la API
+					loadAlumnoHistorial(alId);
 				}
-				
-				loadAlumnoHistorial(alId);
 			}
 		};
 

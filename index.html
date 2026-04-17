@@ -1320,161 +1320,162 @@
 		</div>
 	</div>
 
-    <div id="modal-alumno" class="viking-modal hidden fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-        <div class="glass-card flex flex-col rounded-[3rem] w-full max-w-xl text-left bg-zinc-950 border border-white/5 shadow-2xl overflow-hidden max-h-[95vh]">
-            
-            <!-- CABECERA CON TABS -->
-            <div class="p-8 pb-0 border-b border-white/5">
-                <div class="flex justify-between items-start mb-6">
-                    <div>
-                        <h3 class="text-2xl font-black uppercase italic text-white tracking-tighter" id="modal-alumno-title">Guerrero</h3>
-                        <p class="text-[9px] text-white/30 font-black uppercase tracking-widest mt-1">Gestión de Legajo</p>
-                    </div>
-                    <!-- Al cerrar, reseteamos visualmente a la pestaña personal -->
-                    <button type="button" onclick="closeModal('modal-alumno'); setAlumnoTab('personal');" class="text-white/20 hover:text-white transition-colors">
-                        <i data-lucide="x" class="w-6 h-6"></i>
-                    </button>
-                </div>
+    <div id="modal-alumno" class="viking-modal hidden fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-md p-4">
+		<div class="glass-card flex flex-col rounded-[3rem] w-full max-w-4xl text-left bg-zinc-950 border border-white/5 shadow-2xl overflow-hidden max-h-[95vh]">
+			
+			<div class="p-8 pb-0 border-b border-white/5">
+				<div class="flex justify-between items-start mb-6">
+					<div>
+						<h3 class="text-3xl font-black uppercase italic text-white tracking-tighter" id="modal-alumno-title">Guerrero</h3>
+						<p class="text-[9px] text-white/30 font-black uppercase tracking-widest mt-1">Gestión de Legajo Integral</p>
+					</div>
+					<button type="button" onclick="closeModal('modal-alumno'); setAlumnoTab('personal');" class="text-white/20 hover:text-white transition-colors p-2 bg-white/5 rounded-full">
+						<i data-lucide="x" class="w-6 h-6"></i>
+					</button>
+				</div>
 
-                <!-- NAVEGACIÓN DE SOLAPAS (Con IDs para el resaltado) -->
-                <div class="flex gap-6 border-b border-white/5">
-                    <button type="button" id="btn-tab-personal" onclick="setAlumnoTab('personal')" class="alumno-tab-btn border-b-2 border-red-600 text-white pb-3 text-[10px] font-black uppercase italic transition-all hover:text-red-500">
-                        Información Personal
-                    </button>
-                    <button type="button" id="btn-tab-suscripcion" onclick="setAlumnoTab('suscripcion')" class="alumno-tab-btn border-b-2 border-transparent text-white/20 pb-3 text-[10px] font-black uppercase italic transition-all hover:text-red-500">
-                        Plan y Pagos
-                    </button>
-                </div>
-            </div>
+				<div class="flex gap-8">
+					<button type="button" id="btn-tab-personal" onclick="setAlumnoTab('personal')" class="alumno-tab-btn border-b-4 border-red-600 text-white pb-4 text-[11px] font-black uppercase italic transition-all">
+						Información Personal
+					</button>
+					<button type="button" id="btn-tab-suscripcion" onclick="setAlumnoTab('suscripcion')" class="alumno-tab-btn border-b-4 border-transparent text-white/20 pb-4 text-[11px] font-black uppercase italic transition-all">
+						Plan y Pagos
+					</button>
+				</div>
+			</div>
 
-            <!-- CUERPO DESPLAZABLE -->
-            <div class="flex-1 overflow-y-auto p-8 custom-scrollbar">
-                
-                <!-- SOLAPA 1: DATOS PERSONALES -->
-                <div id="tab-alumno-personal" class="alumno-tab-content space-y-4">
-                    <form id="form-alumno" class="space-y-4">
-                        <input type="hidden" id="al-id">
-                        
-                        <!-- CAMPOS OCULTOS PARA COMPATIBILIDAD CON SCRIPT ANTIGUO -->
-                        <input type="hidden" id="al-fecha-renovacion">
-                        <input type="hidden" id="al-fecha-vencimiento">
-                        <select id="al-tipo-plan" class="hidden"></select>
-                        <select id="al-plan" class="hidden"></select>
-                        <div id="al-plan-valor-display" class="hidden"></div>
-                        
-                        <div class="space-y-1">
-                            <label class="text-[9px] font-black text-white/30 uppercase tracking-widest italic ml-2">Nombre Completo</label>
-                            <input type="text" id="al-nombre" placeholder="Nombre Completo" required class="viking-input">
-                        </div>
+			<div class="flex-1 overflow-y-auto p-8 custom-scrollbar bg-zinc-950/50">
+				
+				<div id="tab-alumno-personal" class="alumno-tab-content">
+					<form id="form-alumno" class="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-6">
+						<input type="hidden" id="al-id">
+						
+						<div class="space-y-4">
+							<h4 class="text-[10px] font-black text-red-600 uppercase italic tracking-widest mb-4">I. Identidad y Contacto</h4>
+							<div class="space-y-1">
+								<label class="text-[9px] font-black text-white/40 uppercase ml-2">Nombre Completo</label>
+								<input type="text" id="al-nombre" placeholder="Nombre Completo" required class="viking-input">
+							</div>
 
-                        <div class="grid grid-cols-2 gap-4">
-                            <div class="space-y-1">
-                                <label class="text-[9px] font-black text-white/30 uppercase tracking-widest italic ml-2">DNI / Usuario</label>
-                                <input type="text" id="al-dni" placeholder="DNI / Usuario" required class="viking-input">
-                            </div>
-                            <div class="space-y-1">
-                                <label class="text-[9px] font-black text-white/30 uppercase tracking-widest italic ml-2">Email</label>
-                                <input type="email" id="al-email" placeholder="Email" class="viking-input">
-                            </div>
-                        </div>
+							<div class="grid grid-cols-2 gap-4">
+								<div class="space-y-1">
+									<label class="text-[9px] font-black text-white/40 uppercase ml-2">DNI</label>
+									<input type="text" id="al-dni" placeholder="DNI" required class="viking-input">
+								</div>
+								<div class="space-y-1">
+									<label class="text-[9px] font-black text-white/40 uppercase ml-2">Género</label>
+									<select id="al-genero" class="viking-input">
+										<option value="Masculino">Masculino</option>
+										<option value="Femenino">Femenino</option>
+										<option value="Otro">Otro</option>
+									</select>
+								</div>
+							</div>
 
-                        <div class="grid grid-cols-2 gap-4">
-                            <div class="space-y-1">
-                                <label class="text-[9px] font-black text-white/30 uppercase tracking-widest italic ml-2">Género</label>
-                                <select id="al-genero" class="viking-input">
-                                    <option value="">No especifica</option>
-                                    <option value="Masculino">Masculino</option>
-                                    <option value="Femenino">Femenino</option>
-                                    <option value="Otro">Otro</option>
-                                </select>
-                            </div>
-                            <div class="space-y-1">
-                                <label class="text-[9px] font-black text-white/30 uppercase tracking-widest italic ml-2">WhatsApp</label>
-                                <input type="text" id="al-telefono" placeholder="+54 9 11..." class="viking-input">
-                            </div>
-                        </div>
+							<div class="space-y-1">
+								<label class="text-[9px] font-black text-white/40 uppercase ml-2">WhatsApp</label>
+								<input type="text" id="al-telefono" placeholder="+54 9 11..." class="viking-input">
+							</div>
 
-                        <div class="grid grid-cols-3 gap-4 p-4 bg-white/5 rounded-3xl border border-white/5">
-                            <div class="space-y-1 text-center">
-                                <label class="text-[8px] font-black text-white-500 uppercase">Peso</label>
-                                <input type="number" step="0.01" id="al-peso" class="viking-input !h-8 !bg-black/40 text-center" oninput="calculateIMC()">
-                            </div>
-                            <div class="space-y-1 text-center">
-                                <label class="text-[8px] font-black text-white-500 uppercase">Altura</label>
-                                <input type="number" step="0.01" id="al-altura" class="viking-input !h-8 !bg-black/40 text-center" oninput="calculateIMC()">
-                            </div>
-                            <div class="space-y-1 text-center">
-                                <label class="text-[8px] font-black text-red-600 uppercase">IMC</label>
-                                <input type="text" id="al-imc" readonly class="viking-input !h-8 opacity-60 text-center !bg-black/20 border-none">
-                            </div>
-                        </div>
+							<div class="space-y-1">
+								<label class="text-[9px] font-black text-white/40 uppercase ml-2">Email</label>
+								<input type="email" id="al-email" placeholder="Email" class="viking-input">
+							</div>
+						</div>
 
-                        <div class="grid grid-cols-2 gap-4 border-t border-white/5 pt-4">
-                            <div class="space-y-1">
-                                <label class="text-[9px] font-black text-white/30 uppercase italic ml-2">Nacimiento</label>
-                                <input type="date" id="al-fecha-nacimiento" class="viking-input">
-                            </div>
-                            <div class="space-y-1">
-                                <label class="text-[9px] font-black text-white/30 uppercase italic ml-2">Certificado Med.</label>
-                                <input type="date" id="al-fecha-certificado" class="viking-input">
-                            </div>
-                        </div>
+						<div class="space-y-4">
+							<h4 class="text-[10px] font-black text-red-600 uppercase italic tracking-widest mb-4">II. Ficha Médica y Sede</h4>
+							
+							<div class="grid grid-cols-3 gap-3 p-4 bg-white/5 rounded-3xl border border-white/5">
+								<div class="text-center">
+									<label class="text-[8px] font-black text-white/40 uppercase">Peso (kg)</label>
+									<input type="number" step="0.1" id="al-peso" class="viking-input !h-9 text-center !bg-black" oninput="calculateIMC()">
+								</div>
+								<div class="text-center">
+									<label class="text-[8px] font-black text-white/40 uppercase">Altura (m)</label>
+									<input type="number" step="0.01" id="al-altura" class="viking-input !h-9 text-center !bg-black" oninput="calculateIMC()">
+								</div>
+								<div class="text-center">
+									<label class="text-[8px] font-black text-red-600 uppercase">IMC</label>
+									<input type="text" id="al-imc" readonly class="viking-input !h-9 text-center !bg-red-600/10 border-red-600/20 text-red-500 font-bold">
+								</div>
+							</div>
 
-                        <div class="flex items-center gap-3 bg-white/5 p-3 rounded-xl border border-white/5">
-                            <input type="checkbox" id="al-certificado-entregado" class="w-4 h-4 accent-red-600">
-                            <label for="al-certificado-entregado" class="text-[10px] font-black uppercase italic text-white-300">¿Certificado Entregado?</label>
-                        </div>
+							<div class="grid grid-cols-2 gap-4">
+								<div class="space-y-1">
+									<label class="text-[9px] font-black text-white/40 uppercase ml-2">Nacimiento</label>
+									<input type="date" id="al-fecha-nacimiento" class="viking-input">
+								</div>
+								<div class="space-y-1">
+									<label class="text-[9px] font-black text-white/40 uppercase ml-2">Vence Certificado</label>
+									<input type="date" id="al-fecha-certificado" class="viking-input">
+								</div>
+							</div>
 
-                        <div class="space-y-1">
-                            <label class="text-[9px] font-black text-white/30 uppercase tracking-widest italic ml-2">Sede Principal</label>
-                            <select id="al-sucursal" class="viking-input" required></select>
-                        </div>
+							<div class="flex items-center gap-3 bg-white/5 p-4 rounded-2xl border border-white/5">
+								<input type="checkbox" id="al-certificado-entregado" class="w-5 h-5 accent-red-600 cursor-pointer">
+								<label for="al-certificado-entregado" class="text-[10px] font-black uppercase italic text-white/70">Certificado Médico Entregado</label>
+							</div>
 
-                        <div class="space-y-1">
-                            <label class="text-[9px] font-black text-white/30 uppercase tracking-widest italic ml-2">Nueva Contraseña</label>
-                            <input type="password" id="al-pass" placeholder="Dejar vacío para no cambiar" class="viking-input">
-                        </div>
-                    </form>
-                </div>
+							<div class="space-y-1">
+								<label class="text-[9px] font-black text-white/40 uppercase ml-2">Sede</label>
+								<select id="al-sucursal" class="viking-input" required></select>
+							</div>
 
-                <!-- SOLAPA 2: SUSCRIPCIÓN Y PAGOS -->
-                <div id="tab-alumno-suscripcion" class="alumno-tab-content hidden space-y-6">
-                    <div class="bg-red-600/5 p-6 rounded-[2rem] border border-red-600/20">
-                        <p class="text-[9px] font-black text-red-600 uppercase italic mb-3 tracking-widest">Estado de Membresía</p>
-                        <div class="flex justify-between items-end">
-                            <div>
-                                <h4 class="text-xl font-black italic uppercase text-white" id="info-plan-nombre">---</h4>
-                                <p class="text-[10px] text-white/40 mt-1">Vencimiento: <span id="info-plan-vence" class="text-white font-bold">---</span></p>
-                            </div>
-                            <!-- Redirección completa a Cobrar > Planes -->
-                            <button type="button" onclick="closeModal('modal-alumno'); setAlumnoTab('personal'); switchView('cobrar'); setCobrarTab('planes');" class="px-4 py-2 bg-red-600 text-black rounded-xl text-[9px] font-black uppercase italic hover:scale-105 transition-all shadow-lg shadow-red-600/20">
-                                Cobrar Cuota
-                            </button>
-                        </div>
-                    </div>
+							<div class="space-y-1">
+								<label class="text-[9px] font-black text-white/40 uppercase ml-2">Reset Password</label>
+								<input type="password" id="al-pass" placeholder="••••••••" class="viking-input">
+							</div>
+						</div>
+					</form>
+				</div>
 
-                    <div class="space-y-4">
-                        <p class="text-[10px] font-black text-white/20 uppercase tracking-widest border-b border-white/5 pb-2">Historial Reciente de Pagos</p>
-                        <div id="historial-pagos-lista" class="space-y-2">
-                            <p class="text-[10px] italic text-white/20 text-center py-4">No hay pagos registrados</p>
-                        </div>
-                    </div>
-                </div>
+				<div id="tab-alumno-suscripcion" class="alumno-tab-content hidden grid grid-cols-1 md:grid-cols-3 gap-6">
+					<div class="md:col-span-1 space-y-4">
+						<div class="bg-red-600 p-6 rounded-[2.5rem] shadow-xl shadow-red-900/20 relative overflow-hidden group">
+							<i data-lucide="shield-check" class="absolute -right-4 -bottom-4 w-24 h-24 text-black/10 -rotate-12"></i>
+							<p class="text-[8px] font-black text-black/60 uppercase mb-4 tracking-widest">Suscripción Activa</p>
+							
+							<div class="mb-6">
+								<span id="info-plan-tipo" class="text-[10px] bg-black text-white px-3 py-1 rounded-full font-black italic uppercase">---</span>
+								<h4 class="text-2xl font-black italic uppercase text-black mt-2 leading-none" id="info-plan-nombre">---</h4>
+							</div>
 
-            </div>
+							<div class="bg-black/10 rounded-2xl p-3 border border-black/5">
+								<p class="text-[9px] text-black/60 font-black uppercase">Vencimiento</p>
+								<p id="info-plan-vence" class="text-sm font-black text-black">---</p>
+							</div>
 
-            <!-- FOOTER -->
-            <div id="modal-alumno-footer" class="p-8 border-t border-white/5 bg-zinc-900/50 flex gap-3">
-                <button type="button" id="btn-delete-alumno" class="hidden py-4 px-6 bg-red-900/20 rounded-2xl font-black uppercase italic text-[11px] text-red-500 border border-red-500/20 hover:bg-red-600 hover:text-black transition-all">
-                    Eliminar
-                </button>
-                <button type="submit" form="form-alumno" id="btn-save-alumno-modal" class="flex-1 py-4 viking-bg-red text-black rounded-2xl font-black uppercase italic text-[11px] shadow-lg shadow-red-900/20">
-                    Guardar Cambios
-                </button>
-            </div>
+							<button onclick="closeModal('modal-alumno'); switchView('cobrar'); setCobrarTab('planes');" class="w-full mt-4 py-3 bg-black text-red-600 rounded-xl text-[10px] font-black uppercase italic hover:bg-zinc-900 transition-all">
+								Renovar Ahora
+							</button>
+						</div>
+					</div>
 
-        </div>
-    </div>
+					<div class="md:col-span-2 space-y-4">
+						<div class="flex justify-between items-center border-b border-white/5 pb-2">
+							<p class="text-[10px] font-black text-white/40 uppercase tracking-widest">Historial de Pagos</p>
+							<i data-lucide="history" class="w-4 h-4 text-white/20"></i>
+						</div>
+						<div id="historial-pagos-lista" class="space-y-2 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+							</div>
+					</div>
+				</div>
+			</div>
+
+			<div id="modal-alumno-footer" class="p-8 border-t border-white/5 bg-zinc-900 flex justify-between items-center">
+				<button type="button" id="btn-delete-alumno" class="hidden py-4 px-6 bg-transparent rounded-2xl font-black uppercase italic text-[11px] text-red-600 hover:bg-red-600/10 transition-all">
+					Dar de Baja
+				</button>
+				<div class="flex gap-3 flex-1 justify-end">
+					<button type="button" onclick="closeModal('modal-alumno')" class="py-4 px-8 bg-white/5 text-white/40 rounded-2xl font-black uppercase italic text-[11px] hover:text-white transition-all">Cerrar</button>
+					<button type="submit" form="form-alumno" id="btn-save-alumno-modal" class="py-4 px-12 viking-bg-red text-black rounded-2xl font-black uppercase italic text-[11px] shadow-xl hover:scale-105 transition-all">
+						Guardar Guerrero
+					</button>
+				</div>
+			</div>
+		</div>
+	</div>
 
     <!-- REEMPLAZA TU DIV "modal-gasto" POR ESTE COMPLETO Y FUNCIONAL -->
 		<div id="modal-gasto" class="fixed inset-0 bg-black/80 hidden flex items-center justify-center z-50 backdrop-blur-sm animate-fade-in">
