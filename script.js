@@ -833,7 +833,7 @@ function renderCobrar() {
                         const isActive = a.fecha_vencimiento && a.fecha_vencimiento >= hoy;
                         const statusColor = isActive ? 'text-green-500' : 'text-red-500';
                         const statusBg = isActive ? 'bg-green-500/10' : 'bg-red-500/10';
-                        const statusText = isActive ? 'Activo' : 'Caducado';
+                        const statusText = isActive ? 'Activo' : 'Vencido';
 
                         return `
                         <div class="flex flex-col gap-3 p-5 bg-white/2 rounded-[2rem] border border-white/5 hover:border-red-600/30 transition-all text-left">
@@ -3212,7 +3212,7 @@ if (editorForm) {
 				
 				let matchesStatus = true;
 				if (state.alumnosStatusFilter === "activos") matchesStatus = isActive;
-				if (state.alumnosStatusFilter === "caducados") matchesStatus = !isActive;
+				if (state.alumnosStatusFilter === "vencidos") matchesStatus = !isActive;
 
 				return matchesSearch && matchesStatus;
 			});
@@ -3382,7 +3382,7 @@ if (editorForm) {
 			const isActive = a.fecha_vencimiento && a.fecha_vencimiento >= hoy;
 			
 			const statusColor = isActive ? 'text-green-500' : 'text-red-500';
-			const statusText = isActive ? 'ACTIVO' : 'CADUCADO';
+			const statusText = isActive ? 'ACTIVO' : 'VENCIDO';
 			const statusBg = isActive ? 'bg-green-500/10 border-green-500/20' : 'bg-red-500/10 border-red-500/20';
 
 			if (type === 'dashboard') {
@@ -5472,11 +5472,11 @@ if (editorForm) {
                 const listaSegura = state.alumnos || [];
 				const total = listaSegura.length;
 				const activos = listaSegura.filter(a => a.fecha_vencimiento && a.fecha_vencimiento >= hoy).length;
-                const caducados = total - activos;
+                const vencidos = total - activos;
 
                 if (document.getElementById('stats-total')) document.getElementById('stats-total').innerText = total;
                 if (document.getElementById('stats-activos')) document.getElementById('stats-activos').innerText = activos;
-                if (document.getElementById('stats-caducado')) document.getElementById('stats-caducado').innerText = caducados;
+                if (document.getElementById('stats-vencidos')) document.getElementById('stats-vencidos').innerText = vencidos;
                 if (document.getElementById('stats-pagina')) document.getElementById('stats-pagina').innerText = state.currentPageAlumnos;
 
                 // --- LÓGICA DE PAGINACIÓN ---
@@ -5503,7 +5503,7 @@ if (editorForm) {
                     // Lógica de Estado
                     const estaVencido = !a.fecha_vencimiento || a.fecha_vencimiento < hoy;
                     const colorEstado = estaVencido ? 'bg-red-600' : 'bg-green-600'; 
-                    const textoEstado = estaVencido ? 'CADUCADO' : 'ACTIVO';
+                    const textoEstado = estaVencido ? 'VENCIDO' : 'ACTIVO';
                     const colorBadge = estaVencido ? 'text-red-500 bg-red-500/10 border-red-500/20' : 'text-green-500 bg-green-500/10 border-green-500/20';
 
                     const initials = a.nombre_completo ? a.nombre_completo.substring(0,2).toUpperCase() : "??";
@@ -5598,7 +5598,7 @@ if (editorForm) {
                 let filtrados = state.alumnos;
                 
                 if(filtro === 'activos') filtrados = state.alumnos.filter(a => a.fecha_vencimiento && a.fecha_vencimiento >= hoy);
-                if(filtro === 'caducados') filtrados = state.alumnos.filter(a => !a.fecha_vencimiento || a.fecha_vencimiento < hoy);
+                if(filtro === 'inactivos') filtrados = state.alumnos.filter(a => !a.fecha_vencimiento || a.fecha_vencimiento < hoy);
                 
                 renderAlumnosList(filtrados);
             }
@@ -5911,7 +5911,7 @@ if (editorForm) {
 				// Lógica de Estado de Plan (Identica a Alumnos)
 				const estaVencido = !a.fecha_vencimiento || a.fecha_vencimiento < hoy;
 				const colorEstado = estaVencido ? 'bg-red-600' : 'bg-green-600'; 
-				const textoEstado = estaVencido ? 'CADUCADO' : 'ACTIVO';
+				const textoEstado = estaVencido ? 'VENCIDO' : 'ACTIVO';
 				const colorBadge = estaVencido ? 'text-red-500 bg-red-500/10 border-red-500/20' : 'text-green-500 bg-green-500/10 border-green-500/20';
 
 				const initials = a.nombre_completo ? a.nombre_completo.substring(0,2).toUpperCase() : "??";
