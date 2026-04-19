@@ -4282,7 +4282,7 @@ if (editorForm) {
 		async function generarInformeRentabilidad() {
 			// 1. Traemos la info fresca de la DB
 			const resStock = await apiFetch('/stock', 'GET');
-			const resCaja = await apiFetch('/caja', 'GET'); // O filtrar por fecha desde el backend
+			const resCaja = await apiFetch('/caja/movimientos', 'GET'); // O filtrar por fecha desde el backend
 
 			if(resStock.error || resCaja.error) return showVikingToast("Error al cargar datos", true);
 
