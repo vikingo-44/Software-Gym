@@ -1063,36 +1063,59 @@ window.updatePaymentButtons = function() {
 };
 
 window.exportarCajaExcel = function() {
-    // 1. Obtener los datos de la caja del estado (lo que ves en la tabla)
-    const datosCaja = state.cajaDatos || []; 
+    // 1. Intentamos obtener datos del estado o directamente del DOM (la tabla)
+    const tablaBody = document.getElementById('table-caja');
+    const filasTabla = tablaBody ? tablaBody.querySelectorAll('tr') : [];
     
-    if (datosCaja.length === 0) {
-        showVikingToast("No hay datos para exportar", true);
+    if (filasTabla.length === 0) {
+        showVikingToast("No hay movimientos visibles para exportar", true);
         return;
     }
 
-    // 2. Mapear los datos para que tengan nombres lindos en el Excel
-    const filas = datosCaja.map(item => ({
-        'FECHA': new Date(item.fecha).toLocaleDateString(),
-        'CONCEPTO': item.concepto.toUpperCase(),
-        'CATEGORÍA': item.categoria || 'GENERAL',
-        'MÉTODO': item.metodo_pago || 'EFECTIVO',
-        'INGRESO': item.tipo === 'ingreso' ? item.monto : 0,
-        'EGRESO': item.tipo === 'egreso' ? item.monto : 0,
-        'SALDO': item.saldo_momento || item.monto,
-        'USUARIO': item.usuario_nombre || 'SISTEMA'
-    }));
+    showVikingToast("Preparando reporte Vikingo...");
 
-    // 3. Crear el libro de Excel
-    const worksheet = XLSX.utils.json_to_sheet(filas);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Caja_Diaria");
+    // 2. Mapeamos las filas de la tabla para asegurar que exportamos lo que estamos viendo
+    const datosParaExportar = Array.from(filasTabla).map(tr => {
+        const celdas = tr.querySelectorAll('td');
+        // Si la fila tiene celdas, extraemos el texto
+        if (celdas.length >= 6) {
+            return {
+                'FECHA': celdas[0].innerText.trim(),
+                'TIPO': celdas[1].innerText.trim(),
+                'DESCRIPCIÓN': celdas[2].innerText.trim(),
+                'DETALLE': celdas[3].innerText.trim(),
+                'MÉTODO': celdas[4].innerText.trim(),
+                'CUOTAS': celdas[5].innerText.trim(),
+                'MONTO': celdas[6].innerText.trim().replace('$', '').replace(/\./g, '').replace(',', '.')
+            };
+        }
+        return null;
+    }).filter(item => item !== null);
 
-    // 4. Descargar
-    const fechaArchivo = new Date().toISOString().split('T')[0];
-    XLSX.writeFile(workbook, `BALANCE_CAJA_${fechaArchivo}.xlsx`);
-    
-    showVikingToast("Excel generado con éxito ⚔️");
+    // 3. Crear el libro de Excel con SheetJS (XLSX)
+    try {
+        const worksheet = XLSX.utils.json_to_sheet(datosParaExportar);
+        
+        // Ajustamos anchos de columna para que se vea pro (opcional)
+        const wscols = [
+            {wch: 12}, {wch: 10}, {wch: 35}, {wch: 35}, {wch: 15}, {wch: 8}, {wch: 15}
+        ];
+        worksheet['!cols'] = wscols;
+
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Balances_GymFit");
+
+        // 4. Generar nombre de archivo con fecha y hora
+        const ahora = new Date();
+        const timestamp = `${ahora.getDate()}-${ahora.getMonth()+1}_${ahora.getHours()}hs`;
+        
+        XLSX.writeFile(workbook, `CAJA_GYMFIT_PRO_${timestamp}.xlsx`);
+        
+        showVikingToast("¡Excel forjado con éxito! ⚔️");
+    } catch (error) {
+        console.error("Error al exportar:", error);
+        showVikingToast("Error al generar el archivo", true);
+    }
 };
 
 /**
