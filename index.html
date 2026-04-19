@@ -141,6 +141,7 @@
 					<button onclick="switchView('cobrar')" id="nav-cobrar" class="block w-full text-left text-[10px] font-black uppercase text-white-500 hover:text-red-600 transition-colors tracking-widest">Cobrar</button>
 					<button onclick="switchView('caja')" id="nav-caja" class="block w-full text-left text-[10px] font-black uppercase text-white-500 hover:text-red-600 transition-colors tracking-widest">Caja</button>
 					<button onclick="switchView('stock')" id="nav-stock" class="block w-full text-left text-[10px] font-black uppercase text-white-500 hover:text-red-600 transition-colors tracking-widest">Stock</button>
+					<button onclick="switchView('rentabilidad')" id="nav-rentabilidad" class="block w-full text-left text-[10px] font-black uppercase text-white-500 hover:text-red-600 transition-colors tracking-widest">Rentabilidad</button>
 				</div>
 			</div>
 		</div>
@@ -480,6 +481,54 @@
 					</div>
 				</div>
 			</div>
+
+			<!-- SECCIÓN RENTABILIDAD -->
+				<div id="view-rentabilidad" class="view-section hidden p-6">
+					<div class="flex justify-between items-center mb-8">
+						<div>
+							<h2 class="text-3xl font-black text-white italic uppercase tracking-tighter">Rentabilidad</h2>
+							<p class="text-white/40 text-[10px] font-bold uppercase tracking-[0.2em]">Análisis de Inversión y Ganancias</p>
+						</div>
+						<div class="flex gap-2">
+							<button onclick="generarInformeRentabilidad()" class="bg-red-600 hover:bg-red-700 text-white text-[10px] font-black uppercase px-6 py-3 rounded-xl transition-all italic">
+								Actualizar Datos
+							</button>
+						</div>
+					</div>
+
+					<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+						<div class="bg-black/40 border border-white/5 p-6 rounded-2xl shadow-2xl">
+							<p class="text-white/30 text-[9px] font-black uppercase mb-1 tracking-widest">Inversión Total (Compras)</p>
+							<h3 id="renta-total-compra" class="text-3xl font-black text-red-500 italic">$0</h3>
+						</div>
+						<div class="bg-black/40 border border-white/5 p-6 rounded-2xl shadow-2xl">
+							<p class="text-white/30 text-[9px] font-black uppercase mb-1 tracking-widest">Recaudación (Ventas)</p>
+							<h3 id="renta-total-venta" class="text-3xl font-black text-green-500 italic">$0</h3>
+						</div>
+						<div class="bg-black/40 border border-white/5 p-6 rounded-2xl shadow-2xl">
+							<p class="text-white/30 text-[9px] font-black uppercase mb-1 tracking-widest">Utilidad Neta</p>
+							<h3 id="renta-utilidad" class="text-3xl font-black text-white italic">$0</h3>
+						</div>
+					</div>
+
+					<div class="bg-black/40 border border-white/5 rounded-2xl overflow-hidden shadow-2xl">
+						<div class="overflow-x-auto">
+							<table class="w-full text-left border-collapse">
+								<thead>
+									<tr class="bg-white/5 text-white/30 text-[9px] font-black uppercase tracking-widest">
+										<th class="p-5">Producto / Categoría</th>
+										<th class="p-5">Costo Total</th>
+										<th class="p-5">Venta Total</th>
+										<th class="p-5">Balance</th>
+										<th class="p-5 text-right">Estado</th>
+									</tr>
+								</thead>
+								<tbody id="tabla-rentabilidad-body" class="divide-y divide-white/5">
+									</tbody>
+							</table>
+						</div>
+					</div>
+				</div>
 
             <div id="view-cobrar" class="view-content hidden">
 				<div class="grid grid-cols-1 lg:grid-cols-3 gap-10 h-full">

@@ -910,6 +910,7 @@ function addToCart(productId) {
         return showVikingToast(`¡Sin stock de ${item.nombre_producto}!`, true);
     }
 
+    // Buscamos si ya está en el carrito (IMPORTANTE: producto_id es la clave)
     const existing = state.cart.find(c => c.producto_id == productId && c.tipo === 'Mercaderia');
 
     if (existing) {
@@ -920,10 +921,11 @@ function addToCart(productId) {
             return showVikingToast("Stock insuficiente para agregar más", true);
         }
     } else {
+        // CREAMOS EL OBJETO: Aquí nace el producto_id para la rentabilidad
         state.cart.push({
             tipo: 'Mercaderia',
-            producto_id: productId,
-            alumno_id: null,
+            producto_id: parseInt(productId), // Aseguramos que sea número
+            alumno_id: state.selectedAlumnoId || null, // Capturamos el alumno si hay uno seleccionado
             nombre: item.nombre_producto,
             precio: item.precio_venta, 
             cantidad: 1,
@@ -1063,12 +1065,16 @@ async function procesarPagoVikingo(payload, actualizarUI = true) {
         const res = await response.json();
 
         if (response.ok) {
-            if(actualizarUI) showVikingToast("¡Victoria! Cobro registrado y Stock actualizado");
-            if (actualizarUI) {
+            if(actualizarUI) {
+                showVikingToast("¡Victoria! Cobro registrado y Stock actualizado");
                 const promises = [];
                 if (typeof loadStock === 'function') promises.push(loadStock());
                 if (typeof loadAlumnos === 'function') promises.push(loadAlumnos());
                 if (typeof loadCaja === 'function') promises.push(loadCaja());
+                
+                // --- AGREGAMOS EL REFRESCO DE RENTABILIDAD AQUÍ ---
+                if (typeof generarInformeRentabilidad === 'function') promises.push(generarInformeRentabilidad());
+                
                 await Promise.all(promises);
                 state.cart = [];
                 updateCartUI();
@@ -1146,7 +1152,8 @@ async function finalizarVentaMercaderia() {
         let errores = 0;
 
         for (const item of state.cart) {
-            const res = await apiFetch('/cobros/procesar', 'POST', {
+            // Usamos la función procesarPagoVikingo que ya tenés para mantener la consistencia
+            const payload = {
                 tipo: item.tipo,
                 monto: item.precio * item.cantidad,
                 descripcion: item.tipo === 'Plan' ? item.nombre : `Venta: ${item.nombre} (x${item.cantidad})`,
@@ -1156,16 +1163,23 @@ async function finalizarVentaMercaderia() {
                 producto_id: item.producto_id,
                 alumno_id: item.alumno_id,
                 cantidad: item.cantidad
-            });
+            };
 
-            if (!res || res.error) errores++;
+            // Llamamos a la función encargada del fetch (pasamos false para que no actualice la UI en cada iteración)
+            const exito = await procesarPagoVikingo(payload, false);
+            if (!exito) errores++;
         }
 
         if (errores === 0) {
             showVikingToast("¡Cobro exitoso! Datos actualizados.");
             state.cart = []; 
             updateCartUI();
-            await Promise.all([loadStock(), loadCaja(), fetchAlumnos()]);
+            
+            // --- REFRESCAMOS TODO INCLUYENDO RENTABILIDAD ---
+            const promesas = [loadStock(), loadCaja(), fetchAlumnos()];
+            if (typeof generarInformeRentabilidad === 'function') promesas.push(generarInformeRentabilidad());
+            
+            await Promise.all(promesas);
             renderCobrar();
         } else {
             showVikingToast(`Hubo ${errores} errores en el proceso.`, true);
@@ -4215,24 +4229,33 @@ if (editorForm) {
 			const endpoint = id ? `/stock/${id}` : '/stock';
 
 			showVikingToast("Sincronizando con el GymFit App...");
+			
+			// Guardamos/Actualizamos el producto
 			const res = await apiFetch(endpoint, method, payload);
 			
 			if(!res.error) {
 				// --- LÓGICA DE GASTO AUTOMÁTICO EN CAJA ---
 				const montoCosto = parseFloat(document.getElementById('stock-costo-total').value);
 				
+				// Solo generamos gasto si es un producto NUEVO (!id) y hay un costo cargado
 				if (!id && montoCosto > 0) {
 					const notaCosto = document.getElementById('stock-costo-nota').value || `Compra inicial: ${nombre}`;
 					const metodoPago = document.getElementById('stock-costo-metodo').value;
 
-					// Enviamos el egreso a la caja
+					// IMPORTANTE: Si es POST, el ID del nuevo producto viene en 'res.id' (o como lo devuelva tu backend)
+					const nuevoProductoId = res.id; 
+
+					// Enviamos el egreso a la caja con los datos para Rentabilidad
 					await apiFetch('/caja/movimientos', 'POST', {
 						descripcion: notaCosto,
 						monto: montoCosto,
 						tipo: 'Egreso',
 						metodo_pago: metodoPago,
-						descripcion2: `Carga automática de stock: ${cantidad} unidades`
+						descripcion2: `Carga automática de stock: ${cantidad} unidades`,
+						producto_id: nuevoProductoId, // <--- LLAVE PARA RENTABILIDAD
+						cantidad: cantidad            // <--- CANTIDAD PARA CALCULAR COSTO UNITARIO
 					});
+					
 					showVikingToast("Mercadería y Gasto de Caja registrados");
 				} else {
 					showVikingToast(id ? "Producto Actualizado" : "Producto Registrado");
@@ -4253,6 +4276,82 @@ if (editorForm) {
 		const stockForm = document.getElementById('form-stock');
 		if (stockForm) {
 			stockForm.onsubmit = saveStockVikingo;
+		}
+
+		// VISTA DE RENTABILIDAD
+		async function generarInformeRentabilidad() {
+			// 1. Traemos la info fresca de la DB
+			const resStock = await apiFetch('/stock', 'GET');
+			const resCaja = await apiFetch('/caja', 'GET'); // O filtrar por fecha desde el backend
+
+			if(resStock.error || resCaja.error) return showVikingToast("Error al cargar datos", true);
+
+			const stock = resStock;
+			const movimientos = resCaja;
+			const body = document.getElementById('tabla-rentabilidad-body');
+			body.innerHTML = '';
+
+			let totalesGeneral = { inversion: 0, recaudacion: 0 };
+
+			stock.forEach(producto => {
+				// Filtramos movimientos de caja vinculados a ESTE producto por ID
+				const historial = movimientos.filter(m => parseInt(m.producto_id) === producto.id);
+
+				let inversionProducto = 0;
+				let recaudacionProducto = 0;
+				let unidadesVendidas = 0;
+				let unidadesCompradas = 0;
+
+				historial.forEach(mov => {
+					const monto = parseFloat(mov.monto);
+					const cant = parseInt(mov.cantidad) || 0;
+
+					if (mov.tipo.toLowerCase() === 'egreso') {
+						inversionProducto += monto;
+						unidadesCompradas += cant;
+					} else if (mov.tipo.toLowerCase() === 'ingreso') {
+						recaudacionProducto += monto;
+						unidadesVendidas += cant;
+					}
+				});
+
+				if (inversionProducto > 0 || recaudacionProducto > 0) {
+					const utilidad = recaudacionProducto - inversionProducto;
+					const margen = inversionProducto > 0 ? ((utilidad / inversionProducto) * 100).toFixed(1) : 0;
+					
+					totalesGeneral.inversion += inversionProducto;
+					totalesGeneral.recaudacion += recaudacionProducto;
+
+					body.innerHTML += `
+						<tr class="border-b border-white/5 hover:bg-white/10 transition-colors">
+							<td class="p-4">
+								<div class="font-bold text-white">${producto.nombre_producto}</div>
+								<div class="text-[10px] text-white/40 italic">${producto.categoria || 'Sin categoría'}</div>
+							</td>
+							<td class="p-4 text-red-400">$${inversionProducto.toLocaleString()} <span class="text-[10px] block text-white/20">(${unidadesCompradas} un.)</span></td>
+							<td class="p-4 text-green-400">$${recaudacionProducto.toLocaleString()} <span class="text-[10px] block text-white/20">(${unidadesVendidas} un.)</span></td>
+							<td class="p-4">
+								<span class="${utilidad >= 0 ? 'text-green-500' : 'text-red-500'} font-bold">
+									$${utilidad.toLocaleString()}
+								</span>
+								<div class="text-[10px] text-white/40">${margen}% margen</div>
+							</td>
+							<td class="p-4 text-right">
+								<span class="px-2 py-1 rounded text-[10px] font-black ${utilidad >= 0 ? 'bg-green-600/20 text-green-500' : 'bg-red-600/20 text-red-600'}">
+									${utilidad >= 0 ? 'RENTABLE' : 'ALERTA'}
+								</span>
+							</td>
+						</tr>
+					`;
+				}
+			});
+
+			// Actualizamos las tarjetas de arriba
+			document.getElementById('renta-total-compra').innerText = `$${totalesGeneral.inversion.toLocaleString()}`;
+			document.getElementById('renta-total-venta').innerText = `$${totalesGeneral.recaudacion.toLocaleString()}`;
+			const totalUtilidad = totalesGeneral.recaudacion - totalesGeneral.inversion;
+			document.getElementById('renta-utilidad').innerText = `$${totalUtilidad.toLocaleString()}`;
+			document.getElementById('renta-utilidad').className = `text-2xl font-bold ${totalUtilidad >= 0 ? 'text-white' : 'text-red-500'}`;
 		}
 
         /**
