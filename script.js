@@ -1062,6 +1062,39 @@ window.updatePaymentButtons = function() {
     setPaymentMethod('Efectivo');
 };
 
+window.exportarCajaExcel = function() {
+    // 1. Obtener los datos de la caja del estado (lo que ves en la tabla)
+    const datosCaja = state.cajaDatos || []; 
+    
+    if (datosCaja.length === 0) {
+        showVikingToast("No hay datos para exportar", true);
+        return;
+    }
+
+    // 2. Mapear los datos para que tengan nombres lindos en el Excel
+    const filas = datosCaja.map(item => ({
+        'FECHA': new Date(item.fecha).toLocaleDateString(),
+        'CONCEPTO': item.concepto.toUpperCase(),
+        'CATEGORÍA': item.categoria || 'GENERAL',
+        'MÉTODO': item.metodo_pago || 'EFECTIVO',
+        'INGRESO': item.tipo === 'ingreso' ? item.monto : 0,
+        'EGRESO': item.tipo === 'egreso' ? item.monto : 0,
+        'SALDO': item.saldo_momento || item.monto,
+        'USUARIO': item.usuario_nombre || 'SISTEMA'
+    }));
+
+    // 3. Crear el libro de Excel
+    const worksheet = XLSX.utils.json_to_sheet(filas);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Caja_Diaria");
+
+    // 4. Descargar
+    const fechaArchivo = new Date().toISOString().split('T')[0];
+    XLSX.writeFile(workbook, `BALANCE_CAJA_${fechaArchivo}.xlsx`);
+    
+    showVikingToast("Excel generado con éxito ⚔️");
+};
+
 /**
  * =========================================================
  * 3. LÓGICA DE COBRO (MODULARIZADA Y CONECTADA)
