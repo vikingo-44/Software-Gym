@@ -117,22 +117,22 @@
 			if (!state.user) return;
 			const rol = (state.user.rol_nombre || "").toLowerCase();
 			
-			// 1. CONTENEDORES (Los que tienen el título: Operación, Seguridad, etc.)
-			// Estos DEBEN ser 'block' para que el título quede arriba de los botones.
+			// 1. CONTENEDORES (Secciones de título)
 			const contenedoresSeccion = {
 				staff: document.getElementById('nav-section-staff'),
 				operativa: document.getElementById('nav-section-operativa'),
 				virtual: document.getElementById('nav-section-virtual')
 			};
 
-			// 2. ITEMS INDIVIDUALES (Los botones con icono + texto)
-			// Estos DEBEN ser 'flex' para que el icono y el texto estén en la misma línea.
+			// 2. ITEMS INDIVIDUALES (Botones)
+			// AGREGAMOS 'sucursales' a la lista para poder controlarlo
 			const itemsMenu = {
 				alumnos: document.getElementById('nav-alumnos'),
 				planes: document.getElementById('nav-planes'),
 				clases: document.getElementById('nav-clases'),
 				facturacion: document.getElementById('nav-cobrar'),
-				acceso: document.getElementById('nav-acceso-virtual')
+				acceso: document.getElementById('nav-acceso-virtual'),
+				sucursales: document.getElementById('nav-sucursales') // <-- AGREGADO
 			};
 
 			// RESET: Contenedores a BLOCK
@@ -140,24 +140,39 @@
 				if (el) el.style.setProperty('display', 'block', 'important');
 			});
 
-			// RESET: Items a FLEX
+			// RESET: Items a FLEX (Volvemos a mostrar todo por defecto)
 			Object.values(itemsMenu).forEach(el => {
 				if (el) el.style.setProperty('display', 'flex', 'important');
 			});
 
 			// --- LÓGICA POR ROL ---
 
-			// A. Alumnos y Profesores (Ocultan casi todo)
-			if (rol === "alumno" || rol === "profesor") {
-				Object.values(contenedoresSeccion).forEach(el => { if(el) el.style.setProperty('display', 'none', 'important'); });
-				Object.values(itemsMenu).forEach(el => { if(el) el.style.setProperty('display', 'none', 'important'); });
+			// A. Alumnos (Ocultan secciones y casi todos los botones)
+			if (rol === "alumno") {
+				// Escondemos todas las secciones de título
+				Object.values(contenedoresSeccion).forEach(el => { 
+					if(el) el.style.setProperty('display', 'none', 'important'); 
+				});
+				
+				// Escondemos los botones restringidos (Sucursales, Planes, Facturación, etc.)
+				const itemsParaOcultar = ['planes', 'facturacion', 'sucursales', 'alumnos'];
+				itemsParaOcultar.forEach(key => {
+					if(itemsMenu[key]) itemsMenu[key].style.setProperty('display', 'none', 'important');
+				});
 			}
 
-			// B. Administrativo (Oculta solo Staff y Control Staff en dashboard)
+			// B. Profesores (Pueden ver alumnos, pero no facturación ni sucursales)
+			else if (rol === "profesor") {
+				if(itemsMenu.facturacion) itemsMenu.facturacion.style.setProperty('display', 'none', 'important');
+				if(itemsMenu.sucursales) itemsMenu.sucursales.style.setProperty('display', 'none', 'important');
+				if(itemsMenu.planes) itemsMenu.planes.style.setProperty('display', 'none', 'important');
+				// El profesor suele necesitar ver 'alumnos' para las rutinas
+			}
+
+			// C. Administrativo (Oculta solo Staff)
 			else if (rol === "administracion" || rol === "administrativo") {
 				if (contenedoresSeccion.staff) contenedoresSeccion.staff.style.setProperty('display', 'none', 'important');
 				
-				// Ocultar el panel de "Control Staff" del Dashboard
 				const staffDashboardPanel = document.getElementById('dash-staff-access');
 				if (staffDashboardPanel) {
 					const card = staffDashboardPanel.closest('.glass-card');
