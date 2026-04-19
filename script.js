@@ -1559,11 +1559,15 @@ window.renderWizardStep = function() {
         body.innerHTML = `
             <div class="flex h-full w-full overflow-hidden bg-zinc-950">
                 <div class="w-[320px] border-r border-white/5 flex flex-col bg-black/40 shrink-0">
-                    <div class="p-6 border-b border-white/5 bg-black/20">
-                        <label class="text-[9px] font-black text-red-600 uppercase tracking-[0.3em] mb-3 block italic">Arsenal Disponible</label>
+                    <div class="p-6 border-b border-white/5 bg-black/20 space-y-4">
+                        <label class="text-[9px] font-black text-red-600 uppercase tracking-[0.3em] block italic">Arsenal Disponible</label>
                         <input type="text" placeholder="BUSCAR EJERCICIO..." 
                             class="viking-input h-12 text-[10px] font-black italic border-white/10 focus:border-red-600" 
                             oninput="window.renderWizardLib(this.value)">
+                        
+                        <button onclick="window.openModalNewExercise()" class="w-full py-3 border border-dashed border-white/20 rounded-xl text-[9px] font-black uppercase text-white/40 hover:border-red-600 hover:text-red-600 transition-all flex items-center justify-center gap-2">
+                            <i data-lucide="plus-circle" class="w-3 h-3"></i> Crear nuevo en Librería
+                        </button>
                     </div>
                     <div class="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar" id="wizard-lib-results">
                         </div>
@@ -1592,7 +1596,8 @@ window.renderWizardStep = function() {
                                 const dayNum = i + 1;
                                 const key = state.routineWizard.tipo === 'progresiva' ? `week${state.routineWizard.semanaActivaWizard}_day${dayNum}` : `day_${dayNum}`;
                                 const isOpen = state.routineWizard.activeDayKey === key;
-                                const data = state.routineWizard.config[key] || { label: `JORNADA ${dayNum}`, exercises: [] };
+                                // Recuperamos data incluyendo el objetivo_dia
+                                const data = state.routineWizard.config[key] || { label: `JORNADA ${dayNum}`, objetivo_dia: '', exercises: [] };
                                 
                                 return `
                                 <div class="group border-2 rounded-[2.5rem] transition-all duration-500 
@@ -1607,6 +1612,7 @@ window.renderWizardStep = function() {
                                             <div>
                                                 <span class="block text-[10px] font-black text-red-600/50 uppercase tracking-[0.3em] mb-1">Configuración</span>
                                                 <span class="text-2xl font-black italic uppercase text-white tracking-tighter">${data.label}</span>
+                                                ${data.objetivo_dia ? `<p class="text-[10px] text-red-600 font-bold uppercase italic mt-1">${data.objetivo_dia}</p>` : ''}
                                             </div>
                                         </div>
 
@@ -1614,7 +1620,7 @@ window.renderWizardStep = function() {
                                             ${state.routineWizard.tipo === 'progresiva' && state.routineWizard.semanaActivaWizard > 1 ? `
                                                 <button onclick="event.stopPropagation(); window.clonePrevWeekDay(${dayNum})" 
                                                     class="bg-amber-600/10 text-amber-500 border border-amber-600/20 px-6 py-3 rounded-2xl text-[10px] font-black uppercase italic hover:bg-amber-600 hover:text-black transition-all shadow-xl">
-                                                    CLONAR SEMANA ANTERIOR
+                                                    CLONAR ANTERIOR
                                                 </button>` : ''}
                                             <div class="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center transition-transform duration-500 ${isOpen ? 'rotate-180 bg-red-600/20' : ''}">
                                                 <i data-lucide="chevron-down" class="w-6 h-6 ${isOpen ? 'text-red-600' : 'text-white/20'}"></i>
@@ -1624,14 +1630,16 @@ window.renderWizardStep = function() {
                                     
                                     ${isOpen ? `
                                     <div class="p-10 border-t border-white/5 space-y-10 animate-in fade-in slide-in-from-top-4 duration-500">
-                                        <div class="grid grid-cols-1 lg:grid-cols-3 gap-10">
-                                            <div class="lg:col-span-1">
-                                                <label class="text-[10px] font-black text-white/20 uppercase tracking-widest mb-3 block ml-1">Título de la Jornada</label>
+                                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                                            <div class="space-y-2">
+                                                <label class="text-[10px] font-black text-white/20 uppercase tracking-widest ml-1">Título de la Jornada</label>
                                                 <input type="text" value="${data.label}" oninput="window.updateSessionData('${key}', 'label', this.value)" 
                                                     class="viking-input !bg-black/40 !h-14 !text-sm font-black uppercase italic border-white/10" placeholder="EJ: PECHO PESADO">
                                             </div>
-                                            <div class="lg:col-span-2 flex items-end">
-                                                <p class="text-[10px] text-white/20 italic italic">Añadí ejercicios desde el arsenal de la izquierda. Podés ajustar repeticiones, pesos y descansos individualmente.</p>
+                                            <div class="space-y-2">
+                                                <label class="text-[10px] font-black text-white/20 uppercase tracking-widest ml-1">Objetivo del Día (Consigna)</label>
+                                                <input type="text" value="${data.objetivo_dia || ''}" oninput="window.updateSessionData('${key}', 'objetivo_dia', this.value)" 
+                                                    class="viking-input !bg-black/40 !h-14 !text-sm font-medium border-white/10" placeholder="Ej: Foco en la fase excéntrica...">
                                             </div>
                                         </div>
 
@@ -1679,7 +1687,7 @@ window.renderExerciseItemWizard = (key, ex, idx) => `
         <div class="flex justify-between items-center mb-6">
             <div class="flex items-center gap-4">
                 <span class="w-8 h-8 rounded-xl bg-red-600 text-black text-[10px] flex items-center justify-center font-black italic">${idx + 1}</span>
-                <h6 class="text-sm font-black italic uppercase text-white">${ex.nombre}</h6>
+                <h6 class="text-sm font-black italic uppercase text-white tracking-tighter">${ex.nombre}</h6>
             </div>
             <button onclick="window.removeExFromWizard('${key}', '${ex.uid}')" class="text-white/10 hover:text-red-600 transition-colors">
                 <i data-lucide="trash-2" class="w-5 h-5"></i>
@@ -1692,10 +1700,11 @@ window.renderExerciseItemWizard = (key, ex, idx) => `
                     <input type="text" value="${ex[f]}" oninput="window.updateExFieldWizard('${key}', '${ex.uid}', '${f}', this.value)" 
                         class="w-full bg-white/5 border border-white/5 rounded-xl text-[11px] font-black italic text-center text-red-600 h-10 outline-none focus:border-red-600 transition-all">
                 </div>`).join('')}
+            
             <div class="space-y-1">
-                <label class="text-[8px] font-black text-white/20 uppercase ml-1">Nota</label>
+                <label class="text-[8px] font-black text-white/20 uppercase ml-1">Consigna</label>
                 <input type="text" value="${ex.comentario || ''}" oninput="window.updateExFieldWizard('${key}', '${ex.uid}', 'comentario', this.value)" 
-                    class="w-full bg-white/5 border border-white/5 rounded-xl text-[10px] font-medium text-white/40 px-3 h-10 outline-none focus:border-red-600 transition-all" placeholder="...">
+                    class="w-full bg-white/5 border border-white/5 rounded-xl text-[10px] font-medium text-white/60 px-3 h-10 outline-none focus:border-red-600 transition-all" placeholder="...">
             </div>
         </div>
     </div>`;
