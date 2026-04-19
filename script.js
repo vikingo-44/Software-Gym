@@ -4212,58 +4212,72 @@ if (editorForm) {
 		async function saveStockVikingo(e) {
 			if(e && e.preventDefault) e.preventDefault();
 			
-			const id = document.getElementById('stock-id').value;
+			// 1. Capturamos los valores NI BIEN arranca la función para que no se pierdan
+			const idExistente = document.getElementById('stock-id').value;
 			const nombre = document.getElementById('stock-nombre').value;
-			const cantidad = parseInt(document.getElementById('stock-cant').value);
+			const cantidadACargar = parseInt(document.getElementById('stock-cant').value) || 0;
+			const precioVenta = parseFloat(document.getElementById('stock-precio').value) || 0;
+			const imagenB64 = document.getElementById('stock-imagen-base64').value;
 			
+			// Capturamos datos de costo también por las dudas
+			const montoCosto = parseFloat(document.getElementById('stock-costo-total').value) || 0;
+			const notaCosto = document.getElementById('stock-costo-nota').value || `Compra inicial: ${nombre}`;
+			const metodoPago = document.getElementById('stock-costo-metodo').value;
+
 			const payload = {
 				nombre_producto: nombre,
-				stock_actual: cantidad,
-				precio_venta: parseFloat(document.getElementById('stock-precio').value),
-				url_imagen: document.getElementById('stock-imagen-base64').value 
+				stock_actual: cantidadACargar,
+				precio_venta: precioVenta,
+				url_imagen: imagenB64 
 			};
 
 			if(!payload.nombre_producto) return showVikingToast("Falta el nombre", true);
 
-			const method = id ? 'PUT' : 'POST';
-			const endpoint = id ? `/stock/${id}` : '/stock';
+			const method = idExistente ? 'PUT' : 'POST';
+			const endpoint = idExistente ? `/stock/${idExistente}` : '/stock';
 
 			showVikingToast("Sincronizando con el GymFit App...");
 			
-			// Guardamos/Actualizamos el producto
+			// 2. Ejecutamos el guardado del producto
 			const res = await apiFetch(endpoint, method, payload);
 			
 			if(!res.error) {
 				// --- LÓGICA DE GASTO AUTOMÁTICO EN CAJA ---
-				const montoCosto = parseFloat(document.getElementById('stock-costo-total').value);
 				
-				// Solo generamos gasto si es un producto NUEVO (!id) y hay un costo cargado
-				if (!id && montoCosto > 0) {
-					const notaCosto = document.getElementById('stock-costo-nota').value || `Compra inicial: ${nombre}`;
-					const metodoPago = document.getElementById('stock-costo-metodo').value;
+				// Si no había ID previo (es producto NUEVO) y hay un costo cargado
+				if (!idExistente && montoCosto > 0) {
+					
+					// IMPORTANTE: Buscamos el ID en 'res.id' o 'res.data.id' según tu backend
+					const nuevoProductoId = res.id || (res.data ? res.data.id : null); 
 
-					// IMPORTANTE: Si es POST, el ID del nuevo producto viene en 'res.id' (o como lo devuelva tu backend)
-					const nuevoProductoId = res.id; 
-
-					// Enviamos el egreso a la caja con los datos para Rentabilidad
-					await apiFetch('/caja/movimientos', 'POST', {
+					const dataCaja = {
 						descripcion: notaCosto,
 						monto: montoCosto,
 						tipo: 'Egreso',
 						metodo_pago: metodoPago,
-						descripcion2: `Carga automática de stock: ${cantidad} unidades`,
-						producto_id: nuevoProductoId, // <--- LLAVE PARA RENTABILIDAD
-						cantidad: cantidad            // <--- CANTIDAD PARA CALCULAR COSTO UNITARIO
-					});
+						descripcion2: `Carga automática de stock: ${cantidadACargar} unidades`,
+						producto_id: nuevoProductoId, 
+						cantidad: cantidadACargar // <--- Ahora usamos la variable capturada al inicio
+					};
+
+					// LOG DE CONTROL: Presioná F12 en el navegador para ver si esto sale bien
+					console.log("DEBUG RENTABILIDAD - Enviando a Caja:", dataCaja);
+
+					// Enviamos el egreso a la caja
+					await apiFetch('/caja/movimientos', 'POST', dataCaja);
 					
 					showVikingToast("Mercadería y Gasto de Caja registrados");
 				} else {
-					showVikingToast(id ? "Producto Actualizado" : "Producto Registrado");
+					showVikingToast(idExistente ? "Producto Actualizado" : "Producto Registrado");
 				}
 
 				closeModal('modal-stock');
-				// Pequeño delay para que la DB impacte antes de recargar la lista
-				setTimeout(loadStock, 300); 
+				// Delay para asegurar que la DB impacte
+				setTimeout(() => {
+					if (typeof loadStock === 'function') loadStock();
+					// Si la función de rentabilidad existe, la refrescamos también
+					if (typeof generarInformeRentabilidad === 'function') generarInformeRentabilidad();
+				}, 300); 
 			} else {
 				showVikingToast("Error: " + res.error, true);
 			}
