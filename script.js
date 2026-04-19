@@ -1532,67 +1532,75 @@ window.renderWizardStep = function() {
             </div>`;
     } else {
         label.innerText = "PASO 2: ASIGNACIÓN DE ARSENAL";
-        // Calculamos cuántas semanas mostrar basándonos en la elección del Paso 1
         const numSemanas = state.routineWizard.tipo === 'progresiva' ? (state.routineWizard.cantSemanas || 4) : 1;
 
         body.innerHTML = `
-            <div class="w-full lg:w-[380px] border-r border-white/5 flex flex-col bg-black/40">
-                <div class="p-8 border-b border-white/5">
-                    <input type="text" placeholder="Buscar ejercicio..." class="viking-input h-12 text-[10px] font-black italic" oninput="window.renderWizardLib(this.value)">
+            <div class="flex flex-col lg:flex-row h-full overflow-hidden">
+                <div class="w-full lg:w-[350px] border-r border-white/5 flex flex-col bg-black/20 shrink-0">
+                    <div class="p-6 border-b border-white/5">
+                        <label class="text-[9px] font-black text-white/30 uppercase tracking-[0.2em] mb-3 block">Buscador de Arsenal</label>
+                        <input type="text" placeholder="EJ: PRESS BANCA..." class="viking-input h-12 text-[10px] font-black italic" oninput="window.renderWizardLib(this.value)">
+                    </div>
+                    <div class="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar" id="wizard-lib-results"></div>
                 </div>
-                <div class="flex-1 overflow-y-auto p-8 space-y-8 custom-scrollbar" id="wizard-lib-results"></div>
-            </div>
-            <div class="flex-1 flex flex-col bg-zinc-950/50">
-                ${state.routineWizard.tipo === 'progresiva' ? `
-                    <div class="p-4 bg-black/60 flex gap-2 border-b border-white/5 overflow-x-auto no-scrollbar">
-                        ${Array.from({length: numSemanas}).map((_, i) => {
-                            const w = i + 1;
-                            return `
-                            <button onclick="state.routineWizard.semanaActivaWizard = ${w}; window.renderWizardStep();" 
-                                class="px-6 py-2.5 rounded-xl font-black italic text-[10px] transition-all whitespace-nowrap 
-                                ${state.routineWizard.semanaActivaWizard === w ? 'bg-amber-600 text-black' : 'bg-white/5 text-white/30 hover:text-white'}">
-                                SEMANA ${w}
-                            </button>`;
-                        }).join('')}
-                    </div>` : ''}
-                <div class="flex-1 overflow-y-auto p-8 lg:p-12 space-y-6 custom-scrollbar">
-                    ${Array.from({length: state.routineWizard.cantDias}).map((_, i) => {
-                        const dayNum = i + 1;
-                        const key = state.routineWizard.tipo === 'progresiva' ? `week${state.routineWizard.semanaActivaWizard}_day${dayNum}` : `day_${dayNum}`;
-                        const isOpen = state.routineWizard.activeDayKey === key;
-                        const data = state.routineWizard.config[key] || { label: `JORNADA ${dayNum}`, exercises: [] };
-                        return `
-                            <div class="border rounded-[2.5rem] overflow-hidden transition-all ${isOpen ? 'border-red-600 bg-red-600/5' : 'border-white/5 bg-white/[0.02]'}">
-                                <button onclick="window.toggleWizardDay('${key}')" class="w-full flex items-center justify-between p-8 text-left group">
-                                    <div class="flex items-center gap-6">
-                                        <div class="w-12 h-12 rounded-2xl flex items-center justify-center font-black italic transition-colors 
-                                            ${isOpen ? 'bg-red-600 text-black' : 'bg-white/5 text-white/30 group-hover:text-white'}">
-                                            ${dayNum}
-                                        </div>
-                                        <span class="text-xl font-black italic uppercase text-white tracking-tighter">${data.label}</span>
-                                    </div>
-                                    <div class="flex items-center gap-4">
-                                        ${state.routineWizard.tipo === 'progresiva' && state.routineWizard.semanaActivaWizard > 1 ? `
-                                            <button onclick="event.stopPropagation(); window.clonePrevWeekDay(${dayNum})" 
-                                                class="text-[9px] font-black uppercase italic bg-amber-600/10 text-amber-500 border border-amber-600/20 px-4 py-2 rounded-xl hover:bg-amber-600 hover:text-black transition-all">
-                                                CLONAR SEM. ANTERIOR
-                                            </button>` : ''}
-                                        <i data-lucide="${isOpen ? 'chevron-up' : 'chevron-down'}" class="w-6 h-6 text-white/20"></i>
-                                    </div>
-                                </button>
-                                ${isOpen ? `
-                                <div class="p-10 border-t border-white/5 space-y-8 animate-in slide-in-from-top-4">
-                                    <div class="max-w-md">
-                                        <label class="text-[9px] font-black text-white/20 uppercase tracking-widest mb-2 block ml-1">Título de la Jornada</label>
-                                        <input type="text" value="${data.label}" oninput="window.updateSessionData('${key}', 'label', this.value)" 
-                                            class="viking-input !bg-black !h-12 !text-[11px] font-black uppercase italic" placeholder="Ej: Pecho y Bíceps">
-                                    </div>
-                                    <div class="space-y-4 pt-4 border-t border-white/5">
-                                        ${data.exercises.map((ex, exIdx) => window.renderExerciseItemWizard(key, ex, exIdx)).join('')}
-                                    </div>
-                                </div>` : ''}
-                            </div>`;
-                    }).join('')}
+
+                <div class="flex-1 flex flex-col min-w-0 bg-zinc-950/20">
+                    ${state.routineWizard.tipo === 'progresiva' ? `
+                        <div class="p-4 bg-black/40 flex gap-2 border-b border-white/5 overflow-x-auto no-scrollbar shrink-0">
+                            ${Array.from({length: numSemanas}).map((_, i) => {
+                                const w = i + 1;
+                                return `
+                                <button onclick="state.routineWizard.semanaActivaWizard = ${w}; window.renderWizardStep();" 
+                                    class="px-5 py-2.5 rounded-xl font-black italic text-[10px] transition-all whitespace-nowrap 
+                                    ${state.routineWizard.semanaActivaWizard === w ? 'bg-amber-600 text-black shadow-lg shadow-amber-900/20' : 'bg-white/5 text-white/30 hover:text-white'}">
+                                    SEMANA ${w}
+                                </button>`;
+                            }).join('')}
+                        </div>` : ''}
+
+                    <div class="flex-1 overflow-y-auto p-6 lg:p-10 space-y-6 custom-scrollbar">
+                        <div class="max-w-4xl mx-auto space-y-6">
+                            ${Array.from({length: state.routineWizard.cantDias}).map((_, i) => {
+                                const dayNum = i + 1;
+                                const key = state.routineWizard.tipo === 'progresiva' ? `week${state.routineWizard.semanaActivaWizard}_day${dayNum}` : `day_${dayNum}`;
+                                const isOpen = state.routineWizard.activeDayKey === key;
+                                const data = state.routineWizard.config[key] || { label: `JORNADA ${dayNum}`, exercises: [] };
+                                
+                                return `
+                                    <div class="border rounded-[2rem] overflow-hidden transition-all ${isOpen ? 'border-red-600 bg-red-600/5' : 'border-white/5 bg-white/[0.02]'}">
+                                        <button onclick="window.toggleWizardDay('${key}')" class="w-full flex flex-wrap md:flex-nowrap items-center justify-between p-6 gap-4 text-left group">
+                                            <div class="flex items-center gap-4">
+                                                <div class="w-10 h-10 rounded-xl flex items-center justify-center font-black italic transition-colors 
+                                                    ${isOpen ? 'bg-red-600 text-black' : 'bg-white/5 text-white/30 group-hover:text-white'}">
+                                                    ${dayNum}
+                                                </div>
+                                                <span class="text-lg font-black italic uppercase text-white tracking-tighter">${data.label}</span>
+                                            </div>
+                                            <div class="flex items-center gap-3 ml-auto">
+                                                ${state.routineWizard.tipo === 'progresiva' && state.routineWizard.semanaActivaWizard > 1 ? `
+                                                    <button onclick="event.stopPropagation(); window.clonePrevWeekDay(${dayNum})" 
+                                                        class="text-[8px] font-black uppercase italic bg-amber-600/10 text-amber-500 border border-amber-600/20 px-3 py-2 rounded-lg hover:bg-amber-600 hover:text-black transition-all">
+                                                        CLONAR ANTERIOR
+                                                    </button>` : ''}
+                                                <i data-lucide="${isOpen ? 'chevron-up' : 'chevron-down'}" class="w-5 h-5 text-white/20"></i>
+                                            </div>
+                                        </button>
+                                        
+                                        ${isOpen ? `
+                                        <div class="p-6 md:p-8 border-t border-white/5 space-y-6 animate-in slide-in-from-top-4">
+                                            <div class="max-w-xs">
+                                                <label class="text-[8px] font-black text-white/20 uppercase tracking-widest mb-2 block ml-1">Título</label>
+                                                <input type="text" value="${data.label}" oninput="window.updateSessionData('${key}', 'label', this.value)" 
+                                                    class="viking-input !bg-black !h-10 !text-[10px] font-black uppercase italic" placeholder="Ej: Pecho">
+                                            </div>
+                                            <div class="grid grid-cols-1 gap-4">
+                                                ${data.exercises.map((ex, exIdx) => window.renderExerciseItemWizard(key, ex, exIdx)).join('')}
+                                            </div>
+                                        </div>` : ''}
+                                    </div>`;
+                            }).join('')}
+                        </div>
+                    </div>
                 </div>
             </div>`;
         window.renderWizardLib();
