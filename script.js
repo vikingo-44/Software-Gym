@@ -4212,14 +4212,13 @@ if (editorForm) {
 		async function saveStockVikingo(e) {
 			if(e && e.preventDefault) e.preventDefault();
 			
-			// 1. Capturamos los valores NI BIEN arranca la función para que no se pierdan
+			// 1. Capturamos los valores NI BIEN arranca la función
 			const idExistente = document.getElementById('stock-id').value;
 			const nombre = document.getElementById('stock-nombre').value;
 			const cantidadACargar = parseInt(document.getElementById('stock-cant').value) || 0;
 			const precioVenta = parseFloat(document.getElementById('stock-precio').value) || 0;
 			const imagenB64 = document.getElementById('stock-imagen-base64').value;
 			
-			// Capturamos datos de costo también por las dudas
 			const montoCosto = parseFloat(document.getElementById('stock-costo-total').value) || 0;
 			const notaCosto = document.getElementById('stock-costo-nota').value || `Compra inicial: ${nombre}`;
 			const metodoPago = document.getElementById('stock-costo-metodo').value;
@@ -4244,11 +4243,18 @@ if (editorForm) {
 			if(!res.error) {
 				// --- LÓGICA DE GASTO AUTOMÁTICO EN CAJA ---
 				
-				// Si no había ID previo (es producto NUEVO) y hay un costo cargado
 				if (!idExistente && montoCosto > 0) {
 					
-					// IMPORTANTE: Buscamos el ID en 'res.id' o 'res.data.id' según tu backend
-					const nuevoProductoId = res.id || (res.data ? res.data.id : null); 
+					// BUSCAMOS EL ID EN DIFERENTES FORMATOS (res.id, res.data.id, etc.)
+					const nuevoProductoId = res.id || (res.data ? res.data.id : (res[0] ? res[0].id : null)); 
+
+					// 🛑 CARTELITO DE DIAGNÓSTICO VIKINGO 🛑
+					alert(`🔍 DIAGNÓSTICO DE CARGA:\n\n` +
+						`1. Producto Guardado: ${nombre}\n` +
+						`2. ID recibido del Server: ${nuevoProductoId}\n` +
+						`3. Cantidad capturada: ${cantidadACargar}\n` +
+						`4. Costo Total: $${montoCosto}\n\n` +
+						`Si el ID es 'null' o 'undefined', el problema es el Backend.`);
 
 					const dataCaja = {
 						descripcion: notaCosto,
@@ -4257,10 +4263,9 @@ if (editorForm) {
 						metodo_pago: metodoPago,
 						descripcion2: `Carga automática de stock: ${cantidadACargar} unidades`,
 						producto_id: nuevoProductoId, 
-						cantidad: cantidadACargar // <--- Ahora usamos la variable capturada al inicio
+						cantidad: cantidadACargar 
 					};
 
-					// LOG DE CONTROL: Presioná F12 en el navegador para ver si esto sale bien
 					console.log("DEBUG RENTABILIDAD - Enviando a Caja:", dataCaja);
 
 					// Enviamos el egreso a la caja
@@ -4272,10 +4277,9 @@ if (editorForm) {
 				}
 
 				closeModal('modal-stock');
-				// Delay para asegurar que la DB impacte
+				
 				setTimeout(() => {
 					if (typeof loadStock === 'function') loadStock();
-					// Si la función de rentabilidad existe, la refrescamos también
 					if (typeof generarInformeRentabilidad === 'function') generarInformeRentabilidad();
 				}, 300); 
 			} else {
