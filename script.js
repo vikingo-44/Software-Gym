@@ -1479,32 +1479,44 @@ window.renderWizardStep = function() {
             <div class="flex-1 p-10 lg:p-20 overflow-y-auto custom-scrollbar animate-in zoom-in-95">
                 <div class="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-12 text-left">
                     <div class="col-span-full space-y-2">
-                        <label class="text-[10px] font-black text-red-600 uppercase tracking-widest italic ml-2">Nombre del Plan (Ej: Volumen Vikingo)</label>
+                        <label class="text-[10px] font-black text-red-600 uppercase tracking-widest italic ml-2">Nombre del Plan</label>
                         <input type="text" value="${state.routineWizard.nombre_grupo}" oninput="state.routineWizard.nombre_grupo = this.value" class="viking-input !h-16 text-2xl font-black italic uppercase">
                     </div>
-                    <div class="col-span-full space-y-2">
-                        <label class="text-[10px] font-black text-white/30 uppercase tracking-widest italic ml-2">Objetivo o Resumen Técnico</label>
-                        <textarea oninput="state.routineWizard.objetivo = this.value" class="viking-input h-32 py-5 text-sm font-medium" placeholder="Describe el enfoque del ciclo...">${state.routineWizard.objetivo}</textarea>
-                    </div>
-                    <div class="space-y-2">
-                        <label class="text-[10px] font-black text-white/30 uppercase tracking-widest italic ml-2">Fecha de Vencimiento</label>
-                        <input type="date" value="${state.routineWizard.vencimiento}" oninput="state.routineWizard.vencimiento = this.value" class="viking-input !h-14">
-                    </div>
+                    
                     <div class="space-y-2">
                         <label class="text-[10px] font-black text-white/30 uppercase tracking-widest italic ml-2">Metodología de Carga</label>
                         <div class="flex gap-4">
                             <button onclick="state.routineWizard.tipo = 'normal'; state.routineWizard.tipo_id = 1; window.renderWizardStep();" 
                                 class="flex-1 h-14 rounded-2xl border-2 font-black text-[10px] transition-all 
                                 ${state.routineWizard.tipo_id === 1 ? 'bg-red-600 text-black border-red-600 shadow-lg shadow-red-900/20' : 'bg-white/5 border-white/5 text-white/30'}">
-                                ESTÁNDAR
+                                ESTÁNDAR (1 SEM)
                             </button>
-                            <button onclick="state.routineWizard.tipo = 'progresiva'; state.routineWizard.tipo_id = 2; window.renderWizardStep();" 
+                            <button onclick="state.routineWizard.tipo = 'progresiva'; state.routineWizard.tipo_id = 2; state.routineWizard.cantSemanas = state.routineWizard.cantSemanas || 4; window.updateRoutineVencimiento(); window.renderWizardStep();" 
                                 class="flex-1 h-14 rounded-2xl border-2 font-black text-[10px] transition-all
                                 ${state.routineWizard.tipo_id === 2 ? 'bg-amber-600 text-black border-amber-600 shadow-lg shadow-amber-900/20' : 'bg-white/5 border-white/5 text-white/30'}">
-                                PROGRESIVA
+                                PROGRESIVA (CICLOS)
                             </button>
                         </div>
                     </div>
+
+                    <div class="space-y-2 ${state.routineWizard.tipo === 'progresiva' ? 'animate-in fade-in slide-in-from-top-2' : 'hidden'}">
+                        <label class="text-[10px] font-black text-amber-500 uppercase tracking-widest italic ml-2">Duración del Ciclo (Semanas)</label>
+                        <div class="grid grid-cols-4 gap-2">
+                            ${[2,4,6,8].map(sw => `
+                                <button onclick="state.routineWizard.cantSemanas = ${sw}; window.updateRoutineVencimiento(); window.renderWizardStep();" 
+                                    class="h-14 rounded-2xl border-2 font-black transition-all text-xs
+                                    ${state.routineWizard.cantSemanas === sw ? 'bg-amber-600 text-black border-amber-600' : 'bg-white/5 border-white/5 text-white/20'}">
+                                    ${sw}
+                                </button>
+                            `).join('')}
+                        </div>
+                    </div>
+
+                    <div class="space-y-2">
+                        <label class="text-[10px] font-black text-white/30 uppercase tracking-widest italic ml-2">Fecha de Vencimiento (Auto)</label>
+                        <input type="date" id="wizard-vencimiento" value="${state.routineWizard.vencimiento}" oninput="state.routineWizard.vencimiento = this.value" class="viking-input !h-14 border-amber-600/20">
+                    </div>
+
                     <div class="space-y-2">
                         <label class="text-[10px] font-black text-white/30 uppercase tracking-widest italic ml-2">Días por Semana</label>
                         <div class="grid grid-cols-6 gap-2">
@@ -1520,6 +1532,9 @@ window.renderWizardStep = function() {
             </div>`;
     } else {
         label.innerText = "PASO 2: ASIGNACIÓN DE ARSENAL";
+        // Calculamos cuántas semanas mostrar basándonos en la elección del Paso 1
+        const numSemanas = state.routineWizard.tipo === 'progresiva' ? (state.routineWizard.cantSemanas || 4) : 1;
+
         body.innerHTML = `
             <div class="w-full lg:w-[380px] border-r border-white/5 flex flex-col bg-black/40">
                 <div class="p-8 border-b border-white/5">
@@ -1530,12 +1545,15 @@ window.renderWizardStep = function() {
             <div class="flex-1 flex flex-col bg-zinc-950/50">
                 ${state.routineWizard.tipo === 'progresiva' ? `
                     <div class="p-4 bg-black/60 flex gap-2 border-b border-white/5 overflow-x-auto no-scrollbar">
-                        ${[1,2,3,4,5].map(w => `
+                        ${Array.from({length: numSemanas}).map((_, i) => {
+                            const w = i + 1;
+                            return `
                             <button onclick="state.routineWizard.semanaActivaWizard = ${w}; window.renderWizardStep();" 
                                 class="px-6 py-2.5 rounded-xl font-black italic text-[10px] transition-all whitespace-nowrap 
-                                ${state.routineWizard.semanaActivaWizard === w ? 'bg-red-600 text-black' : 'bg-white/5 text-white/30 hover:text-white'}">
+                                ${state.routineWizard.semanaActivaWizard === w ? 'bg-amber-600 text-black' : 'bg-white/5 text-white/30 hover:text-white'}">
                                 SEMANA ${w}
-                            </button>`).join('')}
+                            </button>`;
+                        }).join('')}
                     </div>` : ''}
                 <div class="flex-1 overflow-y-auto p-8 lg:p-12 space-y-6 custom-scrollbar">
                     ${Array.from({length: state.routineWizard.cantDias}).map((_, i) => {
@@ -1571,10 +1589,6 @@ window.renderWizardStep = function() {
                                     </div>
                                     <div class="space-y-4 pt-4 border-t border-white/5">
                                         ${data.exercises.map((ex, exIdx) => window.renderExerciseItemWizard(key, ex, exIdx)).join('')}
-                                        ${data.exercises.length === 0 ? `
-                                            <div class="py-12 text-center">
-                                                <p class="text-white/10 font-black italic text-[10px] uppercase tracking-[0.3em]">Añade ejercicios desde el Arsenal</p>
-                                            </div>` : ''}
                                     </div>
                                 </div>` : ''}
                             </div>`;
@@ -1584,6 +1598,26 @@ window.renderWizardStep = function() {
         window.renderWizardLib();
     }
     if (window.lucide) lucide.createIcons();
+};
+
+window.updateRoutineVencimiento = function() {
+    // Si no es progresiva, no forzamos fecha (o ponemos 30 días por defecto)
+    let semanas = state.routineWizard.tipo === 'progresiva' ? state.routineWizard.cantSemanas : 4;
+    
+    const hoy = new Date();
+    // Sumamos los días (semanas * 7)
+    hoy.setDate(hoy.getDate() + (semanas * 7));
+    
+    // Formateamos a YYYY-MM-DD para el input date
+    const yyyy = hoy.getFullYear();
+    const mm = String(hoy.getMonth() + 1).padStart(2, '0');
+    const dd = String(hoy.getDate()).padStart(2, '0');
+    
+    state.routineWizard.vencimiento = `${yyyy}-${mm}-${dd}`;
+    
+    // Actualizamos el input visualmente si ya existe en el DOM
+    const inputVenc = document.getElementById('wizard-vencimiento');
+    if (inputVenc) inputVenc.value = state.routineWizard.vencimiento;
 };
 
 window.renderExerciseItemWizard = (key, ex, idx) => `
@@ -1711,20 +1745,25 @@ window.saveFinalRutina = async function() {
     const config = state.routineWizard.config;
     const isProg = state.routineWizard.tipo_id === 2;
     const processedDays = [];
+    
+    // Determinamos la cantidad de semanas según el tipo de rutina
+    // Si es normal, es 1 semana. Si es progresiva, usamos el selector dinámico.
+    const totalSemanas = isProg ? (state.routineWizard.cantSemanas || 4) : 1;
 
-    // Iteramos por los días definidos en el Wizard
+    // Iteramos por los días definidos en el Wizard (cantDias)
     for (let dNum = 1; dNum <= state.routineWizard.cantDias; dNum++) {
         const ejerciciosDia = [];
         
         if (isProg) {
-            // Recolectamos ejercicios de todas las semanas para este día
-            for (let wNum = 1; wNum <= state.routineWizard.cantSemanas; wNum++) {
+            // Recolectamos ejercicios de todas las semanas para este día específico
+            // Cambiamos el "5" fijo por la variable totalSemanas elegida en el paso 1
+            for (let wNum = 1; wNum <= totalSemanas; wNum++) {
                 const session = config[`week${wNum}_day${dNum}`];
                 if (session && session.exercises) {
                     session.exercises.forEach(ex => {
                         ejerciciosDia.push({
                             ejercicio_id: ex.id,
-                            semana_id: wNum,
+                            semana_id: wNum, // Aquí se asigna dinámicamente la semana 2, 4, 6 u 8
                             comentario: ex.comentario || '',
                             series: [{
                                 numero_serie: 1,
@@ -1738,13 +1777,13 @@ window.saveFinalRutina = async function() {
                 }
             }
         } else {
-            // Rutina normal: solo el día correspondiente
+            // Rutina normal: solo recolectamos el día correspondiente (Semana 1)
             const session = config[`day_${dNum}`];
             if (session && session.exercises) {
                 session.exercises.forEach(ex => {
                     ejerciciosDia.push({
                         ejercicio_id: ex.id,
-                        semana_id: 1, // Por defecto semana 1 en normal
+                        semana_id: 1, // Por defecto semana 1 en rutinas estándar
                         comentario: ex.comentario || '',
                         series: [{
                             numero_serie: 1,
@@ -1758,32 +1797,43 @@ window.saveFinalRutina = async function() {
             }
         }
 
+        // Definimos el nombre de la jornada (ej: "Pecho y Tríceps")
         const dName = (config[isProg ? `week1_day${dNum}` : `day_${dNum}`]?.label) || `Jornada ${dNum}`;
+        
         processedDays.push({ 
             nombre_dia: dName, 
             ejercicios: ejerciciosDia 
         });
     }
 
-    // Payload exacto según PlanRutinaCreate en el backend
+    // Payload exacto según PlanRutinaCreate en el backend (main.py)
     const payload = {
         usuario_id: state.routineWizard.alumnoId,
         nombre_grupo: state.routineWizard.nombre_grupo, 
-        objetivo: state.routineWizard.nombre_grupo, // Por compatibilidad
-        descripcion: state.routineWizard.objetivo,  // El resumen técnico
+        objetivo: state.routineWizard.nombre_grupo, // Mantenemos por compatibilidad con el modelo
+        descripcion: state.routineWizard.objetivo,  // El resumen técnico del ciclo
         tipo: state.routineWizard.tipo,
-        fecha_vencimiento: state.routineWizard.vencimiento,
+        fecha_vencimiento: state.routineWizard.vencimiento, // Esta fecha ya viene calculada por updateRoutineVencimiento
         dias: processedDays
     };
 
+    // Notificación visual de inicio de forja
+    showVikingToast("Sincronizando arsenal con la base de datos...");
+
     const res = await apiFetch('/rutinas/plan', 'POST', payload);
+    
     if (!res.error) {
         showVikingToast("¡Arsenal vikingo forjado correctamente! ⚔️");
+        
+        // Cerramos el modal y refrescamos las vistas
         closeModal('modal-rutina-editor');
+        
+        // Actualizamos la lista de alumnos y rutinas para ver los cambios
         if(typeof fetchAlumnos === 'function') fetchAlumnos();
-        window.renderRutinas();
+        if(typeof renderRutinas === 'function') renderRutinas();
+        
     } else {
-        showVikingToast(res.error, true);
+        showVikingToast("Error en la forja: " + res.error, true);
     }
 };
 
