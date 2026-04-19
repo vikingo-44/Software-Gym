@@ -335,6 +335,9 @@ class MovimientoCreate(BaseModel):
     metodo_pago: str = "Efectivo"
     cuotas: Optional[int] = 1
     descripcion2: Optional[str] = None
+    # --- AGREGAR ESTOS DOS ---
+    producto_id: Optional[int] = None
+    cantidad: Optional[int] = 0
 
 class TransactionCreate(BaseModel):
     tipo: str  # 'Plan' o 'Mercaderia'
@@ -850,7 +853,7 @@ def get_alumnos(db: Session = Depends(database.get_db)):
             if al.fecha_vencimiento:
                 al.estado_cuenta = "Activo" if al.fecha_vencimiento >= hoy else "Caducado"
             else:
-                al.estado_cuenta = "Caducado"
+                al.estado_cuenta = "Inactivo"
 
         return alumnos
     except Exception as e:
@@ -1138,13 +1141,16 @@ def create_stock(data: StockUpdate, db: Session = Depends(database.get_db)):
     new_s = models.Stock(
         nombre_producto=data.nombre_producto, 
         stock_actual=data.stock_actual, 
-        stock_inicial=data.stock_actual, 
+        stock_inicial=data.stock_actual, # Guardamos la cantidad inicial para referencia
         precio_venta=data.precio_venta,
         url_imagen=data.url_imagen 
     )
     db.add(new_s)
     db.commit()
-    return {"status": "success"}
+    db.refresh(new_s) # <--- CRÍTICO: Esto recupera el ID generado por NeonDB
+    
+    # Devolvemos el objeto completo para que el frontend reciba el nuevo ID
+    return new_s
 
 @app.put("/api/stock/{id}", tags=["Inventario"])
 def update_stock(id: int, data: StockUpdate, db: Session = Depends(database.get_db)):
@@ -1344,6 +1350,7 @@ def crear_movimiento_caja(mov: MovimientoCreate, db: Session = Depends(database.
         tipo_final = "Egreso"
     
     # Creación del objeto para la DB incluyendo la nueva columna 'cuotas'
+    # FIX RENTABILIDAD: Agregamos producto_id y cantidad para que el match sea real
     nuevo_movimiento = models.MovimientoCaja(
         descripcion=mov.descripcion,
         descripcion2=mov.descripcion2,
@@ -1351,6 +1358,8 @@ def crear_movimiento_caja(mov: MovimientoCreate, db: Session = Depends(database.
         tipo=tipo_final,        # Aquí definimos si entró o salió plata
         metodo_pago=mov.metodo_pago,
         cuotas=mov.cuotas,      # <--- AGREGADO
+        producto_id=mov.producto_id, # <--- NUEVO: Vincula el gasto al producto
+        cantidad=mov.cantidad,       # <--- NUEVO: Guarda cuántas unidades se compraron
         fecha=datetime.now()
     )
     
@@ -1361,7 +1370,9 @@ def crear_movimiento_caja(mov: MovimientoCreate, db: Session = Depends(database.
     return {
         "status": "success", 
         "mensaje": "Movimiento registrado con éxito", 
-        "id": nuevo_movimiento.id
+        "id": nuevo_movimiento.id,
+        "producto_id": nuevo_movimiento.producto_id, # Devolvemos esto para verificar en el log
+        "cantidad": nuevo_movimiento.cantidad
     }
 
 # --- PROCESAR COBROS ---
