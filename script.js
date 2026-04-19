@@ -193,46 +193,51 @@
 			const u = state.user; 
 			if (!u) return;
 			
-			// 1. Cargar Datos básicos
-			document.getElementById('al-dash-name').innerText = u.nombre_completo;
-			document.getElementById('al-dash-dni').innerText = u.dni;
-			document.getElementById('al-dash-plan').innerText = u.plan?.nombre || 'SIN PLAN';
-			document.getElementById('al-dash-vencimiento').innerText = u.fecha_vencimiento || '-';
-			document.getElementById('al-dash-renovacion').innerText = u.fecha_ultima_renovacion || '-';
-			document.getElementById('al-dash-email').innerText = u.email || '-';
+			// 1. CARGA DE DATOS BÁSICOS
+			// Usamos ?. para evitar errores si algún elemento no existe en el DOM
+			const elName = document.getElementById('al-dash-name');
+			const elPlan = document.getElementById('al-dash-plan');
+			const elVenc = document.getElementById('al-dash-vencimiento');
+
+			if (elName) elName.innerText = u.nombre_completo || "Usuario Vikingo";
+			if (document.getElementById('al-dash-dni')) document.getElementById('al-dash-dni').innerText = u.dni || "-";
+			if (elPlan) elPlan.innerText = u.plan?.nombre || u.plan_nombre || 'SIN PLAN';
+			if (elVenc) elVenc.innerText = u.fecha_vencimiento ? new Date(u.fecha_vencimiento).toLocaleDateString('es-AR') : '-';
+			if (document.getElementById('al-dash-renovacion')) document.getElementById('al-dash-renovacion').innerText = u.fecha_ultima_renovacion || '-';
+			if (document.getElementById('al-dash-email')) document.getElementById('al-dash-email').innerText = u.email || '-';
 			
+			// Iniciales
 			const initials = u.nombre_completo ? u.nombre_completo.split(' ').filter(n=>n).map(n=>n[0]).join('').toUpperCase() : "??";
-			document.getElementById('al-dash-initials').innerText = initials;
+			const elInit = document.getElementById('al-dash-initials');
+			if (elInit) elInit.innerText = initials;
 			
 			// Métricas Físicas
-			document.getElementById('al-dash-peso').innerText = u.peso || '0';
-			document.getElementById('al-dash-altura').innerText = u.altura || '0';
-			document.getElementById('al-dash-imc').innerText = u.imc || '0';
+			if (document.getElementById('al-dash-peso')) document.getElementById('al-dash-peso').innerText = u.peso || '0';
+			if (document.getElementById('al-dash-altura')) document.getElementById('al-dash-altura').innerText = u.altura || '0';
+			if (document.getElementById('al-dash-imc')) document.getElementById('al-dash-imc').innerText = u.imc || '0';
 
 			// Lógica de certificado médico
-			if (u.fecha_certificado) {
+			if (u.fecha_certificado && elPlan) {
 				const fCert = new Date(u.fecha_certificado);
 				const hoy = new Date();
 				const diff = (hoy - fCert) / (1000 * 60 * 60 * 24);
-				const vencido = diff > 365;
-				const statusCert = document.getElementById('al-dash-plan'); 
-				if (vencido && statusCert) {
-					statusCert.innerHTML += ` <span class="text-[8px] bg-red-600 text-black px-1 rounded ml-2">CERTIF. VENCIDO</span>`;
+				if (diff > 365) {
+					elPlan.innerHTML += ` <span class="text-[8px] bg-red-600 text-black font-black px-2 py-0.5 rounded ml-2 italic">CERTIF. VENCIDO</span>`;
 				}
 			}
 
-			// 2. GESTIÓN DE CRÉDITOS Y RESERVAS
+			// 2. GESTIÓN DE CRÉDITOS Y RESERVAS (Membresía)
 			const limite = u.plan?.clases_mensuales || 0;
 			const esFull = limite >= 99; 
 
-			// Recargamos reservas para asegurar datos frescos
+			// Sincronizamos reservas
 			const allReservas = await apiFetch('/reservas');
 			if (!allReservas.error && Array.isArray(allReservas)) {
 				state.reservas = allReservas; 
 			}
 			
 			const hoy = new Date();
-			const reservasMes = state.reservas.filter(r => {
+			const reservasMes = (state.reservas || []).filter(r => {
 				const fecha = new Date(r.fecha_clase + 'T00:00:00'); 
 				return (r.alumno_dni === u.dni || r.usuario_id === u.id) && 
 					fecha.getMonth() === hoy.getMonth() &&
@@ -248,39 +253,55 @@
 			const elCreditos = document.getElementById('al-dash-creditos');
 			if(elCreditos) {
 				elCreditos.innerHTML = esFull ? 
-				`<span class="text-2xl">∞</span>` : 
-				`<span class="${restantes <= 2 ? 'text-red-500' : 'text-white'}">${restantes}</span>`;
+					`<span class="text-2xl">∞</span>` : 
+					`<span class="${restantes <= 2 ? 'text-red-500' : 'text-white'}">${restantes}</span>`;
 			}
 
-			// 3. RESUMEN DE RUTINA
-			let resRutina = await apiFetch(`/rutinas/usuario/${u.id}`);
-			let rutina = (Array.isArray(resRutina) && resRutina.length > 0) ? resRutina[0] : (resRutina?.id ? resRutina : null);
+			// 3. RESUMEN DE RUTINA (Vinculado a openFichaTecnica)
+			try {
+				let resRutina = await apiFetch(`/rutinas/usuario/${u.id}`);
+				// Normalizamos la respuesta por si viene un array o un objeto
+				let rutina = (Array.isArray(resRutina) && resRutina.length > 0) ? resRutina[0] : (resRutina?.id ? resRutina : null);
 
-			const summaryContainer = document.getElementById('al-dash-rutina-summary'); 
-			const contentContainer = document.getElementById('al-dash-rutina-content');
+				const summaryContainer = document.getElementById('al-dash-rutina-summary'); 
+				const contentContainer = document.getElementById('al-dash-rutina-content');
 
-			if (summaryContainer && contentContainer) {
-				if (rutina) {
-					summaryContainer.classList.remove('hidden');
-					contentContainer.innerHTML = `
-						<p class="text-[12px] font-black italic text-white mb-1">${rutina.objetivo || 'Rutina Personalizada'}</p>
-						<p class="text-[10px] text-gray-500 uppercase font-bold">${(rutina.dias||[]).length} Días de Entrenamiento</p>
-					`;
-				} else {
-					summaryContainer.classList.add('hidden');
+				if (summaryContainer && contentContainer) {
+					if (rutina && rutina.nombre_grupo) {
+						summaryContainer.classList.remove('hidden');
+						summaryContainer.classList.add('flex'); // Aseguramos que sea flex para el justify-between
+						
+						contentContainer.innerHTML = `
+							<p class="text-[12px] font-black italic text-white mb-0.5 uppercase tracking-tighter">${rutina.nombre_grupo}</p>
+							<p class="text-[9px] text-red-600 font-black uppercase tracking-widest">${rutina.descripcion || 'PLAN PERSONALIZADO'}</p>
+						`;
+						
+						// Actualizamos el botón para que dispare la ficha
+						const btnVer = summaryContainer.querySelector('button');
+						if (btnVer) {
+							btnVer.innerText = "ENTRENAR AHORA";
+							btnVer.onclick = () => window.openFichaTecnica(u.id);
+						}
+					} else {
+						summaryContainer.classList.add('hidden');
+					}
 				}
+			} catch (err) {
+				console.error("Error al cargar rutina en dashboard:", err);
 			}
 			
-			// 4. PRÓXIMAS CLASES (CORREGIDO PARA MOSTRAR LA FECHA)
+			// 4. PRÓXIMAS CLASES
 			const upcoming = document.getElementById('al-dash-upcoming');
-			const misR = state.reservas.filter(r => r.alumno_dni === u.dni || r.usuario_id === u.id);
+			const misR = (state.reservas || []).filter(r => 
+				(r.alumno_dni === u.dni || r.usuario_id === u.id) && 
+				new Date(r.fecha_clase + 'T23:59:59') >= hoy
+			);
 			
-			// Ordenar por fecha cronológica
+			// Ordenar cronológicamente
 			misR.sort((a, b) => new Date(a.fecha_clase) - new Date(b.fecha_clase));
 
 			if (upcoming) {
 				upcoming.innerHTML = misR.length ? misR.map(r => {
-					// Formateamos la fecha (Ej: "lun. 26/01")
 					let fechaDisplay = "S/F";
 					if (r.fecha_clase) {
 						const [y, m, d] = r.fecha_clase.split('-');
@@ -289,18 +310,23 @@
 					}
 
 					return `
-					<div class="flex items-center justify-between p-3 bg-white/5 rounded-xl border border-red-600/10 mb-2">
-						<div>
-							<p class="text-[10px] font-black uppercase italic text-white">${r.clase_nombre}</p>
-							<p class="text-[9px] text-gray-500 font-bold uppercase">${fechaDisplay} - ${r.horario || ''}HS</p>
+						<div class="flex items-center justify-between p-4 bg-white/[0.03] rounded-2xl border border-white/5 mb-3 group hover:border-red-600/30 transition-all">
+							<div class="flex items-center gap-3">
+								<div class="w-8 h-8 rounded-lg bg-red-600/10 flex items-center justify-center text-red-500">
+									<i data-lucide="clock" class="w-4 h-4"></i>
+								</div>
+								<div>
+									<p class="text-[11px] font-black uppercase italic text-white leading-none mb-1">${r.clase_nombre}</p>
+									<p class="text-[9px] text-gray-500 font-bold uppercase tracking-widest">${fechaDisplay} @ ${r.horario || ''} HS</p>
+								</div>
+							</div>
+							<button onclick="cancelBooking(${r.id})" class="w-8 h-8 rounded-full flex items-center justify-center text-white/10 hover:text-red-600 hover:bg-red-600/10 transition-all">
+								<i data-lucide="trash-2" class="w-4 h-4"></i>
+							</button>
 						</div>
-						<button onclick="cancelBooking(${r.id})" class="text-[9px] text-red-500 hover:text-white transition-colors">
-							<i data-lucide="x" class="w-3 h-3"></i>
-						</button>
-					</div>
-				`}).join('') : '<p class="text-gray-500 italic text-[11px]">Sin reservas próximas.</p>';
+					`}).join('') : '<p class="text-gray-500 italic text-[11px] text-center py-4">No tienes reservas activas.</p>';
 				
-				if (typeof lucide !== 'undefined') lucide.createIcons();
+				if (window.lucide) lucide.createIcons();
 			}
 		}
 		
