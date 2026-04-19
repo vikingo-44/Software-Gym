@@ -1287,46 +1287,56 @@ window.openFichaTecnica = async function(alumnoId) {
         if (el) el.innerText = val;
     });
 
-    // Cargamos la rutina activa con todos sus detalles
+    // Cargamos la rutina activa
     let rutinaActiva = await apiFetch(`/rutinas/usuario/${alumnoId}`);
     
     if (rutinaActiva && !rutinaActiva.error) {
         const semIdActivo = state.routineWizard.semanaActivaFicha || 1;
         const esProg = rutinaActiva.tipo_id === 2 || rutinaActiva.tipo === 'progresiva';
         const objetivoId = `obj-group-0`;
-        
-        const tabsHTML = esProg ? `
-            <div class="flex gap-2 mb-8 bg-black/40 p-2 rounded-2xl border border-white/5 overflow-x-auto no-scrollbar">
-                ${[1, 2, 3, 4, 5].map(id => `
-                    <button onclick="window.changeFichaSemana(${id}, ${alumnoId})"
-                        class="flex-1 min-w-[100px] py-3 rounded-xl font-black italic uppercase text-[10px] transition-all
-                        ${semIdActivo === id ? 'bg-red-600 text-black shadow-[0_0_20px_rgba(255,0,0,0.3)]' : 'bg-white/5 text-white/30 border border-white/10'}">
-                        Semana ${id}
-                    </button>
-                `).join('')}
-            </div>` : '';
+
+        // --- LÓGICA DE SEMANAS DINÁMICAS ---
+        let tabsHTML = '';
+        if (esProg) {
+            // Buscamos cuál es la semana más alta que tiene cargada esta rutina
+            const todasLasSemanas = (rutinaActiva.dias || []).flatMap(d => 
+                (d.ejercicios || []).map(ex => ex.semana_id)
+            );
+            const maxSemana = todasLasSemanas.length > 0 ? Math.max(...todasLasSemanas) : 1;
+
+            tabsHTML = `
+                <div class="flex gap-2 mb-8 bg-black/40 p-2 rounded-2xl border border-white/5 overflow-x-auto no-scrollbar">
+                    ${Array.from({length: maxSemana}).map((_, i) => {
+                        const id = i + 1;
+                        return `
+                        <button onclick="window.changeFichaSemana(${id}, ${alumnoId})"
+                            class="flex-1 min-w-[100px] py-3 rounded-xl font-black italic uppercase text-[10px] transition-all
+                            ${semIdActivo === id ? 'bg-red-600 text-black shadow-[0_0_20px_rgba(255,0,0,0.3)]' : 'bg-white/5 text-white/30 border border-white/10'}">
+                            Semana ${id}
+                        </button>`;
+                    }).join('')}
+                </div>`;
+        }
 
         const diasHTML = (rutinaActiva.dias || []).map((d, dIdx) => {
             const diaId = `ficha-dia-${dIdx}`;
             const isOpen = state.routineWizard.openDays?.includes(diaId);
             
-            // Filtramos ejercicios por semana si es progresiva
             let ejerciciosFiltrados = d.ejercicios || [];
             if (esProg) {
                 ejerciciosFiltrados = ejerciciosFiltrados.filter(ex => ex.semana_id === semIdActivo);
             }
 
-            // Si es progresiva y este día no tiene ejercicios para esta semana, lo saltamos
             if (esProg && ejerciciosFiltrados.length === 0) return ''; 
 
             return `
             <div class="bg-white/2 rounded-[2rem] border border-white/5 overflow-hidden mb-4 transition-all">
-                <button onclick="window.toggleFichaElement('${diaId}')" class="w-full flex items-center justify-between p-6 group">
+                <button onclick="window.toggleFichaElement('${diaId}')" class="w-full flex items-center justify-between p-6 group text-left">
                     <div class="flex items-center gap-4">
                         <div class="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center font-black italic text-red-600">
                             ${d.nombre_dia.charAt(0).toUpperCase()}
                         </div>
-                        <div class="text-left">
+                        <div>
                             <span class="text-[13px] font-black italic uppercase text-white group-hover:text-red-500">${d.nombre_dia}</span>
                             <p class="text-[9px] text-white/30 font-bold uppercase tracking-widest">${ejerciciosFiltrados.length} Ejercicios</p>
                         </div>
@@ -1337,6 +1347,9 @@ window.openFichaTecnica = async function(alumnoId) {
                     ${ejerciciosFiltrados.map(ex => {
                         const cleanName = (ex.ejercicio_obj?.nombre || "Ejercicio").trim();
                         const series = ex.series_detalle || [];
+                        // Intentamos captar de ambos campos por las dudas de la DB
+                        const notaTexto = ex.comentario || ex.comentarios || "";
+
                         return `
                             <div class="flex flex-col border-l-2 border-red-600/30 pl-6 relative">
                                 <p class="text-[14px] font-black uppercase italic text-white mb-4">${cleanName}</p>
@@ -1350,13 +1363,16 @@ window.openFichaTecnica = async function(alumnoId) {
                                         </div>
                                     `).join('')}
                                 </div>
-                                ${ex.comentario ? `<p class="mt-3 text-[9px] text-white/30 italic font-medium">Nota: ${ex.comentario}</p>` : ''}
+                                ${notaTexto ? `<div class="mt-3 p-3 bg-red-600/5 rounded-xl border border-red-600/10">
+                                    <p class="text-[9px] text-white/60 italic font-medium"><span class="text-red-600 font-black not-italic mr-1">CONSIGNA:</span> ${notaTexto}</p>
+                                </div>` : ''}
                             </div>`;
                     }).join('')}
                 </div>
             </div>`;
         }).join('');
 
+        // --- RENDER FINAL CON VENCIMIENTO ---
         rutinaContainer.innerHTML = `
         <div class="col-span-2 mb-8 animate-in fade-in slide-in-from-bottom-4">
             <div class="bg-zinc-900/50 border border-white/10 rounded-[2.5rem] overflow-hidden shadow-2xl">
@@ -1365,7 +1381,13 @@ window.openFichaTecnica = async function(alumnoId) {
                         <div class="w-1.5 h-12 viking-bg-red rounded-full"></div>
                         <div class="text-left">
                             <h5 class="text-xl font-black italic uppercase text-white leading-none">${rutinaActiva.nombre_grupo || 'Rutina Actual'}</h5>
-                            <p class="text-[9px] text-white/40 font-bold italic mt-2 uppercase tracking-widest">OBJETIVO: ${rutinaActiva.descripcion || 'General'}</p>
+                            <div class="flex flex-col gap-1 mt-2">
+                                <p class="text-[9px] text-white/40 font-bold italic uppercase tracking-widest">OBJETIVO: ${rutinaActiva.descripcion || 'General'}</p>
+                                <p class="text-[9px] text-red-600 font-black uppercase tracking-widest flex items-center gap-1">
+                                    <i data-lucide="calendar" class="w-3 h-3"></i> 
+                                    VENCE EL: ${rutinaActiva.fecha_vencimiento ? new Date(rutinaActiva.fecha_vencimiento).toLocaleDateString('es-AR') : 'S/D'}
+                                </p>
+                            </div>
                         </div>
                     </div>
                     <div class="flex items-center gap-4">
