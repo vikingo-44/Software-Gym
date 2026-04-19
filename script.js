@@ -980,6 +980,22 @@ function removeFromCart(i) {
     updateCartUI(); 
 }
 
+window.openModalNewExercise = function() {
+    const selectGrupo = document.getElementById('lib-ex-grupo');
+    if (selectGrupo) {
+        selectGrupo.innerHTML = '<option value="">Seleccionar Grupo Muscular</option>';
+        // Usamos los grupos que cargaste en el inicio
+        const grupos = state.gruposMusculares || []; 
+        grupos.forEach(g => {
+            const opt = document.createElement('option');
+            opt.value = g.id;
+            opt.textContent = g.nombre.toUpperCase();
+            selectGrupo.appendChild(opt);
+        });
+    }
+    openModal('modal-nuevo-ejercicio');
+};
+
 // --- ACTUALIZACIÓN DE MÉTODO DE PAGO (CON ACTUALIZACIÓN DE PRECIOS DINÁMICOS) ---
 window.setPaymentMethod = function(method) {
     const inputOculto = document.getElementById('metodo-pago');
@@ -1501,22 +1517,27 @@ window.renderWizardStep = function() {
             <div class="flex-1 p-10 lg:p-20 overflow-y-auto custom-scrollbar animate-in zoom-in-95">
                 <div class="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-12 text-left">
                     <div class="col-span-full space-y-2">
-                        <label class="text-[10px] font-black text-red-600 uppercase tracking-widest italic ml-2">Nombre del Plan</label>
+                        <label class="text-[10px] font-black text-red-600 uppercase tracking-widest italic ml-2">Nombre del Plan (Ej: Volumen Vikingo)</label>
                         <input type="text" value="${state.routineWizard.nombre_grupo}" oninput="state.routineWizard.nombre_grupo = this.value" class="viking-input !h-16 text-2xl font-black italic uppercase">
                     </div>
-                    
+
+                    <div class="col-span-full space-y-2">
+                        <label class="text-[10px] font-black text-white/30 uppercase tracking-widest italic ml-2">Objetivo o Resumen Técnico</label>
+                        <textarea oninput="state.routineWizard.objetivo = this.value" class="viking-input h-32 py-5 text-sm font-medium" placeholder="Describe el enfoque del ciclo (ej: Enfoque en hipertrofia sarcoplasmática)...">${state.routineWizard.objetivo || ''}</textarea>
+                    </div>
+
                     <div class="space-y-2">
                         <label class="text-[10px] font-black text-white/30 uppercase tracking-widest italic ml-2">Metodología de Carga</label>
                         <div class="flex gap-4">
                             <button onclick="state.routineWizard.tipo = 'normal'; state.routineWizard.tipo_id = 1; window.renderWizardStep();" 
                                 class="flex-1 h-14 rounded-2xl border-2 font-black text-[10px] transition-all 
                                 ${state.routineWizard.tipo_id === 1 ? 'bg-red-600 text-black border-red-600 shadow-lg shadow-red-900/20' : 'bg-white/5 border-white/5 text-white/30'}">
-                                ESTÁNDAR (1 SEM)
+                                ESTÁNDAR
                             </button>
                             <button onclick="state.routineWizard.tipo = 'progresiva'; state.routineWizard.tipo_id = 2; state.routineWizard.cantSemanas = state.routineWizard.cantSemanas || 4; window.updateRoutineVencimiento(); window.renderWizardStep();" 
                                 class="flex-1 h-14 rounded-2xl border-2 font-black text-[10px] transition-all
                                 ${state.routineWizard.tipo_id === 2 ? 'bg-amber-600 text-black border-amber-600 shadow-lg shadow-amber-900/20' : 'bg-white/5 border-white/5 text-white/30'}">
-                                PROGRESIVA (CICLOS)
+                                PROGRESIVA
                             </button>
                         </div>
                     </div>
@@ -1535,8 +1556,8 @@ window.renderWizardStep = function() {
                     </div>
 
                     <div class="space-y-2">
-                        <label class="text-[10px] font-black text-white/30 uppercase tracking-widest italic ml-2">Fecha de Vencimiento (Auto)</label>
-                        <input type="date" id="wizard-vencimiento" value="${state.routineWizard.vencimiento}" oninput="state.routineWizard.vencimiento = this.value" class="viking-input !h-14 border-amber-600/20">
+                        <label class="text-[10px] font-black text-white/30 uppercase tracking-widest italic ml-2">Fecha de Vencimiento (Automática)</label>
+                        <input type="date" id="wizard-vencimiento" value="${state.routineWizard.vencimiento}" oninput="state.routineWizard.vencimiento = this.value" class="viking-input !h-14">
                     </div>
 
                     <div class="space-y-2">
