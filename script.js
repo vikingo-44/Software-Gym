@@ -132,7 +132,8 @@
 				clases: document.getElementById('nav-clases'),
 				facturacion: document.getElementById('nav-cobrar'),
 				acceso: document.getElementById('nav-acceso-virtual'),
-				sucursales: document.getElementById('nav-sucursales') // <-- AGREGADO
+				sucursales: document.getElementById('nav-sucursales'),
+				rutinas: document.getElementById('nav-rutinas') // <-- AGREGADO
 			};
 
 			// RESET: Contenedores a BLOCK
@@ -155,7 +156,7 @@
 				});
 				
 				// Escondemos los botones restringidos (Sucursales, Planes, Facturación, etc.)
-				const itemsParaOcultar = ['planes', 'facturacion', 'sucursales', 'alumnos'];
+				const itemsParaOcultar = ['planes', 'facturacion', 'sucursales', 'alumnos', 'clases', 'rutinas'];
 				itemsParaOcultar.forEach(key => {
 					if(itemsMenu[key]) itemsMenu[key].style.setProperty('display', 'none', 'important');
 				});
