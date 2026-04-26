@@ -5844,6 +5844,52 @@ if (editorForm) {
 			}
 		}
 
+		// Ponela justo arriba de window.switchView
+		async function crearFeriadoVikingo() {
+			console.log("🛡️ Intentando crear día especial...");
+			const fechaEl = document.getElementById('feriado-fecha');
+			const motivoEl = document.getElementById('feriado-motivo');
+
+			if (!fechaEl || !motivoEl) return;
+
+			const fecha = fechaEl.value;
+			const motivo = motivoEl.value;
+
+			if (!fecha || !motivo) {
+				if (typeof showVikingToast === 'function') showVikingToast("Completá fecha y motivo, fiera", true);
+				else alert("Completá fecha y motivo");
+				return;
+			}
+
+			try {
+				// Usamos la ruta sin el /api/ duplicado
+				const res = await apiFetch('/feriados', 'POST', {
+					fecha: fecha,
+					motivo: motivo,
+					abierto: false
+				});
+
+				if (!res.error) {
+					if (typeof showVikingToast === 'function') showVikingToast("¡Día especial marcado!");
+					
+					fechaEl.value = "";
+					motivoEl.value = "";
+					
+					// Recargamos los datos del estado
+					await loadFeriados();
+					// Refrescamos el calendario
+					renderCalendar();
+				} else {
+					alert("Error: " + res.error);
+				}
+			} catch (err) {
+				console.error("Error en crearFeriadoVikingo:", err);
+			}
+		}
+
+		// La asignamos a window para que el HTML la vea sí o si
+		window.crearFeriadoVikingo = crearFeriadoVikingo;
+
         // --- PUNTO 3: Dashboard Específico Profesor ---
         async function loadProfessorDashboard() {
 			if (!state.user || state.user.rol_nombre !== "Profesor") return;
