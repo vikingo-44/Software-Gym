@@ -5924,6 +5924,76 @@ if (editorForm) {
 		}
 		window.crearClaseFeriadoVikinga = crearClaseFeriadoVikinga;
 
+		// 1. FUNCIÓN PARA LLENAR LOS SELECTS (Llamala al abrir el panel)
+		function popularSelectsFeriado(fila) {
+			const selectNombre = fila.querySelector('.clase-feriado-nombre');
+			const selectHora = fila.querySelector('.clase-feriado-hora');
+			const selectProf = fila.querySelector('.clase-feriado-profesor');
+
+			// Llenar Actividades (sacadas de tus clases configuradas)
+			const actividades = [...new Set(state.clases.map(c => c.nombre))];
+			selectNombre.innerHTML = actividades.map(a => `<option value="${a}">${a}</option>`).join('');
+
+			// Llenar Horarios (Cada media hora, igual que tu grilla)
+			let opcionesHora = "";
+			for(let h=7; h<=21.5; h+=0.5) {
+				const label = h % 1 === 0 ? `${h}:00` : `${Math.floor(h)}:30`;
+				opcionesHora += `<option value="${h}">${label}</option>`;
+			}
+			selectHora.innerHTML = opcionesHora;
+
+			// Llenar Profesores (de tu state.profesores)
+			selectProf.innerHTML = state.profesores.map(p => `<option value="${p.nombre_completo}">${p.nombre_completo}</option>`).join('');
+		}
+
+		// 2. FUNCIÓN PARA AGREGAR MÁS FILAS (El "+")
+		window.agregarFilaClaseFeriado = function() {
+			const contenedor = document.getElementById('contenedor-filas-feriado');
+			const primeraFila = contenedor.querySelector('.fila-clase-feriado');
+			const nuevaFila = primeraFila.cloneNode(true);
+			
+			// Limpiamos o ajustamos si hace falta y agregamos
+			contenedor.appendChild(nuevaFila);
+			if (window.lucide) lucide.createIcons();
+		};
+
+		// 3. GUARDADO MASIVO (Manda todas las filas al servidor)
+		window.guardarClasesFeriadoBulk = async function() {
+			const fecha = document.getElementById('feriado-fecha').value;
+			if (!fecha) return showVikingToast("Primero elegí la fecha", true);
+
+			const filas = document.querySelectorAll('.fila-clase-feriado');
+			let errores = 0;
+
+			for (let fila of filas) {
+				const payload = {
+					fecha: fecha,
+					nombre: fila.querySelector('.clase-feriado-nombre').value,
+					horario: parseFloat(fila.querySelector('.clase-feriado-hora').value),
+					profesor: fila.querySelector('.clase-feriado-profesor').value, // Asegurate de tener este campo en el modelo
+					capacidad_max: 40,
+					color: "#FF0000"
+				};
+
+				const res = await apiFetch('/clases-feriado', 'POST', payload);
+				if (res.error) errores++;
+			}
+
+			if (errores === 0) {
+				showVikingToast("¡Todas las clases cargadas!");
+				await loadClasesFeriado();
+				renderCalendar();
+			} else {
+				showVikingToast(`Se cargaron algunas, pero hubo ${errores} errores`, true);
+			}
+		};
+
+		// Ejecutamos la carga inicial de los selects al cargar la página o abrir el panel
+		document.addEventListener('DOMContentLoaded', () => {
+			const filaInicial = document.querySelector('.fila-clase-feriado');
+			if(filaInicial) popularSelectsFeriado(filaInicial);
+		});
+
         // --- PUNTO 3: Dashboard Específico Profesor ---
         async function loadProfessorDashboard() {
 			if (!state.user || state.user.rol_nombre !== "Profesor") return;
