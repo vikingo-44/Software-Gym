@@ -1026,7 +1026,7 @@ def book_clase(data: ReservaCreate, db: Session = Depends(database.get_db)):
             # Usamos 'fecha_vencimiento' restándole el tiempo contratado, 
             # o si tenés un campo 'fecha_pago' o 'ultimo_pago', usalo aquí.
             # Como salvavidas, si no hay fecha, usamos el primer día del mes de la clase.
-            fecha_inicio_base = user.fecha_pago if hasattr(user, 'fecha_pago') and user.fecha_pago else date(fecha_objeto.year, fecha_objeto.month, 1)
+            fecha_inicio_base = user.fecha_ultima_renovacion if hasattr(user, 'fecha_ultima_renovacion') and user.fecha_ultima_renovacion else date(fecha_objeto.year, fecha_objeto.month, 1)
 
             # 2. Calculamos el rango del mes actual del alumno basado en la fecha de la clase que quiere reservar.
             # Esto asegura que si reserva para el mes que viene, se valide contra el cupo del mes que viene.
