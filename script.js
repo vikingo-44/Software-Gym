@@ -2539,7 +2539,23 @@ if (editorForm) {
 			}
 
 			// 10. Cargas de datos adicionales según sección
-			if (view === 'calendario' && typeof renderCalendar === 'function') renderCalendar();
+			if (view === 'calendario' && typeof renderCalendar === 'function') {
+                renderCalendar();
+
+                // --- LÓGICA DE VISIBILIDAD PARA EL PANEL DE FERIADOS ---
+                const isAdmin = (state.user?.rol_nombre === "Administrador" || state.user?.rol_nombre === "Supervisor");
+                const panelFeriados = document.getElementById('admin-feriados-panel');
+                
+                if (panelFeriados) {
+                    if (isAdmin) {
+                        panelFeriados.classList.remove('hidden');
+                        panelFeriados.style.setProperty('display', 'block', 'important');
+                    } else {
+                        panelFeriados.classList.add('hidden');
+                        panelFeriados.style.setProperty('display', 'none', 'important');
+                    }
+                }
+            }
 			if (view === 'cobrar' && typeof renderCobrar === 'function') renderCobrar();
 			if (view === 'acceso-virtual' && typeof renderAccesos === 'function') renderAccesos();
 			
