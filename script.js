@@ -5807,7 +5807,8 @@ if (editorForm) {
 
 		async function loadFeriados() {
 			try {
-				const data = await apiFetch('/api/feriados');
+				// QUITAMOS el /api porque apiFetch ya lo pone
+				const data = await apiFetch('/feriados'); 
 				state.feriados = data || [];
 			} catch (e) {
 				console.error("Error cargando feriados:", e);
@@ -5817,8 +5818,8 @@ if (editorForm) {
 
 		async function loadClasesFeriado() {
 			try {
-				// Traemos todas las clases especiales cargadas
-				const data = await apiFetch('/api/clases-feriado'); 
+				// QUITAMOS el /api aquí también
+				const data = await apiFetch('/clases-feriado'); 
 				state.clasesFeriado = data || [];
 			} catch (e) {
 				console.error("Error cargando clases de feriado:", e);
