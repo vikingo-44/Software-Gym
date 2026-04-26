@@ -3094,7 +3094,6 @@ if (editorForm) {
 			
         async function initApp() {
 			try {
-				// Cargamos TODO en paralelo para que la App vuele
 				await Promise.all([
 					fetchAlumnos(), 
 					loadStaff(), 
@@ -3105,15 +3104,17 @@ if (editorForm) {
 					loadDashboard(), 
 					loadMusculacionMetadata(), 
 					loadCaja(),
-					loadFeriados(),       // <--- NUEVA
-					loadClasesFeriado()   // <--- NUEVA
+					// Agregamos .catch al final de cada una para que no traben el resto
+					loadFeriados().catch(e => console.error("Error en feriados, sigo igual...")), 
+					loadClasesFeriado().catch(e => console.error("Error en clases feriado, sigo igual..."))
 				]);
 				
-				// Una vez que tenemos todos los datos, dibujamos el calendario
+				// Esto se va a ejecutar SI O SI ahora
 				renderCalendar();
-				
 			} catch (error) {
-				console.error("Error en la carga inicial:", error);
+				console.error("Error crítico:", error);
+				// Salvavidas final:
+				renderCalendar();
 			}
 		}
 

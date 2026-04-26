@@ -174,6 +174,13 @@ class ClaseFeriado(Base):
     capacidad_max = Column(Integer, default=40)
     color = Column(String, default="#FF0000") # Estética Dark Premium
 
+class DiaEspecial(Base):
+    __tablename__ = "dias_especiales"
+    id = Column(Integer, primary_key=True)
+    fecha = Column(Date, unique=True, nullable=False) # La fecha del feriado (ej: 2026-05-25)
+    motivo = Column(String)                           # Nombre del feriado
+    abierto = Column(Boolean, default=True)           # Por si querés marcarlo pero que el gym abra igual
+
 # =========================================
 # MÓDULO DE MUSCULACIÓN VIKINGA (PRO)
 # =========================================
