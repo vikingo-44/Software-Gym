@@ -434,6 +434,7 @@ class ReservaCreate(BaseModel):
     clase_id: int
     horario: float
     dia_semana: int
+    fecha_clase: str
 
 class SucursalCreate(BaseModel):
     sucursal: str
@@ -972,22 +973,17 @@ def get_alumno_pagos(id: int, db: Session = Depends(database.get_db)):
 # --- RESERVAS ---
 @app.get("/api/reservas", tags=["Reservas"])
 def get_reservas(fecha: Optional[str] = None, db: Session = Depends(database.get_db)):
-    """
-    Obtiene las reservas. Si se pasa el parámetro ?fecha=YYYY-MM-DD, 
-    filtra solo las de ese día específico.
-    """
     query = db.query(models.Reserva).options(
         joinedload(models.Reserva.usuario),
         joinedload(models.Reserva.clase)
     )
     
     if fecha:
-        # Intentamos convertir el string a objeto date de Python
         try:
             target_date = datetime.strptime(fecha, "%Y-%m-%d").date()
             query = query.filter(models.Reserva.fecha_reserva == target_date)
         except ValueError:
-            pass # Si el formato es malo, devolvemos todo por defecto
+            pass 
 
     res = query.all()
     
@@ -995,6 +991,7 @@ def get_reservas(fecha: Optional[str] = None, db: Session = Depends(database.get
         "id": r.id,
         "usuario_id": r.usuario_id,
         "clase_id": r.clase_id,
+        # Importante: devolvemos la fecha para que el filter del JS funcione
         "fecha_clase": r.fecha_reserva.isoformat() if r.fecha_reserva else None,
         "horario": r.horario,       
         "dia_semana": r.dia_semana, 
@@ -1004,62 +1001,67 @@ def get_reservas(fecha: Optional[str] = None, db: Session = Depends(database.get
 
 @app.post("/api/reservas", tags=["Reservas"])
 def book_clase(data: ReservaCreate, db: Session = Depends(database.get_db)):
+    # 1. Convertimos la fecha que viene de la Web a objeto Date de Python
+    try:
+        fecha_objeto = datetime.strptime(data.fecha_clase, "%Y-%m-%d").date()
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Formato de fecha inválido. Use YYYY-MM-DD")
+
     user = db.query(models.Usuario).options(joinedload(models.Usuario.plan)).filter(models.Usuario.id == data.usuario_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
 
-    # --- VALIDACIÓN DE PLAN VENCIDO PARA RESERVAS ---
+    # --- VALIDACIÓN DE PLAN VENCIDO ---
     if user.fecha_vencimiento and user.fecha_vencimiento < date.today():
-        raise HTTPException(
-            status_code=400, 
-            detail="Tu membresía ha vencido. No puedes realizar reservas."
-        )
+        raise HTTPException(status_code=400, detail="Tu membresía ha vencido. No puedes realizar reservas.")
 
+    # --- VALIDACIÓN LÍMITE MENSUAL ---
     if user.plan:
         limite_mensual = user.plan.clases_mensuales
         if limite_mensual < 999:
-            mes_actual = date.today().month
-            an_actual = date.today().year
+            # Usamos el mes y año de la FECHA DE LA CLASE, no de hoy
+            mes_clase = fecha_objeto.month
+            an_clase = fecha_objeto.year
             
             count_reservas = db.query(models.Reserva).filter(
                 models.Reserva.usuario_id == user.id,
-                extract('month', models.Reserva.fecha_reserva) == mes_actual,
-                extract('year', models.Reserva.fecha_reserva) == an_actual
+                extract('month', models.Reserva.fecha_reserva) == mes_clase,
+                extract('year', models.Reserva.fecha_reserva) == an_clase
             ).count()
             
             if count_reservas >= limite_mensual:
-                raise HTTPException(
-                    status_code=400, 
-                    detail=f"Has alcanzado tu límite de {limite_mensual} clases mensuales."
-                )
+                raise HTTPException(status_code=400, detail=f"Límite de {limite_mensual} clases mensuales alcanzado para este período.")
 
+    # --- VALIDACIÓN DE DUPLICADOS (Ahora por fecha específica) ---
     exists = db.query(models.Reserva).filter(
         models.Reserva.usuario_id == data.usuario_id,
         models.Reserva.clase_id == data.clase_id,
         models.Reserva.horario == data.horario,
-        models.Reserva.dia_semana == data.dia_semana
+        models.Reserva.fecha_reserva == fecha_objeto # <--- Filtro por fecha
     ).first()
     
     if exists:
-        raise HTTPException(status_code=400, detail="Ya tienes reservado este turno específico.")
+        raise HTTPException(status_code=400, detail="Ya tienes reservado este turno en esta fecha.")
     
     clase = db.query(models.Clase).filter(models.Clase.id == data.clase_id).first()
     if not clase:
         raise HTTPException(status_code=404, detail="Clase no encontrada")
         
+    # --- VALIDACIÓN DE CUPO (Ahora por fecha específica) ---
     cupo_actual = db.query(models.Reserva).filter(
         models.Reserva.clase_id == data.clase_id,
         models.Reserva.horario == data.horario,
-        models.Reserva.dia_semana == data.dia_semana
+        models.Reserva.fecha_reserva == fecha_objeto # <--- Solo contamos las de ese día
     ).count()
     
     if cupo_actual >= clase.capacidad_max:
-        raise HTTPException(status_code=400, detail="Este horario no tiene cupos disponibles")
+        raise HTTPException(status_code=400, detail="Este horario no tiene cupos disponibles para esta fecha")
 
+    # --- GUARDADO ---
     new_res = models.Reserva(
         usuario_id=data.usuario_id,
         clase_id=data.clase_id,
-        fecha_reserva=date.today(),
+        fecha_reserva=fecha_objeto, # <--- USAMOS LA FECHA QUE VIENE DE LA WEB
         horario=data.horario,       
         dia_semana=data.dia_semana 
     )
@@ -1068,13 +1070,9 @@ def book_clase(data: ReservaCreate, db: Session = Depends(database.get_db)):
         db.add(new_res)
         db.commit()
         return {"status": "success"}
-    except IntegrityError:
-        db.rollback()
-        raise HTTPException(status_code=400, detail="Error de base de datos.")
     except Exception as e:
         db.rollback()
-        logger.error(f"Error general al reservar: {e}")
-        raise HTTPException(status_code=500, detail="Error interno al guardar la reserva.")
+        raise HTTPException(status_code=500, detail="Error interno al guardar.")
 
 @app.delete("/api/reservas/{id}", tags=["Reservas"])
 def cancel_reserva(id: int, db: Session = Depends(database.get_db)):

@@ -112,11 +112,18 @@ class Reserva(Base):
     id = Column(Integer, primary_key=True)
     usuario_id = Column(Integer, ForeignKey("usuarios.id"))
     clase_id = Column(Integer, ForeignKey("clases.id"))
-    fecha_reserva = Column(Date, default=datetime.date.today)
+    fecha_reserva = Column(Date, default=datetime.date.today) # Se mantiene como Date
     horario = Column(Float)      
     dia_semana = Column(Integer) 
     usuario = relationship("Usuario", back_populates="reservas")
     clase = relationship("Clase", back_populates="reservas")
+
+class ReservaCreate(BaseModel):
+    usuario_id: int
+    clase_id: int
+    horario: float
+    dia_semana: int
+    fecha_clase: str # Este es el campo que manda el JS
 
 class Stock(Base):
     __tablename__ = "stock"
