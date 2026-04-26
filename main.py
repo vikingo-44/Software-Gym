@@ -12,6 +12,7 @@ from sqlalchemy.orm.attributes import flag_modified
 from typing import List, Optional, Union
 from pydantic import BaseModel, ConfigDict
 from datetime import datetime, timedelta, date
+from dateutil.relativedelta import relativedelta
 
 # Librerías para Seguridad (JWT y Hashing de contraseñas)
 from jose import JWTError, jwt
@@ -1015,22 +1016,39 @@ def book_clase(data: ReservaCreate, db: Session = Depends(database.get_db)):
     if user.fecha_vencimiento and user.fecha_vencimiento < date.today():
         raise HTTPException(status_code=400, detail="Tu membresía ha vencido. No puedes realizar reservas.")
 
-    # --- VALIDACIÓN LÍMITE MENSUAL ---
+    # --- VALIDACIÓN DE CUPO MENSUAL POR CICLO PERSONAL ---
     if user.plan:
         limite_mensual = user.plan.clases_mensuales
+        
+        # Si el plan es ilimitado (ej: 999), saltamos la validación
         if limite_mensual < 999:
-            # Usamos el mes y año de la FECHA DE LA CLASE, no de hoy
-            mes_clase = fecha_objeto.month
-            an_clase = fecha_objeto.year
+            # 1. Determinamos la fecha de inicio del ciclo del alumno.
+            # Usamos 'fecha_vencimiento' restándole el tiempo contratado, 
+            # o si tenés un campo 'fecha_pago' o 'ultimo_pago', usalo aquí.
+            # Como salvavidas, si no hay fecha, usamos el primer día del mes de la clase.
+            fecha_inicio_base = user.fecha_pago if hasattr(user, 'fecha_pago') and user.fecha_pago else date(fecha_objeto.year, fecha_objeto.month, 1)
+
+            # 2. Calculamos el rango del mes actual del alumno basado en la fecha de la clase que quiere reservar.
+            # Esto asegura que si reserva para el mes que viene, se valide contra el cupo del mes que viene.
+            delta_meses = (fecha_objeto.year - fecha_inicio_base.year) * 12 + (fecha_objeto.month - fecha_inicio_base.month)
             
+            # El ciclo actual empieza el día X del mes de la clase
+            inicio_ciclo = fecha_inicio_base + relativedelta(months=delta_meses)
+            # El ciclo termina el día X del mes siguiente
+            fin_ciclo = inicio_ciclo + relativedelta(months=1)
+
+            # 3. Contamos las reservas realizadas ÚNICAMENTE dentro de ese mes personal
             count_reservas = db.query(models.Reserva).filter(
                 models.Reserva.usuario_id == user.id,
-                extract('month', models.Reserva.fecha_reserva) == mes_clase,
-                extract('year', models.Reserva.fecha_reserva) == an_clase
+                models.Reserva.fecha_reserva >= inicio_ciclo,
+                models.Reserva.fecha_reserva < fin_ciclo
             ).count()
             
             if count_reservas >= limite_mensual:
-                raise HTTPException(status_code=400, detail=f"Límite de {limite_mensual} clases mensuales alcanzado para este período.")
+                raise HTTPException(
+                    status_code=400, 
+                    detail=f"Límite alcanzado: Tenés {limite_mensual} clases por mes. Ciclo actual: {inicio_ciclo.strftime('%d/%m')} al {fin_ciclo.strftime('%d/%m')}."
+                )
 
     # --- VALIDACIÓN DE DUPLICADOS (Ahora por fecha específica) ---
     exists = db.query(models.Reserva).filter(
