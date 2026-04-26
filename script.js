@@ -5930,11 +5930,17 @@ if (editorForm) {
 			const selectHora = fila.querySelector('.clase-feriado-hora');
 			const selectProf = fila.querySelector('.clase-feriado-profesor');
 
-			// Llenar Actividades (sacadas de tus clases configuradas)
-			const actividades = [...new Set(state.clases.map(c => c.nombre))];
-			selectNombre.innerHTML = actividades.map(a => `<option value="${a}">${a}</option>`).join('');
+			if (!selectNombre || !selectHora || !selectProf) return;
 
-			// Llenar Horarios (Cada media hora, igual que tu grilla)
+			// 1. Llenar Actividades (Filtramos nombres únicos de state.clases)
+			if (state.clases && state.clases.length > 0) {
+				const actividades = [...new Set(state.clases.map(c => c.nombre))];
+				selectNombre.innerHTML = actividades.map(a => `<option value="${a}">${a}</option>`).join('');
+			} else {
+				selectNombre.innerHTML = '<option value="">Sin clases cargadas</option>';
+			}
+
+			// 2. Llenar Horarios (Este ya te funcionaba, lo mantenemos)
 			let opcionesHora = "";
 			for(let h=7; h<=21.5; h+=0.5) {
 				const label = h % 1 === 0 ? `${h}:00` : `${Math.floor(h)}:30`;
@@ -5942,21 +5948,47 @@ if (editorForm) {
 			}
 			selectHora.innerHTML = opcionesHora;
 
-			// Llenar Profesores (de tu state.profesores)
-			selectProf.innerHTML = state.profesores.map(p => `<option value="${p.nombre_completo}">${p.nombre_completo}</option>`).join('');
+			// 3. Llenar Profesores (Combinamos profesores y administrativos si hace falta)
+			const staff = [...(state.profesores || []), ...(state.administrativos || [])];
+			if (staff.length > 0) {
+				selectProf.innerHTML = staff.map(p => `<option value="${p.nombre_completo}">${p.nombre_completo}</option>`).join('');
+			} else {
+				selectProf.innerHTML = '<option value="">Sin staff cargado</option>';
+			}
 		}
+
+		window.toggleMenuFeriados = function() {
+			const content = document.getElementById('menu-feriados-content');
+			if (!content) return;
+			
+			content.classList.toggle('hidden');
+			
+			// Si lo estamos mostrando, llenamos los selects con la data fresca
+			if (!content.classList.contains('hidden')) {
+				const filas = document.querySelectorAll('.fila-clase-feriado');
+				filas.forEach(f => popularSelectsFeriado(f));
+				if (window.lucide) lucide.createIcons();
+			}
+		};
 
 		// 2. FUNCIÓN PARA AGREGAR MÁS FILAS (El "+")
 		window.agregarFilaClaseFeriado = function() {
 			const contenedor = document.getElementById('contenedor-filas-feriado');
-			const primeraFila = contenedor.querySelector('.fila-clase-feriado');
-			const nuevaFila = primeraFila.cloneNode(true);
+			const filasActuales = contenedor.querySelectorAll('.fila-clase-feriado');
+			const ultimaFila = filasActuales[filasActuales.length - 1];
 			
-			// Limpiamos o ajustamos si hace falta y agregamos
+			if (!ultimaFila) return;
+
+			const nuevaFila = ultimaFila.cloneNode(true);
+			
+			// Agregamos la fila al DOM
 			contenedor.appendChild(nuevaFila);
+			
+			// La poblamos específicamente para que traiga los selects llenos
+			popularSelectsFeriado(nuevaFila);
+			
 			if (window.lucide) lucide.createIcons();
 		};
-
 		// 3. GUARDADO MASIVO (Manda todas las filas al servidor)
 		window.guardarClasesFeriadoBulk = async function() {
 			const fecha = document.getElementById('feriado-fecha').value;
