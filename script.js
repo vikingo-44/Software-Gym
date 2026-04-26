@@ -5890,6 +5890,40 @@ if (editorForm) {
 		// La asignamos a window para que el HTML la vea sí o si
 		window.crearFeriadoVikingo = crearFeriadoVikingo;
 
+		async function crearClaseFeriadoVikinga() {
+			// Usamos la misma fecha que está arriba en el selector de feriados
+			const fecha = document.getElementById('feriado-fecha').value;
+			const nombre = document.getElementById('clase-feriado-nombre').value;
+			const horario = document.getElementById('clase-feriado-hora').value;
+			const cupo = document.getElementById('clase-feriado-cupo').value;
+
+			if (!fecha || !nombre || !horario) {
+				showVikingToast("Falta fecha, nombre u horario", true);
+				return;
+			}
+
+			const res = await apiFetch('/clases-feriado', 'POST', {
+				fecha: fecha,
+				nombre: nombre,
+				horario: parseFloat(horario),
+				capacidad_max: parseInt(cupo),
+				color: "#FF0000" // O el color que prefieras
+			});
+
+			if (!res.error) {
+				showVikingToast("¡Clase especial cargada!");
+				document.getElementById('clase-feriado-nombre').value = "";
+				document.getElementById('clase-feriado-hora').value = "";
+				
+				// Recargamos y dibujamos
+				await loadClasesFeriado();
+				renderCalendar();
+			} else {
+				showVikingToast("Error: " + res.error, true);
+			}
+		}
+		window.crearClaseFeriadoVikinga = crearClaseFeriadoVikinga;
+
         // --- PUNTO 3: Dashboard Específico Profesor ---
         async function loadProfessorDashboard() {
 			if (!state.user || state.user.rol_nombre !== "Profesor") return;

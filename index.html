@@ -1024,6 +1024,34 @@
 							<div id="lista-feriados-activos" class="flex flex-wrap gap-2 text-white">
 								</div>
 						</div>
+						<div class="p-6 border-t border-white/10 bg-black/40 space-y-4">
+									<h4 class="text-[10px] font-black text-red-500 uppercase tracking-widest italic">Programar Clase Excepcional</h4>
+									<div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+										<div class="flex flex-col gap-2">
+											<label class="text-[10px] font-black text-white/40 ml-2">ACTIVIDAD</label>
+											<input type="text" id="clase-feriado-nombre" placeholder="Ej: WOD ESPECIAL" 
+												class="bg-zinc-900 border border-white/10 rounded-xl p-3 text-white text-xs outline-none focus:border-red-600">
+										</div>
+										<div class="flex flex-col gap-2">
+											<label class="text-[10px] font-black text-white/40 ml-2">HORA (Ej: 10.5)</label>
+											<input type="number" step="0.5" id="clase-feriado-hora" placeholder="10.5" 
+												class="bg-zinc-900 border border-white/10 rounded-xl p-3 text-white text-xs outline-none focus:border-red-600">
+										</div>
+										<div class="flex flex-col gap-2">
+											<label class="text-[10px] font-black text-white/40 ml-2">CUPO</label>
+											<input type="number" id="clase-feriado-cupo" value="40" 
+												class="bg-zinc-900 border border-white/10 rounded-xl p-3 text-white text-xs outline-none focus:border-red-600">
+										</div>
+										<div class="flex flex-col gap-2">
+											<label class="text-[10px] font-black text-white/40 opacity-0">Acción</label>
+											<button onclick="crearClaseFeriadoVikinga()" 
+												class="h-[42px] bg-white text-black font-black rounded-xl hover:bg-gray-200 transition-all uppercase italic text-[10px]">
+												Cargar Clase
+											</button>
+										</div>
+									</div>
+								</div>
+							</div>
 					</div>
 				</div>
 
