@@ -1,4 +1,3 @@
-
         // ==========================================
 		// 1. CONFIGURACIÓN MAESTRA (PEGAR AL INICIO DE TU SCRIPT)
 		// ==========================================
@@ -75,34 +74,6 @@
 			accesos: []
 		};
 		window.state = state;
-
-		// window.toggleCamposCompra = function(tipo) {
-			// const camposCompra = document.getElementById('campos-compra-mercaderia');
-			// const containerDesc = document.getElementById('container-desc-gasto');
-			// const descInput = document.getElementById('input-desc-gasto');
-			// const productoSelect = document.getElementById('input-producto-stock');
-
-			// if (tipo === 'Compra') {
-				// if (camposCompra) camposCompra.classList.remove('hidden');
-				// if (containerDesc) containerDesc.classList.add('opacity-40');
-				// if (descInput) descInput.required = false;
-				
-				// Obtenemos el stock del estado global
-				// const currentStock = window.state?.stock || [];
-
-				// if (currentStock && Array.isArray(currentStock) && currentStock.length > 0) {
-					// productoSelect.innerHTML = currentStock.map(p => 
-						// `<option value="${p.id}">${p.nombre_producto.toUpperCase()} (Stock: ${p.stock_actual})</option>`
-					// ).join('');
-				// } else {
-					// productoSelect.innerHTML = '<option value="">No hay productos cargados en Stock</option>';
-				// }
-			// } else {
-				// if (camposCompra) camposCompra.classList.add('hidden');
-				// if (containerDesc) containerDesc.classList.remove('opacity-40');
-				// if (descInput) descInput.required = true;
-			// }
-		// };
 
         function showVikingToast(msg, error = false) {
             const toast = document.getElementById('viking-toast');
@@ -682,39 +653,45 @@
                             const colores = getTextColorClass(c.color || '#FF0000');
 
                             horarios.forEach(slot => {
-                                const hKey = slot.horario.toString().replace('.', '_');
-                                const cell = document.getElementById(`cell-${slot.dia}-${hKey}`);
-                                
-                                if (cell) {
-                                    const reservasArray = Array.isArray(state.reservas) ? state.reservas : [];
-                                    const cupoMax = c.capacidad_max || 40;
-                                    const cupoActual = reservasArray.filter(r => 
-                                        String(r.clase_id) === String(c.id) && 
-                                        Number(r.dia_semana) === Number(slot.dia) && 
-                                        Number(r.horario) === Number(slot.horario)
-                                    ).length;
-                                    const estaLleno = cupoActual >= cupoMax;
+								const hKey = slot.horario.toString().replace('.', '_');
+								const cell = document.getElementById(`cell-${slot.dia}-${hKey}`);
+								
+								if (cell) {
+									// --- CÁLCULO DE FECHA PARA ESTE SLOT ESPECÍFICO ---
+									const fechaSlot = new Date(fechaLunes); 
+									fechaSlot.setDate(fechaLunes.getDate() + (slot.dia - 1));
+									const fechaSlotStr = fechaSlot.toISOString().split('T')[0]; // Formato YYYY-MM-DD
 
-                                    // CORRECCIÓN VISUAL FINAL: Altura de 79px para ocupar 1 hora completa (2 slots de 40px)
-                                    // Z-index 20 para estar sobre las celdas pero bajo los headers (z-50)
-                                    const badge = document.createElement('div');
-                                    badge.className = "absolute top-0.5 left-0.5 right-0.5 rounded-xl flex flex-col items-center justify-center text-center overflow-hidden z-20 p-1 shadow-xl"; 
-                                    badge.style.height = "79px";
-                                    badge.style.backgroundColor = c.color || '#FF0000';
-                                    
-                                    if (isAdmin) {
-                                        badge.draggable = true; 
-                                        badge.ondragstart = (e) => {
-                                            e.dataTransfer.setData("claseId", c.id);
-                                            e.dataTransfer.setData("oldDia", slot.dia);
-                                           e.dataTransfer.setData("oldHorario", slot.horario);
-                                            badge.classList.add('opacity-40');
-                                        };
-                                        badge.ondragend = () => badge.classList.remove('opacity-40');
-                                    }
+									const reservasArray = Array.isArray(state.reservas) ? state.reservas : [];
+									const cupoMax = c.capacidad_max || 40;
 
-                                    // CORRECCIÓN INTERNA: Flexbox con leading-tight y gaps eliminados para centrado absoluto
-                                    badge.innerHTML = `
+									// FILTRO DINÁMICO: Solo cuenta reservas de la FECHA EXACTA de esta semana
+									const cupoActual = reservasArray.filter(r => 
+										String(r.clase_id) === String(c.id) && 
+										Number(r.dia_semana) === Number(slot.dia) && 
+										Number(r.horario) === Number(slot.horario) &&
+										String(r.fecha_clase) === String(fechaSlotStr)
+									).length;
+
+									const estaLleno = cupoActual >= cupoMax;
+
+									const badge = document.createElement('div');
+									badge.className = "absolute top-0.5 left-0.5 right-0.5 rounded-xl flex flex-col items-center justify-center text-center overflow-hidden z-20 p-1 shadow-xl"; 
+									badge.style.height = "79px";
+									badge.style.backgroundColor = c.color || '#FF0000';
+									
+									if (isAdmin) {
+										badge.draggable = true; 
+										badge.ondragstart = (e) => {
+											e.dataTransfer.setData("claseId", c.id);
+											e.dataTransfer.setData("oldDia", slot.dia);
+											e.dataTransfer.setData("oldHorario", slot.horario);
+											badge.classList.add('opacity-40');
+										};
+										badge.ondragend = () => badge.classList.remove('opacity-40');
+									}
+
+									badge.innerHTML = `
 										<div class="flex flex-col items-center justify-center w-full h-full space-y-0.5">
 											<span class="text-[10px] font-black uppercase italic leading-[1.1] ${colores.text}" style="display: block; width: 100%; white-space: normal;">
 												${c.nombre}
@@ -722,25 +699,27 @@
 											<span class="text-[8px] font-bold uppercase opacity-90 leading-[1] ${colores.text}">
 												${slot.coach || 'STAFF'}
 											</span>
-											<div class="mt-1 px-2 py-0.5 rounded-full text-[9px] font-black ${colores.bg} ${estaLleno ? 'text-red-500' : colores.text}">
+											<div class="mt-1 px-2 py-0.5 rounded-full text-[9px] font-black ${colores.bg} ${estaLleno ? 'text-red-500 font-bold bg-white' : colores.text}">
 												${cupoActual}/${cupoMax}
 											</div>
 										</div>
 									`;
-                                    
-                                    badge.onclick = (e) => {
-                                        e.stopPropagation();
-                                        if (esAlumno) {
-                                            if (estaLleno) showVikingToast("Cupo lleno para este turno", true);
-                                            else if(typeof confirmarReservaVikinga === 'function') confirmarReservaVikinga(c, slot.dia, slot.horario);
-                                        } else {
-                                            if (typeof openInscriptos === 'function') openInscriptos(c.id, slot.dia, slot.horario);
-                                        }
-                                    };
+									
+									badge.onclick = (e) => {
+										e.stopPropagation();
+										if (esAlumno) {
+											if (estaLleno) showVikingToast("Cupo lleno para este turno", true);
+											// PASAMOS LA FECHA CALCULADA A LA FUNCIÓN DE RESERVA
+											else if(typeof confirmarReservaVikinga === 'function') confirmarReservaVikinga(c, slot.dia, slot.horario, fechaSlotStr);
+										} else {
+											// PARA EL ADMIN: Ver inscriptos de esa fecha específica
+											if (typeof openInscriptos === 'function') openInscriptos(c.id, slot.dia, slot.horario, fechaSlotStr);
+										}
+									};
 
-                                    cell.appendChild(badge);
-                                }
-                            });
+									cell.appendChild(badge);
+								}
+							});
                         });
                     }
 
@@ -751,63 +730,62 @@
                  * FUNCIÓN DE RESERVA CORREGIDA
                  * Evita el error de "Vanhala" manejando fallos internos sin crashear.
                  */
-                async function confirmarReservaVikinga(clase, dia, horario) {
-                    const diasMap = {1: 'Lunes', 2: 'Martes', 3: 'Miércoles', 4: 'Jueves', 5: 'Viernes', 6: 'Sábado'};
-                    const horaLabel = horario % 1 === 0 ? `${horario}:00` : `${Math.floor(horario)}:30`;
-                    
-                    showVikingToast(`Procesando reserva...`);
+                async function confirmarReservaVikinga(clase, dia, horario, fechaExacta) {
+					const diasMap = {1: 'Lunes', 2: 'Martes', 3: 'Miércoles', 4: 'Jueves', 5: 'Viernes', 6: 'Sábado'};
+					const horaLabel = horario % 1 === 0 ? `${horario}:00` : `${Math.floor(horario)}:30`;
+					
+					showVikingToast(`Procesando reserva...`);
 
-                    const payload = {
-                        usuario_id: state.user.id,
-                        clase_id: clase.id,
-                        dia_semana: dia,
-                        horario: horario
-                    };
+					// El payload ahora incluye la fecha_clase para que el reseteo semanal funcione
+					const payload = {
+						usuario_id: state.user.id,
+						clase_id: clase.id,
+						dia_semana: dia,
+						horario: horario,
+						fecha_clase: fechaExacta 
+					};
 
-                    try {
-                        const res = await apiFetch('/reservas', 'POST', payload);
-                        
-                        if (!res.error) {
-                            showVikingToast(`¡Reserva confirmada! ${diasMap[dia]} ${horaLabel}hs`);
-                            
-                            // INTENTO DE ACTUALIZACIÓN PROTEGIDO:
-                            // Si una función falla, no queremos que salte al 'catch' de conexión.
-                            try {
-                                // 1. Refrescar reservas (Intentamos con el nombre que tengas)
-                                if (typeof fetchReservas === 'function') {
-                                    await fetchReservas(); 
-                                } else if (typeof loadReservas === 'function') {
-                                    await loadReservas();
-                                } else {
-                                    // Si no hay función, pedimos los datos manualmente para actualizar el estado
-                                    const manualData = await apiFetch('/reservas');
-                                    if (!manualData.error) state.reservas = manualData;
-                                }
+					try {
+						const res = await apiFetch('/reservas', 'POST', payload);
+						
+						if (!res.error) {
+							showVikingToast(`¡Reserva confirmada! ${diasMap[dia]} ${horaLabel}hs`);
+							
+							// Mantenemos tu bloque de actualización protegido (Try/Catch interno)
+							try {
+								// 1. Refrescar reservas
+								if (typeof fetchReservas === 'function') {
+									await fetchReservas(); 
+								} else if (typeof loadReservas === 'function') {
+									await loadReservas();
+								} else {
+									const manualData = await apiFetch('/reservas');
+									if (!manualData.error) state.reservas = manualData;
+								}
 
-                                // 2. Redibujar calendario
-                                renderCalendar(); 
-                                
-                                // 3. Redibujar dashboard
-                                if (typeof renderStudentDashboard === 'function') {
-                                    renderStudentDashboard();
-                                }
-                            } catch (innerError) {
-                                console.warn("Reserva exitosa pero fallo el refresco visual:", innerError);
-                            }
+								// 2. Redibujar componentes visuales
+								renderCalendar(); 
+								if (typeof renderStudentDashboard === 'function') {
+									renderStudentDashboard();
+								}
+							} catch (innerError) {
+								console.warn("Reserva exitosa pero fallo el refresco visual:", innerError);
+							}
 
-                        } else {
-                            // Error del servidor (ej: sin créditos)
-                            let errorMsg = res.error || "No se pudo procesar";
-                            if (typeof res.error === 'string' && res.error.startsWith('{')) {
-                                try { errorMsg = JSON.parse(res.error).detail || errorMsg; } catch(e){}
-                            }
-                            showVikingToast(errorMsg, true);
-                        }
-                    } catch (err) {
-                        console.error("Error crítico en Reserva:", err);
-                        showVikingToast("Error de sincronización", true);
-                    }
-                }
+						} else {
+							// Mantenemos tu manejo de errores del servidor (incluyendo el parseo de JSON)
+							let errorMsg = res.error || "No se pudo procesar";
+							if (typeof res.error === 'string' && res.error.startsWith('{')) {
+								try { errorMsg = JSON.parse(res.error).detail || errorMsg; } catch(e){}
+							}
+							showVikingToast(errorMsg, true);
+						}
+					} catch (err) {
+						// Mantenemos tu log de error crítico
+						console.error("Error crítico en Reserva:", err);
+						showVikingToast("Error de sincronización", true);
+					}
+				}
 
         /**
  * =========================================================
