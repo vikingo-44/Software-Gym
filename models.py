@@ -165,6 +165,15 @@ class Acceso(Base):
     metodo = Column(String, default="QR")
     usuario = relationship("Usuario", back_populates="accesos")
 
+class ClaseFeriado(Base):
+    __tablename__ = "clases_feriado"
+    id = Column(Integer, primary_key=True)
+    fecha = Column(Date, index=True) # La fecha exacta (ej: 2026-05-25)
+    nombre = Column(String)           # Ej: "Open Box" o "CrossFit Feriado"
+    horario = Column(Float)          # Ej: 10.5 (para las 10:30)
+    capacidad_max = Column(Integer, default=40)
+    color = Column(String, default="#FF0000") # Estética Dark Premium
+
 # =========================================
 # MÓDULO DE MUSCULACIÓN VIKINGA (PRO)
 # =========================================

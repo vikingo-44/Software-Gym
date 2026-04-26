@@ -351,6 +351,19 @@ class TransactionCreate(BaseModel):
     cuotas: Optional[int] = 1
     descripcion2: Optional[str] = None
 
+# --- FERIADOS ---
+class DiaEspecialCreate(BaseModel):
+    fecha: str
+    motivo: str
+    abierto: bool = True
+
+class ClaseFeriadoCreate(BaseModel):
+    fecha: str
+    nombre: str
+    horario: float
+    capacidad_max: int = 40
+    color: str = "#FF0000"
+
 # --- SCHEMAS RUTINAS (SINCRONIZADOS CON DB_SCHEMA.SQL) ---
 class SerieResponse(BaseModel):
     id: int
@@ -1019,25 +1032,12 @@ def book_clase(data: ReservaCreate, db: Session = Depends(database.get_db)):
     # --- VALIDACIÓN DE CUPO MENSUAL POR CICLO PERSONAL ---
     if user.plan:
         limite_mensual = user.plan.clases_mensuales
-        
-        # Si el plan es ilimitado (ej: 999), saltamos la validación
         if limite_mensual < 999:
-            # 1. Determinamos la fecha de inicio del ciclo del alumno.
-            # Usamos 'fecha_vencimiento' restándole el tiempo contratado, 
-            # o si tenés un campo 'fecha_pago' o 'ultimo_pago', usalo aquí.
-            # Como salvavidas, si no hay fecha, usamos el primer día del mes de la clase.
             fecha_inicio_base = user.fecha_ultima_renovacion if hasattr(user, 'fecha_ultima_renovacion') and user.fecha_ultima_renovacion else date(fecha_objeto.year, fecha_objeto.month, 1)
-
-            # 2. Calculamos el rango del mes actual del alumno basado en la fecha de la clase que quiere reservar.
-            # Esto asegura que si reserva para el mes que viene, se valide contra el cupo del mes que viene.
             delta_meses = (fecha_objeto.year - fecha_inicio_base.year) * 12 + (fecha_objeto.month - fecha_inicio_base.month)
-            
-            # El ciclo actual empieza el día X del mes de la clase
             inicio_ciclo = fecha_inicio_base + relativedelta(months=delta_meses)
-            # El ciclo termina el día X del mes siguiente
             fin_ciclo = inicio_ciclo + relativedelta(months=1)
 
-            # 3. Contamos las reservas realizadas ÚNICAMENTE dentro de ese mes personal
             count_reservas = db.query(models.Reserva).filter(
                 models.Reserva.usuario_id == user.id,
                 models.Reserva.fecha_reserva >= inicio_ciclo,
@@ -1050,26 +1050,34 @@ def book_clase(data: ReservaCreate, db: Session = Depends(database.get_db)):
                     detail=f"Límite alcanzado: Tenés {limite_mensual} clases por mes. Ciclo actual: {inicio_ciclo.strftime('%d/%m')} al {fin_ciclo.strftime('%d/%m')}."
                 )
 
-    # --- VALIDACIÓN DE DUPLICADOS (Ahora por fecha específica) ---
+    # --- VALIDACIÓN DE DUPLICADOS ---
     exists = db.query(models.Reserva).filter(
         models.Reserva.usuario_id == data.usuario_id,
         models.Reserva.clase_id == data.clase_id,
         models.Reserva.horario == data.horario,
-        models.Reserva.fecha_reserva == fecha_objeto # <--- Filtro por fecha
+        models.Reserva.fecha_reserva == fecha_objeto
     ).first()
     
     if exists:
         raise HTTPException(status_code=400, detail="Ya tienes reservado este turno en esta fecha.")
-    
+
+    # --- LOGICA DE DOBLE BUSQUEDA (NORMAL O FERIADO) ---
+    # Primero buscamos en clases normales
     clase = db.query(models.Clase).filter(models.Clase.id == data.clase_id).first()
+    
+    # Si no existe en normales, buscamos en la tabla de clases de feriado
     if not clase:
-        raise HTTPException(status_code=404, detail="Clase no encontrada")
-        
-    # --- VALIDACIÓN DE CUPO (Ahora por fecha específica) ---
+        clase = db.query(models.ClaseFeriado).filter(models.ClaseFeriado.id == data.clase_id).first()
+    
+    # Si no está en ninguna de las dos, recién ahí tiramos el error
+    if not clase:
+        raise HTTPException(status_code=404, detail="La clase no existe o fue reprogramada.")
+
+    # --- VALIDACIÓN DE CUPO (Usando el cupo de la clase encontrada) ---
     cupo_actual = db.query(models.Reserva).filter(
         models.Reserva.clase_id == data.clase_id,
         models.Reserva.horario == data.horario,
-        models.Reserva.fecha_reserva == fecha_objeto # <--- Solo contamos las de ese día
+        models.Reserva.fecha_reserva == fecha_objeto
     ).count()
     
     if cupo_actual >= clase.capacidad_max:
@@ -1079,7 +1087,7 @@ def book_clase(data: ReservaCreate, db: Session = Depends(database.get_db)):
     new_res = models.Reserva(
         usuario_id=data.usuario_id,
         clase_id=data.clase_id,
-        fecha_reserva=fecha_objeto, # <--- USAMOS LA FECHA QUE VIENE DE LA WEB
+        fecha_reserva=fecha_objeto,
         horario=data.horario,       
         dia_semana=data.dia_semana 
     )
@@ -1325,6 +1333,50 @@ def move_clase(id: int, data: ClaseMove, db: Session = Depends(database.get_db))
 def delete_clase(id: int, db: Session = Depends(database.get_db)):
     db.query(models.Clase).filter(models.Clase.id == id).delete()
     db.commit()
+    return {"status": "success"}
+
+# --- ENDPOINTS DE FERIADOS ---
+@app.get("/api/feriados", tags=["Feriados"])
+def get_feriados(db: Session = Depends(database.get_db)):
+    return db.query(models.DiaEspecial).all()
+
+@app.post("/api/feriados", tags=["Feriados"])
+def create_feriado(data: DiaEspecialCreate, db: Session = Depends(database.get_db)):
+    try:
+        fecha_dt = datetime.strptime(data.fecha, "%Y-%m-%d").date()
+        nuevo = models.DiaEspecial(fecha=fecha_dt, motivo=data.motivo, abierto=data.abierto)
+        db.add(nuevo)
+        db.commit()
+        return {"status": "success"}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=400, detail="Ese día ya está marcado como feriado.")
+
+@app.get("/api/clases-feriado", tags=["Feriados"])
+def get_clases_feriado(fecha: str, db: Session = Depends(database.get_db)):
+    fecha_dt = datetime.strptime(fecha, "%Y-%m-%d").date()
+    return db.query(models.ClaseFeriado).filter(models.ClaseFeriado.fecha == fecha_dt).all()
+
+@app.post("/api/clases-feriado", tags=["Feriados"])
+def create_clase_feriado(data: ClaseFeriadoCreate, db: Session = Depends(database.get_db)):
+    fecha_dt = datetime.strptime(data.fecha, "%Y-%m-%d").date()
+    nueva = models.ClaseFeriado(
+        fecha=fecha_dt, 
+        nombre=data.nombre, 
+        horario=data.horario, 
+        capacidad_max=data.capacidad_max,
+        color=data.color
+    )
+    db.add(nueva)
+    db.commit()
+    return {"status": "success"}
+
+@app.delete("/api/feriados/{id}", tags=["Feriados"])
+def delete_feriado(id: int, db: Session = Depends(database.get_db)):
+    f = db.query(models.DiaEspecial).filter(models.DiaEspecial.id == id).first()
+    if f:
+        db.delete(f)
+        db.commit()
     return {"status": "success"}
 
 # --- CAJA ---

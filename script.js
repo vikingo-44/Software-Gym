@@ -71,7 +71,10 @@
 			cobrarTab: 'mercaderia',
 			gruposMusculares: [], 
 			ejerciciosLibreria: [],
-			accesos: []
+			accesos: [],
+			// --- AGREGADOS PARA FERIADOS ---
+			feriados: [],
+			clasesFeriado: []
 		};
 		window.state = state;
 
@@ -512,219 +515,255 @@
                  * Ajuste: Se eliminó el gap del grid para evitar el sangrado de badges al scrollear.
                  */
                 async function renderCalendar() {
-                    const cal = document.getElementById('calendar-grid'); 
-                    if (!cal) return;
+					const cal = document.getElementById('calendar-grid'); 
+					if (!cal) return;
 
-                    // Configuración del Grid: 40px por slot. Sin gap para que el sticky sea un bloque sólido.
-                    // CORRECCIÓN VISUAL: Limpiamos y aseguramos que las clases grid se mantengan sin desfasar el min-w
-                    cal.innerHTML = "";
-                    cal.className = "calendar-container min-w-[900px] h-[750px] overflow-y-auto custom-scrollbar grid grid-cols-[80px_repeat(6,1fr)] bg-white/[0.02]";
-                    cal.style.gridAutoRows = "40px";
+					cal.innerHTML = "";
+					cal.className = "calendar-container min-w-[900px] h-[750px] overflow-y-auto custom-scrollbar grid grid-cols-[80px_repeat(6,1fr)] bg-white/[0.02]";
+					cal.style.gridAutoRows = "40px";
 
-                    if (!state.clases || state.clases.length === 0) {
-                        state.clases = await apiFetch('/clases');
-                    }
+					// CARGA DE DATOS (Agregamos feriados y clases especiales al estado)
+					if (!state.clases || state.clases.length === 0) {
+						state.clases = await apiFetch('/clases');
+					}
+					// Si no existen en el state, los traemos (ajustá las rutas a tus endpoints)
+					if (!state.feriados) state.feriados = await apiFetch('/api/feriados') || [];
+					if (!state.clasesFeriado) state.clasesFeriado = await apiFetch('/api/clases-feriado') || [];
 
-                    const isAdmin = (state.user?.rol_nombre === "Administrador" || state.user?.rol_nombre === "Supervisor" || state.user?.rol_nombre === "Profesor");
-                    const esAlumno = (state.user?.rol_nombre === "Alumno");
+					const isAdmin = (state.user?.rol_nombre === "Administrador" || state.user?.rol_nombre === "Supervisor" || state.user?.rol_nombre === "Profesor");
+					const esAlumno = (state.user?.rol_nombre === "Alumno");
 
-                    // --- 1. CÁLCULO DE FECHAS (MODIFICADO POR OFFSET) ---
-                    const hoy = new Date();
-                    const diaSemanaActual = hoy.getDay(); 
-                    const diffParaLunes = diaSemanaActual === 0 ? 6 : diaSemanaActual - 1;
-                    
-                    const fechaLunesBase = new Date(hoy);
-                    fechaLunesBase.setDate(hoy.getDate() - diffParaLunes);
-                    
-                    // Calculamos el lunes de la semana seleccionada
-                    const fechaLunes = new Date(fechaLunesBase);
-                    fechaLunes.setDate(fechaLunesBase.getDate() + (state.calendar.weekOffset * 7));
+					const hoy = new Date();
+					const diaSemanaActual = hoy.getDay(); 
+					const diffParaLunes = diaSemanaActual === 0 ? 6 : diaSemanaActual - 1;
+					
+					const fechaLunesBase = new Date(hoy);
+					fechaLunesBase.setDate(hoy.getDate() - diffParaLunes);
+					
+					const fechaLunes = new Date(fechaLunesBase);
+					fechaLunes.setDate(fechaLunesBase.getDate() + (state.calendar.weekOffset * 7));
 
-                    // Actualizar label de semana en HTML
-                    const labelSemana = document.getElementById('label-semana-vikinga');
-                    if(labelSemana) {
-                        const fFin = new Date(fechaLunes);
-                        fFin.setDate(fechaLunes.getDate() + 5);
-                        labelSemana.innerText = `${fechaLunes.toLocaleDateString('es-ES', {day:'2-digit', month:'short'})} - ${fFin.toLocaleDateString('es-ES', {day:'2-digit', month:'short'})}`.toUpperCase();
-                    }
+					const labelSemana = document.getElementById('label-semana-vikinga');
+					if(labelSemana) {
+						const fFin = new Date(fechaLunes);
+						fFin.setDate(fechaLunes.getDate() + 5);
+						labelSemana.innerText = `${fechaLunes.toLocaleDateString('es-ES', {day:'2-digit', month:'short'})} - ${fFin.toLocaleDateString('es-ES', {day:'2-digit', month:'short'})}`.toUpperCase();
+					}
 
-                    // --- 2. CABECERAS (SIEMPRE 7 ELEMENTOS: HORA + 6 DÍAS) ---
-                    const corner = document.createElement('div');
-                    corner.className = "sticky top-0 z-[60] bg-black flex items-center justify-center font-black italic text-[10px] text-white/30 p-2 border-b border-white/10 rounded-tl-2xl";
-                    corner.innerText = "HORA";
-                    cal.appendChild(corner);
+					// --- 2. CABECERAS ---
+					const corner = document.createElement('div');
+					corner.className = "sticky top-0 z-[60] bg-black flex items-center justify-center font-black italic text-[10px] text-white/30 p-2 border-b border-white/10 rounded-tl-2xl";
+					corner.innerText = "HORA";
+					cal.appendChild(corner);
 
-                    const diasNombres = ["LUNES", "MARTES", "MIÉRCOLES", "JUEVES", "VIERNES", "SÁBADO"];
-                    diasNombres.forEach((nombreDia, index) => {
-                        const fecha = new Date(fechaLunes);
-                        fecha.setDate(fechaLunes.getDate() + index);
-                        const numeroDia = fecha.getDate();
-                        const mesNombre = fecha.toLocaleString('es-ES', { month: 'short' }).toUpperCase().replace('.', '');
-                        const esHoy = fecha.getDate() === hoy.getDate() && fecha.getMonth() === hoy.getMonth() && fecha.getFullYear() === hoy.getFullYear();
+					const diasNombres = ["LUNES", "MARTES", "MIÉRCOLES", "JUEVES", "VIERNES", "SÁBADO"];
+					diasNombres.forEach((nombreDia, index) => {
+						const fecha = new Date(fechaLunes);
+						fecha.setDate(fechaLunes.getDate() + index);
+						const numeroDia = fecha.getDate();
+						const mesNombre = fecha.toLocaleString('es-ES', { month: 'short' }).toUpperCase().replace('.', '');
+						const esHoy = fecha.getDate() === hoy.getDate() && fecha.getMonth() === hoy.getMonth() && fecha.getFullYear() === hoy.getFullYear();
 
-                        const header = document.createElement('div');
-                        header.className = `sticky top-0 z-50 flex flex-row items-center justify-center border-b border-white/10 px-2 ${esHoy ? 'bg-red-600' : 'bg-black text-gray-400'} ${index === 5 ? 'rounded-tr-2xl' : 'border-r'}`;
-                        header.innerHTML = `<span class="text-[10px] font-black uppercase italic ${esHoy ? 'text-black' : 'text-white'} tracking-tighter whitespace-nowrap">${mesNombre} ${numeroDia} ${nombreDia}</span>`;
-                        cal.appendChild(header);
-                    });
+						const header = document.createElement('div');
+						header.className = `sticky top-0 z-50 flex flex-row items-center justify-center border-b border-white/10 px-2 ${esHoy ? 'bg-red-600' : 'bg-black text-gray-400'} ${index === 5 ? 'rounded-tr-2xl' : 'border-r'}`;
+						header.innerHTML = `<span class="text-[10px] font-black uppercase italic ${esHoy ? 'text-black' : 'text-white'} tracking-tighter whitespace-nowrap">${mesNombre} ${numeroDia} ${nombreDia}</span>`;
+						cal.appendChild(header);
+					});
 
-                    // --- 3. GRILLA (Filas de 40px) ---
-                    for(let h=7; h<=21.5; h+=0.5) {
-                        const label = h % 1 === 0 ? `${h}:00` : `${Math.floor(h)}:30`;
-                        const hourLabel = document.createElement('div');
-                        hourLabel.className = "cal-cell flex items-center justify-center font-black text-[10px] text-white/40 bg-white/5 border-r border-white/20";
-                        hourLabel.style.height = "40px";
-                        hourLabel.innerText = label;
-                        cal.appendChild(hourLabel);
-                        
-                        for(let d=1; d<=6; d++) {
-                            const isSat = d === 6; 
-                            const isClosed = isSat && (h < 10 || h > 13);
-                            const cellId = `cell-${d}-${h.toString().replace('.','_')}`;
-                            
-                            const cell = document.createElement('div');
-                            cell.id = cellId;
-                            cell.style.height = "40px";
-                            cell.className = `cal-cell relative border-b border-r border-white/5 hover:bg-white/5 transition-colors ${isClosed ? 'bg-black/40 pointer-events-none' : ''}`;
-                            
-                            if (isAdmin && !isClosed) {
-                                cell.ondragover = (e) => {
-                                    e.preventDefault(); 
-                                    e.dataTransfer.dropEffect = "move";
-                                    cell.classList.add('bg-red-600/10');
-                                };
-                                cell.ondragleave = () => cell.classList.remove('bg-red-600/10');
-                                cell.ondrop = async (e) => {
-                                    e.preventDefault();
-                                    cell.classList.remove('bg-red-600/10');
-                                    const claseId = e.dataTransfer.getData("claseId");
-                                    const oldDia = e.dataTransfer.getData("oldDia");
-                                    const oldHorario = e.dataTransfer.getData("oldHorario");
-                                    if (!claseId) return;
-                                    const parts = cell.id.split('-');
-                                    const newDia = parseInt(parts[1]);
-                                    const newHorario = parseFloat(parts[2].replace('_', '.'));
-                                    if (oldDia == newDia && oldHorario == newHorario) return;
+					// --- 3. GRILLA (Filas de 40px) ---
+					for(let h=7; h<=21.5; h+=0.5) {
+						const label = h % 1 === 0 ? `${h}:00` : `${Math.floor(h)}:30`;
+						const hourLabel = document.createElement('div');
+						hourLabel.className = "cal-cell flex items-center justify-center font-black text-[10px] text-white/40 bg-white/5 border-r border-white/20";
+						hourLabel.style.height = "40px";
+						hourLabel.innerText = label;
+						cal.appendChild(hourLabel);
+						
+						for(let d=1; d<=6; d++) {
+							const isSat = d === 6; 
+							const isClosed = isSat && (h < 10 || h > 13);
+							const cellId = `cell-${d}-${h.toString().replace('.','_')}`;
+							const cell = document.createElement('div');
+							cell.id = cellId;
+							cell.style.height = "40px";
+							cell.className = `cal-cell relative border-b border-r border-white/5 hover:bg-white/5 transition-colors ${isClosed ? 'bg-black/40 pointer-events-none' : ''}`;
+							
+							if (isAdmin && !isClosed) {
+								cell.ondragover = (e) => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; cell.classList.add('bg-red-600/10'); };
+								cell.ondragleave = () => cell.classList.remove('bg-red-600/10');
+								cell.ondrop = async (e) => {
+									// Mantenemos tu lógica de Drop intacta
+									e.preventDefault();
+									cell.classList.remove('bg-red-600/10');
+									const claseId = e.dataTransfer.getData("claseId");
+									const oldDia = e.dataTransfer.getData("oldDia");
+									const oldHorario = e.dataTransfer.getData("oldHorario");
+									if (!claseId) return;
+									const parts = cell.id.split('-');
+									const newDia = parseInt(parts[1]);
+									const newHorario = parseFloat(parts[2].replace('_', '.'));
+									if (oldDia == newDia && oldHorario == newHorario) return;
 
-                                    const res = await apiFetch(`/clases/${claseId}/move`, 'PUT', {
-                                        old_dia: parseInt(oldDia),
-                                        old_horario: parseFloat(oldHorario),
-                                        new_dia: newDia,
-                                        new_horario: newHorario
-                                    });
-                                    if (!res.error) {
-                                        showVikingToast("¡Turno Reubicado!");
-                                        state.clases = await apiFetch('/clases');
-                                        renderCalendar(); 
-                                    } else {
-                                        showVikingToast("Error al mover: " + res.error, true);
-                                    }
-                                };
-                            }
-                            cal.appendChild(cell);
-                        }
-                    }
+									const res = await apiFetch(`/clases/${claseId}/move`, 'PUT', {
+										old_dia: parseInt(oldDia),
+										old_horario: parseFloat(oldHorario),
+										new_dia: newDia,
+										new_horario: newHorario
+									});
+									if (!res.error) {
+										showVikingToast("¡Turno Reubicado!");
+										state.clases = await apiFetch('/clases');
+										renderCalendar(); 
+									} else {
+										showVikingToast("Error al mover: " + res.error, true);
+									}
+								};
+							}
+							cal.appendChild(cell);
+						}
+					}
 
-                    // --- 4. RENDERIZADO DE CLASES (CON FILTRO DE BOX) ---
-                    if(state.clases && Array.isArray(state.clases)){
-                        state.clases.forEach(c => {
-                            // FILTRO DE BOX: Si el box de la clase no coincide con el seleccionado, saltar
-                            // Asumimos que la clase tiene un campo c.box_nombre
-                            if(state.calendar.currentBox !== 'Principal') {
-                                if(c.box_nombre !== state.calendar.currentBox) return;
-                            } else {
-                                // Si es principal, mostramos las que son principal o no tienen asignado
-                                if(c.box_nombre && c.box_nombre !== 'Principal') return;
-                            }
+					// --- 4. RENDERIZADO DE CLASES (INTEGRADO CON FERIADOS) ---
+					// Recorremos los 6 días para ver si alguno es feriado antes de pintar
+					for (let d = 1; d <= 6; d++) {
+						const index = d - 1;
+						const fechaSlot = new Date(fechaLunes); 
+						fechaSlot.setDate(fechaLunes.getDate() + index);
+						const fechaSlotStr = fechaSlot.toISOString().split('T')[0];
 
-                            const horarios = Array.isArray(c.horarios_detalle) ? c.horarios_detalle : [];
-                            
-                            const getTextColorClass = (hexColor) => {
-                                if (!hexColor) return { text: 'text-white', sub: 'text-white/70', bg: 'bg-white/20' };
-                                const r = parseInt(hexColor.substr(1, 2), 16);
-                                const g = parseInt(hexColor.substr(3, 2), 16);
-                                const b = parseInt(hexColor.substr(5, 2), 16);
-                                const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
-                                return (yiq >= 128) 
-                                    ? { text: 'text-black', sub: 'text-black/60', bg: 'bg-black/10' } 
-                                    : { text: 'text-white', sub: 'text-white/80', bg: 'bg-white/20' };
-                            };
+						// ¿ESTE DÍA ES FERIADO?
+						const infoFeriado = state.feriados?.find(f => f.fecha === fechaSlotStr);
 
-                            const colores = getTextColorClass(c.color || '#FF0000');
-
-                            horarios.forEach(slot => {
-								const hKey = slot.horario.toString().replace('.', '_');
-								const cell = document.getElementById(`cell-${slot.dia}-${hKey}`);
-								
+						if (infoFeriado) {
+							// --- LÓGICA FERIADO: Ignora cronograma normal y busca clases especiales ---
+							const clasesEspecialesHoy = state.clasesFeriado?.filter(cf => cf.fecha === fechaSlotStr) || [];
+							
+							clasesEspecialesHoy.forEach(c => {
+								const hKey = c.horario.toString().replace('.', '_');
+								const cell = document.getElementById(`cell-${d}-${hKey}`);
 								if (cell) {
-									// --- CÁLCULO DE FECHA PARA ESTE SLOT ESPECÍFICO ---
-									const fechaSlot = new Date(fechaLunes); 
-									fechaSlot.setDate(fechaLunes.getDate() + (slot.dia - 1));
-									const fechaSlotStr = fechaSlot.toISOString().split('T')[0]; // Formato YYYY-MM-DD
-
+									// PINTAR BADGE (Tu misma lógica adaptada a la clase de feriado)
+									const getTextColorClass = (hexColor) => {
+										if (!hexColor) return { text: 'text-white', sub: 'text-white/70', bg: 'bg-white/20' };
+										const r = parseInt(hexColor.substr(1, 2), 16), g = parseInt(hexColor.substr(3, 2), 16), b = parseInt(hexColor.substr(5, 2), 16);
+										const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
+										return (yiq >= 128) ? { text: 'text-black', sub: 'text-black/60', bg: 'bg-black/10' } : { text: 'text-white', sub: 'text-white/80', bg: 'bg-white/20' };
+									};
+									const colores = getTextColorClass(c.color || '#FF0000');
 									const reservasArray = Array.isArray(state.reservas) ? state.reservas : [];
 									const cupoMax = c.capacidad_max || 40;
-
-									// FILTRO DINÁMICO: Solo cuenta reservas de la FECHA EXACTA de esta semana
-									const cupoActual = reservasArray.filter(r => 
-										String(r.clase_id) === String(c.id) && 
-										Number(r.dia_semana) === Number(slot.dia) && 
-										Number(r.horario) === Number(slot.horario) &&
-										String(r.fecha_clase) === String(fechaSlotStr)
-									).length;
-
+									const cupoActual = reservasArray.filter(r => String(r.clase_id) === String(c.id) && Number(r.horario) === Number(c.horario) && String(r.fecha_clase) === String(fechaSlotStr)).length;
 									const estaLleno = cupoActual >= cupoMax;
 
 									const badge = document.createElement('div');
 									badge.className = "absolute top-0.5 left-0.5 right-0.5 rounded-xl flex flex-col items-center justify-center text-center overflow-hidden z-20 p-1 shadow-xl"; 
 									badge.style.height = "79px";
 									badge.style.backgroundColor = c.color || '#FF0000';
-									
-									if (isAdmin) {
-										badge.draggable = true; 
-										badge.ondragstart = (e) => {
-											e.dataTransfer.setData("claseId", c.id);
-											e.dataTransfer.setData("oldDia", slot.dia);
-											e.dataTransfer.setData("oldHorario", slot.horario);
-											badge.classList.add('opacity-40');
-										};
-										badge.ondragend = () => badge.classList.remove('opacity-40');
-									}
-
-									badge.innerHTML = `
-										<div class="flex flex-col items-center justify-center w-full h-full space-y-0.5">
-											<span class="text-[10px] font-black uppercase italic leading-[1.1] ${colores.text}" style="display: block; width: 100%; white-space: normal;">
-												${c.nombre}
-											</span>
-											<span class="text-[8px] font-bold uppercase opacity-90 leading-[1] ${colores.text}">
-												${slot.coach || 'STAFF'}
-											</span>
-											<div class="mt-1 px-2 py-0.5 rounded-full text-[9px] font-black ${colores.bg} ${estaLleno ? 'text-red-500 font-bold bg-white' : colores.text}">
-												${cupoActual}/${cupoMax}
-											</div>
-										</div>
-									`;
-									
+									badge.innerHTML = `<div class="flex flex-col items-center justify-center w-full h-full space-y-0.5">
+										<span class="text-[10px] font-black uppercase italic leading-[1.1] ${colores.text}">${c.nombre}</span>
+										<span class="text-[8px] font-bold uppercase opacity-90 leading-[1] ${colores.text}">ESPECIAL</span>
+										<div class="mt-1 px-2 py-0.5 rounded-full text-[9px] font-black ${colores.bg} ${estaLleno ? 'text-red-500 font-bold bg-white' : colores.text}">${cupoActual}/${cupoMax}</div>
+									</div>`;
 									badge.onclick = (e) => {
 										e.stopPropagation();
 										if (esAlumno) {
-											if (estaLleno) showVikingToast("Cupo lleno para este turno", true);
-											// PASAMOS LA FECHA CALCULADA A LA FUNCIÓN DE RESERVA
-											else if(typeof confirmarReservaVikinga === 'function') confirmarReservaVikinga(c, slot.dia, slot.horario, fechaSlotStr);
-										} else {
-											// PARA EL ADMIN: Ver inscriptos de esa fecha específica
-											if (typeof openInscriptos === 'function') openInscriptos(c.id, slot.dia, slot.horario, fechaSlotStr);
-										}
+											if (estaLleno) showVikingToast("Cupo lleno", true);
+											else confirmarReservaVikinga(c, d, c.horario, fechaSlotStr);
+										} else { openInscriptos(c.id, d, c.horario, fechaSlotStr); }
 									};
-
 									cell.appendChild(badge);
 								}
 							});
-                        });
-                    }
+							
+							// Bloqueamos las celdas del feriado que no tienen clase especial
+							for(let h=7; h<=21.5; h+=0.5) {
+								const cell = document.getElementById(`cell-${d}-${h.toString().replace('.', '_')}`);
+								if (cell && cell.innerHTML === "") {
+									cell.classList.add('bg-black/60');
+									cell.style.pointerEvents = 'none';
+								}
+							}
+						} else {
+							// --- LÓGICA NORMAL: El código que ya tenías funcionando ---
+							if(state.clases && Array.isArray(state.clases)){
+								state.clases.forEach(c => {
+									if(state.calendar.currentBox !== 'Principal') {
+										if(c.box_nombre !== state.calendar.currentBox) return;
+									} else {
+										if(c.box_nombre && c.box_nombre !== 'Principal') return;
+									}
 
-                    if (window.lucide) lucide.createIcons();
-                }
+									const horarios = Array.isArray(c.horarios_detalle) ? c.horarios_detalle : [];
+									
+									const getTextColorClass = (hexColor) => {
+										if (!hexColor) return { text: 'text-white', sub: 'text-white/70', bg: 'bg-white/20' };
+										const r = parseInt(hexColor.substr(1, 2), 16);
+										const g = parseInt(hexColor.substr(3, 2), 16);
+										const b = parseInt(hexColor.substr(5, 2), 16);
+										const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
+										return (yiq >= 128) ? { text: 'text-black', sub: 'text-black/60', bg: 'bg-black/10' } : { text: 'text-white', sub: 'text-white/80', bg: 'bg-white/20' };
+									};
+									const colores = getTextColorClass(c.color || '#FF0000');
+
+									horarios.forEach(slot => {
+										if (slot.dia === d) {
+											const hKey = slot.horario.toString().replace('.', '_');
+											const cell = document.getElementById(`cell-${d}-${hKey}`);
+											
+											if (cell) {
+												const reservasArray = Array.isArray(state.reservas) ? state.reservas : [];
+												const cupoMax = c.capacidad_max || 40;
+												const cupoActual = reservasArray.filter(r => 
+													String(r.clase_id) === String(c.id) && 
+													Number(r.dia_semana) === Number(slot.dia) && 
+													Number(r.horario) === Number(slot.horario) &&
+													String(r.fecha_clase) === String(fechaSlotStr)
+												).length;
+
+												const estaLleno = cupoActual >= cupoMax;
+												const badge = document.createElement('div');
+												badge.className = "absolute top-0.5 left-0.5 right-0.5 rounded-xl flex flex-col items-center justify-center text-center overflow-hidden z-20 p-1 shadow-xl"; 
+												badge.style.height = "79px";
+												badge.style.backgroundColor = c.color || '#FF0000';
+												
+												if (isAdmin) {
+													badge.draggable = true; 
+													badge.ondragstart = (e) => {
+														e.dataTransfer.setData("claseId", c.id);
+														e.dataTransfer.setData("oldDia", slot.dia);
+														e.dataTransfer.setData("oldHorario", slot.horario);
+														badge.classList.add('opacity-40');
+													};
+													badge.ondragend = () => badge.classList.remove('opacity-40');
+												}
+
+												badge.innerHTML = `
+													<div class="flex flex-col items-center justify-center w-full h-full space-y-0.5">
+														<span class="text-[10px] font-black uppercase italic leading-[1.1] ${colores.text}" style="display: block; width: 100%; white-space: normal;">${c.nombre}</span>
+														<span class="text-[8px] font-bold uppercase opacity-90 leading-[1] ${colores.text}">${slot.coach || 'STAFF'}</span>
+														<div class="mt-1 px-2 py-0.5 rounded-full text-[9px] font-black ${colores.bg} ${estaLleno ? 'text-red-500 font-bold bg-white' : colores.text}">${cupoActual}/${cupoMax}</div>
+													</div>`;
+												
+												badge.onclick = (e) => {
+													e.stopPropagation();
+													if (esAlumno) {
+														if (estaLleno) showVikingToast("Cupo lleno", true);
+														else confirmarReservaVikinga(c, slot.dia, slot.horario, fechaSlotStr);
+													} else {
+														openInscriptos(c.id, slot.dia, slot.horario, fechaSlotStr);
+													}
+												};
+												cell.appendChild(badge);
+											}
+										}
+									});
+								});
+							}
+						}
+					}
+
+					if (window.lucide) lucide.createIcons();
+				}
                 
                 /**
                  * FUNCIÓN DE RESERVA CORREGIDA
@@ -3054,8 +3093,29 @@ if (editorForm) {
 		};
 			
         async function initApp() {
-            await Promise.all([fetchAlumnos(), loadStaff(), loadPlanes(), loadStock(), loadClases(), fetchReservas(), loadDashboard(), loadMusculacionMetadata(), loadCaja()]);
-        }
+			try {
+				// Cargamos TODO en paralelo para que la App vuele
+				await Promise.all([
+					fetchAlumnos(), 
+					loadStaff(), 
+					loadPlanes(), 
+					loadStock(), 
+					loadClases(), 
+					fetchReservas(), 
+					loadDashboard(), 
+					loadMusculacionMetadata(), 
+					loadCaja(),
+					loadFeriados(),       // <--- NUEVA
+					loadClasesFeriado()   // <--- NUEVA
+				]);
+				
+				// Una vez que tenemos todos los datos, dibujamos el calendario
+				renderCalendar();
+				
+			} catch (error) {
+				console.error("Error en la carga inicial:", error);
+			}
+		}
 
 		async function loadDashboard() {
             console.log("⚔️ Sincronizando Central de Mando...");
@@ -5742,6 +5802,27 @@ if (editorForm) {
 					oscillator.start();
 					oscillator.stop(audioCtx.currentTime + 0.5);
 					break;
+			}
+		}
+
+		async function loadFeriados() {
+			try {
+				const data = await apiFetch('/api/feriados');
+				state.feriados = data || [];
+			} catch (e) {
+				console.error("Error cargando feriados:", e);
+				state.feriados = [];
+			}
+		}
+
+		async function loadClasesFeriado() {
+			try {
+				// Traemos todas las clases especiales cargadas
+				const data = await apiFetch('/api/clases-feriado'); 
+				state.clasesFeriado = data || [];
+			} catch (e) {
+				console.error("Error cargando clases de feriado:", e);
+				state.clasesFeriado = [];
 			}
 		}
 
