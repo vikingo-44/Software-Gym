@@ -4364,8 +4364,11 @@ if (editorForm) {
 					transferencia: parseFloat(document.getElementById('plan-transferencia').value || 0), 
 					debito_credito: parseFloat(document.getElementById('plan-debito').value || 0), 
 					tipo_plan_id: parseInt(document.getElementById('plan-tipo').value),
-					clases_mensuales: parseInt(document.getElementById('plan-clases').value || 0) 
+					clases_mensuales: parseInt(document.getElementById('plan-clases').value || 0)
+					// QUITAMOS EL CAMPO DIAS DE ACÁ, EL BACKEND YA LO RESUELVE
 				};
+
+				console.log("Datos enviados al crear plan:", data);
 				
 				const res = await apiFetch(id ? `/planes/${id}` : '/planes', id ? 'PUT' : 'POST', data);
 				

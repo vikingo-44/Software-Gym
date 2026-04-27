@@ -1207,12 +1207,12 @@ def get_planes(db: Session = Depends(database.get_db)):
 
 @app.post("/api/planes", tags=["Planes"])
 def create_plan(data: PlanUpdate, db: Session = Depends(database.get_db)):
-    """Crea un nuevo plan maestro calculando los días automáticamente"""
-    # 1. Buscamos el tipo de plan (Mensual, Trimestral, etc.) para saber sus días
+    """Crea un nuevo plan maestro calculando los días automáticamente desde la DB"""
+    # 1. Buscamos el tipo de plan para obtener los días reales configurados
     tipo = db.query(models.TipoPlan).filter(models.TipoPlan.id == data.tipo_plan_id).first()
     
-    # 2. Si no lo encuentra por alguna razón, usamos 30 por defecto
-    dias_finales = tipo.duracion_dias if (tipo and tipo.duracion_dias) else 30
+    # 2. Usamos los días de la tabla tipo_planes, o 30 por defecto si algo falla
+    dias_automaticos = tipo.duracion_dias if (tipo and tipo.duracion_dias) else 30
 
     new_p = models.Plan(
         nombre=data.nombre,
@@ -1221,12 +1221,18 @@ def create_plan(data: PlanUpdate, db: Session = Depends(database.get_db)):
         debito_credito=data.debito_credito,
         tipo_plan_id=data.tipo_plan_id,
         clases_mensuales=data.clases_mensuales,
-        # ACA ESTÁ EL ARREGLO: Usamos la variable que calculamos recién
-        dias=dias_finales 
+        # ASIGNACIÓN AUTOMÁTICA:
+        dias=dias_automaticos 
     )
-    db.add(new_p)
-    db.commit()
-    return {"status": "success"}
+    
+    try:
+        db.add(new_p)
+        db.commit()
+        return {"status": "success"}
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error al crear plan: {e}")
+        raise HTTPException(status_code=500, detail="Error al insertar en la base de datos")
 
 @app.put("/api/planes/{id}", tags=["Planes"])
 def update_plan(id: int, data: PlanUpdate, db: Session = Depends(database.get_db)):
