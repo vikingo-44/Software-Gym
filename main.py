@@ -1207,32 +1207,41 @@ def get_planes(db: Session = Depends(database.get_db)):
 
 @app.post("/api/planes", tags=["Planes"])
 def create_plan(data: PlanUpdate, db: Session = Depends(database.get_db)):
-    """Crea un nuevo plan maestro calculando los días automáticamente desde la DB"""
-    # 1. Buscamos el tipo de plan para obtener los días reales configurados
-    tipo = db.query(models.TipoPlan).filter(models.TipoPlan.id == data.tipo_plan_id).first()
-    
-    # 2. Usamos los días de la tabla tipo_planes, o 30 por defecto si algo falla
-    dias_automaticos = tipo.duracion_dias if (tipo and tipo.duracion_dias) else 30
-
-    new_p = models.Plan(
-        nombre=data.nombre,
-        efectivo=data.efectivo,
-        transferencia=data.transferencia,
-        debito_credito=data.debito_credito,
-        tipo_plan_id=data.tipo_plan_id,
-        clases_mensuales=data.clases_mensuales,
-        # ASIGNACIÓN AUTOMÁTICA:
-        dias=dias_automaticos 
-    )
-    
+    """Crea un nuevo plan maestro asegurando que nunca falten los días"""
     try:
+        # 1. Intentamos buscar la duración en la tabla de tipos
+        tipo = db.query(models.TipoPlan).filter(models.TipoPlan.id == data.tipo_plan_id).first()
+        
+        # 2. Lógica de rescate: 
+        # Prioridad 1: Días del tipo de plan.
+        # Prioridad 2: Días que vengan en el 'data' (si el JS los mandara).
+        # Prioridad 3: 30 días (el estándar).
+        dias_finales = 30
+        if tipo and tipo.duracion_dias:
+            dias_finales = tipo.duracion_dias
+        elif data.dias:
+            dias_finales = data.dias
+
+        new_p = models.Plan(
+            nombre=data.nombre,
+            efectivo=data.efectivo,
+            transferencia=data.transferencia,
+            debito_credito=data.debito_credito,
+            tipo_plan_id=data.tipo_plan_id,
+            clases_mensuales=data.clases_mensuales,
+            dias=dias_finales  # <--- GARANTIZAMOS UN NÚMERO ACÁ
+        )
+        
         db.add(new_p)
         db.commit()
-        return {"status": "success"}
+        db.refresh(new_p)
+        return {"status": "success", "id": new_p.id}
+        
     except Exception as e:
         db.rollback()
-        logger.error(f"Error al crear plan: {e}")
-        raise HTTPException(status_code=500, detail="Error al insertar en la base de datos")
+        logger.error(f"ERROR CRÍTICO AL CREAR PLAN: {str(e)}")
+        # Esto te va a mostrar el error REAL en el cartelito rojo del gym
+        raise HTTPException(status_code=500, detail=f"Error en BD: {str(e)}")
 
 @app.put("/api/planes/{id}", tags=["Planes"])
 def update_plan(id: int, data: PlanUpdate, db: Session = Depends(database.get_db)):
