@@ -239,6 +239,7 @@ class PlanSchema(BaseModel):
     debito_credito: Optional[float] = 0.0
     clases_mensuales: Optional[int] = 12
     tipo_plan_id: Optional[int] = None
+    duracion_dias: Optional[int] = 30
     tipo: Optional[TipoPlanSchema] = None # Si el tipo no existe, no rompe
     model_config = ConfigDict(from_attributes=True)
 
@@ -1207,19 +1208,15 @@ def get_planes(db: Session = Depends(database.get_db)):
 
 @app.post("/api/planes", tags=["Planes"])
 def create_plan(data: PlanUpdate, db: Session = Depends(database.get_db)):
-    """Crea un nuevo plan maestro asegurando que nunca falten los días"""
+    """Crea un nuevo plan maestro calculando la duración correctamente"""
     try:
-        # 1. Intentamos buscar la duración en la tabla de tipos
         tipo = db.query(models.TipoPlan).filter(models.TipoPlan.id == data.tipo_plan_id).first()
         
-        # 2. Lógica de rescate: 
-        # Prioridad 1: Días del tipo de plan.
-        # Prioridad 2: Días que vengan en el 'data' (si el JS los mandara).
-        # Prioridad 3: 30 días (el estándar).
+        # Si no mandamos días, los sacamos del TipoPlan o default 30
         dias_finales = 30
         if tipo and tipo.duracion_dias:
             dias_finales = tipo.duracion_dias
-        elif data.dias:
+        elif hasattr(data, 'dias') and data.dias:
             dias_finales = data.dias
 
         new_p = models.Plan(
@@ -1229,7 +1226,7 @@ def create_plan(data: PlanUpdate, db: Session = Depends(database.get_db)):
             debito_credito=data.debito_credito,
             tipo_plan_id=data.tipo_plan_id,
             clases_mensuales=data.clases_mensuales,
-            dias=dias_finales  # <--- GARANTIZAMOS UN NÚMERO ACÁ
+            duracion_dias=dias_finales  # Asegurate de usar el nombre de models.py
         )
         
         db.add(new_p)
@@ -1239,8 +1236,7 @@ def create_plan(data: PlanUpdate, db: Session = Depends(database.get_db)):
         
     except Exception as e:
         db.rollback()
-        logger.error(f"ERROR CRÍTICO AL CREAR PLAN: {str(e)}")
-        # Esto te va a mostrar el error REAL en el cartelito rojo del gym
+        logger.error(f"ERROR PLANES: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error en BD: {str(e)}")
 
 @app.put("/api/planes/{id}", tags=["Planes"])
