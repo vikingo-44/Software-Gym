@@ -29,7 +29,8 @@ class Plan(Base):
     transferencia = Column(Float, default=0.0)
     debito_credito = Column("Debito/Credito", Float, default=0.0) 
     tipo_plan_id = Column(Integer, ForeignKey("tipos_planes.id"))
-    clases_mensuales = Column(Integer, default=12) 
+    clases_mensuales = Column(Integer, default=12)
+    dias = Column(Integer, default=30) 
     tipo = relationship("TipoPlan", back_populates="planes")
     usuarios = relationship("Usuario", back_populates="plan")
 
