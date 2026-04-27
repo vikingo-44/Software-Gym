@@ -1207,7 +1207,13 @@ def get_planes(db: Session = Depends(database.get_db)):
 
 @app.post("/api/planes", tags=["Planes"])
 def create_plan(data: PlanUpdate, db: Session = Depends(database.get_db)):
-    """Crea un nuevo plan maestro"""
+    """Crea un nuevo plan maestro calculando los días automáticamente"""
+    # 1. Buscamos el tipo de plan (Mensual, Trimestral, etc.) para saber sus días
+    tipo = db.query(models.TipoPlan).filter(models.TipoPlan.id == data.tipo_plan_id).first()
+    
+    # 2. Si no lo encuentra por alguna razón, usamos 30 por defecto
+    dias_finales = tipo.duracion_dias if (tipo and tipo.duracion_dias) else 30
+
     new_p = models.Plan(
         nombre=data.nombre,
         efectivo=data.efectivo,
@@ -1215,7 +1221,8 @@ def create_plan(data: PlanUpdate, db: Session = Depends(database.get_db)):
         debito_credito=data.debito_credito,
         tipo_plan_id=data.tipo_plan_id,
         clases_mensuales=data.clases_mensuales,
-        dias=data.dias 
+        # ACA ESTÁ EL ARREGLO: Usamos la variable que calculamos recién
+        dias=dias_finales 
     )
     db.add(new_p)
     db.commit()
