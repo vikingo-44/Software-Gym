@@ -228,8 +228,8 @@ class AccessCheck(BaseModel):
 class TipoPlanSchema(BaseModel):
     id: int
     nombre: str
-    duracion_dias: int
-    class Config: from_attributes = True
+    duracion_dias: Optional[int] = 30
+    model_config = ConfigDict(from_attributes=True)
 
 class PlanSchema(BaseModel):
     id: int
@@ -240,7 +240,7 @@ class PlanSchema(BaseModel):
     clases_mensuales: Optional[int] = 12
     tipo_plan_id: Optional[int] = None
     tipo: Optional[TipoPlanSchema] = None # Si el tipo no existe, no rompe
-    class Config: from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class UsuarioResponse(BaseModel):
     id: int
@@ -1207,19 +1207,30 @@ def get_planes(db: Session = Depends(database.get_db)):
 
 @app.post("/api/planes", tags=["Planes"])
 def create_plan(data: PlanUpdate, db: Session = Depends(database.get_db)):
-    """Crea un nuevo plan maestro"""
-    new_p = models.Plan(
-        nombre=data.nombre,
-        efectivo=data.efectivo,
-        transferencia=data.transferencia,
-        debito_credito=data.debito_credito,
-        tipo_plan_id=data.tipo_plan_id,
-        clases_mensuales=data.clases_mensuales,
-        dias=data.dias 
-    )
-    db.add(new_p)
-    db.commit()
-    return {"status": "success"}
+    """Crea un nuevo plan maestro asociado a su tipo"""
+    try:
+        # Creamos el plan usando SOLAMENTE las columnas que existen en tu tabla 'planes'
+        # Según tu imagen: nombre, efectivo, transferencia, debito_credito, tipo_plan_id, clases_mensuales
+        new_p = models.Plan(
+            nombre=data.nombre,
+            efectivo=data.efectivo,
+            transferencia=data.transferencia,
+            debito_credito=data.debito_credito, # SQLAlchemy mapea esto a "Debito/Credito"
+            tipo_plan_id=data.tipo_plan_id,
+            clases_mensuales=data.clases_mensuales
+            # BORRAMOS LA LINEA 'dias=data.dias' PORQUE ES LA QUE DA EL ERROR
+        )
+        
+        db.add(new_p)
+        db.commit()
+        db.refresh(new_p)
+        return {"status": "success"}
+
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error al guardar plan: {str(e)}")
+        # Si algo falla, el Toast te va a decir el mensaje real de la DB
+        raise HTTPException(status_code=500, detail=f"Error en BD: {str(e)}")
 
 @app.put("/api/planes/{id}", tags=["Planes"])
 def update_plan(id: int, data: PlanUpdate, db: Session = Depends(database.get_db)):
