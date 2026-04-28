@@ -1345,7 +1345,11 @@ def delete_clase(id: int, db: Session = Depends(database.get_db)):
     db.commit()
     return {"status": "success"}
 
-# --- ENDPOINTS DE FERIADOS ---
+# ==========================================
+# MÓDULO DE FERIADOS (LIMPIO Y SIN DUPLICADOS)
+# ==========================================
+
+# 1. MARCAR EL DÍA EN EL CALENDARIO (TABLA: dias_especiales)
 @app.get("/api/feriados", tags=["Feriados"])
 def get_feriados(db: Session = Depends(database.get_db)):
     return db.query(models.DiaEspecial).all()
@@ -1353,48 +1357,60 @@ def get_feriados(db: Session = Depends(database.get_db)):
 @app.post("/api/feriados", tags=["Feriados"])
 def create_feriado(data: DiaEspecialCreate, db: Session = Depends(database.get_db)):
     try:
+        # Fix Zona Horaria: Tomamos solo la fecha pura
         fecha_dt = datetime.strptime(data.fecha, "%Y-%m-%d").date()
+        
+        # Evitamos el error de UNIQUE: Si existe, actualizamos el motivo
+        existente = db.query(models.DiaEspecial).filter(models.DiaEspecial.fecha == fecha_dt).first()
+        if existente:
+            existente.motivo = data.motivo
+            db.commit()
+            return {"status": "success", "message": "Actualizado"}
+
         nuevo = models.DiaEspecial(fecha=fecha_dt, motivo=data.motivo, abierto=data.abierto)
         db.add(nuevo)
         db.commit()
         return {"status": "success"}
     except Exception as e:
         db.rollback()
-        raise HTTPException(status_code=400, detail="Ese día ya está marcado como feriado.")
+        raise HTTPException(status_code=400, detail=f"Error: {str(e)}")
 
+# 2. LAS CLASES QUE SE DAN ESE DÍA (TABLA: clases_feriado)
 @app.get("/api/clases-feriado", tags=["Feriados"])
 def get_clases_feriado(fecha: Optional[str] = None, db: Session = Depends(database.get_db)):
-    """Trae todas las clases o filtra por fecha si viene el parámetro"""
     query = db.query(models.ClaseFeriado)
     if fecha:
         try:
             fecha_dt = datetime.strptime(fecha, "%Y-%m-%d").date()
             query = query.filter(models.ClaseFeriado.fecha == fecha_dt)
-        except Exception:
-            pass # Si la fecha viene mal, ignoramos el filtro
-    
+        except:
+            pass
     return query.all()
 
 @app.post("/api/clases-feriado", tags=["Feriados"])
 def create_clase_feriado(data: ClaseFeriadoCreate, db: Session = Depends(database.get_db)):
-    fecha_dt = datetime.strptime(data.fecha, "%Y-%m-%d").date()
-    nueva = models.ClaseFeriado(
-        fecha=fecha_dt, 
-        nombre=data.nombre, 
-        horario=data.horario, 
-        capacidad_max=data.capacidad_max,
-        color=data.color
-    )
-    db.add(nueva)
-    db.commit()
-    return {"status": "success"}
+    try:
+        fecha_dt = datetime.strptime(data.fecha, "%Y-%m-%d").date()
+        
+        nueva = models.ClaseFeriado(
+            fecha=fecha_dt, 
+            nombre=data.nombre, 
+            horario=data.horario, 
+            capacidad_max=data.capacidad_max,
+            color=data.color
+        )
+        db.add(nueva)
+        db.commit()
+        return {"status": "success"}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=str(e))
 
+# 3. ELIMINAR FERIADO
 @app.delete("/api/feriados/{id}", tags=["Feriados"])
 def delete_feriado(id: int, db: Session = Depends(database.get_db)):
-    f = db.query(models.DiaEspecial).filter(models.DiaEspecial.id == id).first()
-    if f:
-        db.delete(f)
-        db.commit()
+    db.query(models.DiaEspecial).filter(models.DiaEspecial.id == id).delete()
+    db.commit()
     return {"status": "success"}
 
 # --- CAJA ---
