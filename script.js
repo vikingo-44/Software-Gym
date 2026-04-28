@@ -1009,17 +1009,31 @@ function updateCartUI() {
     }
 
     list.innerHTML = state.cart.map((c, idx) => `
-        <div class="flex items-center justify-between bg-white/5 p-3 rounded-xl border border-white/5">
-            <div class="overflow-hidden text-left">
-                <p class="text-[11px] font-black uppercase italic truncate text-white">${c.nombre}</p>
-                <div class="flex gap-2">
-                    <p class="text-[10px] text-gray-500 font-bold">VALOR: $ ${(c.precio || 0).toLocaleString()}</p>
-                    <p class="text-[10px] text-red-500 font-bold">CANT: ${c.cantidad}</p>
+        <div class="flex flex-col gap-2 bg-white/5 p-3 rounded-xl border border-white/5 mb-2">
+            <div class="flex items-center justify-between">
+                <div class="overflow-hidden text-left">
+                    <p class="text-[11px] font-black uppercase italic truncate text-white">${c.nombre}</p>
+                    <div class="flex gap-2">
+                        <p class="text-[10px] text-gray-500 font-bold">VALOR: $ ${(c.precio || 0).toLocaleString()}</p>
+                        <p class="text-[10px] text-red-500 font-bold">CANT: ${c.cantidad}</p>
+                    </div>
                 </div>
+                <button onclick="removeFromCart(${idx})" class="text-red-600 hover:text-white">
+                    <i data-lucide="trash-2" class="w-3 h-3"></i>
+                </button>
             </div>
-            <button onclick="removeFromCart(${idx})" class="text-red-600 hover:text-white">
-                <i data-lucide="trash-2" class="w-3 h-3"></i>
-            </button>
+            
+            <div class="flex items-center gap-2 mt-1 pt-2 border-t border-white/5">
+                <div class="relative flex-1">
+                    <input type="number" id="desc-input-${idx}" placeholder="Desc %" 
+                        class="viking-input !py-1 !text-[9px] h-7 bg-black/40 border-white/10 w-full"
+                        min="0" max="100">
+                </div>
+                <button onclick="aplicarDescuento(${idx})" 
+                    class="h-7 px-3 rounded-lg text-[9px] font-black italic bg-red-600/20 text-red-500 border border-red-500/20 hover:bg-red-600 hover:text-black transition-all">
+                    APLICAR
+                </button>
+            </div>
         </div>
     `).join('');
 
@@ -1028,6 +1042,28 @@ function updateCartUI() {
     
     if (window.lucide) lucide.createIcons();
 }
+
+window.aplicarDescuento = function(index) {
+    const input = document.getElementById(`desc-input-${index}`);
+    const porcentaje = parseFloat(input.value);
+
+    if (isNaN(porcentaje) || porcentaje < 0 || porcentaje > 100) {
+        return showVikingToast("Porcentaje inválido (0-100)", true);
+    }
+
+    const item = state.cart[index];
+    
+    // Calculamos el nuevo precio
+    // Fórmula: PrecioOriginal - (PrecioOriginal * (Porcentaje / 100))
+    const descuento = item.precio * (porcentaje / 100);
+    const nuevoPrecio = item.precio - descuento;
+
+    // Actualizamos el precio en el carrito
+    item.precio = Math.round(nuevoPrecio); // Redondeamos para evitar decimales molestos
+    
+    showVikingToast(`Descuento del ${porcentaje}% aplicado`);
+    updateCartUI();
+};
 
 function updateTotales(monto) {
     const elSub = document.getElementById('cobrar-subtotal');
