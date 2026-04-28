@@ -1357,26 +1357,23 @@ def get_feriados(db: Session = Depends(database.get_db)):
 @app.post("/api/feriados", tags=["Feriados"])
 def create_feriado(data: DiaEspecialCreate, db: Session = Depends(database.get_db)):
     try:
-        # 1. Recibimos el string (ej: "2026-05-01")
+        # Fix Zona Horaria: Tomamos solo la fecha pura
         fecha_dt = datetime.strptime(data.fecha, "%Y-%m-%d").date()
         
-        # 2. Le sumamos el día para compensar el atraso por la hora
-        fecha_corregida = fecha_dt + timedelta(days=1)
-        
-        # 3. Guardamos la fecha CORREGIDA
-        existente = db.query(models.DiaEspecial).filter(models.DiaEspecial.fecha == fecha_corregida).first()
+        # Evitamos el error de UNIQUE: Si existe, actualizamos el motivo
+        existente = db.query(models.DiaEspecial).filter(models.DiaEspecial.fecha == fecha_dt).first()
         if existente:
             existente.motivo = data.motivo
             db.commit()
-            return {"status": "success"}
+            return {"status": "success", "message": "Actualizado"}
 
-        nuevo = models.DiaEspecial(fecha=fecha_corregida, motivo=data.motivo, abierto=data.abierto)
+        nuevo = models.DiaEspecial(fecha=fecha_dt, motivo=data.motivo, abierto=data.abierto)
         db.add(nuevo)
         db.commit()
         return {"status": "success"}
     except Exception as e:
         db.rollback()
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=f"Error: {str(e)}")
 
 # 2. LAS CLASES QUE SE DAN ESE DÍA (TABLA: clases_feriado)
 @app.get("/api/clases-feriado", tags=["Feriados"])
