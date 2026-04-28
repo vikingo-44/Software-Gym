@@ -228,8 +228,8 @@ class AccessCheck(BaseModel):
 class TipoPlanSchema(BaseModel):
     id: int
     nombre: str
-    duracion_dias: Optional[int] = 30
-    model_config = ConfigDict(from_attributes=True)
+    duracion_dias: int
+    class Config: from_attributes = True
 
 class PlanSchema(BaseModel):
     id: int
@@ -240,7 +240,7 @@ class PlanSchema(BaseModel):
     clases_mensuales: Optional[int] = 12
     tipo_plan_id: Optional[int] = None
     tipo: Optional[TipoPlanSchema] = None # Si el tipo no existe, no rompe
-    model_config = ConfigDict(from_attributes=True)
+    class Config: from_attributes = True
 
 class UsuarioResponse(BaseModel):
     id: int
