@@ -1420,6 +1420,18 @@ async function loadMusculacionMetadata() {
     }
 }
 
+function toggleTheme() {
+    const theme = document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('viking-theme', theme);
+}
+
+// Al cargar la página aplica el tema guardado
+document.addEventListener('DOMContentLoaded', () => {
+    const savedTheme = localStorage.getItem('viking-theme') || 'dark';
+    document.documentElement.setAttribute('data-theme', savedTheme);
+});
+
 /**
  * 2. FICHA TÉCNICA (Visualización de Rutina)
  */
