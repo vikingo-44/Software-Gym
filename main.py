@@ -239,7 +239,6 @@ class PlanSchema(BaseModel):
     debito_credito: Optional[float] = 0.0
     clases_mensuales: Optional[int] = 12
     tipo_plan_id: Optional[int] = None
-    duracion_dias: Optional[int] = 30
     tipo: Optional[TipoPlanSchema] = None # Si el tipo no existe, no rompe
     model_config = ConfigDict(from_attributes=True)
 
@@ -1208,36 +1207,19 @@ def get_planes(db: Session = Depends(database.get_db)):
 
 @app.post("/api/planes", tags=["Planes"])
 def create_plan(data: PlanUpdate, db: Session = Depends(database.get_db)):
-    """Crea un nuevo plan maestro calculando la duración correctamente"""
-    try:
-        tipo = db.query(models.TipoPlan).filter(models.TipoPlan.id == data.tipo_plan_id).first()
-        
-        # Si no mandamos días, los sacamos del TipoPlan o default 30
-        dias_finales = 30
-        if tipo and tipo.duracion_dias:
-            dias_finales = tipo.duracion_dias
-        elif hasattr(data, 'dias') and data.dias:
-            dias_finales = data.dias
-
-        new_p = models.Plan(
-            nombre=data.nombre,
-            efectivo=data.efectivo,
-            transferencia=data.transferencia,
-            debito_credito=data.debito_credito,
-            tipo_plan_id=data.tipo_plan_id,
-            clases_mensuales=data.clases_mensuales,
-            duracion_dias=dias_finales  # Asegurate de usar el nombre de models.py
-        )
-        
-        db.add(new_p)
-        db.commit()
-        db.refresh(new_p)
-        return {"status": "success", "id": new_p.id}
-        
-    except Exception as e:
-        db.rollback()
-        logger.error(f"ERROR PLANES: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Error en BD: {str(e)}")
+    """Crea un nuevo plan maestro"""
+    new_p = models.Plan(
+        nombre=data.nombre,
+        efectivo=data.efectivo,
+        transferencia=data.transferencia,
+        debito_credito=data.debito_credito,
+        tipo_plan_id=data.tipo_plan_id,
+        clases_mensuales=data.clases_mensuales,
+        dias=data.dias 
+    )
+    db.add(new_p)
+    db.commit()
+    return {"status": "success"}
 
 @app.put("/api/planes/{id}", tags=["Planes"])
 def update_plan(id: int, data: PlanUpdate, db: Session = Depends(database.get_db)):
