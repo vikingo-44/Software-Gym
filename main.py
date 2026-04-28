@@ -300,7 +300,6 @@ class PlanUpdate(BaseModel):
     debito_credito: float
     tipo_plan_id: int
     clases_mensuales: Optional[int] = 12
-    dias: Optional[int] = 30 
 
 # --- NUEVO SCHEMA PARA BOXES ---
 class TipoBoxResponse(BaseModel):
