@@ -636,7 +636,7 @@
 
 						if (infoFeriado) {
 							// --- LÓGICA FERIADO: Ignora cronograma normal y busca clases especiales ---
-							const clasesEspecialesHoy = state.clasesFeriado?.filter(cf => cf.fecha === fechaSlotStr) || [];
+							const clasesEspecialesHoy = (Array.isArray(state.clasesFeriado) ? state.clasesFeriado : []).filter(cf => cf.fecha === fechaSlotStr);
 							
 							clasesEspecialesHoy.forEach(c => {
 								const hKey = c.horario.toString().replace('.', '_');

@@ -1363,14 +1363,16 @@ def create_feriado(data: DiaEspecialCreate, db: Session = Depends(database.get_d
         raise HTTPException(status_code=400, detail="Ese día ya está marcado como feriado.")
 
 @app.get("/api/clases-feriado", tags=["Feriados"])
-def get_clases_feriado(fecha: str, db: Session = Depends(database.get_db)):
-    fecha_dt = datetime.strptime(fecha, "%Y-%m-%d").date()
-    return db.query(models.ClaseFeriado).filter(models.ClaseFeriado.fecha == fecha_dt).all()
 def get_clases_feriado(fecha: Optional[str] = None, db: Session = Depends(database.get_db)):
+    """Trae todas las clases o filtra por fecha si viene el parámetro"""
     query = db.query(models.ClaseFeriado)
     if fecha:
-        fecha_dt = datetime.strptime(fecha, "%Y-%m-%d").date()
-        query = query.filter(models.ClaseFeriado.fecha == fecha_dt)
+        try:
+            fecha_dt = datetime.strptime(fecha, "%Y-%m-%d").date()
+            query = query.filter(models.ClaseFeriado.fecha == fecha_dt)
+        except Exception:
+            pass # Si la fecha viene mal, ignoramos el filtro
+    
     return query.all()
 
 @app.post("/api/clases-feriado", tags=["Feriados"])
