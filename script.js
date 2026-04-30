@@ -3554,18 +3554,24 @@ if (editorForm) {
 			const container = document.getElementById('alumnos-list-view');
 			if (!container) return;
 
+			// Obtenemos la fecha de hoy en formato YYYY-MM-DD
 			const hoy = new Date().toISOString().split('T')[0];
 
 			// --- PASO A: FILTRADO ---
 			let filtrados = state.alumnos.filter(a => {
+				// Búsqueda por texto (Nombre o DNI)
 				const matchesSearch = (a.nombre_completo || "").toLowerCase().includes(state.alumnosSearch.toLowerCase()) || 
-									  String(a.dni || "").includes(state.alumnosSearch);
+									String(a.dni || "").includes(state.alumnosSearch);
 				
+				// Lógica de Estado: Es ACTIVO si tiene fecha y esa fecha es igual o mayor a hoy
 				const isActive = a.fecha_vencimiento && a.fecha_vencimiento >= hoy;
 				
 				let matchesStatus = true;
-				if (state.alumnosStatusFilter === "activos") matchesStatus = isActive;
-				if (state.alumnosStatusFilter === "vencidos") matchesStatus = !isActive;
+				if (state.alumnosStatusFilter === "activos") {
+					matchesStatus = isActive;
+				} else if (state.alumnosStatusFilter === "vencidos") {
+					matchesStatus = !isActive; // Es vencido si NO es activo
+				}
 
 				return matchesSearch && matchesStatus;
 			});
@@ -3578,35 +3584,40 @@ if (editorForm) {
 			const inicio = (state.alumnosPage - 1) * state.alumnosLimit;
 			const paginados = filtrados.slice(inicio, inicio + state.alumnosLimit);
 
-			// --- PASO C: UI DE FILTROS (FIX COLOR ROJO) ---
-			document.querySelectorAll('.filter-btn').forEach(btn => {
+			// --- PASO C: UI DE FILTROS (EL COLOR ROJO) ---
+			// Buscamos todos los botones con la clase específica de alumnos
+			document.querySelectorAll('.filter-btn-alumno').forEach(btn => {
 				btn.classList.remove('bg-red-600', 'text-black');
-				btn.classList.add('text-gray-500');
+				btn.classList.add('text-white-500', 'hover:text-white');
 			});
 			
+			// Marcamos el botón activo
 			const activeFilterBtn = document.getElementById('filter-' + state.alumnosStatusFilter);
 			if (activeFilterBtn) {
-				activeFilterBtn.classList.remove('text-gray-500');
+				activeFilterBtn.classList.remove('text-white-500', 'hover:text-white');
 				activeFilterBtn.classList.add('bg-red-600', 'text-black');
 			}
 
-			// --- PASO D: RENDERIZADO DE CONTENIDO ---
+			// --- PASO D: DIBUJAR EN PANTALLA ---
 			if (paginados.length === 0) {
 				container.innerHTML = `
 					<div class="py-20 text-center opacity-20">
 						<i data-lucide="shield-off" class="w-16 h-16 mx-auto mb-4"></i>
-						<p class="font-black uppercase italic tracking-widest">No se encontraron guerreros en esta categoría</p>
+						<p class="font-black uppercase italic tracking-widest">No hay guerreros en la categoría: ${state.alumnosStatusFilter}</p>
 					</div>`;
 			} else {
 				container.innerHTML = paginados.map(a => createAlumnoRow(a, 'listado')).join('');
 			}
 
-			// --- PASO E: ACTUALIZAR PAGINACIÓN Y ICONOS ---
-			updatePaginationUI(totalPages, totalItems);
+			// --- PASO E: ACTUALIZAR ESTADÍSTICAS Y ICONOS ---
 			if (window.lucide) lucide.createIcons();
 			
-			// Aplicar permisos para ocultar botones de edición según el rol
-			if (typeof applyPermissions === 'function') applyPermissions();
+			// Actualizamos los numeritos de arriba (stats)
+			const totalActivos = state.alumnos.filter(a => a.fecha_vencimiento && a.fecha_vencimiento >= hoy).length;
+			
+			if (document.getElementById('stats-total')) document.getElementById('stats-total').innerText = state.alumnos.length;
+			if (document.getElementById('stats-activos')) document.getElementById('stats-activos').innerText = totalActivos;
+			if (document.getElementById('stats-vencidos')) document.getElementById('stats-vencidos').innerText = state.alumnos.length - totalActivos;
 		}
 		
 		/**
@@ -6272,35 +6283,57 @@ if (editorForm) {
              * 2. Función de Filtrado
              */
             function filterAlumnos(filtro) {
-                state.currentPageAlumnos = 1; // Siempre volvemos a la página 1 al filtrar
-                if(!state.alumnos) return;
-                
-                // Limpiar el input de búsqueda al filtrar para evitar confusión
-                const searchInput = document.getElementById('search-alumno-input');
-                if(searchInput) searchInput.value = "";
+				// 1. Validar que existan alumnos en el estado
+				if (!state.alumnos) return;
 
-                // REINICIAR BOTONES: Limpiamos absolutamente todos los botones que tengan la clase de filtro
-                // Usamos un selector doble por seguridad para que limpie sí o sí
-                document.querySelectorAll('.filter-btn, .filter-btn-alumno').forEach(btn => {
-                    btn.classList.remove('bg-red-600', 'text-black');
-                    btn.classList.add('text-white-500', 'hover:text-white');
-                });
+				// 2. Actualizar el estado global del filtro y resetear página
+				state.alumnosStatusFilter = filtro; // Guardamos qué filtro está activo
+				state.alumnosPage = 1;              // Resetear a la página 1
+				state.currentPageAlumnos = 1;       // Sincronizar con tu otra variable de página si existe
 
-                // MARCAR EL ACTIVO
-                const activeBtn = document.getElementById('filter-' + filtro);
-                if(activeBtn) {
-                    activeBtn.classList.remove('text-white-500', 'hover:text-white');
-                    activeBtn.classList.add('bg-red-600', 'text-black');
-                }
+				// 3. Limpiar el buscador para evitar conflictos visuales
+				const searchInput = document.getElementById('search-alumno-input');
+				if (searchInput) {
+					searchInput.value = "";
+					state.alumnosSearch = ""; // Limpiamos también el texto de búsqueda en el estado
+				}
 
-                const hoy = new Date().toISOString().split('T')[0];
-                let filtrados = state.alumnos;
-                
-                if(filtro === 'activos') filtrados = state.alumnos.filter(a => a.fecha_vencimiento && a.fecha_vencimiento >= hoy);
-                if(filtro === 'inactivos') filtrados = state.alumnos.filter(a => !a.fecha_vencimiento || a.fecha_vencimiento < hoy);
-                
-                renderAlumnosList(filtrados);
-            }
+				// 4. UI: REINICIAR BOTONES (Limpiar colores de todos)
+				document.querySelectorAll('.filter-btn, .filter-btn-alumno').forEach(btn => {
+					btn.classList.remove('bg-red-600', 'text-black');
+					btn.classList.add('text-white-500', 'hover:text-white');
+				});
+
+				// 5. UI: MARCAR EL BOTÓN SELECCIONADO
+				const activeBtn = document.getElementById('filter-' + filtro);
+				if (activeBtn) {
+					activeBtn.classList.remove('text-white-500', 'hover:text-white');
+					activeBtn.classList.add('bg-red-600', 'text-black');
+				}
+
+				// 6. LÓGICA DE FILTRADO
+				const hoy = new Date().toISOString().split('T')[0];
+				let filtrados = [];
+
+				if (filtro === 'todos') {
+					filtrados = state.alumnos;
+				} else if (filtro === 'activos') {
+					// Activos: Tienen fecha y es hoy o futura
+					filtrados = state.alumnos.filter(a => a.fecha_vencimiento && a.fecha_vencimiento >= hoy);
+				} else if (filtro === 'vencidos') {
+					// Vencidos: No tienen fecha O la fecha es menor a hoy (estrictamente lo opuesto a activos)
+					filtrados = state.alumnos.filter(a => !a.fecha_vencimiento || a.fecha_vencimiento < hoy);
+				}
+
+				// 7. RENDERIZAR RESULTADOS
+				// Nota: Asegúrate de que esta función acepte la lista filtrada como argumento
+				if (typeof renderAlumnosList === 'function') {
+					renderAlumnosList(filtrados);
+				} else {
+					// Si tu renderizador principal usa el estado global, llama a esa
+					renderAlumnos(); 
+				}
+			}
 
 
             /**
