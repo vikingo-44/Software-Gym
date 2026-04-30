@@ -860,45 +860,40 @@ function renderCobrar() {
     const displayArea = document.getElementById('cobrar-display-area');
     if (!displayArea) return;
 
-    // Seteo de pestaña por defecto si no existe
     if (!state.cobrarTab) state.cobrarTab = 'mercaderia';
-    
-    // Actualizar botones de pago si la función existe
     if (window.updatePaymentButtons) window.updatePaymentButtons();
 
     const searchVal = document.getElementById('cobrar-search').value.toLowerCase();
     
     if (state.cobrarTab === 'mercaderia') {
-        // Filtrado de productos por nombre
-        const filtered = state.stock.filter(s => s.nombre_producto.toLowerCase().includes(searchVal));
-        
+        const filtered = state.stock.filter(s => 
+            (s.nombre_producto || "").toLowerCase().includes(searchVal)
+        );
+
         displayArea.innerHTML = `<div class="grid grid-cols-2 md:grid-cols-4 gap-4 overflow-y-auto max-h-[600px] pr-2 custom-scrollbar" id="cobrar-catalogo"></div>`;
         const catalog = document.getElementById('cobrar-catalogo');
         
         catalog.innerHTML = filtered.map(s => {
-            // Lógica para el color del stock (Rojo si no hay, Amarillo si hay poco)
-            const stockActual = parseInt(s.cantidad) || 0;
-            let stockColorClass = "text-white/40"; // Normal
+            // --- CORRECCIÓN DE PROPIEDAD DE STOCK ---
+            // Buscamos el valor en cantidad, si no existe probamos con stock, sino 0.
+            const stockActual = parseInt(s.cantidad !== undefined ? s.cantidad : (s.stock !== undefined ? s.stock : 0));
+            
+            let stockColorClass = "text-white/40"; 
             if (stockActual <= 0) stockColorClass = "text-red-500 font-black";
             else if (stockActual < 5) stockColorClass = "text-yellow-500 font-bold";
 
-            // Formatear precio (asumiendo que el campo es precio_venta)
-            const precioFormateado = new Intl.NumberFormat('es-AR', { minimumFractionDigits: 0 }).format(s.precio_venta || 0);
+            const precioFormateado = new Intl.NumberFormat('es-AR').format(s.precio_venta || 0);
 
             return `
-            <div class="glass-card p-4 rounded-3xl relative group cursor-pointer hover:border-red-600/50 flex flex-col h-full transition-all" onclick="addToCart(${s.id}, 'stock')">
-                <!-- Imagen del Producto -->
+            <div class="glass-card p-4 rounded-3xl relative group cursor-pointer hover:border-red-600/50 flex flex-col h-full" onclick="addToCart(${s.id}, 'stock')">
                 <div class="w-full h-24 bg-white/5 rounded-2xl mb-3 flex items-center justify-center overflow-hidden">
                     ${s.url_imagen ? 
                         `<img src="${s.url_imagen}" class="w-full h-full object-cover" onerror="this.parentElement.innerHTML='<i data-lucide=\'package\' class=\'w-6 h-6 opacity-20\'></i>'">` : 
                         `<i data-lucide="package" class="w-6 h-6 opacity-20 text-white"></i>`
                     }
                 </div>
-
-                <!-- Título -->
                 <h4 class="text-[10px] font-black uppercase italic mb-1 truncate text-white/90">${s.nombre_producto}</h4>
                 
-                <!-- Info de Venta (Aquí reemplazamos los puntos) -->
                 <div class="flex justify-between items-end mt-auto pt-2 border-t border-white/5">
                     <div>
                         <p class="text-[14px] font-black text-white italic tracking-tighter">$${precioFormateado}</p>
@@ -914,11 +909,10 @@ function renderCobrar() {
         }).join('');
 
     } else {
-        // --- SECCIÓN DE PLANES / ALUMNOS (Tu código original que funcionaba) ---
+        // --- SECCIÓN PLANES (Sin cambios, ya que funciona) ---
         const hoy = new Date().toISOString().split('T')[0];
         const filteredAl = state.alumnos.filter(a => 
-            (a.nombre_completo || "").toLowerCase().includes(searchVal) || 
-            (a.dni || "").includes(searchVal)
+            (a.nombre_completo || "").toLowerCase().includes(searchVal) || (a.dni || "").includes(searchVal)
         );
 
         displayArea.innerHTML = `
@@ -949,7 +943,6 @@ function renderCobrar() {
                                     ${statusText}
                                 </span>
                             </div>
-
                             <div class="grid grid-cols-1 md:grid-cols-3 gap-3 items-end mt-2 pt-3 border-t border-white/5">
                                 <div>
                                     <p class="text-[8px] text-white/40 font-black uppercase italic px-2 mb-1">Duración</p>
@@ -973,7 +966,6 @@ function renderCobrar() {
                                         class="viking-input !py-2 !text-[10px] h-10 bg-black/60 border-white/10">
                                 </div>
                             </div>
-
                             <button onclick="preparePlanCharge(${a.id})" class="mt-2 w-full h-10 rounded-xl text-[10px] font-black italic bg-green-600/20 text-green-500 border border-green-500/20 hover:bg-green-600 hover:text-black transition-all flex items-center justify-center gap-2">
                                 <i data-lucide="shopping-cart" class="w-3 h-3"></i> CONFIRMAR PARA CARRITO
                             </button>
@@ -982,8 +974,6 @@ function renderCobrar() {
                 </div>
             </div>`;
     }
-    
-    // Refrescar iconos de Lucide y el Carrito
     if (window.lucide) lucide.createIcons();
     if (typeof updateCartUI === 'function') updateCartUI();
 }
