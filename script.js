@@ -860,30 +860,65 @@ function renderCobrar() {
     const displayArea = document.getElementById('cobrar-display-area');
     if (!displayArea) return;
 
+    // Seteo de pestaña por defecto si no existe
     if (!state.cobrarTab) state.cobrarTab = 'mercaderia';
+    
+    // Actualizar botones de pago si la función existe
     if (window.updatePaymentButtons) window.updatePaymentButtons();
 
     const searchVal = document.getElementById('cobrar-search').value.toLowerCase();
     
     if (state.cobrarTab === 'mercaderia') {
+        // Filtrado de productos por nombre
         const filtered = state.stock.filter(s => s.nombre_producto.toLowerCase().includes(searchVal));
+        
         displayArea.innerHTML = `<div class="grid grid-cols-2 md:grid-cols-4 gap-4 overflow-y-auto max-h-[600px] pr-2 custom-scrollbar" id="cobrar-catalogo"></div>`;
         const catalog = document.getElementById('cobrar-catalogo');
-        catalog.innerHTML = filtered.map(s => `
-			<div class="glass-card p-4 rounded-3xl relative group cursor-pointer hover:border-red-600/50" onclick="addToCart(${s.id}, 'stock')">
-				<div class="w-full h-24 bg-white/5 rounded-2xl mb-3 flex items-center justify-center overflow-hidden">
-					${s.url_imagen ? 
-						`<img src="${s.url_imagen}" class="w-full h-full object-cover" onerror="this.parentElement.innerHTML='<i data-lucide=\'package\' class=\'w-6 h-6 opacity-20\'></i>'">` : 
-						`<i data-lucide="package" class="w-6 h-6 opacity-20 text-white"></i>`
-					}
-				</div>
-				<h4 class="text-[10px] font-black uppercase italic mb-1 truncate">${s.nombre_producto}</h4>
-				...
-			</div>`).join('');
+        
+        catalog.innerHTML = filtered.map(s => {
+            // Lógica para el color del stock (Rojo si no hay, Amarillo si hay poco)
+            const stockActual = parseInt(s.cantidad) || 0;
+            let stockColorClass = "text-white/40"; // Normal
+            if (stockActual <= 0) stockColorClass = "text-red-500 font-black";
+            else if (stockActual < 5) stockColorClass = "text-yellow-500 font-bold";
+
+            // Formatear precio (asumiendo que el campo es precio_venta)
+            const precioFormateado = new Intl.NumberFormat('es-AR', { minimumFractionDigits: 0 }).format(s.precio_venta || 0);
+
+            return `
+            <div class="glass-card p-4 rounded-3xl relative group cursor-pointer hover:border-red-600/50 flex flex-col h-full transition-all" onclick="addToCart(${s.id}, 'stock')">
+                <!-- Imagen del Producto -->
+                <div class="w-full h-24 bg-white/5 rounded-2xl mb-3 flex items-center justify-center overflow-hidden">
+                    ${s.url_imagen ? 
+                        `<img src="${s.url_imagen}" class="w-full h-full object-cover" onerror="this.parentElement.innerHTML='<i data-lucide=\'package\' class=\'w-6 h-6 opacity-20\'></i>'">` : 
+                        `<i data-lucide="package" class="w-6 h-6 opacity-20 text-white"></i>`
+                    }
+                </div>
+
+                <!-- Título -->
+                <h4 class="text-[10px] font-black uppercase italic mb-1 truncate text-white/90">${s.nombre_producto}</h4>
+                
+                <!-- Info de Venta (Aquí reemplazamos los puntos) -->
+                <div class="flex justify-between items-end mt-auto pt-2 border-t border-white/5">
+                    <div>
+                        <p class="text-[14px] font-black text-white italic tracking-tighter">$${precioFormateado}</p>
+                        <p class="text-[8px] uppercase tracking-tighter ${stockColorClass}">
+                            Stock: ${stockActual}
+                        </p>
+                    </div>
+                    <div class="w-8 h-8 rounded-xl bg-red-600/10 border border-red-600/20 flex items-center justify-center text-red-500 group-hover:bg-red-600 group-hover:text-black transition-all">
+                        <i data-lucide="plus" class="w-4 h-4"></i>
+                    </div>
+                </div>
+            </div>`;
+        }).join('');
+
     } else {
+        // --- SECCIÓN DE PLANES / ALUMNOS (Tu código original que funcionaba) ---
         const hoy = new Date().toISOString().split('T')[0];
         const filteredAl = state.alumnos.filter(a => 
-            a.nombre_completo.toLowerCase().includes(searchVal) || a.dni.includes(searchVal)
+            (a.nombre_completo || "").toLowerCase().includes(searchVal) || 
+            (a.dni || "").includes(searchVal)
         );
 
         displayArea.innerHTML = `
@@ -903,7 +938,7 @@ function renderCobrar() {
                             <div class="flex justify-between items-center">
                                 <div class="flex items-center gap-3">
                                     <div class="w-10 h-10 rounded-xl viking-bg-red flex items-center justify-center font-black text-black text-xs italic">
-                                        ${a.nombre_completo[0].toUpperCase()}
+                                        ${(a.nombre_completo ? a.nombre_completo[0] : 'G').toUpperCase()}
                                     </div>
                                     <div>
                                         <p class="text-[13px] font-black italic uppercase text-white">${a.nombre_completo}</p>
@@ -947,8 +982,10 @@ function renderCobrar() {
                 </div>
             </div>`;
     }
+    
+    // Refrescar iconos de Lucide y el Carrito
     if (window.lucide) lucide.createIcons();
-    updateCartUI();
+    if (typeof updateCartUI === 'function') updateCartUI();
 }
 document.getElementById('cobrar-search').oninput = renderCobrar;
 
