@@ -874,39 +874,41 @@ function renderCobrar() {
         const catalog = document.getElementById('cobrar-catalogo');
         
         catalog.innerHTML = filtered.map(s => {
-            // --- CORRECCIÓN DE PROPIEDAD DE STOCK ---
-            // Buscamos el valor en cantidad, si no existe probamos con stock, sino 0.
-            const stockActual = parseInt(s.cantidad !== undefined ? s.cantidad : (s.stock !== undefined ? s.stock : 0));
-            
-            let stockColorClass = "text-white/40"; 
-            if (stockActual <= 0) stockColorClass = "text-red-500 font-black";
-            else if (stockActual < 5) stockColorClass = "text-yellow-500 font-bold";
+			// --- CORRECCIÓN DEFINITIVA: Se utiliza 'stock_actual' de la DB ---
+			const stockActual = parseInt(s.stock_actual) || 0;
+			
+			let stockColorClass = "text-white/40"; 
+			if (stockActual <= 0) {
+				stockColorClass = "text-red-500 font-black";
+			} else if (stockActual < 5) {
+				stockColorClass = "text-yellow-500 font-bold";
+			}
 
-            const precioFormateado = new Intl.NumberFormat('es-AR').format(s.precio_venta || 0);
+			const precioFormateado = new Intl.NumberFormat('es-AR').format(s.precio_venta || 0);
 
-            return `
-            <div class="glass-card p-4 rounded-3xl relative group cursor-pointer hover:border-red-600/50 flex flex-col h-full" onclick="addToCart(${s.id}, 'stock')">
-                <div class="w-full h-24 bg-white/5 rounded-2xl mb-3 flex items-center justify-center overflow-hidden">
-                    ${s.url_imagen ? 
-                        `<img src="${s.url_imagen}" class="w-full h-full object-cover" onerror="this.parentElement.innerHTML='<i data-lucide=\'package\' class=\'w-6 h-6 opacity-20\'></i>'">` : 
-                        `<i data-lucide="package" class="w-6 h-6 opacity-20 text-white"></i>`
-                    }
-                </div>
-                <h4 class="text-[10px] font-black uppercase italic mb-1 truncate text-white/90">${s.nombre_producto}</h4>
-                
-                <div class="flex justify-between items-end mt-auto pt-2 border-t border-white/5">
-                    <div>
-                        <p class="text-[14px] font-black text-white italic tracking-tighter">$${precioFormateado}</p>
-                        <p class="text-[8px] uppercase tracking-tighter ${stockColorClass}">
-                            Stock: ${stockActual}
-                        </p>
-                    </div>
-                    <div class="w-8 h-8 rounded-xl bg-red-600/10 border border-red-600/20 flex items-center justify-center text-red-500 group-hover:bg-red-600 group-hover:text-black transition-all">
-                        <i data-lucide="plus" class="w-4 h-4"></i>
-                    </div>
-                </div>
-            </div>`;
-        }).join('');
+			return `
+			<div class="glass-card p-4 rounded-3xl relative group cursor-pointer hover:border-red-600/50 flex flex-col h-full" onclick="addToCart(${s.id}, 'stock')">
+				<div class="w-full h-24 bg-white/5 rounded-2xl mb-3 flex items-center justify-center overflow-hidden">
+					${s.url_imagen ? 
+						`<img src="${s.url_imagen}" class="w-full h-full object-cover" onerror="this.parentElement.innerHTML='<i data-lucide=\'package\' class=\'w-6 h-6 opacity-20\'></i>'">` : 
+						`<i data-lucide="package" class="w-6 h-6 opacity-20 text-white"></i>`
+					}
+				</div>
+				<h4 class="text-[10px] font-black uppercase italic mb-1 truncate text-white/90">${s.nombre_producto}</h4>
+				
+				<div class="flex justify-between items-end mt-auto pt-2 border-t border-white/5">
+					<div>
+						<p class="text-[14px] font-black text-white italic tracking-tighter">$${precioFormateado}</p>
+						<p class="text-[8px] uppercase tracking-tighter ${stockColorClass}">
+							Stock: ${stockActual}
+						</p>
+					</div>
+					<div class="w-8 h-8 rounded-xl bg-red-600/10 border border-red-600/20 flex items-center justify-center text-red-500 group-hover:bg-red-600 group-hover:text-black transition-all">
+						<i data-lucide="plus" class="w-4 h-4"></i>
+					</div>
+				</div>
+			</div>`;
+		}).join('');
 
     } else {
         // --- SECCIÓN PLANES (Sin cambios, ya que funciona) ---
