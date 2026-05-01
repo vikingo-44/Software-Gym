@@ -732,6 +732,16 @@
                             class="viking-input pl-12 bg-white/5 border-white/10 text-white rounded-2xl focus:border-red-600 transition-all">
                     </div>
 
+					<!-- FILTRO DE SUCURSAL PARA LA LISTA -->
+					<div class="flex items-center gap-3 bg-white/5 p-2 rounded-2xl border border-white/5">
+						<i data-lucide="map-pin" class="w-4 h-4 text-red-600 ml-2"></i>
+						<select id="filter-sucursal-alumnos" onchange="filterAlumnos()" 
+							class="bg-transparent text-[11px] font-black uppercase italic text-white/70 outline-none cursor-pointer">
+							<option value="all" class="bg-zinc-950">Todas las Sedes</option>
+							<!-- Dinámico: Sede Norte, Sede Sur, etc. -->
+						</select>
+					</div>
+
                     <!-- FILTRO DE ESTADO VIKINGO -->
                     <div class="flex bg-white/5 p-1 rounded-2xl border border-white/5 h-[52px]">
                         <button onclick="filterAlumnos('todos')" id="filter-todos" class="filter-btn-alumno px-6 rounded-xl text-[10px] font-black uppercase italic transition-all bg-red-600 text-black">Todos</button>
@@ -1567,8 +1577,10 @@
 							</div>
 
 							<div class="space-y-1">
-								<label class="text-[9px] font-black text-white/40 uppercase ml-2">Sede</label>
-								<select id="al-sucursal" class="viking-input" required></select>
+								<label class="text-[9px] font-black text-white/40 uppercase ml-2">Sede de Inscripción</label>
+								<select id="al-sucursal" class="viking-input bg-zinc-900 border-white/10" required>
+									<!-- Se llena dinámicamente con JS -->
+								</select>
 							</div>
 
 							<div class="space-y-1">
@@ -1712,6 +1724,13 @@
 					<div class="grid grid-cols-2 gap-4">
 						<input type="text" id="stf-dni" placeholder="DNI / Usuario" required class="viking-input">
 						<input type="text" id="stf-esp" placeholder="Especialidad / Cargo" class="viking-input">
+					</div>
+					<div class="space-y-2">
+						<label class="text-[10px] font-black text-red-600 uppercase italic">Sucursal Asignada</label>
+						<select id="stf-sucursal" required class="viking-input bg-black">
+							<option value="">Seleccionar Sucursal...</option>
+							<!-- Esto se va a llenar solo con JavaScript -->
+						</select>
 					</div>
 					<div class="space-y-4">
 						<label class="text-[10px] font-black text-red-600 uppercase italic">Seguridad</label>

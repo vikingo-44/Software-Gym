@@ -4380,24 +4380,76 @@ if (editorForm) {
 			}
 		};
 
-        function openModalStaff(rol) { document.getElementById('modal-staff-title').innerText = "Alta " + rol; document.getElementById('stf-id').value = ""; document.getElementById('stf-rol').value = rol; openModal('modal-staff'); }
+        function openModalStaff(rol) {
+			document.getElementById('modal-staff-title').innerText = "Alta " + rol;
+			document.getElementById('stf-id').value = "";
+			document.getElementById('stf-rol').value = rol;
+			document.getElementById('stf-pass').required = true; // Password obligatorio en alta
+			
+			// Llenar select de sucursales
+			fillSucursalSelect('stf-sucursal');
+			
+			openModal('modal-staff');
+		}
+
         function openEditStaff(id, rol) {
-            const user = (rol === 'Profesor' ? state.profesores : state.administrativos).find(x => x.id == id); if(!user) return;
-            document.getElementById('modal-staff-title').innerText = "Editar " + rol;
-            document.getElementById('stf-id').value = user.id; document.getElementById('stf-rol').value = rol;
-            document.getElementById('stf-nombre').value = user.nombre_completo; document.getElementById('stf-dni').value = user.dni; document.getElementById('stf-esp').value = user.especialidad || "";
-            const delBtn = document.getElementById('btn-delete-staff'); if(state.user.rol_nombre === "Administrador" || state.user.rol_nombre === "Supervisor") delBtn.classList.remove('hidden');
-            delBtn.onclick = () => deleteRecord('staff', id, 'modal-staff', loadStaff);
-            openModal('modal-staff');
-        }
+			const user = (rol === 'Profesor' ? state.profesores : state.administrativos).find(x => x.id == id);
+			if(!user) return;
+			
+			document.getElementById('modal-staff-title').innerText = "Editar " + rol;
+			document.getElementById('stf-id').value = user.id;
+			document.getElementById('stf-rol').value = rol;
+			document.getElementById('stf-nombre').value = user.nombre_completo;
+			document.getElementById('stf-dni').value = user.dni;
+			document.getElementById('stf-esp').value = user.especialidad || "";
+			document.getElementById('stf-pass').required = false; // Opcional en edición
+
+			// Llenar select y seleccionar la sucursal actual del usuario
+			fillSucursalSelect('stf-sucursal', user.sucursal_id);
+
+			const delBtn = document.getElementById('btn-delete-staff');
+			if(state.user.rol_nombre === "Administrador" || state.user.rol_nombre === "Supervisor") delBtn.classList.remove('hidden');
+			delBtn.onclick = () => deleteRecord('staff', id, 'modal-staff', loadStaff);
+			
+			openModal('modal-staff');
+		}
 
         document.getElementById('form-staff').onsubmit = async (e) => {
-            e.preventDefault(); const id = document.getElementById('stf-id').value; const rol = document.getElementById('stf-rol').value;
-            const data = { nombre_completo: document.getElementById('stf-nombre').value, dni: document.getElementById('stf-dni').value, especialidad: document.getElementById('stf-esp').value, perfil_nombre: rol };
-            const pass = document.getElementById('stf-pass').value; if(pass) data.password = pass;
-            const res = await apiFetch(id ? `/staff/${id}` : '/staff', id ? 'PUT' : 'POST', data);
-            if(!res.error) { closeModal('modal-staff'); loadStaff(); showVikingToast("Staff Actualizado"); }
-        };
+			e.preventDefault();
+			const id = document.getElementById('stf-id').value;
+			const rol = document.getElementById('stf-rol').value;
+			
+			const data = { 
+				nombre_completo: document.getElementById('stf-nombre').value, 
+				dni: document.getElementById('stf-dni').value, 
+				especialidad: document.getElementById('stf-esp').value, 
+				perfil_nombre: rol,
+				sucursal_id: document.getElementById('stf-sucursal').value // <--- LO NUEVO
+			};
+			
+			const pass = document.getElementById('stf-pass').value;
+			if(pass) data.password = pass;
+
+			const res = await apiFetch(id ? `/staff/${id}` : '/staff', id ? 'PUT' : 'POST', data);
+			if(!res.error) { 
+				closeModal('modal-staff'); 
+				loadStaff(); 
+				showVikingToast("Personal Guardado Correctamente"); 
+			}
+		};
+
+		// Función auxiliar para no repetir código
+		function fillSucursalSelect(selectId, selectedId = null) {
+			const select = document.getElementById(selectId);
+			select.innerHTML = '<option value="">Seleccionar Sucursal...</option>';
+			state.sucursales.forEach(s => {
+				const opt = document.createElement('option');
+				opt.value = s.id;
+				opt.textContent = s.sucursal;
+				if(selectedId && s.id == selectedId) opt.selected = true;
+				select.appendChild(opt);
+			});
+		}
 
 		// SECCION PLANES
 		// Alta de Plan Nuevo
@@ -6340,26 +6392,30 @@ if (editorForm) {
 					activeBtn.classList.add('bg-red-600', 'text-black');
 				}
 
-				// 6. LÓGICA DE FILTRADO
-				const hoy = new Date().toISOString().split('T')[0];
-				let filtrados = [];
+				// --- AGREGADO: Obtener el valor del filtro de sucursal ---
+				const sucursalSelect = document.getElementById('filter-sucursal-alumnos');
+				const sucursalId = sucursalSelect ? sucursalSelect.value : 'all';
 
-				if (filtro === 'todos') {
-					filtrados = state.alumnos;
-				} else if (filtro === 'activos') {
-					// Activos: Tienen fecha y es hoy o futura
-					filtrados = state.alumnos.filter(a => a.fecha_vencimiento && a.fecha_vencimiento >= hoy);
+				// 6. LÓGICA DE FILTRADO (Combinando Estado + Sucursal)
+				const hoy = new Date().toISOString().split('T')[0];
+				
+				// Primero filtramos por sucursal si no es "all"
+				let filtrados = sucursalId === 'all' 
+					? state.alumnos 
+					: state.alumnos.filter(a => a.sucursal_id == sucursalId);
+
+				// Luego filtramos por el estado (todos, activos o vencidos)
+				if (filtro === 'activos') {
+					filtrados = filtrados.filter(a => a.fecha_vencimiento && a.fecha_vencimiento >= hoy);
 				} else if (filtro === 'vencidos') {
-					// Vencidos: No tienen fecha O la fecha es menor a hoy (estrictamente lo opuesto a activos)
-					filtrados = state.alumnos.filter(a => !a.fecha_vencimiento || a.fecha_vencimiento < hoy);
+					filtrados = filtrados.filter(a => !a.fecha_vencimiento || a.fecha_vencimiento < hoy);
 				}
 
 				// 7. RENDERIZAR RESULTADOS
-				// Nota: Asegúrate de que esta función acepte la lista filtrada como argumento
 				if (typeof renderAlumnosList === 'function') {
 					renderAlumnosList(filtrados);
 				} else {
-					// Si tu renderizador principal usa el estado global, llama a esa
+					// Si tu renderizador principal usa el estado global, recordá actualizar la lista filtrada allí si es necesario
 					renderAlumnos(); 
 				}
 			}

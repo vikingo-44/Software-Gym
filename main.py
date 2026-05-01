@@ -790,6 +790,7 @@ def validar_acceso_qr(data: AccessCheck, db: Session = Depends(database.get_db))
             metodo="QR SCAN",
             accion=final_response["status"],
             exitoso=(final_response["status"] == "AUTHORIZED"),
+            sucursal_id=user.sucursal_id, # <--- SE GUARDA LA SUCURSAL DEL USUARIO QUE ACCEDE
             fecha=datetime.now()
         )
         db.add(nuevo_acceso)
@@ -826,16 +827,18 @@ def delete_sucursal(id: int, db: Session = Depends(database.get_db)):
 
 # --- NUEVO: HISTORIAL DE ACCESOS ---
 @app.get("/api/acceso/historial", tags=["Seguridad"])
-def get_historial_accesos(db: Session = Depends(database.get_db)):
+def get_historial_accesos(db: Session = Depends(database.get_db), current_user = Depends(get_current_user)):
     """
-    Trae los últimos 50 registros de acceso. 
-    Enviamos la fecha ya formateada como texto para evitar desfases en el navegador.
+    Trae los últimos 50 registros de acceso FILTRADOS por sucursal. 
     """
     try:
         from datetime import timedelta
-        accesos = db.query(models.Acceso).order_by(models.Acceso.id.desc()).limit(50).all()
+        # Agregamos el filtro por sucursal_id del usuario logueado
+        accesos = db.query(models.Acceso).filter(
+            models.Acceso.sucursal_id == current_user.sucursal_id
+        ).order_by(models.Acceso.id.desc()).limit(50).all()
         
-        # PRIORIDAD 0: CORRECCIÓN HORARIA.
+        # PRIORIDAD 0: CORRECCIÓN HORARIA (GMT-3 para Argentina)
         offset = timedelta(hours=-3) 
 
         return [{
@@ -843,7 +846,6 @@ def get_historial_accesos(db: Session = Depends(database.get_db)):
             "nombre": a.nombre,
             "dni": a.dni,
             "rol": a.rol or "Alumno",
-            # Formateamos aquí a string: "HH:MM - DD/MM/YY"
             "fecha": (a.fecha + offset).strftime("%H:%M - %d/%m/%y") if a.fecha else "S/D",
             "metodo": a.metodo or "QR",
             "estado": a.accion 
@@ -1115,32 +1117,52 @@ def cancel_reserva(id: int, db: Session = Depends(database.get_db)):
 
 # --- STAFF ---
 @app.get("/api/profesores", response_model=List[UsuarioResponse], tags=["Staff"])
-def list_profesores(db: Session = Depends(database.get_db)):
-    profs = db.query(models.Usuario).options(joinedload(models.Usuario.perfil)).join(models.Perfil).filter(func.lower(models.Perfil.nombre) == "profesor").all()
-    for p in profs: p.rol_nombre = p.perfil.nombre
+def list_profesores(db: Session = Depends(database.get_db), current_user = Depends(get_current_user)):
+    """Lista profesores filtrados por la sucursal del usuario que consulta."""
+    profs = db.query(models.Usuario).options(
+        joinedload(models.Usuario.perfil)
+    ).join(models.Perfil).filter(
+        func.lower(models.Perfil.nombre) == "profesor",
+        models.Usuario.sucursal_id == current_user.sucursal_id # <--- FILTRO POR SEDE
+    ).all()
+    
+    for p in profs: 
+        p.rol_nombre = p.perfil.nombre
     return profs
 
 @app.get("/api/administrativos", response_model=List[UsuarioResponse], tags=["Staff"])
-def list_admins(db: Session = Depends(database.get_db)):
-    admins = db.query(models.Usuario).options(joinedload(models.Usuario.perfil)).join(models.Perfil).filter(func.lower(models.Perfil.nombre) == "administracion").all()
-    for a in admins: a.rol_nombre = a.perfil.nombre
+def list_admins(db: Session = Depends(database.get_db), current_user = Depends(get_current_user)):
+    """Lista administrativos de la misma sucursal."""
+    admins = db.query(models.Usuario).options(
+        joinedload(models.Usuario.perfil)
+    ).join(models.Perfil).filter(
+        func.lower(models.Perfil.nombre) == "administracion",
+        models.Usuario.sucursal_id == current_user.sucursal_id # <--- FILTRO POR SEDE
+    ).all()
+    
+    for a in admins: 
+        a.rol_nombre = a.perfil.nombre
     return admins
 
 @app.post("/api/staff", tags=["Staff"])
 def create_staff(data: dict, db: Session = Depends(database.get_db)):
+    """Crea personal asignándole la sucursal seleccionada en el modal."""
     perfil = db.query(models.Perfil).filter(models.Perfil.nombre == data['perfil_nombre']).first()
     if not perfil:
         raise HTTPException(status_code=400, detail="Perfil no válido")
 
     raw_password = str(data.get('password', data['dni'])).strip()
+    
     new_staff = models.Usuario(
-        nombre_completo=data['nombre_completo'], 
+        nombre_completo=data['nombre_completo'].upper(), 
         dni=data['dni'], 
         email=data.get('email'),
         password_hash=get_password_hash(raw_password),
         perfil_id=perfil.id,
-        especialidad=data.get('especialidad')
+        especialidad=data.get('especialidad'),
+        sucursal_id=data.get('sucursal_id') # <--- RECIBE EL ID DEL MODAL HTML
     )
+    
     db.add(new_staff)
     try:
         db.commit()
@@ -1151,38 +1173,65 @@ def create_staff(data: dict, db: Session = Depends(database.get_db)):
 
 @app.put("/api/staff/{id}", tags=["Staff"])
 def update_staff(id: int, data: StaffUpdate, db: Session = Depends(database.get_db)):
+    """
+    Actualiza personal. 
+    Nota: update_db_user ya maneja dinámicamente los campos de StaffUpdate (incluyendo sucursal_id).
+    """
     return update_db_user(id, data, db)
 
 @app.delete("/api/staff/{id}", tags=["Staff"])
-def delete_staff(id: int, db: Session = Depends(database.get_db)):
-    db.query(models.Usuario).filter(models.Usuario.id == id).delete()
+def delete_staff(id: int, db: Session = Depends(database.get_db), current_user = Depends(get_current_user)):
+    """Elimina personal asegurando que sea de la misma sucursal (por seguridad)."""
+    resultado = db.query(models.Usuario).filter(
+        models.Usuario.id == id,
+        models.Usuario.sucursal_id == current_user.sucursal_id
+    ).delete()
+    
     db.commit()
-    return {"status": "success"}
+    if resultado:
+        return {"status": "success"}
+    return {"status": "error", "message": "No se encontró el registro o pertenece a otra sede."}
 
-# --- STOCK ---
+# --- STOCK (MODIFICADO PARA MULTISUCURSAL) ---
+
 @app.get("/api/stock", tags=["Inventario"])
-def get_stock(db: Session = Depends(database.get_db)):
-    return db.query(models.Stock).all()
+def get_stock(db: Session = Depends(database.get_db), current_user = Depends(get_current_user)):
+    """
+    Lista el stock filtrado por la sucursal del usuario logueado.
+    """
+    # Filtramos la consulta para que solo traiga lo que pertenece a la sucursal del staff
+    return db.query(models.Stock).filter(models.Stock.sucursal_id == current_user.sucursal_id).all()
 
 @app.post("/api/stock", tags=["Inventario"])
-def create_stock(data: StockUpdate, db: Session = Depends(database.get_db)):
+def create_stock(data: StockUpdate, db: Session = Depends(database.get_db), current_user = Depends(get_current_user)):
+    """
+    Crea un producto nuevo asignándolo automáticamente a la sucursal del usuario actual.
+    """
     new_s = models.Stock(
         nombre_producto=data.nombre_producto, 
         stock_actual=data.stock_actual, 
         stock_inicial=data.stock_actual, # Guardamos la cantidad inicial para referencia
         precio_venta=data.precio_venta,
-        url_imagen=data.url_imagen 
+        url_imagen=data.url_imagen,
+        sucursal_id=current_user.sucursal_id  # <--- VINCULACIÓN AUTOMÁTICA A LA SUCURSAL
     )
     db.add(new_s)
     db.commit()
-    db.refresh(new_s) # <--- CRÍTICO: Esto recupera el ID generado por NeonDB
+    db.refresh(new_s) 
     
-    # Devolvemos el objeto completo para que el frontend reciba el nuevo ID
     return new_s
 
 @app.put("/api/stock/{id}", tags=["Inventario"])
-def update_stock(id: int, data: StockUpdate, db: Session = Depends(database.get_db)):
-    s = db.query(models.Stock).filter(models.Stock.id == id).first()
+def update_stock(id: int, data: StockUpdate, db: Session = Depends(database.get_db), current_user = Depends(get_current_user)):
+    """
+    Actualiza un producto asegurando que pertenezca a la sucursal del usuario.
+    """
+    # Agregamos el filtro de sucursal_id por seguridad para que un admin no edite stock de otra sucursal por error
+    s = db.query(models.Stock).filter(
+        models.Stock.id == id, 
+        models.Stock.sucursal_id == current_user.sucursal_id
+    ).first()
+
     if s:
         s.nombre_producto = data.nombre_producto
         s.stock_actual = data.stock_actual
@@ -1190,13 +1239,24 @@ def update_stock(id: int, data: StockUpdate, db: Session = Depends(database.get_
         s.url_imagen = data.url_imagen 
         db.commit()
         return {"status": "success"}
-    return {"status": "error", "message": "Producto no encontrado"}
+    return {"status": "error", "message": "Producto no encontrado en esta sucursal"}
 
 @app.delete("/api/stock/{id}", tags=["Inventario"])
-def delete_stock(id: int, db: Session = Depends(database.get_db)):
-    db.query(models.Stock).filter(models.Stock.id == id).delete()
+def delete_stock(id: int, db: Session = Depends(database.get_db), current_user = Depends(get_current_user)):
+    """
+    Elimina un producto validando la sucursal.
+    """
+    # Solo permite borrar si el ID existe Y pertenece a la sucursal del usuario
+    resultado = db.query(models.Stock).filter(
+        models.Stock.id == id, 
+        models.Stock.sucursal_id == current_user.sucursal_id
+    ).delete()
+    
     db.commit()
-    return {"status": "success"}
+    
+    if resultado:
+        return {"status": "success"}
+    return {"status": "error", "message": "No se pudo eliminar: Producto no encontrado"}
 
 # --- PLANES ---
 @app.get("/api/planes", response_model=List[PlanSchema], tags=["Planes"])
@@ -1268,15 +1328,21 @@ def get_tipos(db: Session = Depends(database.get_db)):
 # --- CLASES ---
 
 @app.get("/api/tipo_box", tags=["Configuracion"])
-def get_tipo_box(db: Session = Depends(database.get_db)):
-    """Retorna la lista de boxes disponibles"""
-    return db.query(models.TipoBox).all()
+def get_tipo_box(db: Session = Depends(database.get_db), current_user = Depends(get_current_user)):
+    """Retorna la lista de boxes disponibles para la sucursal del usuario actual."""
+    return db.query(models.TipoBox).filter(
+        models.TipoBox.sucursal_id == current_user.sucursal_id
+    ).all()
 
 @app.get("/api/clases", tags=["Clases"])
-def get_clases(db: Session = Depends(database.get_db)):
-    """Retorna las clases incluyendo el nombre del box para el filtro del frontend"""
-    clases = db.query(models.Clase).options(joinedload(models.Clase.box_rel)).all()
-    # Mapeamos para que el frontend reciba 'box_nombre' directamente
+def get_clases(db: Session = Depends(database.get_db), current_user = Depends(get_current_user)):
+    """Retorna las clases de la sucursal actual con el nombre del box."""
+    clases = db.query(models.Clase).options(
+        joinedload(models.Clase.box_rel)
+    ).filter(
+        models.Clase.sucursal_id == current_user.sucursal_id
+    ).all()
+    
     result = []
     for c in clases:
         c_dict = {
@@ -1293,22 +1359,29 @@ def get_clases(db: Session = Depends(database.get_db)):
     return result
 
 @app.post("/api/clases", tags=["Clases"])
-def create_clase(data: ClaseUpdate, db: Session = Depends(database.get_db)):
+def create_clase(data: ClaseUpdate, db: Session = Depends(database.get_db), current_user = Depends(get_current_user)):
+    """Crea una nueva clase vinculada automáticamente a la sucursal del operador."""
     new_c = models.Clase(
         nombre=data.nombre,
         coach=data.coach,
         box_id=data.box_id,
         color=data.color,
         capacidad_max=data.capacidad_max,
-        horarios_detalle=data.horarios_detalle 
+        horarios_detalle=data.horarios_detalle,
+        sucursal_id=current_user.sucursal_id  # <--- ASIGNACIÓN AUTOMÁTICA
     )
     db.add(new_c)
     db.commit()
     return {"status": "success"}
 
 @app.put("/api/clases/{id}", tags=["Clases"])
-def update_clase(id: int, data: ClaseUpdate, db: Session = Depends(database.get_db)):
-    c = db.query(models.Clase).filter(models.Clase.id == id).first()
+def update_clase(id: int, data: ClaseUpdate, db: Session = Depends(database.get_db), current_user = Depends(get_current_user)):
+    """Actualiza una clase validando que pertenezca a la sucursal."""
+    c = db.query(models.Clase).filter(
+        models.Clase.id == id,
+        models.Clase.sucursal_id == current_user.sucursal_id
+    ).first()
+    
     if c:
         c.nombre = data.nombre
         c.coach = data.coach
@@ -1319,13 +1392,18 @@ def update_clase(id: int, data: ClaseUpdate, db: Session = Depends(database.get_
         flag_modified(c, "horarios_detalle")
         db.commit()
         return {"status": "success"}
-    return {"status": "error", "message": "Clase no encontrada"}
+    return {"status": "error", "message": "Clase no encontrada en esta sucursal"}
 
 @app.put("/api/clases/{id}/move", tags=["Clases"])
-def move_clase(id: int, data: ClaseMove, db: Session = Depends(database.get_db)):
-    c = db.query(models.Clase).filter(models.Clase.id == id).first()
+def move_clase(id: int, data: ClaseMove, db: Session = Depends(database.get_db), current_user = Depends(get_current_user)):
+    """Mueve el horario de una clase validando la sucursal."""
+    c = db.query(models.Clase).filter(
+        models.Clase.id == id,
+        models.Clase.sucursal_id == current_user.sucursal_id
+    ).first()
+    
     if not c:
-        raise HTTPException(status_code=404, detail="Clase no encontrada")
+        raise HTTPException(status_code=404, detail="Clase no encontrada en esta sucursal")
     
     horarios = list(c.horarios_detalle) if c.horarios_detalle else []
     encontrado = False
@@ -1345,10 +1423,17 @@ def move_clase(id: int, data: ClaseMove, db: Session = Depends(database.get_db))
     return {"status": "error", "message": "No se encontró el horario original"}
 
 @app.delete("/api/clases/{id}", tags=["Clases"])
-def delete_clase(id: int, db: Session = Depends(database.get_db)):
-    db.query(models.Clase).filter(models.Clase.id == id).delete()
+def delete_clase(id: int, db: Session = Depends(database.get_db), current_user = Depends(get_current_user)):
+    """Elimina una clase verificando sucursal."""
+    resultado = db.query(models.Clase).filter(
+        models.Clase.id == id,
+        models.Clase.sucursal_id == current_user.sucursal_id
+    ).delete()
+    
     db.commit()
-    return {"status": "success"}
+    if resultado:
+        return {"status": "success"}
+    return {"status": "error", "message": "No se pudo eliminar la clase"}
 
 # ==========================================
 # MÓDULO DE FERIADOS (LIMPIO Y SIN DUPLICADOS)
@@ -1420,29 +1505,42 @@ def delete_feriado(id: int, db: Session = Depends(database.get_db)):
 
 # --- CAJA ---
 @app.get("/api/caja/resumen", tags=["Finanzas"])
-def get_caja_resumen(db: Session = Depends(database.get_db)):
-    ing = db.query(func.sum(models.MovimientoCaja.monto)).filter(models.MovimientoCaja.tipo == "Ingreso").scalar() or 0
-    egr = db.query(func.sum(models.MovimientoCaja.monto)).filter(models.MovimientoCaja.tipo == "Egreso").scalar() or 0
+def get_caja_resumen(db: Session = Depends(database.get_db), current_user = Depends(get_current_user)):
+    """Calcula el resumen financiero SOLO para la sucursal del usuario actual."""
+    ing = db.query(func.sum(models.MovimientoCaja.monto)).filter(
+        models.MovimientoCaja.tipo == "Ingreso",
+        models.MovimientoCaja.sucursal_id == current_user.sucursal_id
+    ).scalar() or 0
+    
+    egr = db.query(func.sum(models.MovimientoCaja.monto)).filter(
+        models.MovimientoCaja.tipo == "Egreso",
+        models.MovimientoCaja.sucursal_id == current_user.sucursal_id
+    ).scalar() or 0
+    
     return {"ingresos": float(ing), "gastos": float(egr), "balance": float(ing - egr)}
 
 @app.get("/api/caja/movimientos", tags=["Caja"])
-def get_movimientos(db: Session = Depends(database.get_db)):
+def get_movimientos(db: Session = Depends(database.get_db), current_user = Depends(get_current_user)):
+    """Lista los últimos 150 movimientos de la sucursal logueada."""
     try:
-        # Traemos data plana para evitar que fallas en relaciones rompan el JSON
-        movs = db.query(models.MovimientoCaja).order_by(models.MovimientoCaja.fecha.desc()).limit(150).all()
+        movs = db.query(models.MovimientoCaja).filter(
+            models.MovimientoCaja.sucursal_id == current_user.sucursal_id
+        ).order_by(models.MovimientoCaja.fecha.desc()).limit(150).all()
         return movs
     except Exception as e:
         logger.error(f"Error Crítico Caja: {str(e)}")
         return []
 
 @app.post("/api/caja/movimiento", tags=["Finanzas"])
-def create_movimiento(data: MovimientoCajaCreate, db: Session = Depends(database.get_db)):
+def create_movimiento(data: MovimientoCajaCreate, db: Session = Depends(database.get_db), current_user = Depends(get_current_user)):
+    """Crea un movimiento manual de caja asignado a la sucursal actual."""
     new_mov = models.MovimientoCaja(
         tipo=data.tipo,
-        monto=abs(data.monto), # Forzar positivo
+        monto=abs(data.monto),
         descripcion=data.descripcion,
         descripcion2=data.descripcion2,
         metodo_pago=data.metodo_pago,
+        sucursal_id=current_user.sucursal_id,  # VINCULACIÓN AUTOMÁTICA
         fecha=datetime.now()
     )
     db.add(new_mov)
@@ -1450,23 +1548,20 @@ def create_movimiento(data: MovimientoCajaCreate, db: Session = Depends(database
     return {"status": "success"}
 
 @app.post("/api/caja/movimientos", tags=["Caja"])
-def crear_movimiento_caja(mov: MovimientoCreate, db: Session = Depends(database.get_db)):
-    # LÓGICA VIKINGA: Si el tipo es Gasto o Compra, se asegura de que sea Egreso
-    tipo_final = mov.tipo
-    if mov.tipo in ["Gasto", "Compra", "Egreso"]:
-        tipo_final = "Egreso"
+def crear_movimiento_caja(mov: MovimientoCreate, db: Session = Depends(database.get_db), current_user = Depends(get_current_user)):
+    """Registra gastos o compras vinculados a la sucursal actual."""
+    tipo_final = "Egreso" if mov.tipo in ["Gasto", "Compra", "Egreso"] else mov.tipo
     
-    # Creación del objeto para la DB incluyendo la nueva columna 'cuotas'
-    # FIX RENTABILIDAD: Agregamos producto_id y cantidad para que el match sea real
     nuevo_movimiento = models.MovimientoCaja(
         descripcion=mov.descripcion,
         descripcion2=mov.descripcion2,
-        monto=abs(mov.monto),   # Siempre guardamos el monto positivo
-        tipo=tipo_final,        # Aquí definimos si entró o salió plata
+        monto=abs(mov.monto),
+        tipo=tipo_final,
         metodo_pago=mov.metodo_pago,
-        cuotas=mov.cuotas,      # <--- AGREGADO
-        producto_id=mov.producto_id, # <--- NUEVO: Vincula el gasto al producto
-        cantidad=mov.cantidad,       # <--- NUEVO: Guarda cuántas unidades se compraron
+        cuotas=mov.cuotas,
+        producto_id=mov.producto_id,
+        cantidad=mov.cantidad,
+        sucursal_id=current_user.sucursal_id,  # VINCULACIÓN AUTOMÁTICA
         fecha=datetime.now()
     )
     
@@ -1477,68 +1572,58 @@ def crear_movimiento_caja(mov: MovimientoCreate, db: Session = Depends(database.
     return {
         "status": "success", 
         "mensaje": "Movimiento registrado con éxito", 
-        "id": nuevo_movimiento.id,
-        "producto_id": nuevo_movimiento.producto_id, # Devolvemos esto para verificar en el log
-        "cantidad": nuevo_movimiento.cantidad
+        "id": nuevo_movimiento.id
     }
 
 # --- PROCESAR COBROS ---
 @app.post("/api/cobros/procesar", tags=["Finanzas"])
-def procesar_cobro(data: TransactionCreate, db: Session = Depends(database.get_db)):
-    """
-    PRIORIDAD 3: Lógica de cobros con actualización de vencimiento automática.
-    Actualiza la membresía sumando días del plan a la fecha de vencimiento actual o desde hoy.
-    """
+def procesar_cobro(data: TransactionCreate, db: Session = Depends(database.get_db), current_user = Depends(get_current_user)):
+    """Lógica de cobros que respeta el inventario y caja por sucursal."""
     try:
-        # 1. Registro automático en Caja (USANDO alumno_id Y producto_id CORRECTAMENTE)
-        monto_positivo = abs(data.monto)
-        
-        detalle = data.descripcion if data.descripcion else f"Cobro: {data.tipo}"
-
+        # 1. Registro automático en Caja de la sucursal actual
         nueva_transaccion = models.MovimientoCaja(
             tipo="Ingreso", 
-            monto=monto_positivo,
-            descripcion=detalle,
+            monto=abs(data.monto),
+            descripcion=data.descripcion or f"Cobro: {data.tipo}",
             descripcion2=data.descripcion2,
             metodo_pago=data.metodo_pago,
             cuotas=data.cuotas,
             alumno_id=data.alumno_id,
-            producto_id=data.producto_id, # <--- AGREGADO FIX 500
-            cantidad=data.cantidad,       # <--- AGREGADO FIX 500
+            producto_id=data.producto_id,
+            cantidad=data.cantidad,
+            sucursal_id=current_user.sucursal_id,  # EL COBRO VA A LA CAJA DE ESTA SUCURSAL
             fecha=datetime.now()
         )
         db.add(nueva_transaccion)
 
-        # 2. Lógica de Stock (Si es mercadería)
+        # 2. Lógica de Stock (Verificamos que el producto sea de ESTA sucursal)
         if (data.tipo == "Mercaderia" or "ercader" in data.tipo.lower()) and data.producto_id:
-            producto = db.query(models.Stock).filter(models.Stock.id == data.producto_id).first()
+            producto = db.query(models.Stock).filter(
+                models.Stock.id == data.producto_id,
+                models.Stock.sucursal_id == current_user.sucursal_id
+            ).first()
+            
             if not producto:
-                raise HTTPException(status_code=404, detail="Producto no encontrado")
+                raise HTTPException(status_code=404, detail="Producto no encontrado en esta sucursal")
+            
             producto.stock_actual -= data.cantidad
             
-        # 3. Lógica de Planes (Actualización de Vencimiento Automatizada)
+        # 3. Lógica de Planes (Independiente de sucursal pero registrada en caja local)
         if (data.tipo == "Plan" or "plan" in data.tipo.lower()) and data.alumno_id:
             alumno = db.query(models.Usuario).filter(models.Usuario.id == data.alumno_id).first()
-            # En cobros de planes, el 'producto_id' del payload suele ser el ID del Plan maestro
             plan = db.query(models.Plan).options(joinedload(models.Plan.tipo)).filter(models.Plan.id == data.producto_id).first()
 
             if alumno and plan:
                 hoy = date.today()
                 dias_duracion = plan.tipo.duracion_dias if (plan.tipo and plan.tipo.duracion_dias) else 30
-                
-                # LÓGICA DE RENOVACIÓN INTELIGENTE:
-                base_fecha = hoy
-                if alumno.fecha_vencimiento and alumno.fecha_vencimiento > hoy:
-                    base_fecha = alumno.fecha_vencimiento
+                base_fecha = max(hoy, alumno.fecha_vencimiento) if alumno.fecha_vencimiento else hoy
                 
                 alumno.fecha_ultima_renovacion = hoy
                 alumno.fecha_vencimiento = base_fecha + timedelta(days=dias_duracion)
                 alumno.estado_cuenta = "Activo"
                 alumno.plan_id = plan.id
-                
-                # Sincronizamos clases si el plan tiene límite
-                if hasattr(alumno, 'clases_restantes') and plan.clases_mensuales:
-                    alumno.clases_restantes = plan.clases_mensuales
+                # Importante: opcionalmente podrías actualizar la sucursal_id del alumno 
+                # a la sucursal donde está pagando ahora, si quisieras.
 
         db.commit()
         return {"status": "success", "message": "Cobro procesado correctamente"}
