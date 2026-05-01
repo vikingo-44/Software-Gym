@@ -286,12 +286,14 @@ class StaffUpdate(BaseModel):
     especialidad: Optional[str] = None
     perfil_nombre: Optional[str] = None
     password: Optional[str] = None
+    sucursal_id: Optional[int] = None
 
 class StockUpdate(BaseModel):
     nombre_producto: str
     stock_actual: int
     precio_venta: float
-    url_imagen: Optional[str] = None 
+    url_imagen: Optional[str] = None
+    sucursal_id: Optional[int] = None 
 
 class PlanUpdate(BaseModel):
     nombre: str
@@ -314,6 +316,7 @@ class ClaseUpdate(BaseModel):
     color: Optional[str] = "#FF0000"
     capacidad_max: Optional[int] = 40
     horarios_detalle: Optional[List[dict]] = None
+    sucursal_id: Optional[int] = None
 
 class ClaseMove(BaseModel):
     old_dia: int
@@ -338,6 +341,7 @@ class MovimientoCreate(BaseModel):
     # --- AGREGAR ESTOS DOS ---
     producto_id: Optional[int] = None
     cantidad: Optional[int] = 0
+    sucursal_id: Optional[int] = None
 
 class TransactionCreate(BaseModel):
     tipo: str  # 'Plan' o 'Mercaderia'
@@ -349,6 +353,7 @@ class TransactionCreate(BaseModel):
     cantidad: int = 1
     cuotas: Optional[int] = 1
     descripcion2: Optional[str] = None
+    sucursal_id: Optional[int] = None
 
 # --- FERIADOS ---
 class DiaEspecialCreate(BaseModel):

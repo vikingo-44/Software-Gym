@@ -93,6 +93,8 @@ class TipoBox(Base):
     id = Column(Integer, primary_key=True)
     nombre = Column(String, unique=True, nullable=False)
     clases = relationship("Clase", back_populates="box_rel")
+    sucursal_id = Column(Integer, ForeignKey("sucursales.id"), nullable=True)
+    sucursal = relationship("Sucursal")
 
 class Clase(Base):
     __tablename__ = "clases"
@@ -106,6 +108,8 @@ class Clase(Base):
     box_id = Column(Integer, ForeignKey("tipo_box.id"), nullable=True)
     box_rel = relationship("TipoBox", back_populates="clases")
     reservas = relationship("Reserva", back_populates="clase", cascade="all, delete-orphan")
+    sucursal_id = Column(Integer, ForeignKey("sucursales.id"), nullable=True)
+    sucursal = relationship("Sucursal")
 
 class Reserva(Base):
     __tablename__ = "reservas"
@@ -117,6 +121,8 @@ class Reserva(Base):
     dia_semana = Column(Integer) 
     usuario = relationship("Usuario", back_populates="reservas")
     clase = relationship("Clase", back_populates="reservas")
+    sucursal_id = Column(Integer, ForeignKey("sucursales.id"), nullable=True)
+    sucursal = relationship("Sucursal")
 
 class ReservaCreate(BaseModel):
     usuario_id: int
@@ -132,7 +138,9 @@ class Stock(Base):
     precio_venta = Column(Float)
     stock_actual = Column(Integer)
     stock_inicial = Column(Integer)
-    url_imagen = Column(String, nullable=True) 
+    url_imagen = Column(String, nullable=True)
+    sucursal_id = Column(Integer, ForeignKey("sucursales.id"), nullable=True)
+    sucursal = relationship("Sucursal") 
 
 class MovimientoCaja(Base):
     __tablename__ = "caja"
@@ -147,7 +155,8 @@ class MovimientoCaja(Base):
     alumno_id = Column(Integer, ForeignKey("usuarios.id"), nullable=True)
     producto_id = Column(Integer, nullable=True)
     cantidad = Column(Integer, default=1) # FIX: Necesario para procesar ventas de mercadería
-    
+    sucursal_id = Column(Integer, ForeignKey("sucursales.id"), nullable=True)
+    sucursal = relationship("Sucursal")
     alumno_rel = relationship("Usuario", back_populates="movimientos")
 
 class Acceso(Base):
@@ -164,6 +173,8 @@ class Acceso(Base):
     rol = Column(String, nullable=True)
     metodo = Column(String, default="QR")
     usuario = relationship("Usuario", back_populates="accesos")
+    sucursal_id = Column(Integer, ForeignKey("sucursales.id"), nullable=True)
+    sucursal = relationship("Sucursal")
 
 class ClaseFeriado(Base):
     __tablename__ = "clases_feriado"
@@ -173,6 +184,8 @@ class ClaseFeriado(Base):
     horario = Column(Float)          # Ej: 10.5 (para las 10:30)
     capacidad_max = Column(Integer, default=40)
     color = Column(String, default="#FF0000") # Estética Dark Premium
+    sucursal_id = Column(Integer, ForeignKey("sucursales.id"), nullable=True)
+    sucursal = relationship("Sucursal")
 
 class DiaEspecial(Base):
     __tablename__ = "dias_especiales"
@@ -180,6 +193,8 @@ class DiaEspecial(Base):
     fecha = Column(Date, unique=True, nullable=False) # La fecha del feriado (ej: 2026-05-25)
     motivo = Column(String)                           # Nombre del feriado
     abierto = Column(Boolean, default=True)           # Por si querés marcarlo pero que el gym abra igual
+    sucursal_id = Column(Integer, ForeignKey("sucursales.id"), nullable=True)
+    sucursal = relationship("Sucursal")
 
 # =========================================
 # MÓDULO DE MUSCULACIÓN VIKINGA (PRO)
