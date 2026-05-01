@@ -3190,6 +3190,7 @@ if (editorForm) {
         async function initApp() {
 			try {
 				await Promise.all([
+					apiFetch('/sucursales').then(res => state.sucursales = res),
 					fetchAlumnos(), 
 					loadStaff(), 
 					loadPlanes(), 
@@ -4380,15 +4381,17 @@ if (editorForm) {
 			}
 		};
 
-        function openModalStaff(rol) {
+        async function openModalStaff(rol) {
 			document.getElementById('modal-staff-title').innerText = "Alta " + rol;
 			document.getElementById('stf-id').value = "";
 			document.getElementById('stf-rol').value = rol;
-			document.getElementById('stf-pass').required = true; // Password obligatorio en alta
-			
-			// Llenar select de sucursales
+
+			// Si por alguna razón están vacías, las pedimos antes de llenar el select
+			if (!state.sucursales || state.sucursales.length === 0) {
+				state.sucursales = await apiFetch('/sucursales');
+			}
+
 			fillSucursalSelect('stf-sucursal');
-			
 			openModal('modal-staff');
 		}
 
@@ -4441,14 +4444,24 @@ if (editorForm) {
 		// Función auxiliar para no repetir código
 		function fillSucursalSelect(selectId, selectedId = null) {
 			const select = document.getElementById(selectId);
+			if (!select) return;
+
 			select.innerHTML = '<option value="">Seleccionar Sucursal...</option>';
-			state.sucursales.forEach(s => {
-				const opt = document.createElement('option');
-				opt.value = s.id;
-				opt.textContent = s.sucursal;
-				if(selectedId && s.id == selectedId) opt.selected = true;
-				select.appendChild(opt);
-			});
+
+			// Verificamos que state.sucursales exista y sea un array
+			if (state.sucursales && Array.isArray(state.sucursales)) {
+				state.sucursales.forEach(s => {
+					const opt = document.createElement('option');
+					opt.value = s.id;
+					opt.textContent = s.sucursal;
+					if (selectedId && s.id == selectedId) opt.selected = true;
+					select.appendChild(opt);
+				});
+			} else {
+				console.error("❌ Error: state.sucursales no está definido o no es un array.");
+				// Opcional: intentar cargar sucursales si están vacías
+				if (typeof loadSucursales === 'function') loadSucursales();
+			}
 		}
 
 		// SECCION PLANES
