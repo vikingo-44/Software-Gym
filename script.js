@@ -5531,6 +5531,13 @@ if (editorForm) {
 		 * Se llama al entrar a la vista o después de un escaneo.
 		 */
 		async function fetchAccesos() {
+
+			// 🛡️ SEGURIDAD: Si no hay token, no intentamos pedir datos
+			if (!localStorage.getItem('gymfit_token') && !state.token) {
+				console.warn("⚠️ Intento de sincronización sin sesión activa. Abortando.");
+				return; 
+			}
+
             console.log("🔄 Sincronizando historial...");
             try {
                 const res = await apiFetch('/acceso/historial'); 
@@ -6824,15 +6831,27 @@ if (editorForm) {
 			const f = document.getElementById('form-stock');
 			if(f) f.onsubmit = saveStockVikingo;
 
-			// 2. PRIORIDAD 1: Activar el motor de tiempo real para el historial
-			// Verificamos que las funciones existan antes de llamarlas para evitar errores
-			if (typeof fetchAccesos === 'function') {
-				console.log("🚀 Iniciando carga de datos de acceso...");
-				fetchAccesos(); // Carga inicial inmediata
-			}
+			/**
+			 * BARRERA DE SEGURIDAD MULTISUCURSAL
+			 * Solo activamos el motor de datos si el usuario está logueado.
+			 * Esto evita el error 401 y el bucle de refresco infinito.
+			 */
+			const token = localStorage.getItem('gymfit_token') || (state && state.token);
 
-			if (typeof iniciarRefrescoAutomatico === 'function') {
-				iniciarRefrescoAutomatico(); // Arranca el ciclo de actualización constante
+			if (token) {
+				// 2. PRIORIDAD 1: Activar el motor de tiempo real para el historial
+				// Solo si hay token, procedemos a pedir datos al servidor
+				if (typeof fetchAccesos === 'function') {
+					console.log("🚀 Sesión detectada. Iniciando carga de datos de acceso...");
+					fetchAccesos(); // Carga inicial inmediata
+				}
+
+				if (typeof iniciarRefrescoAutomatico === 'function') {
+					iniciarRefrescoAutomatico(); // Arranca el ciclo de actualización constante
+				}
+			} else {
+				// Si no hay token, el sistema permanece en "reposo" hasta el login exitoso
+				console.log("🔒 Sistema en espera: No hay sesión activa para sincronizar historial.");
 			}
 		});
 		
