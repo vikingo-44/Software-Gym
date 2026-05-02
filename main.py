@@ -1118,30 +1118,30 @@ def cancel_reserva(id: int, db: Session = Depends(database.get_db)):
 # --- STAFF ---
 @app.get("/api/profesores", response_model=List[UsuarioResponse], tags=["Staff"])
 def list_profesores(db: Session = Depends(database.get_db), current_user = Depends(get_current_user)):
-    """Lista profesores filtrados por la sucursal del usuario que consulta."""
-    profs = db.query(models.Usuario).options(
-        joinedload(models.Usuario.perfil)
-    ).join(models.Perfil).filter(
-        func.lower(models.Perfil.nombre) == "profesor",
-        models.Usuario.sucursal_id == current_user.sucursal_id # <--- FILTRO POR SEDE
-    ).all()
+    query = db.query(models.Usuario).options(joinedload(models.Usuario.perfil)).join(models.Perfil).filter(
+        func.lower(models.Perfil.nombre) == "profesor"
+    )
     
-    for p in profs: 
-        p.rol_nombre = p.perfil.nombre
+    # 🛡️ SI NO ES ADMIN/SUPERVISOR, FILTRAR POR SU SEDE
+    if current_user.perfil.nombre.lower() not in ["administrador", "supervisor"]:
+        query = query.filter(models.Usuario.sucursal_id == current_user.sucursal_id)
+    
+    profs = query.all()
+    for p in profs: p.rol_nombre = p.perfil.nombre
     return profs
 
 @app.get("/api/administrativos", response_model=List[UsuarioResponse], tags=["Staff"])
 def list_admins(db: Session = Depends(database.get_db), current_user = Depends(get_current_user)):
-    """Lista administrativos de la misma sucursal."""
-    admins = db.query(models.Usuario).options(
-        joinedload(models.Usuario.perfil)
-    ).join(models.Perfil).filter(
-        func.lower(models.Perfil.nombre) == "administracion",
-        models.Usuario.sucursal_id == current_user.sucursal_id # <--- FILTRO POR SEDE
-    ).all()
+    query = db.query(models.Usuario).options(joinedload(models.Usuario.perfil)).join(models.Perfil).filter(
+        func.lower(models.Perfil.nombre) == "administracion"
+    )
     
-    for a in admins: 
-        a.rol_nombre = a.perfil.nombre
+    # 🛡️ SI NO ES ADMIN/SUPERVISOR, FILTRAR POR SU SEDE
+    if current_user.perfil.nombre.lower() not in ["administrador", "supervisor"]:
+        query = query.filter(models.Usuario.sucursal_id == current_user.sucursal_id)
+    
+    admins = query.all()
+    for a in admins: a.rol_nombre = a.perfil.nombre
     return admins
 
 @app.post("/api/staff", tags=["Staff"])
