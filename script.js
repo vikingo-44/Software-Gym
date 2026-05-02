@@ -3204,7 +3204,7 @@ if (editorForm) {
         async function initApp() {
 			try {
 				await Promise.all([
-					apiFetch('/sucursales').then(res => state.sucursales = res),
+					loadSucursales(), // <--- CAMBIO CLAVE: Ejecuta la lógica completa de carga y renderizado
 					fetchAlumnos(), 
 					loadStaff(), 
 					loadPlanes(), 
@@ -3214,16 +3214,16 @@ if (editorForm) {
 					loadDashboard(), 
 					loadMusculacionMetadata(), 
 					loadCaja(),
-					// Agregamos .catch al final de cada una para que no traben el resto
-					loadFeriados().catch(e => console.error("Error en feriados, sigo igual...")), 
-					loadClasesFeriado().catch(e => console.error("Error en clases feriado, sigo igual..."))
+					loadFeriados().catch(e => console.error("Error en feriados")), 
+					loadClasesFeriado().catch(e => console.error("Error en clases feriado"))
 				]);
 				
-				// Esto se va a ejecutar SI O SI ahora
+				// Setup inicial del filtro del calendario
+				if (typeof setupCalendarFilters === 'function') setupCalendarFilters();
+				
 				renderCalendar();
 			} catch (error) {
 				console.error("Error crítico:", error);
-				// Salvavidas final:
 				renderCalendar();
 			}
 		}
@@ -5052,8 +5052,11 @@ if (editorForm) {
 				
 				if (!response.ok) throw new Error("Error en API");
 				const sucursales = await response.json();
+
+				// --- 🆕 AGREGADO: Guardar en el estado para que el calendario lo use ---
+				state.sucursales = sucursales; 
 				
-				// --- 1. Renderizar Tarjetas en la vista de Sucursales ---
+				// --- 1. Renderizar Tarjetas en la vista de Sucursales (Tuyo, sin tocar) ---
 				const container = document.getElementById('sucursales-container');
 				if (container) {
 					if (sucursales.length === 0) {
@@ -5080,13 +5083,20 @@ if (editorForm) {
 					}
 				}
 
-				// --- 2. Actualizar el Selector (Select) en el modal de alumnos ---
+				// --- 2. Actualizar el Selector (Select) en el modal de alumnos (Tuyo, sin tocar) ---
 				const selectAl = document.getElementById('al-sucursal');
 				if (selectAl) {
 					const currentVal = selectAl.value;
 					selectAl.innerHTML = '<option value="">Seleccionar Sucursal...</option>' + 
 						sucursales.map(s => `<option value="${s.id}">${s.sucursal.toUpperCase()}</option>`).join('');
 					if(currentVal) selectAl.value = currentVal;
+				}
+
+				// --- 🆕 3. AGREGADO: Actualizar el Selector en el modal de CLASES ---
+				const selectCl = document.getElementById('clase-sucursal-select');
+				if (selectCl) {
+					// Llenamos el select de clases con las mismas sucursales
+					selectCl.innerHTML = sucursales.map(s => `<option value="${s.id}">${s.sucursal.toUpperCase()}</option>`).join('');
 				}
 
 				if(window.lucide) lucide.createIcons();

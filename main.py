@@ -1325,7 +1325,7 @@ def get_tipos(db: Session = Depends(database.get_db)):
     """Obtiene la lista de tipos (Mensual, Trimestral, etc)"""
     return db.query(models.TipoPlan).all()
 
-# --- CLASES ---
+# --- CONFIGURACIONES ---
 @app.get("/api/tipo_box", tags=["Configuracion"])
 def get_tipo_box(db: Session = Depends(database.get_db), current_user = Depends(get_current_user)):
     """Retorna la lista de boxes disponibles para la sucursal del usuario actual."""
@@ -1333,6 +1333,13 @@ def get_tipo_box(db: Session = Depends(database.get_db), current_user = Depends(
         models.TipoBox.sucursal_id == current_user.sucursal_id
     ).all()
 
+@app.get("/api/sucursales", tags=["Configuracion"])
+def get_todas_sucursales(db: Session = Depends(database.get_db), current_user = Depends(get_current_user)):
+    """Retorna todas las sucursales registradas para llenar selectores."""
+    # Solo permitimos que los logueados vean la lista de sedes
+    return db.query(models.Sucursal).all()
+
+# --- CLASES ---
 @app.get("/api/clases", tags=["Clases"])
 def get_clases(db: Session = Depends(database.get_db), current_user = Depends(get_current_user)):
     """Retorna las clases con lógica de sucursal y permisos de Admin."""
