@@ -978,6 +978,18 @@
 						</button>
 					</div>
 
+					<!-- Selector de Sucursal para el Calendario -->
+					<div id="calendar-controls" class="flex flex-wrap items-center gap-4 mb-6">
+						<div class="flex flex-col gap-1">
+							<label class="text-[10px] font-black text-white/30 italic uppercase ml-2">Sede Visualizada</label>
+							<select id="cal-sucursal-filter" 
+									onchange="cambiarSedeCalendario(this.value)"
+									class="bg-white/5 border border-white/10 text-white text-xs rounded-xl px-4 py-2.5 focus:outline-none focus:border-red-600 transition-all min-w-[200px] appearance-none cursor-pointer">
+								<!-- Se llena dinámicamente -->
+							</select>
+						</div>
+					</div>
+
 					<div class="flex gap-2 items-center">
 						<div class="flex bg-black/40 p-1.5 rounded-2xl border border-white/5 items-center backdrop-blur-md">
 							<button onclick="window.changeCalendarWeek(-1)" class="w-10 h-10 flex items-center justify-center text-white/40 hover:text-red-600 transition-all">
@@ -1378,6 +1390,14 @@
 					<input type="text" id="cl-nombre" placeholder="Nombre de Clase" class="viking-input" required>
 					<!-- El selector de coach global se elimina visualmente porque elegiremos coach por turno -->
 					<input type="hidden" id="cl-coach-select" value="Staff"> 
+				</div>
+
+				<!-- 🆕 CAMPO DE SUCURSAL (Agregado aquí) -->
+				<div class="w-full">
+					<label class="text-[9px] font-black text-white/30 uppercase tracking-widest italic ml-2">Seleccionar Sede</label>
+					<select id="clase-sucursal-select" class="viking-input mt-1" required onchange="loadBoxes()">
+						<!-- Se llena dinámicamente con las sucursales del sistema -->
+					</select>
 				</div>
 
 				<!-- CAMPO DE BOX -->

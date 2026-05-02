@@ -1326,7 +1326,6 @@ def get_tipos(db: Session = Depends(database.get_db)):
     return db.query(models.TipoPlan).all()
 
 # --- CLASES ---
-
 @app.get("/api/tipo_box", tags=["Configuracion"])
 def get_tipo_box(db: Session = Depends(database.get_db), current_user = Depends(get_current_user)):
     """Retorna la lista de boxes disponibles para la sucursal del usuario actual."""
@@ -1336,12 +1335,14 @@ def get_tipo_box(db: Session = Depends(database.get_db), current_user = Depends(
 
 @app.get("/api/clases", tags=["Clases"])
 def get_clases(db: Session = Depends(database.get_db), current_user = Depends(get_current_user)):
-    """Retorna las clases de la sucursal actual con el nombre del box."""
-    clases = db.query(models.Clase).options(
-        joinedload(models.Clase.box_rel)
-    ).filter(
-        models.Clase.sucursal_id == current_user.sucursal_id
-    ).all()
+    """Retorna las clases con lógica de sucursal y permisos de Admin."""
+    query = db.query(models.Clase).options(joinedload(models.Clase.box_rel))
+    
+    # 🛡️ SI NO ES ADMIN/SUPERVISOR, FILTRAR POR SU SEDE
+    if current_user.perfil.nombre.lower() not in ["administrador", "supervisor"]:
+        query = query.filter(models.Clase.sucursal_id == current_user.sucursal_id)
+    
+    clases = query.all()
     
     result = []
     for c in clases:
@@ -1353,14 +1354,24 @@ def get_clases(db: Session = Depends(database.get_db), current_user = Depends(ge
             "capacidad_max": c.capacidad_max,
             "horarios_detalle": c.horarios_detalle,
             "box_id": c.box_id,
-            "box_nombre": c.box_rel.nombre if c.box_rel else "Principal"
+            "box_nombre": c.box_rel.nombre if c.box_rel else "Principal",
+            "sucursal_id": c.sucursal_id  # <--- ¡ESTO ES VITAL! Para el script.js
         }
         result.append(c_dict)
     return result
 
 @app.post("/api/clases", tags=["Clases"])
 def create_clase(data: ClaseUpdate, db: Session = Depends(database.get_db), current_user = Depends(get_current_user)):
-    """Crea una nueva clase vinculada automáticamente a la sucursal del operador."""
+    """Crea una nueva clase. El Admin puede elegir sede, el resto usa la propia."""
+    
+    # Determinamos la sucursal final
+    final_sucursal_id = current_user.sucursal_id
+    
+    # 🛡️ Si el que crea es Admin y envió una sucursal en el JSON, usamos esa
+    if current_user.perfil.nombre.lower() in ["administrador", "supervisor"] and hasattr(data, 'sucursal_id'):
+        if data.sucursal_id:
+            final_sucursal_id = data.sucursal_id
+
     new_c = models.Clase(
         nombre=data.nombre,
         coach=data.coach,
@@ -1368,7 +1379,7 @@ def create_clase(data: ClaseUpdate, db: Session = Depends(database.get_db), curr
         color=data.color,
         capacidad_max=data.capacidad_max,
         horarios_detalle=data.horarios_detalle,
-        sucursal_id=current_user.sucursal_id  # <--- ASIGNACIÓN AUTOMÁTICA
+        sucursal_id=final_sucursal_id
     )
     db.add(new_c)
     db.commit()
@@ -1376,11 +1387,14 @@ def create_clase(data: ClaseUpdate, db: Session = Depends(database.get_db), curr
 
 @app.put("/api/clases/{id}", tags=["Clases"])
 def update_clase(id: int, data: ClaseUpdate, db: Session = Depends(database.get_db), current_user = Depends(get_current_user)):
-    """Actualiza una clase validando que pertenezca a la sucursal."""
-    c = db.query(models.Clase).filter(
-        models.Clase.id == id,
-        models.Clase.sucursal_id == current_user.sucursal_id
-    ).first()
+    """Actualiza una clase validando permisos de sucursal o admin."""
+    query = db.query(models.Clase).filter(models.Clase.id == id)
+    
+    # 🛡️ Si NO es Admin/Supervisor, solo puede editar lo de su sucursal
+    if current_user.perfil.nombre.lower() not in ["administrador", "supervisor"]:
+        query = query.filter(models.Clase.sucursal_id == current_user.sucursal_id)
+    
+    c = query.first()
     
     if c:
         c.nombre = data.nombre
@@ -1392,19 +1406,22 @@ def update_clase(id: int, data: ClaseUpdate, db: Session = Depends(database.get_
         flag_modified(c, "horarios_detalle")
         db.commit()
         return {"status": "success"}
-    return {"status": "error", "message": "Clase no encontrada en esta sucursal"}
+    return {"status": "error", "message": "No tenés permiso para editar esta clase"}
 
 @app.put("/api/clases/{id}/move", tags=["Clases"])
 def move_clase(id: int, data: ClaseMove, db: Session = Depends(database.get_db), current_user = Depends(get_current_user)):
-    """Mueve el horario de una clase validando la sucursal."""
-    c = db.query(models.Clase).filter(
-        models.Clase.id == id,
-        models.Clase.sucursal_id == current_user.sucursal_id
-    ).first()
+    """Mueve el horario validando sucursal o permisos de admin."""
+    query = db.query(models.Clase).filter(models.Clase.id == id)
+    
+    if current_user.perfil.nombre.lower() not in ["administrador", "supervisor"]:
+        query = query.filter(models.Clase.sucursal_id == current_user.sucursal_id)
+    
+    c = query.first()
     
     if not c:
-        raise HTTPException(status_code=404, detail="Clase no encontrada en esta sucursal")
+        raise HTTPException(status_code=404, detail="No tenés permiso para mover esta clase")
     
+    # ... (el resto de tu lógica de horarios_detalle queda igual) ...
     horarios = list(c.horarios_detalle) if c.horarios_detalle else []
     encontrado = False
     for slot in horarios:
@@ -1419,21 +1436,22 @@ def move_clase(id: int, data: ClaseMove, db: Session = Depends(database.get_db),
         flag_modified(c, "horarios_detalle")
         db.commit()
         return {"status": "success"}
-    
     return {"status": "error", "message": "No se encontró el horario original"}
 
 @app.delete("/api/clases/{id}", tags=["Clases"])
 def delete_clase(id: int, db: Session = Depends(database.get_db), current_user = Depends(get_current_user)):
-    """Elimina una clase verificando sucursal."""
-    resultado = db.query(models.Clase).filter(
-        models.Clase.id == id,
-        models.Clase.sucursal_id == current_user.sucursal_id
-    ).delete()
+    """Elimina una clase verificando sucursal o admin."""
+    query = db.query(models.Clase).filter(models.Clase.id == id)
     
+    if current_user.perfil.nombre.lower() not in ["administrador", "supervisor"]:
+        query = query.filter(models.Clase.sucursal_id == current_user.sucursal_id)
+    
+    resultado = query.delete()
     db.commit()
+    
     if resultado:
         return {"status": "success"}
-    return {"status": "error", "message": "No se pudo eliminar la clase"}
+    return {"status": "error", "message": "No tenés permiso para eliminar esta clase"}
 
 # ==========================================
 # MÓDULO DE FERIADOS (LIMPIO Y SIN DUPLICADOS)
