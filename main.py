@@ -13,6 +13,7 @@ from typing import List, Optional, Union
 from pydantic import BaseModel, ConfigDict
 from datetime import datetime, timedelta, date
 from dateutil.relativedelta import relativedelta
+from fastapi.staticfiles import StaticFiles
 
 # Librerías para Seguridad (JWT y Hashing de contraseñas)
 from jose import JWTError, jwt
@@ -47,6 +48,8 @@ app = FastAPI(
     description="Sistema de gestión integral",
     version="2.5.0"
 )
+
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 app.add_middleware(
     CORSMiddleware,
