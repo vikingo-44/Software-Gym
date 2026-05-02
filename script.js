@@ -1254,38 +1254,41 @@ async function procesarPagoVikingo(payload, actualizarUI = true) {
     if(actualizarUI) showVikingToast("Sincronizando con la Tesorería...");
 
     try {
-        const response = await fetch(`${API_BASE}/cobros/procesar`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
+        // CAMBIO CRÍTICO: Usamos apiFetch para incluir automáticamente el Token (evita el 401)
+        // y para que el backend sepa a qué sucursal pertenece el movimiento.
+        const res = await apiFetch('/cobros/procesar', 'POST', payload);
 
-        const res = await response.json();
-
-        if (response.ok) {
+        // apiFetch ya devuelve el JSON parseado. Si hay error, devuelve {error: ...}
+        if (res && !res.error) {
             if(actualizarUI) {
                 showVikingToast("¡Victoria! Cobro registrado y Stock actualizado");
+                
                 const promises = [];
+                // Recargamos datos para que la UI refleje el nuevo stock y saldo de caja
                 if (typeof loadStock === 'function') promises.push(loadStock());
                 if (typeof loadAlumnos === 'function') promises.push(loadAlumnos());
                 if (typeof loadCaja === 'function') promises.push(loadCaja());
                 
-                // --- AGREGAMOS EL REFRESCO DE RENTABILIDAD AQUÍ ---
+                // Refresco de rentabilidad para ver la ganancia al instante
                 if (typeof generarInformeRentabilidad === 'function') promises.push(generarInformeRentabilidad());
                 
                 await Promise.all(promises);
+                
+                // Limpiamos el carrito y refrescamos la vista de ventas
                 state.cart = [];
-                updateCartUI();
+                if (typeof updateCartUI === 'function') updateCartUI();
                 if (typeof renderCobrar === 'function') renderCobrar();
             }
             return true; 
         } else {
-            showVikingToast("Error: " + (res.detail || "Error desconocido"), true);
+            // Manejo de errores detallado que viene del servidor
+            const errorMsg = res.detail || res.error || "Error desconocido en el proceso";
+            showVikingToast("Error: " + errorMsg, true);
             return false;
         }
     } catch (err) {
-        console.error(err);
-        showVikingToast("Error de conexión", true);
+        console.error("Error en procesarPagoVikingo:", err);
+        showVikingToast("Error de conexión con el servidor", true);
         return false;
     }
 }
