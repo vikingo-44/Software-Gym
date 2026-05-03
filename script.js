@@ -2739,16 +2739,17 @@ if (editorForm) {
 			}
 
 			if (view === 'clases') {
-				// Primero nos aseguramos de que las clases estén cargadas en el estado global
-				if (!state.clases || state.clases.length === 0) {
-					apiFetch('/api/clases').then(data => {
-						state.clases = data;
-						renderFiltroSedesGestion();
-					});
-				} else {
-					renderFiltroSedesGestion();
-				}
-			}
+                // Bloqueamos la ejecución hasta tener los datos
+                const cargarYRenderizar = async () => {
+                    if (!state.clases || state.clases.length === 0) {
+                        const data = await apiFetch('/api/clases');
+                        state.clases = data;
+                    }
+                    // Solo llamamos al render cuando estamos seguros de que state.clases tiene algo
+                    renderFiltroSedesGestion();
+                };
+                cargarYRenderizar();
+            }
 
 			// 11. Aplicar permisos de visibilidad final
 			if (typeof applyPermissions === 'function') applyPermissions();
