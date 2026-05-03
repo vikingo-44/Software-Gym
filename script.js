@@ -768,34 +768,50 @@
 					const select = document.getElementById('filtro-clases-seccion');
 					if (!select) return;
 
-					// Aseguramos datos antes de renderizar
-					if (!state.sucursales || state.sucursales.length === 0) {
-						state.sucursales = await apiFetch('/api/sucursales');
-					}
-					if (!state.clases || state.clases.length === 0) {
-						state.clases = await apiFetch('/api/clases');
-					}
+					try {
+						// FORZAMOS LA CARGA: Si no hay datos, los traemos YA.
+						if (!state.sucursales || state.sucursales.length === 0) {
+							const sucs = await apiFetch('/api/sucursales');
+							state.sucursales = sucs;
+						}
 
-					const isAdmin = (state.user?.rol_nombre === "Administrador" || state.user?.rol_nombre === "Supervisor");
-					let options = isAdmin ? '<option value="TODAS">--- TODAS LAS SEDES ---</option>' : '';
-					
-					options += state.sucursales.map(s => 
-						`<option value="${s.id}" ${s.id == state.user.sucursal_id ? 'selected' : ''}>${s.sucursal.toUpperCase()}</option>`
-					).join('');
+						if (!state.clases || state.clases.length === 0) {
+							const cls = await apiFetch('/api/clases');
+							state.clases = cls;
+						}
 
-					select.innerHTML = options;
-					
-					// Filtramos inmediatamente para quitar clases de otras sedes
-					filtrarClasesGestion(select.value);
+						const isAdmin = (state.user?.rol_nombre === "Administrador" || state.user?.rol_nombre === "Supervisor");
+						
+						// Construimos el HTML de las opciones
+						let options = isAdmin ? '<option value="TODAS">--- TODAS LAS SEDES ---</option>' : '';
+						options += state.sucursales.map(s => 
+							`<option value="${s.id}" ${s.id == state.user.sucursal_id ? 'selected' : ''}>${s.sucursal.toUpperCase()}</option>`
+						).join('');
+
+						select.innerHTML = options;
+						
+						// 🛡️ FILTRO DE SEGURIDAD: 
+						// Ejecutamos el filtro con el valor que quedó (por defecto la sucursal del usuario)
+						// Esto es lo que saca la clase de la Sede B de tu vista.
+						filtrarClasesGestion(select.value);
+
+					} catch (err) {
+						console.error("Error crítico en filtro:", err);
+						select.innerHTML = '<option value="">Error al cargar</option>';
+					}
 				}
 
 				// 2. Esta función FILTRA las tarjetas
 				function filtrarClasesGestion(sucursalId) {
-					if (!state.clases) return;
+					const container = document.getElementById('clases-container');
+					if (!container || !state.clases) return;
 
-					const filtradas = (sucursalId === "TODAS") 
+					// Si sucursalId es vacío o nulo (por error de carga), forzamos a la sede del usuario
+					const sedeAFiltrar = sucursalId || state.user.sucursal_id;
+
+					const filtradas = (sedeAFiltrar === "TODAS") 
 						? state.clases 
-						: state.clases.filter(c => parseInt(c.sucursal_id) === parseInt(sucursalId));
+						: state.clases.filter(c => parseInt(c.sucursal_id) === parseInt(sedeAFiltrar));
 
 					renderTarjetasClases(filtradas);
 				}
@@ -2731,6 +2747,10 @@ if (editorForm) {
 			}
 
 			if (view === 'clases') {
+				// Limpiamos el contenedor antes de empezar para que no veas clases viejas
+				const container = document.getElementById('clases-container');
+				if (container) container.innerHTML = '<p class="text-white/20 p-8">Cargando gestión...</p>';
+				
 				renderFiltroSedesGestion();
 			}
 
