@@ -766,14 +766,23 @@
 				// 1. Esta función LLENA el selector con las sedes
 				async function renderFiltroSedesGestion() {
 					const select = document.getElementById('filtro-clases-gestion');
-					if (!select) return;
+					
+					// Si no encuentra el select, lo intentamos de nuevo en medio segundo
+					if (!select) {
+						console.warn("⚠️ No se encontró el select 'filtro-clases-gestion', reintentando...");
+						setTimeout(renderFiltroSedesGestion, 500);
+						return;
+					}
 
-					// Si por alguna razón state.sucursales está vacío, intentamos cargarlas
+					// Si las sucursales no están, las vamos a buscar a la fuerza
 					if (!state.sucursales || state.sucursales.length === 0) {
+						console.log("🔄 Cargando sucursales desde el servidor...");
 						state.sucursales = await apiFetch('/api/sucursales');
 					}
 
-					const isAdmin = state.user?.rol_nombre === "Administrador" || state.user?.rol_nombre === "Supervisor";
+					console.log("✅ Llenando selector con sedes:", state.sucursales.length);
+
+					const isAdmin = (state.user?.rol_nombre === "Administrador" || state.user?.rol_nombre === "Supervisor");
 					
 					let options = isAdmin ? '<option value="TODAS">--- TODAS LAS SEDES ---</option>' : '';
 					
@@ -783,9 +792,8 @@
 
 					select.innerHTML = options;
 					
-					// Ejecutamos el filtro inicial para que la lista no empiece vacía
-					const valorInicial = select.value;
-					filtrarClasesGestion(valorInicial);
+					// Disparamos el primer filtro para ver las tarjetas
+					filtrarClasesGestion(select.value);
 				}
 
 				// 2. Esta función FILTRA las tarjetas
@@ -2731,8 +2739,16 @@ if (editorForm) {
 			}
 
 			if (view === 'clases') {
-                if (typeof renderFiltroSedesGestion === 'function') renderFiltroSedesGestion();
-            }
+				// Primero nos aseguramos de que las clases estén cargadas en el estado global
+				if (!state.clases || state.clases.length === 0) {
+					apiFetch('/api/clases').then(data => {
+						state.clases = data;
+						renderFiltroSedesGestion();
+					});
+				} else {
+					renderFiltroSedesGestion();
+				}
+			}
 
 			// 11. Aplicar permisos de visibilidad final
 			if (typeof applyPermissions === 'function') applyPermissions();
