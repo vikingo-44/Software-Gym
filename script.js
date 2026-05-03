@@ -766,34 +766,37 @@
 				// 1. Esta función LLENA el selector con las sedes
 				async function renderFiltroSedesGestion() {
 					const select = document.getElementById('filtro-clases-gestion');
-					
-					// Si no encuentra el select, lo intentamos de nuevo en medio segundo
-					if (!select) {
-						console.warn("⚠️ No se encontró el select 'filtro-clases-gestion', reintentando...");
-						setTimeout(renderFiltroSedesGestion, 500);
-						return;
+					if (!select) return;
+
+					try {
+						// Si no hay sucursales en memoria, las traemos rápido
+						if (!state.sucursales || state.sucursales.length === 0) {
+							state.sucursales = await apiFetch('/api/sucursales');
+						}
+
+						const isAdmin = (state.user?.rol_nombre === "Administrador" || state.user?.rol_nombre === "Supervisor");
+						
+						// Construimos las opciones
+						let options = isAdmin ? '<option value="TODAS">--- TODAS LAS SEDES ---</option>' : '';
+						
+						if (state.sucursales && state.sucursales.length > 0) {
+							options += state.sucursales.map(s => 
+								`<option value="${s.id}" ${s.id == state.user.sucursal_id ? 'selected' : ''}>${s.sucursal.toUpperCase()}</option>`
+							).join('');
+						} else {
+							options = '<option value="">ERROR AL CARGAR SEDES</option>';
+						}
+
+						select.innerHTML = options;
+						
+						// IMPORTANTE: Una vez que el select tiene sedes, filtramos la lista
+						// Esto va a quitar la clase de la otra sede que te aparece ahora
+						filtrarClasesGestion(select.value);
+
+					} catch (error) {
+						console.error("Error en renderFiltroSedesGestion:", error);
+						select.innerHTML = '<option value="">ERROR DE CONEXIÓN</option>';
 					}
-
-					// Si las sucursales no están, las vamos a buscar a la fuerza
-					if (!state.sucursales || state.sucursales.length === 0) {
-						console.log("🔄 Cargando sucursales desde el servidor...");
-						state.sucursales = await apiFetch('/api/sucursales');
-					}
-
-					console.log("✅ Llenando selector con sedes:", state.sucursales.length);
-
-					const isAdmin = (state.user?.rol_nombre === "Administrador" || state.user?.rol_nombre === "Supervisor");
-					
-					let options = isAdmin ? '<option value="TODAS">--- TODAS LAS SEDES ---</option>' : '';
-					
-					options += state.sucursales.map(s => 
-						`<option value="${s.id}" ${s.id == state.user.sucursal_id ? 'selected' : ''}>${s.sucursal.toUpperCase()}</option>`
-					).join('');
-
-					select.innerHTML = options;
-					
-					// Disparamos el primer filtro para ver las tarjetas
-					filtrarClasesGestion(select.value);
 				}
 
 				// 2. Esta función FILTRA las tarjetas
@@ -2739,16 +2742,14 @@ if (editorForm) {
 			}
 
 			if (view === 'clases') {
-                // Bloqueamos la ejecución hasta tener los datos
-                const cargarYRenderizar = async () => {
-                    if (!state.clases || state.clases.length === 0) {
-                        const data = await apiFetch('/api/clases');
-                        state.clases = data;
-                    }
-                    // Solo llamamos al render cuando estamos seguros de que state.clases tiene algo
-                    renderFiltroSedesGestion();
-                };
-                cargarYRenderizar();
+                // Forzamos la carga de clases y luego disparamos el filtro
+                apiFetch('/api/clases').then(data => {
+                    state.clases = data;
+                    renderFiltroSedesGestion(); 
+                }).catch(err => {
+                    console.error("Error cargando clases:", err);
+                    renderFiltroSedesGestion(); // Intentamos renderizar el filtro igual
+                });
             }
 
 			// 11. Aplicar permisos de visibilidad final
