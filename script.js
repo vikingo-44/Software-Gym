@@ -762,6 +762,83 @@
 				
 				renderCalendar();
 			}
+
+			// 1. Llenamos el selector de sedes en la vista de gestión
+			function renderFiltroSedesGestion() {
+				const select = document.getElementById('filtro-clases-gestion');
+				if (!select || !state.sucursales) return;
+
+				const isAdmin = state.user?.rol_nombre === "Administrador" || state.user?.rol_nombre === "Supervisor";
+				
+				// Si es Admin, puede ver "Todas". Si es Staff, solo ve sedes pero el backend ya le filtrará.
+				let options = isAdmin ? '<option value="TODAS">--- TODAS LAS SEDES ---</option>' : '';
+				
+				options += state.sucursales.map(s => 
+					`<option value="${s.id}" ${s.id == state.user.sucursal_id ? 'selected' : ''}>${s.sucursal.toUpperCase()}</option>`
+				).join('');
+
+				select.innerHTML = options;
+			}
+
+			// 2. Filtramos la lista y aplicamos la restricción de edición
+			function filtrarClasesGestion(sucursalId) {
+				const container = document.getElementById('clases-container');
+				if (!container || !state.clases) return;
+
+				const filtradas = (sucursalId === "TODAS") 
+					? state.clases 
+					: state.clases.filter(c => parseInt(c.sucursal_id) === parseInt(sucursalId));
+
+				// Dibujamos las tarjetas pasándole el filtro de permisos
+				renderTarjetasClases(filtradas);
+			}
+
+			// 3. Ajuste en tu función que dibuja las tarjetas (renderTarjetasClases)
+			// Asegúrate de que adentro tenga esta lógica de bloqueo:
+			function renderTarjetasClases(lista) {
+				const container = document.getElementById('clases-container');
+				container.innerHTML = "";
+
+				const isAdmin = state.user?.rol_nombre === "Administrador" || state.user?.rol_nombre === "Supervisor";
+
+				lista.forEach(clase => {
+					// REGLA DE ORO: ¿Puede editar? 
+					// Sí, si es Admin Global O si la sucursal de la clase es su propia sucursal.
+					const puedeEditar = isAdmin || (parseInt(clase.sucursal_id) === parseInt(state.user.sucursal_id));
+
+					const card = document.createElement('div');
+					card.className = `viking-card p-6 rounded-3xl border border-white/5 bg-white/5 transition-all ${!puedeEditar ? 'opacity-60 grayscale-[0.5]' : 'hover:border-red-600/30'}`;
+					
+					card.innerHTML = `
+						<div class="flex justify-between items-start mb-4">
+							<div class="w-12 h-12 rounded-2xl flex items-center justify-center" style="background-color: ${clase.color}20">
+								<div class="w-3 h-3 rounded-full" style="background-color: ${clase.color}"></div>
+							</div>
+							${puedeEditar ? `
+								<div class="flex gap-2">
+									<button onclick="editClase(${clase.id})" class="p-2 hover:bg-white/10 rounded-lg text-white/50 hover:text-white transition-colors">
+										<i data-lucide="edit-3" class="w-4 h-4"></i>
+									</button>
+									<button onclick="deleteClase(${clase.id})" class="p-2 hover:bg-white/10 rounded-lg text-red-500/50 hover:text-red-500 transition-colors">
+										<i data-lucide="trash-2" class="w-4 h-4"></i>
+									</button>
+								</div>
+							` : `
+								<span class="text-[8px] font-black uppercase bg-white/10 px-2 py-1 rounded-md text-white/40 italic">Solo Lectura</span>
+							`}
+						</div>
+						<h4 class="text-xl font-black italic uppercase mb-1">${clase.nombre}</h4>
+						<p class="text-white/40 text-[10px] font-bold uppercase mb-4">${clase.box_nombre} | ${clase.coach}</p>
+						<div class="flex items-center justify-between mt-auto">
+							<span class="text-[10px] font-black text-red-600 uppercase italic">Cupo: ${clase.capacidad_max}</span>
+							<span class="text-[9px] font-bold text-white/20 uppercase">ID: ${clase.id}</span>
+						</div>
+					`;
+					container.appendChild(card);
+				});
+				
+				if (window.lucide) lucide.createIcons();
+			}
                 
                 /**
                  * FUNCIÓN DE RESERVA CORREGIDA
