@@ -522,7 +522,7 @@
 				cal.className = "calendar-container min-w-[900px] h-[750px] overflow-y-auto custom-scrollbar grid grid-cols-[80px_repeat(6,1fr)] bg-white/[0.02]";
 				cal.style.gridAutoRows = "40px";
 
-				// 1. CARGA DE DATOS (Mantenemos tus peticiones al estado)
+				// 1. CARGA DE DATOS
 				if (!state.clases || state.clases.length === 0) {
 					state.clases = await apiFetch('/clases');
 				}
@@ -530,9 +530,10 @@
 				if (!state.clasesFeriado) state.clasesFeriado = await apiFetch('/api/clases-feriado') || [];
 
 				const isAdminGlobal = (state.user?.rol_nombre === "Administrador" || state.user?.rol_nombre === "Supervisor");
-				const isProfesor = (state.user?.rol_nombre === "Profesor");
 				const esAlumno = (state.user?.rol_nombre === "Alumno");
-				const miSucursalId = state.viewing_sucursal_id || state.user?.sucursal_id;
+				
+				// Sede que estamos visualizando actualmente
+				const miSucursalId = parseInt(state.viewing_sucursal_id) || state.user?.sucursal_id;
 
 				// Lógica de fechas
 				const hoy = new Date();
@@ -588,7 +589,6 @@
 						cell.style.height = "40px";
 						cell.className = `cal-cell relative border-b border-r border-white/5 hover:bg-white/5 transition-colors ${isClosed ? 'bg-black/40 pointer-events-none' : ''}`;
 
-						// Drag and Drop solo habilitado para los que pueden editar
 						if ((isAdminGlobal || !esAlumno) && !isClosed) {
 							cell.ondragover = (e) => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; cell.classList.add('bg-red-600/10'); };
 							cell.ondragleave = () => cell.classList.remove('bg-red-600/10');
@@ -598,8 +598,7 @@
 								const claseId = e.dataTransfer.getData("claseId");
 								const claseSucursal = e.dataTransfer.getData("claseSucursal");
 
-								// Bloqueo de seguridad: No podés soltar algo en una celda si no sos dueño o admin
-								if (!isAdminGlobal && claseSucursal != miSucursalId) {
+								if (!isAdminGlobal && claseSucursal != state.user?.sucursal_id) {
 									return showVikingToast("No podés mover clases de otra sucursal", true);
 								}
 
@@ -609,6 +608,7 @@
 								const parts = cell.id.split('-');
 								const newDia = parseInt(parts[1]);
 								const newHorario = parseFloat(parts[2].replace('_', '.'));
+								
 								if (oldDia == newDia && oldHorario == newHorario) return;
 
 								const res = await apiFetch(`/clases/${claseId}/move`, 'PUT', {
@@ -621,8 +621,6 @@
 									showVikingToast("¡Turno Reubicado!");
 									state.clases = await apiFetch('/clases');
 									renderCalendar();
-								} else {
-									showVikingToast("Error al mover: " + res.error, true);
 								}
 							};
 						}
@@ -639,13 +637,10 @@
 					const infoFeriado = state.feriados?.find(f => f.fecha === fechaSlotStr);
 
 					if (infoFeriado) {
-						// Lógica Feriado (Simplificada para mantener el foco en sucursales)
 						const listaSegura = Array.isArray(state.clasesFeriado) ? state.clasesFeriado : [];
-						const clasesEspecialesHoy = listaSegura.filter(cf => cf.fecha === fechaSlotStr);
-						clasesEspecialesHoy.forEach(c => {
+						listaSegura.filter(cf => cf.fecha === fechaSlotStr).forEach(c => {
 							pintarBadgeClase(c, d, c.horario, fechaSlotStr, true);
 						});
-						// Bloqueo de celdas vacías en feriado
 						for (let h = 7; h <= 21.5; h += 0.5) {
 							const cell = document.getElementById(`cell-${d}-${h.toString().replace('.', '_')}`);
 							if (cell && cell.innerHTML === "") {
@@ -654,10 +649,8 @@
 							}
 						}
 					} else {
-						// Lógica Normal
 						if (state.clases && Array.isArray(state.clases)) {
 							state.clases.forEach(c => {
-								// Filtro de Box
 								if (state.calendar.currentBox !== 'Principal') {
 									if (c.box_nombre !== state.calendar.currentBox) return;
 								} else if (c.box_nombre && c.box_nombre !== 'Principal') return;
@@ -673,17 +666,17 @@
 					}
 				}
 
-				// Función interna para pintar el badge con lógica de sucursal
+				// FUNCIÓN INTERNA PARA PINTAR EL BADGE
 				function pintarBadgeClase(c, d, horario, fechaSlotStr, esEspecial, slotInfo = null) {
 					const hKey = horario.toString().replace('.', '_');
 					const cell = document.getElementById(`cell-${d}-${hKey}`);
 					if (!cell) return;
 
-					const esMiSede = (c.sucursal_id == miSucursalId || isAdminGlobal);
+					// Lógica de sucursal: ¿Es de la sede que estoy filtrando?
+					const esMiSedeVisualizada = (c.sucursal_id == miSucursalId);
 					const colorBase = c.color || '#FF0000';
 					
 					const getTextColorClass = (hexColor) => {
-						if (!hexColor) return { text: 'text-white', bg: 'bg-white/20' };
 						const r = parseInt(hexColor.substr(1, 2), 16), g = parseInt(hexColor.substr(3, 2), 16), b = parseInt(hexColor.substr(5, 2), 16);
 						const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
 						return (yiq >= 128) ? { text: 'text-black', bg: 'bg-black/10' } : { text: 'text-white', bg: 'bg-white/20' };
@@ -700,22 +693,19 @@
 					const estaLleno = cupoActual >= cupoMax;
 
 					const badge = document.createElement('div');
-					// Estilización: Si no es mi sede, aplicamos opacidad y borde punteado
-					badge.className = `absolute top-0.5 left-0.5 right-0.5 rounded-xl flex flex-col items-center justify-center text-center overflow-hidden z-20 p-1 shadow-xl transition-all ${!esMiSede ? 'opacity-40 border-2 border-dashed border-white/20' : ''}`;
+					// Estilización para sucursales ajenas: opacidad 40% y borde dashed
+					badge.className = `absolute top-0.5 left-0.5 right-0.5 rounded-xl flex flex-col items-center justify-center text-center overflow-hidden z-20 p-1 shadow-xl transition-all ${!esMiSedeVisualizada ? 'opacity-40 border-2 border-dashed border-white/20 pointer-events-none' : 'cursor-pointer hover:scale-[1.02]'}`;
 					badge.style.height = "79px";
 					badge.style.backgroundColor = colorBase;
 
-					// Drag and drop solo si es mi sede o soy admin
-					if (esMiSede && !esAlumno && !esEspecial) {
+					if (esMiSedeVisualizada && !esAlumno && !esEspecial) {
 						badge.draggable = true;
 						badge.ondragstart = (e) => {
 							e.dataTransfer.setData("claseId", c.id);
 							e.dataTransfer.setData("claseSucursal", c.sucursal_id);
 							e.dataTransfer.setData("oldDia", d);
 							e.dataTransfer.setData("oldHorario", horario);
-							badge.classList.add('scale-95', 'rotate-2');
 						};
-						badge.ondragend = () => badge.classList.remove('scale-95', 'rotate-2');
 					}
 
 					badge.innerHTML = `
@@ -723,7 +713,7 @@
 							<span class="text-[9px] font-black uppercase italic leading-[1.1] ${colores.text}">${c.nombre}</span>
 							<span class="text-[7px] font-bold uppercase opacity-80 ${colores.text}">${esEspecial ? 'ESPECIAL' : (slotInfo?.coach || 'STAFF')}</span>
 							<div class="mt-1 px-2 py-0.5 rounded-full text-[8px] font-black ${colores.bg} ${estaLleno ? 'text-red-500 bg-white' : colores.text}">${cupoActual}/${cupoMax}</div>
-							${!esMiSede ? '<span class="text-[6px] font-black text-white/50">OTRA SEDE</span>' : ''}
+							${!esMiSedeVisualizada ? '<span class="text-[6px] font-black text-white/50 tracking-tighter">OTRA SEDE</span>' : ''}
 						</div>`;
 
 					badge.onclick = (e) => {
@@ -732,12 +722,7 @@
 							if (estaLleno) showVikingToast("Cupo lleno", true);
 							else confirmarReservaVikinga(c, d, horario, fechaSlotStr);
 						} else {
-							// Solo abre edición si es mi sede o soy admin
-							if (esMiSede) {
-								openInscriptos(c.id, d, horario, fechaSlotStr);
-							} else {
-								showVikingToast("Acceso restringido: Clase de otra sucursal", true);
-							}
+							openInscriptos(c.id, d, horario, fechaSlotStr);
 						}
 					};
 					cell.appendChild(badge);
