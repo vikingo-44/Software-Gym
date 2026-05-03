@@ -1433,34 +1433,6 @@ def update_clase(id: int, data: ClaseUpdate, db: Session = Depends(database.get_
         return {"status": "success"}
     return {"status": "error", "message": "No tenés permiso para editar esta clase"}
 
-@app.put("/api/clases/{id}", tags=["Clases"])
-def update_clase(id: int, data: ClaseUpdate, db: Session = Depends(database.get_db), current_user = Depends(get_current_user)):
-    """Actualiza una clase validando permisos."""
-    query = db.query(models.Clase).filter(models.Clase.id == id)
-    
-    if current_user.perfil.nombre.lower() not in ["administrador", "supervisor"]:
-        query = query.filter(models.Clase.sucursal_id == current_user.sucursal_id)
-    
-    c = query.first()
-    
-    if c:
-        c.nombre = data.nombre
-        c.coach = data.coach
-        c.box_id = data.box_id
-        c.color = data.color
-        c.capacidad_max = data.capacidad_max
-        c.horarios_detalle = data.horarios_detalle
-        
-        # Permitir que el Admin cambie la sucursal de una clase existente
-        if current_user.perfil.nombre.lower() in ["administrador", "supervisor"] and data.sucursal_id is not None:
-            c.sucursal_id = data.sucursal_id
-            
-        from sqlalchemy.orm.attributes import flag_modified
-        flag_modified(c, "horarios_detalle")
-        db.commit()
-        return {"status": "success"}
-    return {"status": "error", "message": "No tenés permiso para editar esta clase"}
-
 @app.put("/api/clases/{id}/move", tags=["Clases"])
 def move_clase(id: int, data: ClaseMove, db: Session = Depends(database.get_db), current_user = Depends(get_current_user)):
     """Mueve el horario validando sucursal o permisos de admin."""
