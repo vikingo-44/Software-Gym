@@ -4273,27 +4273,30 @@ if (editorForm) {
 		}
 
         async function loadClases() {
-			// 1. Localizar el contenedor y mostrar estado de carga
 			const container = document.getElementById('clases-container');
 			if (!container) return;
-			container.innerHTML = '<p class="text-white/20 p-8 font-black uppercase italic">Cargando datos del servidor...</p>';
+			
+			// Limpieza visual preventiva
+			container.innerHTML = '<p class="text-white/20 p-8 font-black uppercase italic text-center">Sincronizando clases...</p>';
 
 			try {
-				// 2. Pedir datos al servidor y guardarlos en el estado global
-				const data = await apiFetch('/api/clases'); 
-				state.clases = Array.isArray(data) ? data : [];
+				// Pedimos clases y sucursales en paralelo para ganar velocidad
+				const [clasesData, sucursalesData] = await Promise.all([
+					apiFetch('/api/clases'),
+					apiFetch('/api/sucursales')
+				]);
 
-				// 3. LLAMADA CRÍTICA: Primero armamos el selector de sedes
-				// Usamos await para que no intente filtrar sin tener las opciones listas
-				await renderFiltroSedesGestion(); 
+				state.clases = Array.isArray(clasesData) ? clasesData : [];
+				state.sucursales = Array.isArray(sucursalesData) ? sucursalesData : [];
 
-				// 4. Refrescar componentes visuales
-				if (window.lucide) lucide.createIcons();
-				applyPermissions();
+				// Llenamos el selector de sedes y filtramos automáticamente
+				if (typeof renderFiltroSedesGestion === 'function') {
+					renderFiltroSedesGestion();
+				}
 
 			} catch (error) {
-				console.error("Error en loadClases:", error);
-				container.innerHTML = '<p class="text-red-500 p-8 font-black uppercase">Error al conectar con el servidor</p>';
+				console.error("Error cargando clases:", error);
+				container.innerHTML = '<p class="text-red-500 p-8">Falla al cargar clases</p>';
 			}
 		}
 		
@@ -5075,8 +5078,13 @@ if (editorForm) {
 			const id = document.getElementById('cl-id').value;
 			const slotRows = document.querySelectorAll('.schedule-slot-row');
 			
-			// Capturamos la sucursal seleccionada en el modal
-			const sucursalId = document.getElementById('clase-sucursal-select')?.value;
+			// Captura de sucursal: si no hay selector o está vacío, usa la del usuario logueado
+			const sucursalSelect = document.getElementById('clase-sucursal-select');
+			let sucursalId = sucursalSelect ? sucursalSelect.value : null;
+			
+			if (!sucursalId || sucursalId === "") {
+				sucursalId = state.user?.sucursal_id; 
+			}
 			
 			const horarios_detalle = [];
 			slotRows.forEach(row => {
@@ -5095,7 +5103,7 @@ if (editorForm) {
 					horarios_detalle.push({
 						dia: parseInt(diaEl.value),
 						horario: parseFloat(horaEl.value),
-						coach: nombreCoach || "Staff" 
+						coach: String(nombreCoach || "Staff") 
 					});
 				}
 			});
@@ -5104,31 +5112,28 @@ if (editorForm) {
 				return showVikingToast("Añade al menos un horario", true);
 			}
 
-			const mainCoach = horarios_detalle[0].coach || "Staff";
-
 			const payload = {
 				nombre: document.getElementById('cl-nombre').value,
-				box_id: parseInt(document.getElementById('cl-box').value),
-				coach: String(mainCoach),
-				color: document.getElementById('cl-color').value,
+				box_id: parseInt(document.getElementById('cl-box').value) || 1,
+				coach: String(horarios_detalle[0].coach),
+				color: document.getElementById('cl-color').value || "#FF0000",
 				capacidad_max: parseInt(document.getElementById('cl-cupo').value) || 20,
 				horarios_detalle: horarios_detalle,
-				// Agregamos el ID de sucursal al envío de datos
 				sucursal_id: sucursalId ? parseInt(sucursalId) : null 
 			};
 
 			const method = id ? 'PUT' : 'POST';
-			const endpoint = id ? `/clases/${id}` : '/clases';
+			const endpoint = id ? `/api/clases/${id}` : '/api/clases'; // Prefijo /api mandatorio
 			
 			try {
 				const res = await apiFetch(endpoint, method, payload);
 				if(!res.error) {
 					showVikingToast(id ? "¡Clase Actualizada!" : "¡Clase Creada!");
 					closeModal('modal-clase');
-					// Refrescamos el calendario para ver los cambios
-					if (typeof renderCalendar === 'function') renderCalendar();
+					// Recarga inmediata de datos
+					await loadClases();
 				} else {
-					showVikingToast("Error: " + JSON.stringify(res.detail || res.error), true);
+					showVikingToast("Error: " + (res.detail || res.error), true);
 				}
 			} catch (err) {
 				console.error(err);
