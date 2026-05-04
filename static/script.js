@@ -522,7 +522,7 @@
 				cal.className = "calendar-container min-w-[900px] h-[750px] overflow-y-auto custom-scrollbar grid grid-cols-[80px_repeat(6,1fr)] bg-white/[0.02]";
 				cal.style.gridAutoRows = "40px";
 
-				// 1. CARGA DE DATOS
+				// 1. CARGA DE DATOS (Mantenemos tus peticiones al estado)
 				if (!state.clases || state.clases.length === 0) {
 					state.clases = await apiFetch('/clases');
 				}
@@ -530,10 +530,9 @@
 				if (!state.clasesFeriado) state.clasesFeriado = await apiFetch('/api/clases-feriado') || [];
 
 				const isAdminGlobal = (state.user?.rol_nombre === "Administrador" || state.user?.rol_nombre === "Supervisor");
+				const isProfesor = (state.user?.rol_nombre === "Profesor");
 				const esAlumno = (state.user?.rol_nombre === "Alumno");
-				
-				// Sede que estamos visualizando actualmente
-				const miSucursalId = parseInt(state.viewing_sucursal_id) || state.user?.sucursal_id;
+				const miSucursalId = state.viewing_sucursal_id || state.user?.sucursal_id;
 
 				// Lógica de fechas
 				const hoy = new Date();
@@ -589,6 +588,7 @@
 						cell.style.height = "40px";
 						cell.className = `cal-cell relative border-b border-r border-white/5 hover:bg-white/5 transition-colors ${isClosed ? 'bg-black/40 pointer-events-none' : ''}`;
 
+						// Drag and Drop solo habilitado para los que pueden editar
 						if ((isAdminGlobal || !esAlumno) && !isClosed) {
 							cell.ondragover = (e) => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; cell.classList.add('bg-red-600/10'); };
 							cell.ondragleave = () => cell.classList.remove('bg-red-600/10');
@@ -598,7 +598,8 @@
 								const claseId = e.dataTransfer.getData("claseId");
 								const claseSucursal = e.dataTransfer.getData("claseSucursal");
 
-								if (!isAdminGlobal && claseSucursal != state.user?.sucursal_id) {
+								// Bloqueo de seguridad: No podés soltar algo en una celda si no sos dueño o admin
+								if (!isAdminGlobal && claseSucursal != miSucursalId) {
 									return showVikingToast("No podés mover clases de otra sucursal", true);
 								}
 
@@ -608,7 +609,6 @@
 								const parts = cell.id.split('-');
 								const newDia = parseInt(parts[1]);
 								const newHorario = parseFloat(parts[2].replace('_', '.'));
-								
 								if (oldDia == newDia && oldHorario == newHorario) return;
 
 								const res = await apiFetch(`/clases/${claseId}/move`, 'PUT', {
@@ -621,6 +621,8 @@
 									showVikingToast("¡Turno Reubicado!");
 									state.clases = await apiFetch('/clases');
 									renderCalendar();
+								} else {
+									showVikingToast("Error al mover: " + res.error, true);
 								}
 							};
 						}
@@ -637,10 +639,13 @@
 					const infoFeriado = state.feriados?.find(f => f.fecha === fechaSlotStr);
 
 					if (infoFeriado) {
+						// Lógica Feriado (Simplificada para mantener el foco en sucursales)
 						const listaSegura = Array.isArray(state.clasesFeriado) ? state.clasesFeriado : [];
-						listaSegura.filter(cf => cf.fecha === fechaSlotStr).forEach(c => {
+						const clasesEspecialesHoy = listaSegura.filter(cf => cf.fecha === fechaSlotStr);
+						clasesEspecialesHoy.forEach(c => {
 							pintarBadgeClase(c, d, c.horario, fechaSlotStr, true);
 						});
+						// Bloqueo de celdas vacías en feriado
 						for (let h = 7; h <= 21.5; h += 0.5) {
 							const cell = document.getElementById(`cell-${d}-${h.toString().replace('.', '_')}`);
 							if (cell && cell.innerHTML === "") {
@@ -649,8 +654,10 @@
 							}
 						}
 					} else {
+						// Lógica Normal
 						if (state.clases && Array.isArray(state.clases)) {
 							state.clases.forEach(c => {
+								// Filtro de Box
 								if (state.calendar.currentBox !== 'Principal') {
 									if (c.box_nombre !== state.calendar.currentBox) return;
 								} else if (c.box_nombre && c.box_nombre !== 'Principal') return;
@@ -666,17 +673,17 @@
 					}
 				}
 
-				// FUNCIÓN INTERNA PARA PINTAR EL BADGE
+				// Función interna para pintar el badge con lógica de sucursal
 				function pintarBadgeClase(c, d, horario, fechaSlotStr, esEspecial, slotInfo = null) {
 					const hKey = horario.toString().replace('.', '_');
 					const cell = document.getElementById(`cell-${d}-${hKey}`);
 					if (!cell) return;
 
-					// Lógica de sucursal: ¿Es de la sede que estoy filtrando?
-					const esMiSedeVisualizada = (c.sucursal_id == miSucursalId);
+					const esMiSede = (c.sucursal_id == miSucursalId || isAdminGlobal);
 					const colorBase = c.color || '#FF0000';
 					
 					const getTextColorClass = (hexColor) => {
+						if (!hexColor) return { text: 'text-white', bg: 'bg-white/20' };
 						const r = parseInt(hexColor.substr(1, 2), 16), g = parseInt(hexColor.substr(3, 2), 16), b = parseInt(hexColor.substr(5, 2), 16);
 						const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
 						return (yiq >= 128) ? { text: 'text-black', bg: 'bg-black/10' } : { text: 'text-white', bg: 'bg-white/20' };
@@ -693,19 +700,22 @@
 					const estaLleno = cupoActual >= cupoMax;
 
 					const badge = document.createElement('div');
-					// Estilización para sucursales ajenas: opacidad 40% y borde dashed
-					badge.className = `absolute top-0.5 left-0.5 right-0.5 rounded-xl flex flex-col items-center justify-center text-center overflow-hidden z-20 p-1 shadow-xl transition-all ${!esMiSedeVisualizada ? 'opacity-40 border-2 border-dashed border-white/20 pointer-events-none' : 'cursor-pointer hover:scale-[1.02]'}`;
+					// Estilización: Si no es mi sede, aplicamos opacidad y borde punteado
+					badge.className = `absolute top-0.5 left-0.5 right-0.5 rounded-xl flex flex-col items-center justify-center text-center overflow-hidden z-20 p-1 shadow-xl transition-all ${!esMiSede ? 'opacity-40 border-2 border-dashed border-white/20' : ''}`;
 					badge.style.height = "79px";
 					badge.style.backgroundColor = colorBase;
 
-					if (esMiSedeVisualizada && !esAlumno && !esEspecial) {
+					// Drag and drop solo si es mi sede o soy admin
+					if (esMiSede && !esAlumno && !esEspecial) {
 						badge.draggable = true;
 						badge.ondragstart = (e) => {
 							e.dataTransfer.setData("claseId", c.id);
 							e.dataTransfer.setData("claseSucursal", c.sucursal_id);
 							e.dataTransfer.setData("oldDia", d);
 							e.dataTransfer.setData("oldHorario", horario);
+							badge.classList.add('scale-95', 'rotate-2');
 						};
+						badge.ondragend = () => badge.classList.remove('scale-95', 'rotate-2');
 					}
 
 					badge.innerHTML = `
@@ -713,7 +723,7 @@
 							<span class="text-[9px] font-black uppercase italic leading-[1.1] ${colores.text}">${c.nombre}</span>
 							<span class="text-[7px] font-bold uppercase opacity-80 ${colores.text}">${esEspecial ? 'ESPECIAL' : (slotInfo?.coach || 'STAFF')}</span>
 							<div class="mt-1 px-2 py-0.5 rounded-full text-[8px] font-black ${colores.bg} ${estaLleno ? 'text-red-500 bg-white' : colores.text}">${cupoActual}/${cupoMax}</div>
-							${!esMiSedeVisualizada ? '<span class="text-[6px] font-black text-white/50 tracking-tighter">OTRA SEDE</span>' : ''}
+							${!esMiSede ? '<span class="text-[6px] font-black text-white/50">OTRA SEDE</span>' : ''}
 						</div>`;
 
 					badge.onclick = (e) => {
@@ -722,7 +732,12 @@
 							if (estaLleno) showVikingToast("Cupo lleno", true);
 							else confirmarReservaVikinga(c, d, horario, fechaSlotStr);
 						} else {
-							openInscriptos(c.id, d, horario, fechaSlotStr);
+							// Solo abre edición si es mi sede o soy admin
+							if (esMiSede) {
+								openInscriptos(c.id, d, horario, fechaSlotStr);
+							} else {
+								showVikingToast("Acceso restringido: Clase de otra sucursal", true);
+							}
 						}
 					};
 					cell.appendChild(badge);
@@ -762,144 +777,6 @@
 				
 				renderCalendar();
 			}
-
-				// 1. Esta función LLENA el selector con las sedes
-				async function renderFiltroSedesGestion() {
-					const select = document.getElementById('filtro-clases-seccion');
-					if (!select) return;
-
-					try {
-						// Aseguramos que existan las sedes en el estado global
-						if (!state.sucursales || state.sucursales.length === 0) {
-							const sucs = await apiFetch('/api/sucursales');
-							state.sucursales = Array.isArray(sucs) ? sucs : [];
-						}
-
-						const isAdmin = (state.user?.rol_nombre === "Administrador" || state.user?.rol_nombre === "Supervisor");
-						
-						// Si es Admin, mostramos todas. Si no, solo su sede.
-						let options = isAdmin ? '<option value="TODAS">--- TODAS LAS SEDES ---</option>' : '';
-						
-						if (state.sucursales.length > 0) {
-							options += state.sucursales.map(s => 
-								`<option value="${s.id}" ${parseInt(s.id) === parseInt(state.user.sucursal_id) ? 'selected' : ''}>${s.sucursal.toUpperCase()}</option>`
-							).join('');
-						} else {
-							options = '<option value="">No se encontraron sedes</option>';
-						}
-
-						select.innerHTML = options;
-						
-						// 5. EJECUCIÓN INMEDIATA: Una vez que el select tiene datos, disparamos el dibujo de las tarjetas
-						// Esto limpia la Clase B intrusa de inmediato.
-						filtrarClasesGestion(select.value);
-
-					} catch (err) {
-						console.error("Error en renderFiltroSedesGestion:", err);
-						select.innerHTML = '<option value="">Error al cargar sedes</option>';
-					}
-				}
-
-				// 2. Esta función FILTRA las tarjetas
-				function filtrarClasesGestion(sucursalId) {
-					const container = document.getElementById('clases-container');
-					if (!container || !state.clases) return;
-
-					// Filtro estricto por ID de sucursal
-					const filtradas = (sucursalId === "TODAS") 
-						? state.clases 
-						: state.clases.filter(c => parseInt(c.sucursal_id) === parseInt(sucursalId));
-
-					// Si no hay clases tras el filtro, mensaje de vacío
-					if (filtradas.length === 0) {
-						container.innerHTML = `
-							<div class="col-span-3 p-16 border border-dashed border-white/10 rounded-[3rem] text-center bg-white/2">
-								<p class="text-[12px] text-gray-600 font-black uppercase italic tracking-[0.2em]">No hay clases configuradas para esta sede</p>
-								<p class="text-[10px] text-gray-700 mt-2 font-bold">Usa el botón "Alta de Clase" para comenzar.</p>
-							</div>`;
-						return;
-					}
-
-					// Dibujar las tarjetas filtradas
-					const isAdmin = state.user?.rol_nombre === "Administrador" || state.user?.rol_nombre === "Supervisor";
-					
-					container.innerHTML = filtradas.map(c => {
-						const puedeEditar = isAdmin || (parseInt(c.sucursal_id) === parseInt(state.user.sucursal_id));
-
-						return `
-							<div class="glass-card p-6 rounded-[2.5rem] border-white/5 flex flex-col justify-between hover:border-red-600/20 transition-all group ${!puedeEditar ? 'opacity-60 grayscale' : ''}">
-								<div>
-									<div class="flex items-center gap-4 mb-6">
-										<div class="w-12 h-12 rounded-2xl flex items-center justify-center font-black text-black text-sm italic shadow-lg" style="background-color: ${c.color || '#FF0000'}">
-											${c.nombre ? c.nombre[0].toUpperCase() : '?'}
-										</div>
-										<div>
-											<h4 class="text-sm font-black uppercase italic text-white group-hover:text-red-500 transition-colors">${c.nombre}</h4>
-											<p class="text-[10px] text-white-500 font-bold uppercase tracking-wider flex items-center gap-1">
-												<i data-lucide="user" class="w-3 h-3"></i> ${c.coach || 'Sin Coach'}
-											</p>
-										</div>
-									</div>
-								</div>
-								${puedeEditar ? `
-								<button onclick="openEditClase(${c.id})" class="w-full py-4 bg-white/5 text-white rounded-2xl text-[10px] font-black uppercase italic hover:bg-white/10 hover:text-red-600 transition-all flex items-center justify-center gap-2 border border-white/5">
-									<i data-lucide="settings-2" class="w-3.5 h-3.5"></i>
-									Configuración Técnica
-								</button>
-								` : '<p class="text-[9px] text-gray-700 italic text-center uppercase font-black">Vista de solo lectura</p>'}
-							</div>`;
-					}).join('');
-
-					if (window.lucide) lucide.createIcons();
-				}
-
-				// 3. Ajuste en tu función que dibuja las tarjetas (renderTarjetasClases)
-				// Asegúrate de que adentro tenga esta lógica de bloqueo:
-				function renderTarjetasClases(lista) {
-					const container = document.getElementById('clases-container');
-					if (!container) return;
-					
-					container.innerHTML = "";
-
-					if (lista.length === 0) {
-						container.innerHTML = `<div class="col-span-3 p-12 text-center text-white/20 font-black uppercase italic">No hay clases en esta sede</div>`;
-						return;
-					}
-
-					const isAdmin = state.user?.rol_nombre === "Administrador" || state.user?.rol_nombre === "Supervisor";
-
-					lista.forEach(clase => {
-						// Solo puede editar si es Admin o si la clase pertenece a su sucursal
-						const puedeEditar = isAdmin || (parseInt(clase.sucursal_id) === parseInt(state.user.sucursal_id));
-
-						const card = document.createElement('div');
-						card.className = `viking-card p-6 rounded-3xl border border-white/5 bg-white/5 transition-all ${!puedeEditar ? 'opacity-60 grayscale' : 'hover:border-red-600/30'}`;
-						
-						card.innerHTML = `
-							<div class="flex justify-between items-start mb-4">
-								<div class="w-12 h-12 rounded-2xl flex items-center justify-center" style="background-color: ${clase.color}20">
-									<div class="w-3 h-3 rounded-full" style="background-color: ${clase.color}"></div>
-								</div>
-								${puedeEditar ? `
-									<div class="flex gap-2">
-										<button onclick="openEditClase(${clase.id})" class="p-2 hover:bg-white/10 rounded-lg text-white/50 hover:text-white transition-colors">
-											<i data-lucide="settings-2" class="w-4 h-4"></i>
-										</button>
-									</div>
-								` : `<span class="text-[8px] font-black uppercase bg-white/10 px-2 py-1 rounded-md text-white/40 italic">Solo Lectura</span>`}
-							</div>
-							<h4 class="text-xl font-black italic uppercase mb-1">${clase.nombre}</h4>
-							<p class="text-white/40 text-[10px] font-bold uppercase mb-4">${clase.box_nombre || 'Principal'} | ${clase.coach}</p>
-							<div class="flex items-center justify-between mt-auto">
-								<span class="text-[10px] font-black text-red-600 uppercase italic">Cupo: ${clase.capacidad_max}</span>
-								<span class="text-[9px] font-bold text-white/20 uppercase">Sede ID: ${clase.sucursal_id}</span>
-							</div>
-						`;
-						container.appendChild(card);
-					});
-					
-					if (window.lucide) lucide.createIcons();
-				}
                 
                 /**
                  * FUNCIÓN DE RESERVA CORREGIDA
@@ -2784,10 +2661,6 @@ if (editorForm) {
 				if (typeof renderAlumnosSection === 'function') renderAlumnosSection();
 			}
 
-			if (view === 'clases') {
-				loadClases();
-			}
-
 			// 11. Aplicar permisos de visibilidad final
 			if (typeof applyPermissions === 'function') applyPermissions();
 			
@@ -4273,31 +4146,57 @@ if (editorForm) {
 		}
 
         async function loadClases() {
+			// 1. Pedir datos al servidor
+			const data = await apiFetch('/clases'); 
+			state.clases = Array.isArray(data) ? data : [];
+
+			// 2. Localizar el contenedor en el HTML
 			const container = document.getElementById('clases-container');
 			if (!container) return;
-			
-			// Limpieza visual preventiva
-			container.innerHTML = '<p class="text-white/20 p-8 font-black uppercase italic text-center">Sincronizando clases...</p>';
 
-			try {
-				// Pedimos clases y sucursales en paralelo para ganar velocidad
-				const [clasesData, sucursalesData] = await Promise.all([
-					apiFetch('/api/clases'),
-					apiFetch('/api/sucursales')
-				]);
+			// 3. Si no hay clases, mostrar mensaje de vacío
+			if (state.clases.length === 0) {
+				container.innerHTML = `
+					<div class="col-span-3 p-16 border border-dashed border-white/10 rounded-[3rem] text-center bg-white/2">
+						<p class="text-[12px] text-gray-600 font-black uppercase italic tracking-[0.2em]">No hay clases configuradas</p>
+						<p class="text-[10px] text-gray-700 mt-2 font-bold">Usa el botón "Alta de Clase" para comenzar.</p>
+					</div>`;
+			} else {
+				// 4. Dibujar las tarjetas (Solo con info técnica y botón de editar)
+				const canEdit = (state.user?.rol_nombre === "Administrador" || state.user?.rol_nombre === "Supervisor");
+				
+				container.innerHTML = state.clases.map(c => `
+					<div class="glass-card p-6 rounded-[2.5rem] border-white/5 flex flex-col justify-between hover:border-red-600/20 transition-all group">
+						<div>
+							<div class="flex items-center gap-4 mb-6">
+								<!-- Icono con el color de la clase -->
+								<div class="w-12 h-12 rounded-2xl flex items-center justify-center font-black text-black text-sm italic shadow-lg" style="background-color: ${c.color || '#FF0000'}">
+									${c.nombre ? c.nombre[0].toUpperCase() : '?'}
+								</div>
+								<div>
+									<h4 class="text-sm font-black uppercase italic text-white group-hover:text-red-500 transition-colors">${c.nombre}</h4>
+									<p class="text-[10px] text-white-500 font-bold uppercase tracking-wider flex items-center gap-1">
+										<i data-lucide="user" class="w-3 h-3"></i> ${c.coach || 'Sin Coach'}
+									</p>
+								</div>
+							</div>
+						</div>
 
-				state.clases = Array.isArray(clasesData) ? clasesData : [];
-				state.sucursales = Array.isArray(sucursalesData) ? sucursalesData : [];
-
-				// Llenamos el selector de sedes y filtramos automáticamente
-				if (typeof renderFiltroSedesGestion === 'function') {
-					renderFiltroSedesGestion();
-				}
-
-			} catch (error) {
-				console.error("Error cargando clases:", error);
-				container.innerHTML = '<p class="text-red-500 p-8">Falla al cargar clases</p>';
+						<!-- Botón de edición: Solo aparece para Admin/Supervisor -->
+						${canEdit ? `
+						<button onclick="openEditClase(${c.id})" class="w-full py-4 bg-white/5 text-white rounded-2xl text-[10px] font-black uppercase italic hover:bg-white/10 hover:text-red-600 transition-all flex items-center justify-center gap-2 border border-white/5">
+							<i data-lucide="settings-2" class="w-3.5 h-3.5"></i>
+							Configuración Técnica
+						</button>
+						` : '<p class="text-[9px] text-gray-700 italic text-center">Solo lectura</p>'}
+					</div>
+				`).join('');
 			}
+
+			// 5. Refrescar iconos y otros componentes
+			lucide.createIcons();
+			if(document.getElementById('view-calendario')?.classList.contains('active')) renderCalendar();
+			applyPermissions();
 		}
 		
 		async function loadProfesores() {
@@ -5078,13 +4977,8 @@ if (editorForm) {
 			const id = document.getElementById('cl-id').value;
 			const slotRows = document.querySelectorAll('.schedule-slot-row');
 			
-			// Captura de sucursal: si no hay selector o está vacío, usa la del usuario logueado
-			const sucursalSelect = document.getElementById('clase-sucursal-select');
-			let sucursalId = sucursalSelect ? sucursalSelect.value : null;
-			
-			if (!sucursalId || sucursalId === "") {
-				sucursalId = state.user?.sucursal_id; 
-			}
+			// Capturamos la sucursal seleccionada en el modal
+			const sucursalId = document.getElementById('clase-sucursal-select')?.value;
 			
 			const horarios_detalle = [];
 			slotRows.forEach(row => {
@@ -5103,7 +4997,7 @@ if (editorForm) {
 					horarios_detalle.push({
 						dia: parseInt(diaEl.value),
 						horario: parseFloat(horaEl.value),
-						coach: String(nombreCoach || "Staff") 
+						coach: nombreCoach || "Staff" 
 					});
 				}
 			});
@@ -5112,28 +5006,31 @@ if (editorForm) {
 				return showVikingToast("Añade al menos un horario", true);
 			}
 
+			const mainCoach = horarios_detalle[0].coach || "Staff";
+
 			const payload = {
 				nombre: document.getElementById('cl-nombre').value,
-				box_id: parseInt(document.getElementById('cl-box').value) || 1,
-				coach: String(horarios_detalle[0].coach),
-				color: document.getElementById('cl-color').value || "#FF0000",
+				box_id: parseInt(document.getElementById('cl-box').value),
+				coach: String(mainCoach),
+				color: document.getElementById('cl-color').value,
 				capacidad_max: parseInt(document.getElementById('cl-cupo').value) || 20,
 				horarios_detalle: horarios_detalle,
+				// Agregamos el ID de sucursal al envío de datos
 				sucursal_id: sucursalId ? parseInt(sucursalId) : null 
 			};
 
 			const method = id ? 'PUT' : 'POST';
-			const endpoint = id ? `/api/clases/${id}` : '/api/clases'; // Prefijo /api mandatorio
+			const endpoint = id ? `/clases/${id}` : '/clases';
 			
 			try {
 				const res = await apiFetch(endpoint, method, payload);
 				if(!res.error) {
 					showVikingToast(id ? "¡Clase Actualizada!" : "¡Clase Creada!");
 					closeModal('modal-clase');
-					// Recarga inmediata de datos
-					await loadClases();
+					// Refrescamos el calendario para ver los cambios
+					if (typeof renderCalendar === 'function') renderCalendar();
 				} else {
-					showVikingToast("Error: " + (res.detail || res.error), true);
+					showVikingToast("Error: " + JSON.stringify(res.detail || res.error), true);
 				}
 			} catch (err) {
 				console.error(err);
