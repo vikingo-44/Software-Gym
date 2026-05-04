@@ -2527,7 +2527,82 @@ if (editorForm) {
 			}
 		}
 
-        window.switchView = function(view) {
+        // --- 1. APLICAR PERMISOS (Control de Interfaz por Rol) ---
+		function applyPermissions() {
+			if (!state.user) return;
+			const rol = (state.user.rol_nombre || "").toLowerCase();
+			
+			// 1. CONTENEDORES (Secciones de título del Sidebar)
+			const contenedoresSeccion = {
+				staff: document.getElementById('nav-section-staff'),
+				operativa: document.getElementById('nav-section-operativa'),
+				virtual: document.getElementById('nav-section-virtual')
+			};
+
+			// 2. ITEMS INDIVIDUALES (Botones del Sidebar)
+			const itemsMenu = {
+				alumnos: document.getElementById('nav-alumnos'),
+				planes: document.getElementById('nav-planes'),
+				clases: document.getElementById('nav-clases'),
+				facturacion: document.getElementById('nav-cobrar'),
+				acceso: document.getElementById('nav-acceso-virtual'),
+				sucursales: document.getElementById('nav-sucursales'),
+				rutinas: document.getElementById('nav-rutinas')
+			};
+
+			// RESET: Mostramos todo por defecto antes de filtrar
+			Object.values(contenedoresSeccion).forEach(el => {
+				if (el) el.style.setProperty('display', 'block', 'important');
+			});
+
+			Object.values(itemsMenu).forEach(el => {
+				if (el) el.style.setProperty('display', 'flex', 'important');
+			});
+
+			// --- LÓGICA DE BLOQUEO POR ROL ---
+
+			// A. Alumnos (Acceso mínimo)
+			if (rol === "alumno") {
+				Object.values(contenedoresSeccion).forEach(el => { 
+					if(el) el.style.setProperty('display', 'none', 'important'); 
+				});
+				
+				const itemsParaOcultar = ['planes', 'facturacion', 'sucursales', 'alumnos', 'clases', 'rutinas'];
+				itemsParaOcultar.forEach(key => {
+					if(itemsMenu[key]) itemsMenu[key].style.setProperty('display', 'none', 'important');
+				});
+			}
+
+			// B. Profesores (Gestión técnica, sin facturación ni sedes)
+			else if (rol === "profesor") {
+				if(itemsMenu.facturacion) itemsMenu.facturacion.style.setProperty('display', 'none', 'important');
+				if(itemsMenu.sucursales) itemsMenu.sucursales.style.setProperty('display', 'none', 'important');
+				if(itemsMenu.planes) itemsMenu.planes.style.setProperty('display', 'none', 'important');
+			}
+
+			// C. Administrativos / Supervisores (Ocultan solo gestión interna de Staff si no corresponde)
+			else if (rol === "administracion" || rol === "administrativo") {
+				if (contenedoresSeccion.staff) contenedoresSeccion.staff.style.setProperty('display', 'none', 'important');
+				
+				const staffDashboardPanel = document.getElementById('dash-staff-access');
+				if (staffDashboardPanel) {
+					const card = staffDashboardPanel.closest('.glass-card');
+					if (card) card.style.setProperty('display', 'none', 'important');
+				}
+			}
+
+			// D. Botón de Alta Sucursal (Solo para rangos altos)
+			const isAdmin = (rol === "administrador" || rol === "supervisor");
+			const btnNuevaSucursal = document.getElementById('btn-nueva-sucursal');
+			if (btnNuevaSucursal) {
+				btnNuevaSucursal.style.setProperty('display', isAdmin ? 'flex' : 'none', 'important');
+			}
+
+			if (window.lucide) lucide.createIcons();
+		}
+
+		// --- 2. SWITCH VIEW (Navegación entre Secciones) ---
+		window.switchView = function(view) {
 			console.log(`🚀 Navegando a: ${view}`);
 
 			// 1. Ocultar todas las vistas de contenido
@@ -2550,7 +2625,7 @@ if (editorForm) {
 			// 3. Desactivar botones de navegación
 			document.querySelectorAll('.nav-btn, .nav-item').forEach(b => b.classList.remove('active'));
 
-			// 4. Lógica de selección de Dashboard por ROL
+			// 4. Lógica de selección por ROL
 			let targetId = 'view-' + view;
 			const rol = (state.user?.rol_nombre || "").toLowerCase();
 
@@ -2580,92 +2655,69 @@ if (editorForm) {
 			if (targetView) {
 				targetView.classList.add('active');
 				targetView.classList.remove('hidden');
-				targetView.style.setProperty('display', (view === 'dashboard' ? 'block' : 'flex'), 'important'); 
+				// Usamos FLEX para casi todas las vistas excepto Dashboard
+				const displayType = (view === 'dashboard' || view === 'perfil') ? 'block' : 'flex';
+				targetView.style.setProperty('display', displayType, 'important'); 
 			}
 
 			// 6. Activar botón de menú
 			const n = document.getElementById('nav-' + view); 
 			if (n) n.classList.add('active');
 			
-			// 7. Cambiar título
+			// 7. Cambiar título del Header
 			const titleEl = document.getElementById('view-title');
 			if (titleEl) titleEl.innerText = view.replace('-', ' ').toUpperCase();
 
-			// 8. LÓGICA DE BLOQUEO POR VENCIMIENTO
-			if (typeof checkUserMembresia === 'function') checkUserMembresia(view);
+			// 8. LÓGICA DE CARGA DE DATOS POR SECCIÓN
+			if (view === 'clases' && typeof loadClases === 'function') loadClases();
+			
+			if (view === 'sucursales' && typeof loadSucursales === 'function') loadSucursales();
 
-			// 9. CORRECCIÓN: Carga de datos en "Mi Perfil"
-			if (view === 'perfil' && state.user) {
-				const u = state.user;
-				const initials = u.nombre_completo ? u.nombre_completo.split(' ').filter(n => n).map(n => n[0]).join('').toUpperCase() : "??";
-				
-				const nameHeader = document.getElementById('prof-name');
-				const roleHeader = document.getElementById('prof-role');
-				if (nameHeader) nameHeader.innerText = u.nombre_completo || "Usuario Vikingo";
-				if (roleHeader) roleHeader.innerText = u.rol_nombre || "Staff";
-				
-				const elInitials = document.getElementById('user-initials');
-				const elInitialsView = document.getElementById('prof-initials-view');
-				if (elInitials) elInitials.innerText = initials;
-				if (elInitialsView) elInitialsView.innerText = initials;
-				
-				const inputName = document.getElementById('prof-input-name');
-				const inputDni = document.getElementById('prof-input-dni');
-				const inputEmail = document.getElementById('prof-input-email');
-				if (inputName) inputName.value = u.nombre_completo || "";
-				if (inputDni) inputDni.value = u.dni || "";
-				if (inputEmail) inputEmail.value = u.email || "";
-
-				const fisicos = document.getElementById('perfil-datos-fisicos');
-				if (fisicos) {
-					if (rol === "alumno") {
-						fisicos.classList.remove('hidden');
-						fisicos.style.setProperty('display', 'grid', 'important');
-						document.getElementById('prof-input-peso').value = u.peso || "";
-						document.getElementById('prof-input-altura').value = u.altura || "";
-						document.getElementById('prof-input-imc').value = u.imc || "";
-					} else {
-						fisicos.classList.add('hidden');
-						fisicos.style.setProperty('display', 'none', 'important');
-					}
+			if (view === 'calendario' && typeof renderCalendar === 'function') {
+				renderCalendar();
+				const isAdmin = (rol === "administrador" || rol === "supervisor");
+				const panelFeriados = document.getElementById('admin-feriados-panel');
+				if (panelFeriados) {
+					panelFeriados.style.setProperty('display', isAdmin ? 'block' : 'none', 'important');
 				}
 			}
 
-			// 10. Cargas de datos adicionales según sección
-			if (view === 'calendario' && typeof renderCalendar === 'function') {
-                renderCalendar();
+			if (view === 'perfil' && state.user) {
+				renderPerfil(); // Asumimos que encapsulas la lógica de perfil para no ensuciar
+			}
 
-                // --- LÓGICA DE VISIBILIDAD PARA EL PANEL DE FERIADOS ---
-                const isAdmin = (state.user?.rol_nombre === "Administrador" || state.user?.rol_nombre === "Supervisor");
-                const panelFeriados = document.getElementById('admin-feriados-panel');
-                
-                if (panelFeriados) {
-                    if (isAdmin) {
-                        panelFeriados.classList.remove('hidden');
-                        panelFeriados.style.setProperty('display', 'block', 'important');
-                    } else {
-                        panelFeriados.classList.add('hidden');
-                        panelFeriados.style.setProperty('display', 'none', 'important');
-                    }
-                }
-            }
 			if (view === 'cobrar' && typeof renderCobrar === 'function') renderCobrar();
-			if (view === 'acceso-virtual' && typeof renderAccesos === 'function') renderAccesos();
-			
-			// INTEGRACIÓN RUTINAS
-			if (view === 'rutinas') {
-				renderRutinas();
-			}
+			if (view === 'rutinas' && typeof renderRutinas === 'function') renderRutinas();
+			if (view === 'alumnos' && typeof renderAlumnosSection === 'function') renderAlumnosSection();
 
-			if (view === 'alumnos') {
-				if (typeof renderAlumnosSection === 'function') renderAlumnosSection();
-			}
-
-			// 11. Aplicar permisos de visibilidad final
-			if (typeof applyPermissions === 'function') applyPermissions();
-			
+			// 9. Aplicar permisos y refrescar iconos
+			applyPermissions();
 			if (window.lucide) lucide.createIcons();
 		};
+
+		// Función auxiliar para limpiar la lógica de perfil (Extraída de tu switchView original)
+		function renderPerfil() {
+			const u = state.user;
+			const initials = u.nombre_completo ? u.nombre_completo.split(' ').filter(n => n).map(n => n[0]).join('').toUpperCase() : "??";
+			
+			const elements = {
+				name: document.getElementById('prof-name'),
+				role: document.getElementById('prof-role'),
+				initials: document.getElementById('user-initials'),
+				initialsView: document.getElementById('prof-initials-view'),
+				inputName: document.getElementById('prof-input-name'),
+				inputDni: document.getElementById('prof-input-dni'),
+				inputEmail: document.getElementById('prof-input-email')
+			};
+
+			if (elements.name) elements.name.innerText = u.nombre_completo || "Usuario Vikingo";
+			if (elements.role) elements.role.innerText = u.rol_nombre || "Staff";
+			if (elements.initials) elements.initials.innerText = initials;
+			if (elements.initialsView) elements.initialsView.innerText = initials;
+			if (elements.inputName) elements.inputName.value = u.nombre_completo || "";
+			if (elements.inputDni) elements.inputDni.value = u.dni || "";
+			if (elements.inputEmail) elements.inputEmail.value = u.email || "";
+		}
 
 		async function handleLogin(e) {
 			// 1. Detener el refresco automático del formulario
