@@ -3237,14 +3237,19 @@ if (editorForm) {
 		};
 			
         async function initApp() {
+			console.log("⚔️ Sincronizando Central de Mando Vikinga...");
 			try {
+				// 1. PRIMERO cargamos las sucursales de forma aislada.
+				// Esto garantiza que 'state.sucursales' esté lleno antes de que cualquier otra función intente usarlo.
+				await loadSucursales(); 
+
+				// 2. AHORA SÍ, lanzamos el resto en paralelo porque ya tenemos la base (sucursales) lista.
 				await Promise.all([
-					loadSucursales(), // <--- CAMBIO CLAVE: Ejecuta la lógica completa de carga y renderizado
 					fetchAlumnos(), 
 					loadStaff(), 
 					loadPlanes(), 
 					loadStock(), 
-					loadClases(), 
+					loadClases(), // Esta función ahora encontrará las sucursales listas para filtrar.
 					fetchReservas(), 
 					loadDashboard(), 
 					loadMusculacionMetadata(), 
@@ -3253,13 +3258,20 @@ if (editorForm) {
 					loadClasesFeriado().catch(e => console.error("Error en clases feriado"))
 				]);
 				
-				// Setup inicial del filtro del calendario
-				if (typeof setupCalendarFilters === 'function') setupCalendarFilters();
+				// 3. Setup final de UI
+				if (typeof setupCalendarFilters === 'function') {
+					setupCalendarFilters();
+				}
 				
-				renderCalendar();
+				if (typeof renderCalendar === 'function') {
+					renderCalendar();
+				}
+
+				console.log("✅ Arsenal cargado y sincronizado.");
 			} catch (error) {
-				console.error("Error crítico:", error);
-				renderCalendar();
+				console.error("Error crítico en el arranque del sistema:", error);
+				// Fallback para no bloquear la pantalla al usuario
+				if (typeof renderCalendar === 'function') renderCalendar();
 			}
 		}
 
@@ -3454,55 +3466,77 @@ if (editorForm) {
         }
 
         async function fetchAlumnos() {
-			const d = await apiFetch('/alumnos');
-			state.alumnos = Array.isArray(d) ? d : [];
+			try {
+				console.log("👥 Sincronizando Guerrero Alumnos...");
+				const d = await apiFetch('/alumnos');
+				state.alumnos = Array.isArray(d) ? d : [];
 
-			// 1. TRANSFORMACIÓN VISUAL DEL DASHBOARD (Mini Lista)
-			// Buscamos la tabla original para reemplazarla por nuestro nuevo diseño de filas
-			const dashTable = document.querySelector('#admin-dashboard-layout table');
-			const dashListId = 'dash-alumnos-list-view';
-			let dashContainer = document.getElementById(dashListId);
+				// 1. TRANSFORMACIÓN VISUAL DEL DASHBOARD (Mini Lista)
+				const dashListId = 'dash-alumnos-list-view';
+				let dashContainer = document.getElementById(dashListId);
 
-			// Si todavía existe la tabla (primera carga), la reemplazamos por un DIV contenedor
-			if (!dashContainer && dashTable) {
-				dashContainer = document.createElement('div');
-				dashContainer.id = dashListId;
-				dashContainer.className = "flex flex-col gap-2"; // Espacio entre filas
-				// Reemplazamos la tabla entera (y sus cabeceras) por nuestra lista limpia
-				if (dashTable.parentNode) dashTable.parentNode.replaceChild(dashContainer, dashTable);
-			}
-
-			if (dashContainer) {
-				const topAlumnos = state.alumnos.slice(0, 5); // Solo mostramos los 5 recientes en dashboard
-				if (topAlumnos.length === 0) {
-					dashContainer.innerHTML = '<p class="text-center text-gray-500 italic text-[11px] py-4">No hay alumnos recientes.</p>';
-				} else {
-					dashContainer.innerHTML = topAlumnos.map(a => createAlumnoRow(a, 'dashboard')).join('');
+				// Si el contenedor NO existe, intentamos crearlo a partir de la tabla vieja
+				if (!dashContainer) {
+					const dashTable = document.querySelector('#admin-dashboard-layout table');
+					if (dashTable && dashTable.parentNode) {
+						dashContainer = document.createElement('div');
+						dashContainer.id = dashListId;
+						dashContainer.className = "flex flex-col gap-2";
+						dashTable.parentNode.replaceChild(dashContainer, dashTable);
+					}
 				}
-			}
 
-			// 2. TRANSFORMACIÓN VISUAL DE LA SECCIÓN ALUMNOS (Lista Completa)
-			const fullTable = document.querySelector('#view-alumnos table');
-			const fullListId = 'full-alumnos-list-view';
-			let fullContainer = document.getElementById(fullListId);
-
-			if (!fullContainer && fullTable) {
-				fullContainer = document.createElement('div');
-				fullContainer.id = fullListId;
-				fullContainer.className = "flex flex-col gap-3"; // Más espacio en la vista completa
-				if (fullTable.parentNode) fullTable.parentNode.replaceChild(fullContainer, fullTable);
-			}
-
-			if (fullContainer) {
-				if (state.alumnos.length === 0) {
-					fullContainer.innerHTML = '<div class="text-center py-10"><i data-lucide="users" class="w-12 h-12 text-gray-600 mx-auto mb-4"></i><p class="text-gray-500 italic">No hay alumnos registrados.</p></div>';
-				} else {
-					fullContainer.innerHTML = state.alumnos.map(a => createAlumnoRow(a, 'full')).join('');
+				// Renderizado en Dashboard (Solo si el contenedor existe en el DOM actual)
+				if (dashContainer) {
+					const topAlumnos = state.alumnos.slice(0, 5); 
+					if (topAlumnos.length === 0) {
+						dashContainer.innerHTML = '<p class="text-center text-gray-500 italic text-[11px] py-10 opacity-30 uppercase font-black">No hay alumnos recientes</p>';
+					} else {
+						dashContainer.innerHTML = topAlumnos.map(a => createAlumnoRow(a, 'dashboard')).join('');
+					}
 				}
-			}
 
-			if (window.lucide) lucide.createIcons();
-			applyPermissions(); // Re-aplicamos permisos para ocultar botones de editar a quien no corresponda
+				// 2. TRANSFORMACIÓN VISUAL DE LA SECCIÓN ALUMNOS (Lista Completa)
+				const fullListId = 'full-alumnos-list-view';
+				let fullContainer = document.getElementById(fullListId);
+
+				// Si el contenedor NO existe, intentamos crearlo a partir de la tabla vieja
+				if (!fullContainer) {
+					const fullTable = document.querySelector('#view-alumnos table');
+					if (fullTable && fullTable.parentNode) {
+						fullContainer = document.createElement('div');
+						fullContainer.id = fullListId;
+						fullContainer.className = "flex flex-col gap-3";
+						fullTable.parentNode.replaceChild(fullContainer, fullTable);
+					}
+				}
+
+				// Renderizado en Vista Alumnos
+				if (fullContainer) {
+					if (state.alumnos.length === 0) {
+						fullContainer.innerHTML = `
+							<div class="text-center py-20 opacity-20">
+								<i data-lucide="users" class="w-16 h-16 mx-auto mb-4"></i>
+								<p class="font-black uppercase italic tracking-widest">No hay guerreros registrados</p>
+							</div>`;
+					} else {
+						// Aquí podrías usar la lógica de filtrado/paginación si ya la tienes implementada
+						fullContainer.innerHTML = state.alumnos.map(a => createAlumnoRow(a, 'full')).join('');
+					}
+				}
+
+				// 3. Finalización
+				if (window.lucide) lucide.createIcons();
+				
+				// Es vital llamar a applyPermissions para que los botones de edición 
+				// se oculten si el usuario no es Admin/Administrativo
+				if (typeof applyPermissions === 'function') {
+					applyPermissions();
+				}
+
+			} catch (error) {
+				console.error("❌ Error en fetchAlumnos:", error);
+			}
 		}
 
 		// --- REEMPLAZA TU FUNCIÓN loadStaff POR ESTA NUEVA VERSIÓN VISUAL ---
@@ -4200,18 +4234,25 @@ if (editorForm) {
 
 		// 1. CARGA INICIAL: El motor que arranca todo
 		async function loadClases() {
-			const data = await apiFetch('/clases'); 
+			const data = await apiFetch('/clases');
 			state.clases = Array.isArray(data) ? data : [];
 
+			// Si no hay sucursales, las cargamos de nuevo por las dudas
 			if (!state.sucursales || state.sucursales.length === 0) {
 				await loadSucursales();
 			}
 
-			await renderFiltroSedesGestion(); 
-
-			if (window.lucide) lucide.createIcons();
-			if (document.getElementById('view-calendario')?.classList.contains('active')) renderCalendar();
-			applyPermissions();
+			const selectFiltro = document.getElementById('filtro-clases-gestion');
+			if (selectFiltro) {
+				const isAdmin = (state.user?.rol_nombre === "Administrador" || state.user?.rol_nombre === "Supervisor");
+				let options = isAdmin ? '<option value="TODAS">--- TODAS LAS SEDES ---</option>' : '';
+				options += state.sucursales.map(s => `<option value="${s.id}">${s.sucursal.toUpperCase()}</option>`).join('');
+				selectFiltro.innerHTML = options;
+				
+				// Seteamos la sede del usuario por defecto
+				if (!selectFiltro.value) selectFiltro.value = state.user.sucursal_id;
+				filtrarClasesGestion(selectFiltro.value);
+			}
 		}
 
 		// 2. SELECTOR PRINCIPAL: Crea el dropdown de la vista de gestión
@@ -5187,27 +5228,31 @@ if (editorForm) {
 		// --- GESTIÓN DE SUCURSALES ---
 		async function loadSucursales() {
 			try {
-				// Usamos apiFetch para que maneje el token y la URL base correctamente
+				console.log("📍 Sincronizando Arsenal de Sedes...");
+				
+				// 1. Llamada a la API
 				const sucursales = await apiFetch('/sucursales');
 				
-				if (sucursales.error) {
-					throw new Error(sucursales.error);
+				if (!sucursales || sucursales.error) {
+					throw new Error(sucursales?.error || "Error al obtener sucursales");
 				}
 
-				// Guardamos en el estado global
-				state.sucursales = sucursales; 
+				// 2. Guardar en el estado global (Aseguramos que sea un Array)
+				state.sucursales = Array.isArray(sucursales) ? sucursales : []; 
 				
-				// 1. Renderizar Tarjetas en la vista de Sucursales
+				// --- RENDERIZADO DE INTERFAZ ---
+
+				// A. Tarjetas en la vista de Sucursales
 				const container = document.getElementById('sucursales-container');
 				if (container) {
-					if (sucursales.length === 0) {
+					if (state.sucursales.length === 0) {
 						container.innerHTML = `
 							<div class="col-span-full py-20 text-center opacity-30 italic font-black uppercase">
 								<i data-lucide="map-pin-off" class="w-12 h-12 mx-auto mb-4"></i>
 								<p class="font-black uppercase italic">No hay sedes registradas en el arsenal</p>
 							</div>`;
 					} else {
-						container.innerHTML = sucursales.map(s => `
+						container.innerHTML = state.sucursales.map(s => `
 							<div class="glass-card p-8 rounded-[2.5rem] border border-white/5 hover:border-red-600/30 transition-all group relative overflow-hidden">
 								<div class="flex justify-between items-start mb-6">
 									<div class="p-4 bg-red-600/10 rounded-2xl text-red-500 group-hover:bg-red-600 group-hover:text-black transition-all">
@@ -5224,30 +5269,49 @@ if (editorForm) {
 					}
 				}
 
-				// 2. Llenar Select de Feriados
+				// B. Llenar Select de Feriados
 				const feriadoSelect = document.getElementById('feriado-sucursal-select');
 				if (feriadoSelect) {
-					feriadoSelect.innerHTML = sucursales.map(s => 
-						`<option value="${s.id}" ${s.id == state.user.sucursal_id ? 'selected' : ''}>${s.sucursal.toUpperCase()}</option>`
+					feriadoSelect.innerHTML = state.sucursales.map(s => 
+						`<option value="${s.id}" ${parseInt(s.id) === parseInt(state.user?.sucursal_id) ? 'selected' : ''}>${s.sucursal.toUpperCase()}</option>`
 					).join('');
 				}
 
-				// 3. Llenar Select de Alumnos
+				// C. Llenar Select de Alumnos (Modal Alta/Edición)
 				const selectAl = document.getElementById('al-sucursal');
 				if (selectAl) {
 					const currentVal = selectAl.value;
 					selectAl.innerHTML = '<option value="">Seleccionar Sucursal...</option>' + 
-						sucursales.map(s => `<option value="${s.id}">${s.sucursal.toUpperCase()}</option>`).join('');
-					if(currentVal) selectAl.value = currentVal;
+						state.sucursales.map(s => `<option value="${s.id}">${s.sucursal.toUpperCase()}</option>`).join('');
+					// Restauramos el valor si ya había uno seleccionado (importante en edición)
+					if (currentVal) selectAl.value = currentVal;
 				}
 
-				// 4. Llenar Select de Clases (Modal)
+				// D. Llenar Select de Clases (Modal Alta/Edición)
 				const selectCl = document.getElementById('clase-sucursal-select');
 				if (selectCl) {
-					selectCl.innerHTML = sucursales.map(s => `<option value="${s.id}">${s.sucursal.toUpperCase()}</option>`).join('');
+					selectCl.innerHTML = state.sucursales.map(s => 
+						`<option value="${s.id}">${s.sucursal.toUpperCase()}</option>`
+					).join('');
 				}
 
-				if(window.lucide) lucide.createIcons();
+				// E. Llenar Filtro de Gestión de Clases (El que está arriba de la grilla de clases)
+				const selectFiltroGestion = document.getElementById('filtro-clases-gestion');
+				if (selectFiltroGestion) {
+					const rol = (state.user?.rol_nombre || "").toLowerCase();
+					const isAdmin = (rol === "administrador" || rol === "supervisor");
+					
+					let options = isAdmin ? '<option value="TODAS">--- TODAS LAS SEDES ---</option>' : '';
+					options += state.sucursales.map(s => 
+						`<option value="${s.id}" ${parseInt(s.id) === parseInt(state.user?.sucursal_id) ? 'selected' : ''}>${s.sucursal.toUpperCase()}</option>`
+					).join('');
+					
+					selectFiltroGestion.innerHTML = options;
+				}
+
+				// 3. Refrescar iconos y permisos
+				if (window.lucide) lucide.createIcons();
+				if (typeof applyPermissions === 'function') applyPermissions();
 
 			} catch (error) {
 				console.error("❌ Error cargando sucursales:", error);
