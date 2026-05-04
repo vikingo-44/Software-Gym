@@ -1473,19 +1473,32 @@ def get_feriados(db: Session = Depends(database.get_db)):
     return db.query(models.DiaEspecial).all()
 
 @app.post("/api/feriados", tags=["Feriados"])
-def create_feriado(data: DiaEspecialCreate, db: Session = Depends(database.get_db)):
+def create_feriado(data: DiaEspecialCreate, db: Session = Depends(database.get_db), current_user = Depends(get_current_user)):
     try:
-        # Fix Zona Horaria: Tomamos solo la fecha pura
+        # Mantenemos tu Fix de Zona Horaria
         fecha_dt = datetime.strptime(data.fecha, "%Y-%m-%d").date()
         
-        # Evitamos el error de UNIQUE: Si existe, actualizamos el motivo
-        existente = db.query(models.DiaEspecial).filter(models.DiaEspecial.fecha == fecha_dt).first()
+        # Determinamos la sucursal (Prioridad: la que venga en data, sino la del usuario)
+        final_sucursal_id = getattr(data, 'sucursal_id', current_user.sucursal_id) or current_user.sucursal_id
+
+        # Mantenemos tu lógica de evitar el error de UNIQUE
+        existente = db.query(models.DiaEspecial).filter(
+            models.DiaEspecial.fecha == fecha_dt,
+            models.DiaEspecial.sucursal_id == final_sucursal_id # Filtramos por sede para permitir feriados distintos
+        ).first()
+        
         if existente:
             existente.motivo = data.motivo
             db.commit()
             return {"status": "success", "message": "Actualizado"}
 
-        nuevo = models.DiaEspecial(fecha=fecha_dt, motivo=data.motivo, abierto=data.abierto)
+        # Agregamos la sucursal_id al crear
+        nuevo = models.DiaEspecial(
+            fecha=fecha_dt, 
+            motivo=data.motivo, 
+            abierto=data.abierto,
+            sucursal_id=final_sucursal_id
+        )
         db.add(nuevo)
         db.commit()
         return {"status": "success"}
@@ -1506,16 +1519,20 @@ def get_clases_feriado(fecha: Optional[str] = None, db: Session = Depends(databa
     return query.all()
 
 @app.post("/api/clases-feriado", tags=["Feriados"])
-def create_clase_feriado(data: ClaseFeriadoCreate, db: Session = Depends(database.get_db)):
+def create_clase_feriado(data: ClaseFeriadoCreate, db: Session = Depends(database.get_db), current_user = Depends(get_current_user)):
     try:
         fecha_dt = datetime.strptime(data.fecha, "%Y-%m-%d").date()
         
+        # Sucursal automática
+        final_sucursal_id = getattr(data, 'sucursal_id', current_user.sucursal_id) or current_user.sucursal_id
+
         nueva = models.ClaseFeriado(
             fecha=fecha_dt, 
             nombre=data.nombre, 
             horario=data.horario, 
             capacidad_max=data.capacidad_max,
-            color=data.color
+            color=data.color,
+            sucursal_id=final_sucursal_id # Se asocia a la sede
         )
         db.add(nueva)
         db.commit()
