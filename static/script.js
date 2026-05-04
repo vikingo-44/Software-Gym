@@ -4165,19 +4165,15 @@ if (editorForm) {
 
 		// 1. CARGA INICIAL: El motor que arranca todo
 		async function loadClases() {
-			// Traemos las clases del servidor
-			const data = await apiFetch('/api/clases'); 
+			const data = await apiFetch('/clases'); 
 			state.clases = Array.isArray(data) ? data : [];
 
-			// CRÍTICO: Si no hay sucursales en memoria, las cargamos ANTES de filtrar
 			if (!state.sucursales || state.sucursales.length === 0) {
 				await loadSucursales();
 			}
 
-			// Una vez que tenemos clases y sucursales, disparamos el selector y el filtro
 			await renderFiltroSedesGestion(); 
 
-			// Refrescos visuales
 			if (window.lucide) lucide.createIcons();
 			if (document.getElementById('view-calendario')?.classList.contains('active')) renderCalendar();
 			applyPermissions();
@@ -5121,7 +5117,7 @@ if (editorForm) {
 
 			// 3. Endpoints corregidos con prefijo /api
 			const method = id ? 'PUT' : 'POST';
-			const endpoint = id ? `/api/clases/${id}` : '/api/clases';
+			const endpoint = id ? `/clases/${id}` : '/clases';
 			
 			try {
 				const res = await apiFetch(endpoint, method, payload);
