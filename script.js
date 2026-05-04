@@ -768,50 +768,34 @@
 					const select = document.getElementById('filtro-clases-seccion');
 					if (!select) return;
 
-					try {
-						// FORZAMOS LA CARGA: Si no hay datos, los traemos YA.
-						if (!state.sucursales || state.sucursales.length === 0) {
-							const sucs = await apiFetch('/api/sucursales');
-							state.sucursales = sucs;
-						}
-
-						if (!state.clases || state.clases.length === 0) {
-							const cls = await apiFetch('/api/clases');
-							state.clases = cls;
-						}
-
-						const isAdmin = (state.user?.rol_nombre === "Administrador" || state.user?.rol_nombre === "Supervisor");
-						
-						// Construimos el HTML de las opciones
-						let options = isAdmin ? '<option value="TODAS">--- TODAS LAS SEDES ---</option>' : '';
-						options += state.sucursales.map(s => 
-							`<option value="${s.id}" ${s.id == state.user.sucursal_id ? 'selected' : ''}>${s.sucursal.toUpperCase()}</option>`
-						).join('');
-
-						select.innerHTML = options;
-						
-						// 🛡️ FILTRO DE SEGURIDAD: 
-						// Ejecutamos el filtro con el valor que quedó (por defecto la sucursal del usuario)
-						// Esto es lo que saca la clase de la Sede B de tu vista.
-						filtrarClasesGestion(select.value);
-
-					} catch (err) {
-						console.error("Error crítico en filtro:", err);
-						select.innerHTML = '<option value="">Error al cargar</option>';
+					// Aseguramos que existan las sedes en el estado
+					if (!state.sucursales || state.sucursales.length === 0) {
+						state.sucursales = await apiFetch('/api/sucursales');
 					}
+
+					const isAdmin = (state.user?.rol_nombre === "Administrador" || state.user?.rol_nombre === "Supervisor");
+					
+					// Si es Admin, mostramos todas. Si no, solo su sede.
+					let options = isAdmin ? '<option value="TODAS">--- TODAS LAS SEDES ---</option>' : '';
+					options += state.sucursales.map(s => 
+						`<option value="${s.id}" ${parseInt(s.id) === parseInt(state.user.sucursal_id) ? 'selected' : ''}>${s.sucursal.toUpperCase()}</option>`
+					).join('');
+
+					select.innerHTML = options;
+					
+					// Ejecutamos el filtro inicial
+					filtrarClasesGestion(select.value);
 				}
 
 				// 2. Esta función FILTRA las tarjetas
 				function filtrarClasesGestion(sucursalId) {
-					const container = document.getElementById('clases-container');
-					if (!container || !state.clases) return;
+					if (!state.clases) return;
 
-					// Si sucursalId es vacío o nulo (por error de carga), forzamos a la sede del usuario
-					const sedeAFiltrar = sucursalId || state.user.sucursal_id;
-
-					const filtradas = (sedeAFiltrar === "TODAS") 
+					// ELIMINAMOS LA CARGA DE LA SEDE B AQUÍ:
+					// Filtramos el array global 'state.clases' basándonos en el ID de sucursal
+					const filtradas = (sucursalId === "TODAS") 
 						? state.clases 
-						: state.clases.filter(c => parseInt(c.sucursal_id) === parseInt(sedeAFiltrar));
+						: state.clases.filter(c => parseInt(c.sucursal_id) === parseInt(sucursalId));
 
 					renderTarjetasClases(filtradas);
 				}
@@ -820,17 +804,23 @@
 				// Asegúrate de que adentro tenga esta lógica de bloqueo:
 				function renderTarjetasClases(lista) {
 					const container = document.getElementById('clases-container');
+					if (!container) return;
+					
 					container.innerHTML = "";
+
+					if (lista.length === 0) {
+						container.innerHTML = `<div class="col-span-3 p-12 text-center text-white/20 font-black uppercase italic">No hay clases en esta sede</div>`;
+						return;
+					}
 
 					const isAdmin = state.user?.rol_nombre === "Administrador" || state.user?.rol_nombre === "Supervisor";
 
 					lista.forEach(clase => {
-						// REGLA DE ORO: ¿Puede editar? 
-						// Sí, si es Admin Global O si la sucursal de la clase es su propia sucursal.
+						// Solo puede editar si es Admin o si la clase pertenece a su sucursal
 						const puedeEditar = isAdmin || (parseInt(clase.sucursal_id) === parseInt(state.user.sucursal_id));
 
 						const card = document.createElement('div');
-						card.className = `viking-card p-6 rounded-3xl border border-white/5 bg-white/5 transition-all ${!puedeEditar ? 'opacity-60 grayscale-[0.5]' : 'hover:border-red-600/30'}`;
+						card.className = `viking-card p-6 rounded-3xl border border-white/5 bg-white/5 transition-all ${!puedeEditar ? 'opacity-60 grayscale' : 'hover:border-red-600/30'}`;
 						
 						card.innerHTML = `
 							<div class="flex justify-between items-start mb-4">
@@ -839,22 +829,17 @@
 								</div>
 								${puedeEditar ? `
 									<div class="flex gap-2">
-										<button onclick="editClase(${clase.id})" class="p-2 hover:bg-white/10 rounded-lg text-white/50 hover:text-white transition-colors">
-											<i data-lucide="edit-3" class="w-4 h-4"></i>
-										</button>
-										<button onclick="deleteClase(${clase.id})" class="p-2 hover:bg-white/10 rounded-lg text-red-500/50 hover:text-red-500 transition-colors">
-											<i data-lucide="trash-2" class="w-4 h-4"></i>
+										<button onclick="openEditClase(${clase.id})" class="p-2 hover:bg-white/10 rounded-lg text-white/50 hover:text-white transition-colors">
+											<i data-lucide="settings-2" class="w-4 h-4"></i>
 										</button>
 									</div>
-								` : `
-									<span class="text-[8px] font-black uppercase bg-white/10 px-2 py-1 rounded-md text-white/40 italic">Solo Lectura</span>
-								`}
+								` : `<span class="text-[8px] font-black uppercase bg-white/10 px-2 py-1 rounded-md text-white/40 italic">Solo Lectura</span>`}
 							</div>
 							<h4 class="text-xl font-black italic uppercase mb-1">${clase.nombre}</h4>
-							<p class="text-white/40 text-[10px] font-bold uppercase mb-4">${clase.box_nombre} | ${clase.coach}</p>
+							<p class="text-white/40 text-[10px] font-bold uppercase mb-4">${clase.box_nombre || 'Principal'} | ${clase.coach}</p>
 							<div class="flex items-center justify-between mt-auto">
 								<span class="text-[10px] font-black text-red-600 uppercase italic">Cupo: ${clase.capacidad_max}</span>
-								<span class="text-[9px] font-bold text-white/20 uppercase">ID: ${clase.id}</span>
+								<span class="text-[9px] font-bold text-white/20 uppercase">Sede ID: ${clase.sucursal_id}</span>
 							</div>
 						`;
 						container.appendChild(card);
@@ -2747,11 +2732,7 @@ if (editorForm) {
 			}
 
 			if (view === 'clases') {
-				// Limpiamos el contenedor antes de empezar para que no veas clases viejas
-				const container = document.getElementById('clases-container');
-				if (container) container.innerHTML = '<p class="text-white/20 p-8">Cargando gestión...</p>';
-				
-				renderFiltroSedesGestion();
+				renderFiltroSedesGestion(); 
 			}
 
 			// 11. Aplicar permisos de visibilidad final
@@ -4240,50 +4221,61 @@ if (editorForm) {
 
         async function loadClases() {
 			// 1. Pedir datos al servidor
-			const data = await apiFetch('/clases'); 
+			const data = await apiFetch('/api/clases'); 
 			state.clases = Array.isArray(data) ? data : [];
 
 			// 2. Localizar el contenedor en el HTML
 			const container = document.getElementById('clases-container');
 			if (!container) return;
 
-			// 3. Si no hay clases, mostrar mensaje de vacío
-			if (state.clases.length === 0) {
+			// --- LÓGICA DE FILTRADO POR SEDE ---
+			const select = document.getElementById('filtro-clases-seccion');
+			const sucursalId = select ? select.value : (state.user?.sucursal_id || "TODAS");
+
+			const filtradas = (sucursalId === "TODAS") 
+				? state.clases 
+				: state.clases.filter(c => parseInt(c.sucursal_id) === parseInt(sucursalId));
+
+			// 3. Si no hay clases tras el filtro, mostrar mensaje de vacío
+			if (filtradas.length === 0) {
 				container.innerHTML = `
 					<div class="col-span-3 p-16 border border-dashed border-white/10 rounded-[3rem] text-center bg-white/2">
-						<p class="text-[12px] text-gray-600 font-black uppercase italic tracking-[0.2em]">No hay clases configuradas</p>
+						<p class="text-[12px] text-gray-600 font-black uppercase italic tracking-[0.2em]">No hay clases configuradas para esta sede</p>
 						<p class="text-[10px] text-gray-700 mt-2 font-bold">Usa el botón "Alta de Clase" para comenzar.</p>
 					</div>`;
 			} else {
 				// 4. Dibujar las tarjetas (Solo con info técnica y botón de editar)
-				const canEdit = (state.user?.rol_nombre === "Administrador" || state.user?.rol_nombre === "Supervisor");
+				const isAdmin = state.user?.rol_nombre === "Administrador" || state.user?.rol_nombre === "Supervisor";
 				
-				container.innerHTML = state.clases.map(c => `
-					<div class="glass-card p-6 rounded-[2.5rem] border-white/5 flex flex-col justify-between hover:border-red-600/20 transition-all group">
-						<div>
-							<div class="flex items-center gap-4 mb-6">
-								<!-- Icono con el color de la clase -->
-								<div class="w-12 h-12 rounded-2xl flex items-center justify-center font-black text-black text-sm italic shadow-lg" style="background-color: ${c.color || '#FF0000'}">
-									${c.nombre ? c.nombre[0].toUpperCase() : '?'}
-								</div>
-								<div>
-									<h4 class="text-sm font-black uppercase italic text-white group-hover:text-red-500 transition-colors">${c.nombre}</h4>
-									<p class="text-[10px] text-white-500 font-bold uppercase tracking-wider flex items-center gap-1">
-										<i data-lucide="user" class="w-3 h-3"></i> ${c.coach || 'Sin Coach'}
-									</p>
+				container.innerHTML = filtradas.map(c => {
+					// Regla: ¿Puede editar? Admin o si pertenece a sucursal propia
+					const puedeEditar = isAdmin || (parseInt(c.sucursal_id) === parseInt(state.user.sucursal_id));
+
+					return `
+						<div class="glass-card p-6 rounded-[2.5rem] border-white/5 flex flex-col justify-between hover:border-red-600/20 transition-all group ${!puedeEditar ? 'opacity-60 grayscale' : ''}">
+							<div>
+								<div class="flex items-center gap-4 mb-6">
+									<div class="w-12 h-12 rounded-2xl flex items-center justify-center font-black text-black text-sm italic shadow-lg" style="background-color: ${c.color || '#FF0000'}">
+										${c.nombre ? c.nombre[0].toUpperCase() : '?'}
+									</div>
+									<div>
+										<h4 class="text-sm font-black uppercase italic text-white group-hover:text-red-500 transition-colors">${c.nombre}</h4>
+										<p class="text-[10px] text-white-500 font-bold uppercase tracking-wider flex items-center gap-1">
+											<i data-lucide="user" class="w-3 h-3"></i> ${c.coach || 'Sin Coach'}
+										</p>
+									</div>
 								</div>
 							</div>
-						</div>
 
-						<!-- Botón de edición: Solo aparece para Admin/Supervisor -->
-						${canEdit ? `
-						<button onclick="openEditClase(${c.id})" class="w-full py-4 bg-white/5 text-white rounded-2xl text-[10px] font-black uppercase italic hover:bg-white/10 hover:text-red-600 transition-all flex items-center justify-center gap-2 border border-white/5">
-							<i data-lucide="settings-2" class="w-3.5 h-3.5"></i>
-							Configuración Técnica
-						</button>
-						` : '<p class="text-[9px] text-gray-700 italic text-center">Solo lectura</p>'}
-					</div>
-				`).join('');
+							${puedeEditar ? `
+							<button onclick="openEditClase(${c.id})" class="w-full py-4 bg-white/5 text-white rounded-2xl text-[10px] font-black uppercase italic hover:bg-white/10 hover:text-red-600 transition-all flex items-center justify-center gap-2 border border-white/5">
+								<i data-lucide="settings-2" class="w-3.5 h-3.5"></i>
+								Configuración Técnica
+							</button>
+							` : '<p class="text-[9px] text-gray-700 italic text-center uppercase font-black">Vista de solo lectura</p>'}
+						</div>
+					`;
+				}).join('');
 			}
 
 			// 5. Refrescar iconos y otros componentes
