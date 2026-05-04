@@ -87,77 +87,6 @@
             setTimeout(() => toast.classList.remove('show'), 3000);
         }
 
-		function applyPermissions() {
-			if (!state.user) return;
-			const rol = (state.user.rol_nombre || "").toLowerCase();
-			
-			// 1. CONTENEDORES (Secciones de título)
-			const contenedoresSeccion = {
-				staff: document.getElementById('nav-section-staff'),
-				operativa: document.getElementById('nav-section-operativa'),
-				virtual: document.getElementById('nav-section-virtual')
-			};
-
-			// 2. ITEMS INDIVIDUALES (Botones)
-			// AGREGAMOS 'sucursales' a la lista para poder controlarlo
-			const itemsMenu = {
-				alumnos: document.getElementById('nav-alumnos'),
-				planes: document.getElementById('nav-planes'),
-				clases: document.getElementById('nav-clases'),
-				facturacion: document.getElementById('nav-cobrar'),
-				acceso: document.getElementById('nav-acceso-virtual'),
-				sucursales: document.getElementById('nav-sucursales'),
-				rutinas: document.getElementById('nav-rutinas') // <-- AGREGADO
-			};
-
-			// RESET: Contenedores a BLOCK
-			Object.values(contenedoresSeccion).forEach(el => {
-				if (el) el.style.setProperty('display', 'block', 'important');
-			});
-
-			// RESET: Items a FLEX (Volvemos a mostrar todo por defecto)
-			Object.values(itemsMenu).forEach(el => {
-				if (el) el.style.setProperty('display', 'flex', 'important');
-			});
-
-			// --- LÓGICA POR ROL ---
-
-			// A. Alumnos (Ocultan secciones y casi todos los botones)
-			if (rol === "alumno") {
-				// Escondemos todas las secciones de título
-				Object.values(contenedoresSeccion).forEach(el => { 
-					if(el) el.style.setProperty('display', 'none', 'important'); 
-				});
-				
-				// Escondemos los botones restringidos (Sucursales, Planes, Facturación, etc.)
-				const itemsParaOcultar = ['planes', 'facturacion', 'sucursales', 'alumnos', 'clases', 'rutinas'];
-				itemsParaOcultar.forEach(key => {
-					if(itemsMenu[key]) itemsMenu[key].style.setProperty('display', 'none', 'important');
-				});
-			}
-
-			// B. Profesores (Pueden ver alumnos, pero no facturación ni sucursales)
-			else if (rol === "profesor") {
-				if(itemsMenu.facturacion) itemsMenu.facturacion.style.setProperty('display', 'none', 'important');
-				if(itemsMenu.sucursales) itemsMenu.sucursales.style.setProperty('display', 'none', 'important');
-				if(itemsMenu.planes) itemsMenu.planes.style.setProperty('display', 'none', 'important');
-				// El profesor suele necesitar ver 'alumnos' para las rutinas
-			}
-
-			// C. Administrativo (Oculta solo Staff)
-			else if (rol === "administracion" || rol === "administrativo") {
-				if (contenedoresSeccion.staff) contenedoresSeccion.staff.style.setProperty('display', 'none', 'important');
-				
-				const staffDashboardPanel = document.getElementById('dash-staff-access');
-				if (staffDashboardPanel) {
-					const card = staffDashboardPanel.closest('.glass-card');
-					if (card) card.style.setProperty('display', 'none', 'important');
-				}
-			}
-
-			if (window.lucide) lucide.createIcons();
-		}
-
 		/**
 		* REQUERIMIENTO: Mostrar fecha exacta en el Dashboard del Alumno.
 		* Se actualiza la función renderStudentDashboard para formatear 'fecha_clase'.
@@ -2529,17 +2458,20 @@ if (editorForm) {
 
         // --- 1. APLICAR PERMISOS (Control de Interfaz por Rol) ---
 		function applyPermissions() {
+			// 1. Verificación de seguridad: Si no hay usuario, no hacemos nada
 			if (!state.user) return;
+
+			// Normalizamos el rol a minúsculas para evitar errores de comparación
 			const rol = (state.user.rol_nombre || "").toLowerCase();
 			
-			// 1. CONTENEDORES (Secciones de título del Sidebar)
+			// 2. MAPEO DE CONTENEDORES (Secciones de título del Sidebar)
 			const contenedoresSeccion = {
 				staff: document.getElementById('nav-section-staff'),
 				operativa: document.getElementById('nav-section-operativa'),
 				virtual: document.getElementById('nav-section-virtual')
 			};
 
-			// 2. ITEMS INDIVIDUALES (Botones del Sidebar)
+			// 3. MAPEO DE ITEMS INDIVIDUALES (Botones del Sidebar)
 			const itemsMenu = {
 				alumnos: document.getElementById('nav-alumnos'),
 				planes: document.getElementById('nav-planes'),
@@ -2550,7 +2482,9 @@ if (editorForm) {
 				rutinas: document.getElementById('nav-rutinas')
 			};
 
-			// RESET: Mostramos todo por defecto antes de filtrar
+			// --- RESET INICIAL ---
+			// Mostramos todos los contenedores y botones por defecto con 'important' 
+			// para sobreescribir cualquier clase 'hidden' de Tailwind momentáneamente.
 			Object.values(contenedoresSeccion).forEach(el => {
 				if (el) el.style.setProperty('display', 'block', 'important');
 			});
@@ -2559,31 +2493,38 @@ if (editorForm) {
 				if (el) el.style.setProperty('display', 'flex', 'important');
 			});
 
-			// --- LÓGICA DE BLOQUEO POR ROL ---
+			// --- LÓGICA DE RESTRICCIÓN SEGÚN EL ROL ---
 
-			// A. Alumnos (Acceso mínimo)
+			// CASO A: ALUMNO (Acceso restringido solo a Dashboard, Perfil y Calendario/Acceso)
 			if (rol === "alumno") {
+				// Escondemos todas las secciones de títulos
 				Object.values(contenedoresSeccion).forEach(el => { 
 					if(el) el.style.setProperty('display', 'none', 'important'); 
 				});
 				
+				// Escondemos los botones de gestión
 				const itemsParaOcultar = ['planes', 'facturacion', 'sucursales', 'alumnos', 'clases', 'rutinas'];
 				itemsParaOcultar.forEach(key => {
 					if(itemsMenu[key]) itemsMenu[key].style.setProperty('display', 'none', 'important');
 				});
 			}
 
-			// B. Profesores (Gestión técnica, sin facturación ni sedes)
+			// CASO B: PROFESOR (Gestión técnica habilitada, pero sin finanzas ni sedes)
 			else if (rol === "profesor") {
 				if(itemsMenu.facturacion) itemsMenu.facturacion.style.setProperty('display', 'none', 'important');
 				if(itemsMenu.sucursales) itemsMenu.sucursales.style.setProperty('display', 'none', 'important');
 				if(itemsMenu.planes) itemsMenu.planes.style.setProperty('display', 'none', 'important');
+				
+				// El profesor no debe ver la sección operativa (Facturación/Caja)
+				if (contenedoresSeccion.operativa) contenedoresSeccion.operativa.style.setProperty('display', 'none', 'important');
 			}
 
-			// C. Administrativos / Supervisores (Ocultan solo gestión interna de Staff si no corresponde)
+			// CASO C: ADMINISTRATIVO / ADMINISTRACIÓN (Gestión total, excepto configuración de Staff)
 			else if (rol === "administracion" || rol === "administrativo") {
+				// Ocultamos la sección de Staff para que no puedan editar otros empleados
 				if (contenedoresSeccion.staff) contenedoresSeccion.staff.style.setProperty('display', 'none', 'important');
 				
+				// Ocultamos específicamente el panel de acceso de staff en el dashboard si existe
 				const staffDashboardPanel = document.getElementById('dash-staff-access');
 				if (staffDashboardPanel) {
 					const card = staffDashboardPanel.closest('.glass-card');
@@ -2591,13 +2532,25 @@ if (editorForm) {
 				}
 			}
 
-			// D. Botón de Alta Sucursal (Solo para rangos altos)
-			const isAdmin = (rol === "administrador" || rol === "supervisor");
+			// --- LÓGICA DE BOTONES DE ACCIÓN (DENTRO DE LAS VISTAS) ---
+
+			// Definimos quién es "Poder Superior" (Admin o Supervisor)
+			const isAdminTotal = (rol === "administrador" || rol === "supervisor");
+
+			// Botón de "Nueva Sucursal" en la vista de sedes
 			const btnNuevaSucursal = document.getElementById('btn-nueva-sucursal');
 			if (btnNuevaSucursal) {
-				btnNuevaSucursal.style.setProperty('display', isAdmin ? 'flex' : 'none', 'important');
+				btnNuevaSucursal.style.setProperty('display', isAdminTotal ? 'flex' : 'none', 'important');
 			}
 
+			// Botón de "Nuevo Alumno" (Permitido para Admin, Supervisor y Administrativo)
+			const btnNuevoAlumno = document.getElementById('btn-nuevo-alumno');
+			if (btnNuevoAlumno) {
+				const puedeCrearAlumno = isAdminTotal || rol === "administracion" || rol === "administrativo";
+				btnNuevoAlumno.style.setProperty('display', puedeCrearAlumno ? 'flex' : 'none', 'important');
+			}
+
+			// Refrescamos los iconos de Lucide por si se inyectó contenido nuevo
 			if (window.lucide) lucide.createIcons();
 		}
 
@@ -2605,14 +2558,17 @@ if (editorForm) {
 		window.switchView = function(view) {
 			console.log(`🚀 Navegando a: ${view}`);
 
-			// 1. Ocultar todas las vistas de contenido
+			// 1. OCULTAR TODAS LAS VISTAS
+			// Seleccionamos todos los elementos con la clase .view-content de tu HTML
 			document.querySelectorAll('.view-content').forEach(v => {
 				v.classList.remove('active');
 				v.classList.add('hidden');
+				// Usamos !important para asegurar que Tailwind o estilos inline no interfieran
 				v.style.setProperty('display', 'none', 'important'); 
 			});
 
-			// 2. Ocultar layouts internos de Dashboard
+			// 2. OCULTAR LAYOUTS INTERNOS DE DASHBOARD
+			// Esto limpia los contenedores específicos de cada rol antes de decidir cuál mostrar
 			const layouts = ['admin-dashboard-layout', 'alumno-dashboard-layout', 'view-professor-dashboard'];
 			layouts.forEach(id => {
 				const l = document.getElementById(id);
@@ -2622,13 +2578,15 @@ if (editorForm) {
 				}
 			});
 
-			// 3. Desactivar botones de navegación
+			// 3. ACTUALIZAR BOTONES DE NAVEGACIÓN
+			// Removemos la clase active de todos para marcar solo el actual después
 			document.querySelectorAll('.nav-btn, .nav-item').forEach(b => b.classList.remove('active'));
 
-			// 4. Lógica de selección por ROL
+			// 4. LÓGICA DE SELECCIÓN POR ROL Y VISTA
 			let targetId = 'view-' + view;
 			const rol = (state.user?.rol_nombre || "").toLowerCase();
 
+			// Caso especial para el Dashboard: decide qué layout mostrar dentro de view-dashboard
 			if (view === 'dashboard') {
 				if (rol === "alumno") {
 					targetId = 'view-dashboard';
@@ -2650,28 +2608,37 @@ if (editorForm) {
 				}
 			}
 
-			// 5. Mostrar la vista final
+			// 5. MOSTRAR LA VISTA OBJETIVO (Ej: view-sucursales, view-clases)
 			const targetView = document.getElementById(targetId);
 			if (targetView) {
 				targetView.classList.add('active');
 				targetView.classList.remove('hidden');
-				// Usamos FLEX para casi todas las vistas excepto Dashboard
+				
+				// Decidimos el tipo de display: Block para layouts fijos, Flex para los que usan grids
 				const displayType = (view === 'dashboard' || view === 'perfil') ? 'block' : 'flex';
 				targetView.style.setProperty('display', displayType, 'important'); 
 			}
 
-			// 6. Activar botón de menú
+			// 6. ACTIVAR BOTÓN EN EL SIDEBAR
 			const n = document.getElementById('nav-' + view); 
 			if (n) n.classList.add('active');
 			
-			// 7. Cambiar título del Header
+			// 7. ACTUALIZAR TÍTULO EN EL HEADER
 			const titleEl = document.getElementById('view-title');
-			if (titleEl) titleEl.innerText = view.replace('-', ' ').toUpperCase();
+			if (titleEl) {
+				// Formateamos el texto (ej: "acceso-virtual" -> "ACCESO VIRTUAL")
+				titleEl.innerText = view.replace('-', ' ').toUpperCase();
+			}
 
-			// 8. LÓGICA DE CARGA DE DATOS POR SECCIÓN
-			if (view === 'clases' && typeof loadClases === 'function') loadClases();
+			// 8. DISPARADORES DE CARGA DE DATOS (Mecánica de Sincronización)
+			// Solo cargamos si la función existe para evitar errores en consola
+			if (view === 'clases' && typeof loadClases === 'function') {
+				loadClases();
+			}
 			
-			if (view === 'sucursales' && typeof loadSucursales === 'function') loadSucursales();
+			if (view === 'sucursales' && typeof loadSucursales === 'function') {
+				loadSucursales();
+			}
 
 			if (view === 'calendario' && typeof renderCalendar === 'function') {
 				renderCalendar();
@@ -2683,16 +2650,32 @@ if (editorForm) {
 			}
 
 			if (view === 'perfil' && state.user) {
-				renderPerfil(); // Asumimos que encapsulas la lógica de perfil para no ensuciar
+				if (typeof renderPerfil === 'function') {
+					renderPerfil();
+				}
 			}
 
-			if (view === 'cobrar' && typeof renderCobrar === 'function') renderCobrar();
-			if (view === 'rutinas' && typeof renderRutinas === 'function') renderRutinas();
-			if (view === 'alumnos' && typeof renderAlumnosSection === 'function') renderAlumnosSection();
+			if (view === 'cobrar' && typeof renderCobrar === 'function') {
+				renderCobrar();
+			}
 
-			// 9. Aplicar permisos y refrescar iconos
-			applyPermissions();
-			if (window.lucide) lucide.createIcons();
+			if (view === 'rutinas' && typeof renderRutinas === 'function') {
+				renderRutinas();
+			}
+
+			if (view === 'alumnos' && typeof renderAlumnosSection === 'function') {
+				renderAlumnosSection();
+			}
+
+			// 9. RE-APLICAR PERMISOS Y REFRESCAR ICONOS
+			// Esto asegura que si la vista inyectó botones nuevos, se oculten si no hay permiso
+			if (typeof applyPermissions === 'function') {
+				applyPermissions();
+			}
+			
+			if (window.lucide) {
+				lucide.createIcons();
+			}
 		};
 
 		// Función auxiliar para limpiar la lógica de perfil (Extraída de tu switchView original)
