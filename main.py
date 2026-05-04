@@ -312,23 +312,14 @@ class TipoBoxResponse(BaseModel):
     nombre: str
     class Config: from_attributes = True
 
-class ClaseCreate(BaseModel):
-    nombre: str
-    box_id: int
-    coach: str
-    color: str
-    capacidad_max: int
-    horarios_detalle: List[dict]
-    sucursal_id: Optional[int] = None # Para que el Admin elija
-
 class ClaseUpdate(BaseModel):
     nombre: str
     coach: str
-    box_id: Optional[int] = 1 
+    box_id: Optional[int] = 1 # Por defecto al Principal
     color: Optional[str] = "#FF0000"
     capacidad_max: Optional[int] = 40
     horarios_detalle: Optional[List[dict]] = None
-    sucursal_id: Optional[int] = None # Para que el Admin pueda cambiarla si quiere
+    sucursal_id: Optional[int] = None
 
 class ClaseMove(BaseModel):
     old_dia: int
@@ -1380,16 +1371,15 @@ def get_clases(db: Session = Depends(database.get_db), current_user = Depends(ge
     return result
 
 @app.post("/api/clases", tags=["Clases"])
-def create_clase(data: ClaseCreate, db: Session = Depends(database.get_db), current_user = Depends(get_current_user)):
+def create_clase(data: ClaseUpdate, db: Session = Depends(database.get_db), current_user = Depends(get_current_user)):
     """Crea una nueva clase. El Admin puede elegir sede, el resto usa la propia."""
     
-    # Por defecto, la sede del que crea
+    # Determinamos la sucursal final
     final_sucursal_id = current_user.sucursal_id
     
-    # 🛡️ Si es Admin/Supervisor y mandó una sucursal, usamos esa.
-    # Si no mandó nada, usamos su propia sede (la principal por defecto).
-    if current_user.perfil.nombre.lower() in ["administrador", "supervisor"]:
-        if data.sucursal_id is not None:
+    # 🛡️ Si el que crea es Admin y envió una sucursal en el JSON, usamos esa
+    if current_user.perfil.nombre.lower() in ["administrador", "supervisor"] and hasattr(data, 'sucursal_id'):
+        if data.sucursal_id:
             final_sucursal_id = data.sucursal_id
 
     new_c = models.Clase(
@@ -1407,9 +1397,10 @@ def create_clase(data: ClaseCreate, db: Session = Depends(database.get_db), curr
 
 @app.put("/api/clases/{id}", tags=["Clases"])
 def update_clase(id: int, data: ClaseUpdate, db: Session = Depends(database.get_db), current_user = Depends(get_current_user)):
-    """Actualiza una clase validando permisos."""
+    """Actualiza una clase validando permisos de sucursal o admin."""
     query = db.query(models.Clase).filter(models.Clase.id == id)
     
+    # 🛡️ Si NO es Admin/Supervisor, solo puede editar lo de su sucursal
     if current_user.perfil.nombre.lower() not in ["administrador", "supervisor"]:
         query = query.filter(models.Clase.sucursal_id == current_user.sucursal_id)
     
@@ -1421,13 +1412,7 @@ def update_clase(id: int, data: ClaseUpdate, db: Session = Depends(database.get_
         c.box_id = data.box_id
         c.color = data.color
         c.capacidad_max = data.capacidad_max
-        c.horarios_detalle = data.horarios_detalle
-        
-        # Permitir que el Admin cambie la sucursal de una clase existente
-        if current_user.perfil.nombre.lower() in ["administrador", "supervisor"] and data.sucursal_id is not None:
-            c.sucursal_id = data.sucursal_id
-            
-        from sqlalchemy.orm.attributes import flag_modified
+        c.horarios_detalle = data.horarios_detalle 
         flag_modified(c, "horarios_detalle")
         db.commit()
         return {"status": "success"}
