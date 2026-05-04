@@ -768,36 +768,89 @@
 					const select = document.getElementById('filtro-clases-seccion');
 					if (!select) return;
 
-					// Aseguramos que existan las sedes en el estado
-					if (!state.sucursales || state.sucursales.length === 0) {
-						state.sucursales = await apiFetch('/api/sucursales');
+					try {
+						// Aseguramos que existan las sedes en el estado global
+						if (!state.sucursales || state.sucursales.length === 0) {
+							const sucs = await apiFetch('/api/sucursales');
+							state.sucursales = Array.isArray(sucs) ? sucs : [];
+						}
+
+						const isAdmin = (state.user?.rol_nombre === "Administrador" || state.user?.rol_nombre === "Supervisor");
+						
+						// Si es Admin, mostramos todas. Si no, solo su sede.
+						let options = isAdmin ? '<option value="TODAS">--- TODAS LAS SEDES ---</option>' : '';
+						
+						if (state.sucursales.length > 0) {
+							options += state.sucursales.map(s => 
+								`<option value="${s.id}" ${parseInt(s.id) === parseInt(state.user.sucursal_id) ? 'selected' : ''}>${s.sucursal.toUpperCase()}</option>`
+							).join('');
+						} else {
+							options = '<option value="">No se encontraron sedes</option>';
+						}
+
+						select.innerHTML = options;
+						
+						// 5. EJECUCIÓN INMEDIATA: Una vez que el select tiene datos, disparamos el dibujo de las tarjetas
+						// Esto limpia la Clase B intrusa de inmediato.
+						filtrarClasesGestion(select.value);
+
+					} catch (err) {
+						console.error("Error en renderFiltroSedesGestion:", err);
+						select.innerHTML = '<option value="">Error al cargar sedes</option>';
 					}
-
-					const isAdmin = (state.user?.rol_nombre === "Administrador" || state.user?.rol_nombre === "Supervisor");
-					
-					// Si es Admin, mostramos todas. Si no, solo su sede.
-					let options = isAdmin ? '<option value="TODAS">--- TODAS LAS SEDES ---</option>' : '';
-					options += state.sucursales.map(s => 
-						`<option value="${s.id}" ${parseInt(s.id) === parseInt(state.user.sucursal_id) ? 'selected' : ''}>${s.sucursal.toUpperCase()}</option>`
-					).join('');
-
-					select.innerHTML = options;
-					
-					// Ejecutamos el filtro inicial
-					filtrarClasesGestion(select.value);
 				}
 
 				// 2. Esta función FILTRA las tarjetas
 				function filtrarClasesGestion(sucursalId) {
-					if (!state.clases) return;
+					const container = document.getElementById('clases-container');
+					if (!container || !state.clases) return;
 
-					// ELIMINAMOS LA CARGA DE LA SEDE B AQUÍ:
-					// Filtramos el array global 'state.clases' basándonos en el ID de sucursal
+					// Filtro estricto por ID de sucursal
 					const filtradas = (sucursalId === "TODAS") 
 						? state.clases 
 						: state.clases.filter(c => parseInt(c.sucursal_id) === parseInt(sucursalId));
 
-					renderTarjetasClases(filtradas);
+					// Si no hay clases tras el filtro, mensaje de vacío
+					if (filtradas.length === 0) {
+						container.innerHTML = `
+							<div class="col-span-3 p-16 border border-dashed border-white/10 rounded-[3rem] text-center bg-white/2">
+								<p class="text-[12px] text-gray-600 font-black uppercase italic tracking-[0.2em]">No hay clases configuradas para esta sede</p>
+								<p class="text-[10px] text-gray-700 mt-2 font-bold">Usa el botón "Alta de Clase" para comenzar.</p>
+							</div>`;
+						return;
+					}
+
+					// Dibujar las tarjetas filtradas
+					const isAdmin = state.user?.rol_nombre === "Administrador" || state.user?.rol_nombre === "Supervisor";
+					
+					container.innerHTML = filtradas.map(c => {
+						const puedeEditar = isAdmin || (parseInt(c.sucursal_id) === parseInt(state.user.sucursal_id));
+
+						return `
+							<div class="glass-card p-6 rounded-[2.5rem] border-white/5 flex flex-col justify-between hover:border-red-600/20 transition-all group ${!puedeEditar ? 'opacity-60 grayscale' : ''}">
+								<div>
+									<div class="flex items-center gap-4 mb-6">
+										<div class="w-12 h-12 rounded-2xl flex items-center justify-center font-black text-black text-sm italic shadow-lg" style="background-color: ${c.color || '#FF0000'}">
+											${c.nombre ? c.nombre[0].toUpperCase() : '?'}
+										</div>
+										<div>
+											<h4 class="text-sm font-black uppercase italic text-white group-hover:text-red-500 transition-colors">${c.nombre}</h4>
+											<p class="text-[10px] text-white-500 font-bold uppercase tracking-wider flex items-center gap-1">
+												<i data-lucide="user" class="w-3 h-3"></i> ${c.coach || 'Sin Coach'}
+											</p>
+										</div>
+									</div>
+								</div>
+								${puedeEditar ? `
+								<button onclick="openEditClase(${c.id})" class="w-full py-4 bg-white/5 text-white rounded-2xl text-[10px] font-black uppercase italic hover:bg-white/10 hover:text-red-600 transition-all flex items-center justify-center gap-2 border border-white/5">
+									<i data-lucide="settings-2" class="w-3.5 h-3.5"></i>
+									Configuración Técnica
+								</button>
+								` : '<p class="text-[9px] text-gray-700 italic text-center uppercase font-black">Vista de solo lectura</p>'}
+							</div>`;
+					}).join('');
+
+					if (window.lucide) lucide.createIcons();
 				}
 
 				// 3. Ajuste en tu función que dibuja las tarjetas (renderTarjetasClases)
@@ -2732,7 +2785,7 @@ if (editorForm) {
 			}
 
 			if (view === 'clases') {
-				renderFiltroSedesGestion(); 
+				loadClases();
 			}
 
 			// 11. Aplicar permisos de visibilidad final
@@ -4220,68 +4273,28 @@ if (editorForm) {
 		}
 
         async function loadClases() {
-			// 1. Pedir datos al servidor
-			const data = await apiFetch('/api/clases'); 
-			state.clases = Array.isArray(data) ? data : [];
-
-			// 2. Localizar el contenedor en el HTML
+			// 1. Localizar el contenedor y mostrar estado de carga
 			const container = document.getElementById('clases-container');
 			if (!container) return;
+			container.innerHTML = '<p class="text-white/20 p-8 font-black uppercase italic">Cargando datos del servidor...</p>';
 
-			// --- LÓGICA DE FILTRADO POR SEDE ---
-			const select = document.getElementById('filtro-clases-seccion');
-			const sucursalId = select ? select.value : (state.user?.sucursal_id || "TODAS");
+			try {
+				// 2. Pedir datos al servidor y guardarlos en el estado global
+				const data = await apiFetch('/api/clases'); 
+				state.clases = Array.isArray(data) ? data : [];
 
-			const filtradas = (sucursalId === "TODAS") 
-				? state.clases 
-				: state.clases.filter(c => parseInt(c.sucursal_id) === parseInt(sucursalId));
+				// 3. LLAMADA CRÍTICA: Primero armamos el selector de sedes
+				// Usamos await para que no intente filtrar sin tener las opciones listas
+				await renderFiltroSedesGestion(); 
 
-			// 3. Si no hay clases tras el filtro, mostrar mensaje de vacío
-			if (filtradas.length === 0) {
-				container.innerHTML = `
-					<div class="col-span-3 p-16 border border-dashed border-white/10 rounded-[3rem] text-center bg-white/2">
-						<p class="text-[12px] text-gray-600 font-black uppercase italic tracking-[0.2em]">No hay clases configuradas para esta sede</p>
-						<p class="text-[10px] text-gray-700 mt-2 font-bold">Usa el botón "Alta de Clase" para comenzar.</p>
-					</div>`;
-			} else {
-				// 4. Dibujar las tarjetas (Solo con info técnica y botón de editar)
-				const isAdmin = state.user?.rol_nombre === "Administrador" || state.user?.rol_nombre === "Supervisor";
-				
-				container.innerHTML = filtradas.map(c => {
-					// Regla: ¿Puede editar? Admin o si pertenece a sucursal propia
-					const puedeEditar = isAdmin || (parseInt(c.sucursal_id) === parseInt(state.user.sucursal_id));
+				// 4. Refrescar componentes visuales
+				if (window.lucide) lucide.createIcons();
+				applyPermissions();
 
-					return `
-						<div class="glass-card p-6 rounded-[2.5rem] border-white/5 flex flex-col justify-between hover:border-red-600/20 transition-all group ${!puedeEditar ? 'opacity-60 grayscale' : ''}">
-							<div>
-								<div class="flex items-center gap-4 mb-6">
-									<div class="w-12 h-12 rounded-2xl flex items-center justify-center font-black text-black text-sm italic shadow-lg" style="background-color: ${c.color || '#FF0000'}">
-										${c.nombre ? c.nombre[0].toUpperCase() : '?'}
-									</div>
-									<div>
-										<h4 class="text-sm font-black uppercase italic text-white group-hover:text-red-500 transition-colors">${c.nombre}</h4>
-										<p class="text-[10px] text-white-500 font-bold uppercase tracking-wider flex items-center gap-1">
-											<i data-lucide="user" class="w-3 h-3"></i> ${c.coach || 'Sin Coach'}
-										</p>
-									</div>
-								</div>
-							</div>
-
-							${puedeEditar ? `
-							<button onclick="openEditClase(${c.id})" class="w-full py-4 bg-white/5 text-white rounded-2xl text-[10px] font-black uppercase italic hover:bg-white/10 hover:text-red-600 transition-all flex items-center justify-center gap-2 border border-white/5">
-								<i data-lucide="settings-2" class="w-3.5 h-3.5"></i>
-								Configuración Técnica
-							</button>
-							` : '<p class="text-[9px] text-gray-700 italic text-center uppercase font-black">Vista de solo lectura</p>'}
-						</div>
-					`;
-				}).join('');
+			} catch (error) {
+				console.error("Error en loadClases:", error);
+				container.innerHTML = '<p class="text-red-500 p-8 font-black uppercase">Error al conectar con el servidor</p>';
 			}
-
-			// 5. Refrescar iconos y otros componentes
-			lucide.createIcons();
-			if(document.getElementById('view-calendario')?.classList.contains('active')) renderCalendar();
-			applyPermissions();
 		}
 		
 		async function loadProfesores() {
