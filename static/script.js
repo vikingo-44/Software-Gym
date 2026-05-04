@@ -641,7 +641,10 @@
 					const fechaSlotStr = fechaSlot.toISOString().split('T')[0];
 					
 					// Filtramos feriados de la sucursal actual
-					const infoFeriado = state.feriados?.find(f => f.fecha === fechaSlotStr && f.sucursal_id == miSucursalId);
+					const infoFeriado = state.feriados?.find(f => 
+						f.fecha === fechaSlotStr && 
+						f.sucursal_id == currentSucursalId
+					);
 
 					if (infoFeriado) {
 						const listaSegura = Array.isArray(state.clasesFeriado) ? state.clasesFeriado : [];
@@ -6098,8 +6101,12 @@ if (editorForm) {
 			console.log("🛡️ Intentando crear día especial...");
 			const fechaEl = document.getElementById('feriado-fecha');
 			const motivoEl = document.getElementById('feriado-motivo');
+			
+			// CAPTURA CRÍTICA: Tomamos la sucursal de la vista actual o la del usuario logueado
+			const sucursalId = state.viewing_sucursal_id || state.user?.sucursal_id;
 
 			if (!fechaEl || !motivoEl) return;
+			if (!sucursalId) return showVikingToast("No se detectó sucursal activa", true);
 
 			const fecha = fechaEl.value;
 			const motivo = motivoEl.value;
@@ -6111,25 +6118,26 @@ if (editorForm) {
 			}
 
 			try {
-				// Usamos la ruta sin el /api/ duplicado
+				// Enviamos el sucursal_id para que el impacto sea solo en esta sede
 				const res = await apiFetch('/feriados', 'POST', {
 					fecha: fecha,
 					motivo: motivo,
-					abierto: false
+					abierto: false,
+					sucursal_id: parseInt(sucursalId) 
 				});
 
 				if (!res.error) {
-					if (typeof showVikingToast === 'function') showVikingToast("¡Día especial marcado!");
+					if (typeof showVikingToast === 'function') showVikingToast("¡Día especial marcado en esta sede!");
 					
 					fechaEl.value = "";
 					motivoEl.value = "";
 					
 					// Recargamos los datos del estado
 					await loadFeriados();
-					// Refrescamos el calendario
+					// Refrescamos el calendario (ahora filtrará por el sucursal_id guardado)
 					renderCalendar();
 				} else {
-					alert("Error: " + res.error);
+					showVikingToast("Error: " + res.error, true);
 				}
 			} catch (err) {
 				console.error("Error en crearFeriadoVikingo:", err);

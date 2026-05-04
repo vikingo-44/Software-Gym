@@ -1477,22 +1477,42 @@ def get_feriados(db: Session = Depends(database.get_db)):
     return db.query(models.DiaEspecial).all()
 
 @app.post("/api/feriados", tags=["Feriados"])
-def create_feriado(data: DiaEspecialCreate, db: Session = Depends(database.get_db)):
+def create_feriado(data: dict, db: Session = Depends(database.get_db), current_user = Depends(get_current_user)):
     try:
-        # Fix Zona Horaria: Tomamos solo la fecha pura
-        fecha_dt = datetime.strptime(data.fecha, "%Y-%m-%d").date()
+        # Extraemos los datos del JSON
+        fecha_str = data.get("fecha")
+        motivo = data.get("motivo")
+        abierto = data.get("abierto", False)
         
-        # Evitamos el error de UNIQUE: Si existe, actualizamos el motivo
-        existente = db.query(models.DiaEspecial).filter(models.DiaEspecial.fecha == fecha_dt).first()
-        if existente:
-            existente.motivo = data.motivo
-            db.commit()
-            return {"status": "success", "message": "Actualizado"}
+        # PRIORIDAD DE SEDE: La que viene del front o, en su defecto, la del usuario
+        sede_id = data.get("sucursal_id") or current_user.sucursal_id
+        
+        # Fix Zona Horaria: Tomamos solo la fecha pura
+        fecha_dt = datetime.strptime(fecha_str, "%Y-%m-%d").date()
+        
+        # ⚔️ FILTRO VIKINGO: Buscamos si ya existe feriado para ESTA FECHA en ESTA SEDE
+        existente = db.query(models.DiaEspecial).filter(
+            models.DiaEspecial.fecha == fecha_dt,
+            models.DiaEspecial.sucursal_id == sede_id
+        ).first()
 
-        nuevo = models.DiaEspecial(fecha=fecha_dt, motivo=data.motivo, abierto=data.abierto)
+        if existente:
+            existente.motivo = motivo
+            existente.abierto = abierto
+            db.commit()
+            return {"status": "success", "message": "Feriado de sede actualizado"}
+
+        # Si no existe para esa sede, lo creamos nuevo con su sucursal_id
+        nuevo = models.DiaEspecial(
+            fecha=fecha_dt, 
+            motivo=motivo, 
+            abierto=abierto,
+            sucursal_id=sede_id
+        )
         db.add(nuevo)
         db.commit()
-        return {"status": "success"}
+        return {"status": "success", "message": "Feriado de sede creado"}
+
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=400, detail=f"Error: {str(e)}")
