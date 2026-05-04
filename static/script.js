@@ -4187,21 +4187,15 @@ if (editorForm) {
 			const container = document.getElementById('clases-container');
 			if (!container || !state.clases) return;
 
-			console.log("Filtrando por ID:", sucursalId); // Para que veas en consola qué llega
-
+			// Convertimos ambos a número (parseInt) para que la comparación sea real
+			// Ejemplo: parseInt("1") === parseInt(1) -> TRUE
 			const filtradas = (sucursalId === "TODAS") 
 				? state.clases 
-				: state.clases.filter(c => {
-					// Forzamos que ambos sean números para que la comparación sea real
-					const idClase = parseInt(c.sucursal_id);
-					const idFiltro = parseInt(sucursalId);
-					return idClase === idFiltro;
-				});
+				: state.clases.filter(c => parseInt(c.sucursal_id) === parseInt(sucursalId));
 
-			console.log("Clases encontradas:", filtradas.length);
 			renderTarjetasClases(filtradas);
 		}
-
+		
 		// 4. RENDER: Pone el HTML en el contenedor
 		function renderTarjetasClases(clasesAMostrar) {
 			const container = document.getElementById('clases-container');
