@@ -4184,13 +4184,21 @@ if (editorForm) {
 
 		// 3. FILTRO: Separa las clases que coinciden con la sede
 		function filtrarClasesGestion(sucursalId) {
-			if (!state.clases) return;
+			const container = document.getElementById('clases-container');
+			if (!container || !state.clases) return;
+
+			console.log("Filtrando por ID:", sucursalId); // Para que veas en consola qué llega
 
 			const filtradas = (sucursalId === "TODAS") 
 				? state.clases 
-				: state.clases.filter(c => parseInt(c.sucursal_id) === parseInt(sucursalId));
+				: state.clases.filter(c => {
+					// Forzamos que ambos sean números para que la comparación sea real
+					const idClase = parseInt(c.sucursal_id);
+					const idFiltro = parseInt(sucursalId);
+					return idClase === idFiltro;
+				});
 
-			// Llama al último paso: el dibujo
+			console.log("Clases encontradas:", filtradas.length);
 			renderTarjetasClases(filtradas);
 		}
 
@@ -5026,6 +5034,25 @@ if (editorForm) {
 
 			// 5. Abrir el modal
 			openModal('modal-clase');
+		}
+
+		// ESTA ES LA DEFINICIÓN QUE TE FALTA
+		function popularSucursalesModal(sucursalIdSeleccionada = null) {
+			const select = document.getElementById('clase-sucursal-select');
+			if (!select) {
+				console.error("No se encontró el elemento 'clase-sucursal-select' en el HTML");
+				return;
+			}
+			if (!state.sucursales || state.sucursales.length === 0) {
+				console.error("No hay sucursales cargadas en state.sucursales");
+				return;
+			}
+
+			select.innerHTML = state.sucursales.map(s => 
+				`<option value="${s.id}" ${parseInt(s.id) === parseInt(sucursalIdSeleccionada || state.user.sucursal_id) ? 'selected' : ''}>
+					${s.sucursal.toUpperCase()}
+				</option>`
+			).join('');
 		}
 
 		async function loadProfesores() {
