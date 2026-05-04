@@ -87,6 +87,77 @@
             setTimeout(() => toast.classList.remove('show'), 3000);
         }
 
+		function applyPermissions() {
+			if (!state.user) return;
+			const rol = (state.user.rol_nombre || "").toLowerCase();
+			
+			// 1. CONTENEDORES (Secciones de título)
+			const contenedoresSeccion = {
+				staff: document.getElementById('nav-section-staff'),
+				operativa: document.getElementById('nav-section-operativa'),
+				virtual: document.getElementById('nav-section-virtual')
+			};
+
+			// 2. ITEMS INDIVIDUALES (Botones)
+			// AGREGAMOS 'sucursales' a la lista para poder controlarlo
+			const itemsMenu = {
+				alumnos: document.getElementById('nav-alumnos'),
+				planes: document.getElementById('nav-planes'),
+				clases: document.getElementById('nav-clases'),
+				facturacion: document.getElementById('nav-cobrar'),
+				acceso: document.getElementById('nav-acceso-virtual'),
+				sucursales: document.getElementById('nav-sucursales'),
+				rutinas: document.getElementById('nav-rutinas') // <-- AGREGADO
+			};
+
+			// RESET: Contenedores a BLOCK
+			Object.values(contenedoresSeccion).forEach(el => {
+				if (el) el.style.setProperty('display', 'block', 'important');
+			});
+
+			// RESET: Items a FLEX (Volvemos a mostrar todo por defecto)
+			Object.values(itemsMenu).forEach(el => {
+				if (el) el.style.setProperty('display', 'flex', 'important');
+			});
+
+			// --- LÓGICA POR ROL ---
+
+			// A. Alumnos (Ocultan secciones y casi todos los botones)
+			if (rol === "alumno") {
+				// Escondemos todas las secciones de título
+				Object.values(contenedoresSeccion).forEach(el => { 
+					if(el) el.style.setProperty('display', 'none', 'important'); 
+				});
+				
+				// Escondemos los botones restringidos (Sucursales, Planes, Facturación, etc.)
+				const itemsParaOcultar = ['planes', 'facturacion', 'sucursales', 'alumnos', 'clases', 'rutinas'];
+				itemsParaOcultar.forEach(key => {
+					if(itemsMenu[key]) itemsMenu[key].style.setProperty('display', 'none', 'important');
+				});
+			}
+
+			// B. Profesores (Pueden ver alumnos, pero no facturación ni sucursales)
+			else if (rol === "profesor") {
+				if(itemsMenu.facturacion) itemsMenu.facturacion.style.setProperty('display', 'none', 'important');
+				if(itemsMenu.sucursales) itemsMenu.sucursales.style.setProperty('display', 'none', 'important');
+				if(itemsMenu.planes) itemsMenu.planes.style.setProperty('display', 'none', 'important');
+				// El profesor suele necesitar ver 'alumnos' para las rutinas
+			}
+
+			// C. Administrativo (Oculta solo Staff)
+			else if (rol === "administracion" || rol === "administrativo") {
+				if (contenedoresSeccion.staff) contenedoresSeccion.staff.style.setProperty('display', 'none', 'important');
+				
+				const staffDashboardPanel = document.getElementById('dash-staff-access');
+				if (staffDashboardPanel) {
+					const card = staffDashboardPanel.closest('.glass-card');
+					if (card) card.style.setProperty('display', 'none', 'important');
+				}
+			}
+
+			if (window.lucide) lucide.createIcons();
+		}
+
 		/**
 		* REQUERIMIENTO: Mostrar fecha exacta en el Dashboard del Alumno.
 		* Se actualiza la función renderStudentDashboard para formatear 'fecha_clase'.
@@ -2456,119 +2527,17 @@ if (editorForm) {
 			}
 		}
 
-        // --- 1. APLICAR PERMISOS (Control de Interfaz por Rol) ---
-		function applyPermissions() {
-			// 1. Verificación de seguridad: Si no hay usuario, no hacemos nada
-			if (!state.user) return;
-
-			// Normalizamos el rol a minúsculas para evitar errores de comparación
-			const rol = (state.user.rol_nombre || "").toLowerCase();
-			
-			// 2. MAPEO DE CONTENEDORES (Secciones de título del Sidebar)
-			const contenedoresSeccion = {
-				staff: document.getElementById('nav-section-staff'),
-				operativa: document.getElementById('nav-section-operativa'),
-				virtual: document.getElementById('nav-section-virtual')
-			};
-
-			// 3. MAPEO DE ITEMS INDIVIDUALES (Botones del Sidebar)
-			const itemsMenu = {
-				alumnos: document.getElementById('nav-alumnos'),
-				planes: document.getElementById('nav-planes'),
-				clases: document.getElementById('nav-clases'),
-				facturacion: document.getElementById('nav-cobrar'),
-				acceso: document.getElementById('nav-acceso-virtual'),
-				sucursales: document.getElementById('nav-sucursales'),
-				rutinas: document.getElementById('nav-rutinas')
-			};
-
-			// --- RESET INICIAL ---
-			// Mostramos todos los contenedores y botones por defecto con 'important' 
-			// para sobreescribir cualquier clase 'hidden' de Tailwind momentáneamente.
-			Object.values(contenedoresSeccion).forEach(el => {
-				if (el) el.style.setProperty('display', 'block', 'important');
-			});
-
-			Object.values(itemsMenu).forEach(el => {
-				if (el) el.style.setProperty('display', 'flex', 'important');
-			});
-
-			// --- LÓGICA DE RESTRICCIÓN SEGÚN EL ROL ---
-
-			// CASO A: ALUMNO (Acceso restringido solo a Dashboard, Perfil y Calendario/Acceso)
-			if (rol === "alumno") {
-				// Escondemos todas las secciones de títulos
-				Object.values(contenedoresSeccion).forEach(el => { 
-					if(el) el.style.setProperty('display', 'none', 'important'); 
-				});
-				
-				// Escondemos los botones de gestión
-				const itemsParaOcultar = ['planes', 'facturacion', 'sucursales', 'alumnos', 'clases', 'rutinas'];
-				itemsParaOcultar.forEach(key => {
-					if(itemsMenu[key]) itemsMenu[key].style.setProperty('display', 'none', 'important');
-				});
-			}
-
-			// CASO B: PROFESOR (Gestión técnica habilitada, pero sin finanzas ni sedes)
-			else if (rol === "profesor") {
-				if(itemsMenu.facturacion) itemsMenu.facturacion.style.setProperty('display', 'none', 'important');
-				if(itemsMenu.sucursales) itemsMenu.sucursales.style.setProperty('display', 'none', 'important');
-				if(itemsMenu.planes) itemsMenu.planes.style.setProperty('display', 'none', 'important');
-				
-				// El profesor no debe ver la sección operativa (Facturación/Caja)
-				if (contenedoresSeccion.operativa) contenedoresSeccion.operativa.style.setProperty('display', 'none', 'important');
-			}
-
-			// CASO C: ADMINISTRATIVO / ADMINISTRACIÓN (Gestión total, excepto configuración de Staff)
-			else if (rol === "administracion" || rol === "administrativo") {
-				// Ocultamos la sección de Staff para que no puedan editar otros empleados
-				if (contenedoresSeccion.staff) contenedoresSeccion.staff.style.setProperty('display', 'none', 'important');
-				
-				// Ocultamos específicamente el panel de acceso de staff en el dashboard si existe
-				const staffDashboardPanel = document.getElementById('dash-staff-access');
-				if (staffDashboardPanel) {
-					const card = staffDashboardPanel.closest('.glass-card');
-					if (card) card.style.setProperty('display', 'none', 'important');
-				}
-			}
-
-			// --- LÓGICA DE BOTONES DE ACCIÓN (DENTRO DE LAS VISTAS) ---
-
-			// Definimos quién es "Poder Superior" (Admin o Supervisor)
-			const isAdminTotal = (rol === "administrador" || rol === "supervisor");
-
-			// Botón de "Nueva Sucursal" en la vista de sedes
-			const btnNuevaSucursal = document.getElementById('btn-nueva-sucursal');
-			if (btnNuevaSucursal) {
-				btnNuevaSucursal.style.setProperty('display', isAdminTotal ? 'flex' : 'none', 'important');
-			}
-
-			// Botón de "Nuevo Alumno" (Permitido para Admin, Supervisor y Administrativo)
-			const btnNuevoAlumno = document.getElementById('btn-nuevo-alumno');
-			if (btnNuevoAlumno) {
-				const puedeCrearAlumno = isAdminTotal || rol === "administracion" || rol === "administrativo";
-				btnNuevoAlumno.style.setProperty('display', puedeCrearAlumno ? 'flex' : 'none', 'important');
-			}
-
-			// Refrescamos los iconos de Lucide por si se inyectó contenido nuevo
-			if (window.lucide) lucide.createIcons();
-		}
-
-		// --- 2. SWITCH VIEW (Navegación entre Secciones) ---
-		window.switchView = function(view) {
+        window.switchView = function(view) {
 			console.log(`🚀 Navegando a: ${view}`);
 
-			// 1. OCULTAR TODAS LAS VISTAS
-			// Seleccionamos todos los elementos con la clase .view-content de tu HTML
+			// 1. Ocultar todas las vistas de contenido
 			document.querySelectorAll('.view-content').forEach(v => {
 				v.classList.remove('active');
 				v.classList.add('hidden');
-				// Usamos !important para asegurar que Tailwind o estilos inline no interfieran
 				v.style.setProperty('display', 'none', 'important'); 
 			});
 
-			// 2. OCULTAR LAYOUTS INTERNOS DE DASHBOARD
-			// Esto limpia los contenedores específicos de cada rol antes de decidir cuál mostrar
+			// 2. Ocultar layouts internos de Dashboard
 			const layouts = ['admin-dashboard-layout', 'alumno-dashboard-layout', 'view-professor-dashboard'];
 			layouts.forEach(id => {
 				const l = document.getElementById(id);
@@ -2578,15 +2547,13 @@ if (editorForm) {
 				}
 			});
 
-			// 3. ACTUALIZAR BOTONES DE NAVEGACIÓN
-			// Removemos la clase active de todos para marcar solo el actual después
+			// 3. Desactivar botones de navegación
 			document.querySelectorAll('.nav-btn, .nav-item').forEach(b => b.classList.remove('active'));
 
-			// 4. LÓGICA DE SELECCIÓN POR ROL Y VISTA
+			// 4. Lógica de selección de Dashboard por ROL
 			let targetId = 'view-' + view;
 			const rol = (state.user?.rol_nombre || "").toLowerCase();
 
-			// Caso especial para el Dashboard: decide qué layout mostrar dentro de view-dashboard
 			if (view === 'dashboard') {
 				if (rol === "alumno") {
 					targetId = 'view-dashboard';
@@ -2608,99 +2575,97 @@ if (editorForm) {
 				}
 			}
 
-			// 5. MOSTRAR LA VISTA OBJETIVO (Ej: view-sucursales, view-clases)
+			// 5. Mostrar la vista final
 			const targetView = document.getElementById(targetId);
 			if (targetView) {
 				targetView.classList.add('active');
 				targetView.classList.remove('hidden');
-				
-				// Decidimos el tipo de display: Block para layouts fijos, Flex para los que usan grids
-				const displayType = (view === 'dashboard' || view === 'perfil') ? 'block' : 'flex';
-				targetView.style.setProperty('display', displayType, 'important'); 
+				targetView.style.setProperty('display', (view === 'dashboard' ? 'block' : 'flex'), 'important'); 
 			}
 
-			// 6. ACTIVAR BOTÓN EN EL SIDEBAR
+			// 6. Activar botón de menú
 			const n = document.getElementById('nav-' + view); 
 			if (n) n.classList.add('active');
 			
-			// 7. ACTUALIZAR TÍTULO EN EL HEADER
+			// 7. Cambiar título
 			const titleEl = document.getElementById('view-title');
-			if (titleEl) {
-				// Formateamos el texto (ej: "acceso-virtual" -> "ACCESO VIRTUAL")
-				titleEl.innerText = view.replace('-', ' ').toUpperCase();
-			}
+			if (titleEl) titleEl.innerText = view.replace('-', ' ').toUpperCase();
 
-			// 8. DISPARADORES DE CARGA DE DATOS (Mecánica de Sincronización)
-			// Solo cargamos si la función existe para evitar errores en consola
-			if (view === 'clases' && typeof loadClases === 'function') {
-				loadClases();
-			}
-			
-			if (view === 'sucursales' && typeof loadSucursales === 'function') {
-				loadSucursales();
-			}
+			// 8. LÓGICA DE BLOQUEO POR VENCIMIENTO
+			if (typeof checkUserMembresia === 'function') checkUserMembresia(view);
 
-			if (view === 'calendario' && typeof renderCalendar === 'function') {
-				renderCalendar();
-				const isAdmin = (rol === "administrador" || rol === "supervisor");
-				const panelFeriados = document.getElementById('admin-feriados-panel');
-				if (panelFeriados) {
-					panelFeriados.style.setProperty('display', isAdmin ? 'block' : 'none', 'important');
-				}
-			}
-
+			// 9. CORRECCIÓN: Carga de datos en "Mi Perfil"
 			if (view === 'perfil' && state.user) {
-				if (typeof renderPerfil === 'function') {
-					renderPerfil();
+				const u = state.user;
+				const initials = u.nombre_completo ? u.nombre_completo.split(' ').filter(n => n).map(n => n[0]).join('').toUpperCase() : "??";
+				
+				const nameHeader = document.getElementById('prof-name');
+				const roleHeader = document.getElementById('prof-role');
+				if (nameHeader) nameHeader.innerText = u.nombre_completo || "Usuario Vikingo";
+				if (roleHeader) roleHeader.innerText = u.rol_nombre || "Staff";
+				
+				const elInitials = document.getElementById('user-initials');
+				const elInitialsView = document.getElementById('prof-initials-view');
+				if (elInitials) elInitials.innerText = initials;
+				if (elInitialsView) elInitialsView.innerText = initials;
+				
+				const inputName = document.getElementById('prof-input-name');
+				const inputDni = document.getElementById('prof-input-dni');
+				const inputEmail = document.getElementById('prof-input-email');
+				if (inputName) inputName.value = u.nombre_completo || "";
+				if (inputDni) inputDni.value = u.dni || "";
+				if (inputEmail) inputEmail.value = u.email || "";
+
+				const fisicos = document.getElementById('perfil-datos-fisicos');
+				if (fisicos) {
+					if (rol === "alumno") {
+						fisicos.classList.remove('hidden');
+						fisicos.style.setProperty('display', 'grid', 'important');
+						document.getElementById('prof-input-peso').value = u.peso || "";
+						document.getElementById('prof-input-altura').value = u.altura || "";
+						document.getElementById('prof-input-imc').value = u.imc || "";
+					} else {
+						fisicos.classList.add('hidden');
+						fisicos.style.setProperty('display', 'none', 'important');
+					}
 				}
 			}
 
-			if (view === 'cobrar' && typeof renderCobrar === 'function') {
-				renderCobrar();
-			}
+			// 10. Cargas de datos adicionales según sección
+			if (view === 'calendario' && typeof renderCalendar === 'function') {
+                renderCalendar();
 
-			if (view === 'rutinas' && typeof renderRutinas === 'function') {
+                // --- LÓGICA DE VISIBILIDAD PARA EL PANEL DE FERIADOS ---
+                const isAdmin = (state.user?.rol_nombre === "Administrador" || state.user?.rol_nombre === "Supervisor");
+                const panelFeriados = document.getElementById('admin-feriados-panel');
+                
+                if (panelFeriados) {
+                    if (isAdmin) {
+                        panelFeriados.classList.remove('hidden');
+                        panelFeriados.style.setProperty('display', 'block', 'important');
+                    } else {
+                        panelFeriados.classList.add('hidden');
+                        panelFeriados.style.setProperty('display', 'none', 'important');
+                    }
+                }
+            }
+			if (view === 'cobrar' && typeof renderCobrar === 'function') renderCobrar();
+			if (view === 'acceso-virtual' && typeof renderAccesos === 'function') renderAccesos();
+			
+			// INTEGRACIÓN RUTINAS
+			if (view === 'rutinas') {
 				renderRutinas();
 			}
 
-			if (view === 'alumnos' && typeof renderAlumnosSection === 'function') {
-				renderAlumnosSection();
+			if (view === 'alumnos') {
+				if (typeof renderAlumnosSection === 'function') renderAlumnosSection();
 			}
 
-			// 9. RE-APLICAR PERMISOS Y REFRESCAR ICONOS
-			// Esto asegura que si la vista inyectó botones nuevos, se oculten si no hay permiso
-			if (typeof applyPermissions === 'function') {
-				applyPermissions();
-			}
+			// 11. Aplicar permisos de visibilidad final
+			if (typeof applyPermissions === 'function') applyPermissions();
 			
-			if (window.lucide) {
-				lucide.createIcons();
-			}
+			if (window.lucide) lucide.createIcons();
 		};
-
-		// Función auxiliar para limpiar la lógica de perfil (Extraída de tu switchView original)
-		function renderPerfil() {
-			const u = state.user;
-			const initials = u.nombre_completo ? u.nombre_completo.split(' ').filter(n => n).map(n => n[0]).join('').toUpperCase() : "??";
-			
-			const elements = {
-				name: document.getElementById('prof-name'),
-				role: document.getElementById('prof-role'),
-				initials: document.getElementById('user-initials'),
-				initialsView: document.getElementById('prof-initials-view'),
-				inputName: document.getElementById('prof-input-name'),
-				inputDni: document.getElementById('prof-input-dni'),
-				inputEmail: document.getElementById('prof-input-email')
-			};
-
-			if (elements.name) elements.name.innerText = u.nombre_completo || "Usuario Vikingo";
-			if (elements.role) elements.role.innerText = u.rol_nombre || "Staff";
-			if (elements.initials) elements.initials.innerText = initials;
-			if (elements.initialsView) elements.initialsView.innerText = initials;
-			if (elements.inputName) elements.inputName.value = u.nombre_completo || "";
-			if (elements.inputDni) elements.inputDni.value = u.dni || "";
-			if (elements.inputEmail) elements.inputEmail.value = u.email || "";
-		}
 
 		async function handleLogin(e) {
 			// 1. Detener el refresco automático del formulario
@@ -3237,19 +3202,14 @@ if (editorForm) {
 		};
 			
         async function initApp() {
-			console.log("⚔️ Sincronizando Central de Mando Vikinga...");
 			try {
-				// 1. PRIMERO cargamos las sucursales de forma aislada.
-				// Esto garantiza que 'state.sucursales' esté lleno antes de que cualquier otra función intente usarlo.
-				await loadSucursales(); 
-
-				// 2. AHORA SÍ, lanzamos el resto en paralelo porque ya tenemos la base (sucursales) lista.
 				await Promise.all([
+					loadSucursales(), // <--- CAMBIO CLAVE: Ejecuta la lógica completa de carga y renderizado
 					fetchAlumnos(), 
 					loadStaff(), 
 					loadPlanes(), 
 					loadStock(), 
-					loadClases(), // Esta función ahora encontrará las sucursales listas para filtrar.
+					loadClases(), 
 					fetchReservas(), 
 					loadDashboard(), 
 					loadMusculacionMetadata(), 
@@ -3258,20 +3218,13 @@ if (editorForm) {
 					loadClasesFeriado().catch(e => console.error("Error en clases feriado"))
 				]);
 				
-				// 3. Setup final de UI
-				if (typeof setupCalendarFilters === 'function') {
-					setupCalendarFilters();
-				}
+				// Setup inicial del filtro del calendario
+				if (typeof setupCalendarFilters === 'function') setupCalendarFilters();
 				
-				if (typeof renderCalendar === 'function') {
-					renderCalendar();
-				}
-
-				console.log("✅ Arsenal cargado y sincronizado.");
+				renderCalendar();
 			} catch (error) {
-				console.error("Error crítico en el arranque del sistema:", error);
-				// Fallback para no bloquear la pantalla al usuario
-				if (typeof renderCalendar === 'function') renderCalendar();
+				console.error("Error crítico:", error);
+				renderCalendar();
 			}
 		}
 
@@ -3466,77 +3419,55 @@ if (editorForm) {
         }
 
         async function fetchAlumnos() {
-			try {
-				console.log("👥 Sincronizando Guerrero Alumnos...");
-				const d = await apiFetch('/alumnos');
-				state.alumnos = Array.isArray(d) ? d : [];
+			const d = await apiFetch('/alumnos');
+			state.alumnos = Array.isArray(d) ? d : [];
 
-				// 1. TRANSFORMACIÓN VISUAL DEL DASHBOARD (Mini Lista)
-				const dashListId = 'dash-alumnos-list-view';
-				let dashContainer = document.getElementById(dashListId);
+			// 1. TRANSFORMACIÓN VISUAL DEL DASHBOARD (Mini Lista)
+			// Buscamos la tabla original para reemplazarla por nuestro nuevo diseño de filas
+			const dashTable = document.querySelector('#admin-dashboard-layout table');
+			const dashListId = 'dash-alumnos-list-view';
+			let dashContainer = document.getElementById(dashListId);
 
-				// Si el contenedor NO existe, intentamos crearlo a partir de la tabla vieja
-				if (!dashContainer) {
-					const dashTable = document.querySelector('#admin-dashboard-layout table');
-					if (dashTable && dashTable.parentNode) {
-						dashContainer = document.createElement('div');
-						dashContainer.id = dashListId;
-						dashContainer.className = "flex flex-col gap-2";
-						dashTable.parentNode.replaceChild(dashContainer, dashTable);
-					}
-				}
-
-				// Renderizado en Dashboard (Solo si el contenedor existe en el DOM actual)
-				if (dashContainer) {
-					const topAlumnos = state.alumnos.slice(0, 5); 
-					if (topAlumnos.length === 0) {
-						dashContainer.innerHTML = '<p class="text-center text-gray-500 italic text-[11px] py-10 opacity-30 uppercase font-black">No hay alumnos recientes</p>';
-					} else {
-						dashContainer.innerHTML = topAlumnos.map(a => createAlumnoRow(a, 'dashboard')).join('');
-					}
-				}
-
-				// 2. TRANSFORMACIÓN VISUAL DE LA SECCIÓN ALUMNOS (Lista Completa)
-				const fullListId = 'full-alumnos-list-view';
-				let fullContainer = document.getElementById(fullListId);
-
-				// Si el contenedor NO existe, intentamos crearlo a partir de la tabla vieja
-				if (!fullContainer) {
-					const fullTable = document.querySelector('#view-alumnos table');
-					if (fullTable && fullTable.parentNode) {
-						fullContainer = document.createElement('div');
-						fullContainer.id = fullListId;
-						fullContainer.className = "flex flex-col gap-3";
-						fullTable.parentNode.replaceChild(fullContainer, fullTable);
-					}
-				}
-
-				// Renderizado en Vista Alumnos
-				if (fullContainer) {
-					if (state.alumnos.length === 0) {
-						fullContainer.innerHTML = `
-							<div class="text-center py-20 opacity-20">
-								<i data-lucide="users" class="w-16 h-16 mx-auto mb-4"></i>
-								<p class="font-black uppercase italic tracking-widest">No hay guerreros registrados</p>
-							</div>`;
-					} else {
-						// Aquí podrías usar la lógica de filtrado/paginación si ya la tienes implementada
-						fullContainer.innerHTML = state.alumnos.map(a => createAlumnoRow(a, 'full')).join('');
-					}
-				}
-
-				// 3. Finalización
-				if (window.lucide) lucide.createIcons();
-				
-				// Es vital llamar a applyPermissions para que los botones de edición 
-				// se oculten si el usuario no es Admin/Administrativo
-				if (typeof applyPermissions === 'function') {
-					applyPermissions();
-				}
-
-			} catch (error) {
-				console.error("❌ Error en fetchAlumnos:", error);
+			// Si todavía existe la tabla (primera carga), la reemplazamos por un DIV contenedor
+			if (!dashContainer && dashTable) {
+				dashContainer = document.createElement('div');
+				dashContainer.id = dashListId;
+				dashContainer.className = "flex flex-col gap-2"; // Espacio entre filas
+				// Reemplazamos la tabla entera (y sus cabeceras) por nuestra lista limpia
+				if (dashTable.parentNode) dashTable.parentNode.replaceChild(dashContainer, dashTable);
 			}
+
+			if (dashContainer) {
+				const topAlumnos = state.alumnos.slice(0, 5); // Solo mostramos los 5 recientes en dashboard
+				if (topAlumnos.length === 0) {
+					dashContainer.innerHTML = '<p class="text-center text-gray-500 italic text-[11px] py-4">No hay alumnos recientes.</p>';
+				} else {
+					dashContainer.innerHTML = topAlumnos.map(a => createAlumnoRow(a, 'dashboard')).join('');
+				}
+			}
+
+			// 2. TRANSFORMACIÓN VISUAL DE LA SECCIÓN ALUMNOS (Lista Completa)
+			const fullTable = document.querySelector('#view-alumnos table');
+			const fullListId = 'full-alumnos-list-view';
+			let fullContainer = document.getElementById(fullListId);
+
+			if (!fullContainer && fullTable) {
+				fullContainer = document.createElement('div');
+				fullContainer.id = fullListId;
+				fullContainer.className = "flex flex-col gap-3"; // Más espacio en la vista completa
+				if (fullTable.parentNode) fullTable.parentNode.replaceChild(fullContainer, fullTable);
+			}
+
+			if (fullContainer) {
+				if (state.alumnos.length === 0) {
+					fullContainer.innerHTML = '<div class="text-center py-10"><i data-lucide="users" class="w-12 h-12 text-gray-600 mx-auto mb-4"></i><p class="text-gray-500 italic">No hay alumnos registrados.</p></div>';
+				} else {
+					fullContainer.innerHTML = state.alumnos.map(a => createAlumnoRow(a, 'full')).join('');
+				}
+			}
+
+			if (window.lucide) lucide.createIcons();
+			applyPermissions(); // Re-aplicamos permisos para ocultar botones de editar a quien no corresponda
 		}
 
 		// --- REEMPLAZA TU FUNCIÓN loadStaff POR ESTA NUEVA VERSIÓN VISUAL ---
@@ -4214,146 +4145,60 @@ if (editorForm) {
 			reader.readAsDataURL(file);
 		}
 
-		// FUNCIÓN 1: La que llena el selector del modal
-		async function popularSucursalesModal(sucursalIdSeleccionada = null) {
-			const select = document.getElementById('clase-sucursal-select');
-			if (!select) return;
-
-			// Si el estado está vacío, esperamos a que carguen
-			if (!state.sucursales || state.sucursales.length === 0) {
-				await loadSucursales(); 
-			}
-
-			// Dibujamos las opciones (Sin vueltas)
-			select.innerHTML = state.sucursales.map(s => 
-				`<option value="${s.id}" ${parseInt(s.id) === parseInt(sucursalIdSeleccionada || state.user.sucursal_id) ? 'selected' : ''}>
-					${s.sucursal.toUpperCase()}
-				</option>`
-			).join('');
-		}
-
-		// 1. CARGA INICIAL: El motor que arranca todo
-		async function loadClases() {
-			const data = await apiFetch('/clases');
+        async function loadClases() {
+			// 1. Pedir datos al servidor
+			const data = await apiFetch('/clases'); 
 			state.clases = Array.isArray(data) ? data : [];
 
-			// Si no hay sucursales, las cargamos de nuevo por las dudas
-			if (!state.sucursales || state.sucursales.length === 0) {
-				await loadSucursales();
-			}
-
-			const selectFiltro = document.getElementById('filtro-clases-gestion');
-			if (selectFiltro) {
-				const isAdmin = (state.user?.rol_nombre === "Administrador" || state.user?.rol_nombre === "Supervisor");
-				let options = isAdmin ? '<option value="TODAS">--- TODAS LAS SEDES ---</option>' : '';
-				options += state.sucursales.map(s => `<option value="${s.id}">${s.sucursal.toUpperCase()}</option>`).join('');
-				selectFiltro.innerHTML = options;
-				
-				// Seteamos la sede del usuario por defecto
-				if (!selectFiltro.value) selectFiltro.value = state.user.sucursal_id;
-				filtrarClasesGestion(selectFiltro.value);
-			}
-		}
-
-		// 2. SELECTOR PRINCIPAL: Crea el dropdown de la vista de gestión
-		async function renderFiltroSedesGestion() {
-			const select = document.getElementById('filtro-clases-gestion');
-			if (!select) return;
-
-			// Re-chequeo de seguridad para sucursales
-			if (!state.sucursales || state.sucursales.length === 0) {
-				state.sucursales = await apiFetch('/api/sucursales');
-			}
-
-			const isAdmin = (state.user?.rol_nombre === "Administrador" || state.user?.rol_nombre === "Supervisor");
-			
-			let options = isAdmin ? '<option value="TODAS">--- TODAS LAS SEDES ---</option>' : '';
-			
-			options += state.sucursales.map(s => 
-				`<option value="${s.id}" ${parseInt(s.id) === parseInt(state.user.sucursal_id) ? 'selected' : ''}>
-					${s.sucursal.toUpperCase()}
-				</option>`
-			).join('');
-
-			select.innerHTML = options;
-			
-			// Ejecutamos el filtro inicial con el valor que quedó seleccionado
-			filtrarClasesGestion(select.value);
-		}
-
-		// 3. FILTRO LÓGICO: Separa las clases por sede sin perder datos "null"
-		function filtrarClasesGestion(sucursalId) {
-			const container = document.getElementById('clases-container');
-			if (!container || !state.clases) return;
-
-			const filtradas = (sucursalId === "TODAS") 
-				? state.clases 
-				: state.clases.filter(c => {
-					// Si la clase tiene sucursal_id lo usamos; si es null, 
-					// la asignamos a la sede del usuario para que no desaparezca de la vista.
-					const sId = c.sucursal_id ? parseInt(c.sucursal_id) : parseInt(state.user.sucursal_id);
-					return sId === parseInt(sucursalId);
-				});
-
-			renderTarjetasClases(filtradas);
-		}
-
-		// 4. RENDERIZADO: Dibuja las tarjetas en el HTML
-		function renderTarjetasClases(clasesAMostrar) {
+			// 2. Localizar el contenedor en el HTML
 			const container = document.getElementById('clases-container');
 			if (!container) return;
 
-			if (clasesAMostrar.length === 0) {
+			// 3. Si no hay clases, mostrar mensaje de vacío
+			if (state.clases.length === 0) {
 				container.innerHTML = `
 					<div class="col-span-3 p-16 border border-dashed border-white/10 rounded-[3rem] text-center bg-white/2">
-						<p class="text-[12px] text-gray-600 font-black uppercase italic tracking-[0.2em]">No hay clases para esta sede</p>
+						<p class="text-[12px] text-gray-600 font-black uppercase italic tracking-[0.2em]">No hay clases configuradas</p>
+						<p class="text-[10px] text-gray-700 mt-2 font-bold">Usa el botón "Alta de Clase" para comenzar.</p>
 					</div>`;
-				return;
-			}
-
-			const canEdit = (state.user?.rol_nombre === "Administrador" || state.user?.rol_nombre === "Supervisor");
-
-			container.innerHTML = clasesAMostrar.map(c => `
-				<div class="glass-card p-6 rounded-[2.5rem] border-white/5 flex flex-col justify-between hover:border-red-600/20 transition-all group">
-					<div class="flex items-center gap-4 mb-6">
-						<div class="w-12 h-12 rounded-2xl flex items-center justify-center font-black text-black text-sm italic shadow-lg" style="background-color: ${c.color || '#FF0000'}">
-							${c.nombre ? c.nombre[0].toUpperCase() : '?'}
-						</div>
+			} else {
+				// 4. Dibujar las tarjetas (Solo con info técnica y botón de editar)
+				const canEdit = (state.user?.rol_nombre === "Administrador" || state.user?.rol_nombre === "Supervisor");
+				
+				container.innerHTML = state.clases.map(c => `
+					<div class="glass-card p-6 rounded-[2.5rem] border-white/5 flex flex-col justify-between hover:border-red-600/20 transition-all group">
 						<div>
-							<h4 class="text-sm font-black uppercase italic text-white group-hover:text-red-500">${c.nombre}</h4>
-							<p class="text-[10px] text-white-500 font-bold uppercase tracking-wider flex items-center gap-1">
-								<i data-lucide="user" class="w-3 h-3"></i> ${c.coach || 'Sin Coach'}
-							</p>
+							<div class="flex items-center gap-4 mb-6">
+								<!-- Icono con el color de la clase -->
+								<div class="w-12 h-12 rounded-2xl flex items-center justify-center font-black text-black text-sm italic shadow-lg" style="background-color: ${c.color || '#FF0000'}">
+									${c.nombre ? c.nombre[0].toUpperCase() : '?'}
+								</div>
+								<div>
+									<h4 class="text-sm font-black uppercase italic text-white group-hover:text-red-500 transition-colors">${c.nombre}</h4>
+									<p class="text-[10px] text-white-500 font-bold uppercase tracking-wider flex items-center gap-1">
+										<i data-lucide="user" class="w-3 h-3"></i> ${c.coach || 'Sin Coach'}
+									</p>
+								</div>
+							</div>
 						</div>
-					</div>
-					${canEdit ? `
-						<button onclick="openEditClase(${c.id})" class="w-full py-4 bg-white/5 text-white rounded-2xl text-[10px] font-black uppercase italic hover:bg-white/10 hover:text-red-600 transition-all border border-white/5">
+
+						<!-- Botón de edición: Solo aparece para Admin/Supervisor -->
+						${canEdit ? `
+						<button onclick="openEditClase(${c.id})" class="w-full py-4 bg-white/5 text-white rounded-2xl text-[10px] font-black uppercase italic hover:bg-white/10 hover:text-red-600 transition-all flex items-center justify-center gap-2 border border-white/5">
+							<i data-lucide="settings-2" class="w-3.5 h-3.5"></i>
 							Configuración Técnica
 						</button>
-					` : '<p class="text-[9px] text-gray-700 italic text-center uppercase font-black tracking-tighter opacity-30">Solo lectura</p>'}
-				</div>
-			`).join('');
-
-			if (window.lucide) lucide.createIcons();
-		}
-
-		// 5. SELECTOR DE MODAL: Llena el dropdown interno del modal (Alta/Edición)
-		async function popularSucursalesModal(sucursalIdSeleccionada = null) {
-			const select = document.getElementById('clase-sucursal-select');
-			if (!select) return;
-
-			// Si el estado está vacío por alguna razón, forzamos la carga
-			if (!state.sucursales || state.sucursales.length === 0) {
-				await loadSucursales(); 
+						` : '<p class="text-[9px] text-gray-700 italic text-center">Solo lectura</p>'}
+					</div>
+				`).join('');
 			}
 
-			select.innerHTML = state.sucursales.map(s => 
-				`<option value="${s.id}" ${parseInt(s.id) === parseInt(sucursalIdSeleccionada || state.user.sucursal_id) ? 'selected' : ''}>
-					${s.sucursal.toUpperCase()}
-				</option>`
-			).join('');
+			// 5. Refrescar iconos y otros componentes
+			lucide.createIcons();
+			if(document.getElementById('view-calendario')?.classList.contains('active')) renderCalendar();
+			applyPermissions();
 		}
-
+		
 		async function loadProfesores() {
 			// Esta función llena la memoria con los profesores para usarlos en el select de turnos
 			const res = await apiFetch('/profesores');
@@ -5018,14 +4863,7 @@ if (editorForm) {
 			document.getElementById('modal-clase-title').innerText = "Alta de Clase";
 			document.getElementById('btn-delete-clase').classList.add('hidden'); 
 			
-			// 1. Cargamos los boxes (tu función actual)
 			loadBoxes(); 
-
-			// 2. NUEVO: Llenamos el selector de sucursales del modal
-			// Al no pasarle parámetros, por defecto seleccionará la sede del usuario logueado
-			popularSucursalesModal(); 
-
-			// 3. Finalmente abrimos el modal
 			openModal('modal-clase'); 
 		}
 		
@@ -5087,9 +4925,6 @@ if (editorForm) {
 
 			await loadBoxes(); 
 
-			// Llenamos el selector pasando el ID de la sucursal de LA CLASE
-			popularSucursalesModal(c.sucursal_id);
-
 			document.getElementById('cl-id').value = c.id; 
 			document.getElementById('modal-clase-title').innerText = "Editar: " + c.nombre;
 			document.getElementById('cl-nombre').value = c.nombre; 
@@ -5099,6 +4934,7 @@ if (editorForm) {
 			
 			const slotsContainer = document.getElementById('cl-schedule-slots');
 			slotsContainer.innerHTML = "";
+
 			const horarios = Array.isArray(c.horarios_detalle) ? c.horarios_detalle : [];
 			if (horarios.length > 0) {
 				horarios.forEach(h => addNewScheduleSlot(h));
@@ -5116,18 +4952,13 @@ if (editorForm) {
 			openModal('modal-clase');
 		}
 
-		async function openNewClase() {
+		function openNewClase() {
 			document.getElementById('form-clase').reset();
 			document.getElementById('cl-id').value = "";
 			document.getElementById('cl-schedule-slots').innerHTML = "";
 			document.getElementById('modal-clase-title').innerText = "Nueva Clase";
 			
-			// 1. Cargamos boxes
-			await loadBoxes();
-
-			// 2. Llenamos el selector de sedes (usa lo que ya está en el state)
-			popularSucursalesModal();
-
+			loadBoxes();
 			addNewScheduleSlot();
 			openModal('modal-clase');
 		}
@@ -5146,10 +4977,8 @@ if (editorForm) {
 			const id = document.getElementById('cl-id').value;
 			const slotRows = document.querySelectorAll('.schedule-slot-row');
 			
-			// 1. Capturamos la sucursal del modal (VITAL para el filtrado posterior)
-			const sucursalSelect = document.getElementById('clase-sucursal-select');
-			// Si no hay selección, usamos la sucursal del usuario logueado como respaldo
-			const sucursalId = sucursalSelect?.value || state.user?.sucursal_id;
+			// Capturamos la sucursal seleccionada en el modal
+			const sucursalId = document.getElementById('clase-sucursal-select')?.value;
 			
 			const horarios_detalle = [];
 			slotRows.forEach(row => {
@@ -5179,43 +5008,32 @@ if (editorForm) {
 
 			const mainCoach = horarios_detalle[0].coach || "Staff";
 
-			// 2. Construcción del Payload siguiendo tu ClaseUpdate de main.py
 			const payload = {
 				nombre: document.getElementById('cl-nombre').value,
-				box_id: parseInt(document.getElementById('cl-box').value) || 1,
+				box_id: parseInt(document.getElementById('cl-box').value),
 				coach: String(mainCoach),
-				color: document.getElementById('cl-color').value || "#FF0000",
+				color: document.getElementById('cl-color').value,
 				capacidad_max: parseInt(document.getElementById('cl-cupo').value) || 20,
 				horarios_detalle: horarios_detalle,
-				// Enviamos siempre un ID entero para no romper el backend
-				sucursal_id: parseInt(sucursalId) 
+				// Agregamos el ID de sucursal al envío de datos
+				sucursal_id: sucursalId ? parseInt(sucursalId) : null 
 			};
 
-			// 3. Endpoints corregidos con prefijo /api
 			const method = id ? 'PUT' : 'POST';
 			const endpoint = id ? `/clases/${id}` : '/clases';
 			
 			try {
 				const res = await apiFetch(endpoint, method, payload);
-				
 				if(!res.error) {
 					showVikingToast(id ? "¡Clase Actualizada!" : "¡Clase Creada!");
 					closeModal('modal-clase');
-					
-					// 4. RECARGA TOTAL Y AUTO-FILTRADO
-					// Primero cargamos los datos nuevos del servidor
-					await loadClases(); 
-					
-					// Si el calendario está visible, lo refrescamos también
+					// Refrescamos el calendario para ver los cambios
 					if (typeof renderCalendar === 'function') renderCalendar();
-					
 				} else {
-					// Manejo de errores detallado del servidor
-					const errorMsg = res.detail ? JSON.stringify(res.detail) : res.error;
-					showVikingToast("Error: " + errorMsg, true);
+					showVikingToast("Error: " + JSON.stringify(res.detail || res.error), true);
 				}
 			} catch (err) {
-				console.error("Error en saveClaseVikinga:", err);
+				console.error(err);
 				showVikingToast("Fallo en la conexión", true);
 			}
 		}
@@ -5228,31 +5046,27 @@ if (editorForm) {
 		// --- GESTIÓN DE SUCURSALES ---
 		async function loadSucursales() {
 			try {
-				console.log("📍 Sincronizando Arsenal de Sedes...");
+				const response = await fetch(`${API_BASE}/sucursales`, {
+					headers: { 'Authorization': `Bearer ${localStorage.getItem('viking_token')}` }
+				});
 				
-				// 1. Llamada a la API
-				const sucursales = await apiFetch('/sucursales');
-				
-				if (!sucursales || sucursales.error) {
-					throw new Error(sucursales?.error || "Error al obtener sucursales");
-				}
+				if (!response.ok) throw new Error("Error en API");
+				const sucursales = await response.json();
 
-				// 2. Guardar en el estado global (Aseguramos que sea un Array)
-				state.sucursales = Array.isArray(sucursales) ? sucursales : []; 
+				// --- 🆕 AGREGADO: Guardar en el estado para que el calendario lo use ---
+				state.sucursales = sucursales; 
 				
-				// --- RENDERIZADO DE INTERFAZ ---
-
-				// A. Tarjetas en la vista de Sucursales
+				// --- 1. Renderizar Tarjetas en la vista de Sucursales (Tuyo, sin tocar) ---
 				const container = document.getElementById('sucursales-container');
 				if (container) {
-					if (state.sucursales.length === 0) {
+					if (sucursales.length === 0) {
 						container.innerHTML = `
 							<div class="col-span-full py-20 text-center opacity-30 italic font-black uppercase">
 								<i data-lucide="map-pin-off" class="w-12 h-12 mx-auto mb-4"></i>
 								<p class="font-black uppercase italic">No hay sedes registradas en el arsenal</p>
 							</div>`;
 					} else {
-						container.innerHTML = state.sucursales.map(s => `
+						container.innerHTML = sucursales.map(s => `
 							<div class="glass-card p-8 rounded-[2.5rem] border border-white/5 hover:border-red-600/30 transition-all group relative overflow-hidden">
 								<div class="flex justify-between items-start mb-6">
 									<div class="p-4 bg-red-600/10 rounded-2xl text-red-500 group-hover:bg-red-600 group-hover:text-black transition-all">
@@ -5269,49 +5083,23 @@ if (editorForm) {
 					}
 				}
 
-				// B. Llenar Select de Feriados
-				const feriadoSelect = document.getElementById('feriado-sucursal-select');
-				if (feriadoSelect) {
-					feriadoSelect.innerHTML = state.sucursales.map(s => 
-						`<option value="${s.id}" ${parseInt(s.id) === parseInt(state.user?.sucursal_id) ? 'selected' : ''}>${s.sucursal.toUpperCase()}</option>`
-					).join('');
-				}
-
-				// C. Llenar Select de Alumnos (Modal Alta/Edición)
+				// --- 2. Actualizar el Selector (Select) en el modal de alumnos (Tuyo, sin tocar) ---
 				const selectAl = document.getElementById('al-sucursal');
 				if (selectAl) {
 					const currentVal = selectAl.value;
 					selectAl.innerHTML = '<option value="">Seleccionar Sucursal...</option>' + 
-						state.sucursales.map(s => `<option value="${s.id}">${s.sucursal.toUpperCase()}</option>`).join('');
-					// Restauramos el valor si ya había uno seleccionado (importante en edición)
-					if (currentVal) selectAl.value = currentVal;
+						sucursales.map(s => `<option value="${s.id}">${s.sucursal.toUpperCase()}</option>`).join('');
+					if(currentVal) selectAl.value = currentVal;
 				}
 
-				// D. Llenar Select de Clases (Modal Alta/Edición)
+				// --- 🆕 3. AGREGADO: Actualizar el Selector en el modal de CLASES ---
 				const selectCl = document.getElementById('clase-sucursal-select');
 				if (selectCl) {
-					selectCl.innerHTML = state.sucursales.map(s => 
-						`<option value="${s.id}">${s.sucursal.toUpperCase()}</option>`
-					).join('');
+					// Llenamos el select de clases con las mismas sucursales
+					selectCl.innerHTML = sucursales.map(s => `<option value="${s.id}">${s.sucursal.toUpperCase()}</option>`).join('');
 				}
 
-				// E. Llenar Filtro de Gestión de Clases (El que está arriba de la grilla de clases)
-				const selectFiltroGestion = document.getElementById('filtro-clases-gestion');
-				if (selectFiltroGestion) {
-					const rol = (state.user?.rol_nombre || "").toLowerCase();
-					const isAdmin = (rol === "administrador" || rol === "supervisor");
-					
-					let options = isAdmin ? '<option value="TODAS">--- TODAS LAS SEDES ---</option>' : '';
-					options += state.sucursales.map(s => 
-						`<option value="${s.id}" ${parseInt(s.id) === parseInt(state.user?.sucursal_id) ? 'selected' : ''}>${s.sucursal.toUpperCase()}</option>`
-					).join('');
-					
-					selectFiltroGestion.innerHTML = options;
-				}
-
-				// 3. Refrescar iconos y permisos
-				if (window.lucide) lucide.createIcons();
-				if (typeof applyPermissions === 'function') applyPermissions();
+				if(window.lucide) lucide.createIcons();
 
 			} catch (error) {
 				console.error("❌ Error cargando sucursales:", error);
@@ -6072,10 +5860,6 @@ if (editorForm) {
 						}
 						break;
 
-					case 'clases':
-						loadClases();
-						break;
-
 					case 'merca':
 						if (typeof fetchStock === 'function') {
 							fetchStock();
@@ -6091,7 +5875,6 @@ if (editorForm) {
 					setTimeout(() => lucide.createIcons(), 50);
 				}
 			};
-
 			window.switchView.isVikingo = true;
 
 			console.log("✅ Sistema de navegación extendido correctamente.");
@@ -6269,52 +6052,40 @@ if (editorForm) {
 		// Ponela justo arriba de window.switchView
 		async function crearFeriadoVikingo() {
 			console.log("🛡️ Intentando crear día especial...");
-			
-			// 1. Obtener los elementos del DOM
 			const fechaEl = document.getElementById('feriado-fecha');
 			const motivoEl = document.getElementById('feriado-motivo');
-			const sucursalSelect = document.getElementById('feriado-sucursal-select');
 
 			if (!fechaEl || !motivoEl) return;
 
-			// 2. Capturar los valores
 			const fecha = fechaEl.value;
 			const motivo = motivoEl.value;
-			// Captura la sucursal seleccionada o usa la del usuario por defecto
-			const sucursalId = sucursalSelect?.value || state.user.sucursal_id;
 
-			// 3. Validaciones
-			if (!fecha || !motivo || !sucursalId) {
-				if (typeof showVikingToast === 'function') {
-					showVikingToast("Completá fecha, motivo y sucursal", true);
-				} else {
-					alert("Faltan datos obligatorios");
-				}
+			if (!fecha || !motivo) {
+				if (typeof showVikingToast === 'function') showVikingToast("Completá fecha y motivo, fiera", true);
+				else alert("Completá fecha y motivo");
 				return;
 			}
 
 			try {
-				// 4. Ejecutar la petición al servidor (UNA SOLA VEZ)
+				// Usamos la ruta sin el /api/ duplicado
 				const res = await apiFetch('/feriados', 'POST', {
 					fecha: fecha,
 					motivo: motivo,
-					abierto: false,
-					sucursal_id: parseInt(sucursalId) // Aseguramos que sea un número
+					abierto: false
 				});
 
-				// 5. Manejo de la respuesta
 				if (!res.error) {
 					if (typeof showVikingToast === 'function') showVikingToast("¡Día especial marcado!");
 					
-					// Limpiar campos
 					fechaEl.value = "";
 					motivoEl.value = "";
 					
-					// Recargar datos y refrescar calendario
+					// Recargamos los datos del estado
 					await loadFeriados();
-					if (typeof renderCalendar === 'function') renderCalendar();
+					// Refrescamos el calendario
+					renderCalendar();
 				} else {
-					alert("Error: " + (res.detail || res.error));
+					alert("Error: " + res.error);
 				}
 			} catch (err) {
 				console.error("Error en crearFeriadoVikingo:", err);
@@ -6426,11 +6197,7 @@ if (editorForm) {
 		// 3. GUARDADO MASIVO (Manda todas las filas al servidor)
 		window.guardarClasesFeriadoBulk = async function() {
 			const fecha = document.getElementById('feriado-fecha').value;
-			// CAPTURAMOS LA SUCURSAL DEL NUEVO SELECTOR
-			const sucursalId = document.getElementById('feriado-sucursal-select')?.value;
-
 			if (!fecha) return showVikingToast("Primero elegí la fecha", true);
-			if (!sucursalId) return showVikingToast("Elegí una sucursal", true);
 
 			const filas = document.querySelectorAll('.fila-clase-feriado');
 			let errores = 0;
@@ -6440,11 +6207,9 @@ if (editorForm) {
 					fecha: fecha,
 					nombre: fila.querySelector('.clase-feriado-nombre').value,
 					horario: parseFloat(fila.querySelector('.clase-feriado-hora').value),
-					profesor: fila.querySelector('.clase-feriado-profesor').value,
+					profesor: fila.querySelector('.clase-feriado-profesor').value, // Asegurate de tener este campo en el modelo
 					capacidad_max: 40,
-					color: "#FF0000",
-					// ENVIAMOS LA SUCURSAL ELEGIDA
-					sucursal_id: parseInt(sucursalId) 
+					color: "#FF0000"
 				};
 
 				const res = await apiFetch('/clases-feriado', 'POST', payload);
@@ -6456,7 +6221,7 @@ if (editorForm) {
 				await loadClasesFeriado();
 				renderCalendar();
 			} else {
-				showVikingToast(`Hubo ${errores} errores en la carga`, true);
+				showVikingToast(`Se cargaron algunas, pero hubo ${errores} errores`, true);
 			}
 		};
 
@@ -6900,7 +6665,6 @@ if (editorForm) {
 		window.openModal = openModal;
 		window.closeModal = closeModal;
 
-		// 1. ABRIR MODAL: Prepara el formulario para una nueva sucursal
 		window.openModalSucursal = function() {
 			console.log("📂 Abriendo modal de sucursal...");
 			const form = document.getElementById('form-sucursal');
@@ -6912,58 +6676,46 @@ if (editorForm) {
 			const title = document.getElementById('modal-sucursal-title');
 			if (title) title.innerText = "Nueva Sucursal";
 			
-			// Usamos la función estándar para abrir el modal
-			if (typeof openModal === 'function') {
-				openModal('modal-sucursal');
-			} else {
-				const modal = document.getElementById('modal-sucursal');
-				if (modal) {
-					modal.classList.remove('hidden');
-					modal.style.display = 'flex'; 
-				}
+			const modal = document.getElementById('modal-sucursal');
+			if (modal) {
+				modal.classList.remove('hidden');
+				modal.style.display = 'flex'; 
 			}
 		};
 
-		// 2. GUARDAR SUCURSAL: Maneja el envío de datos al backend
+
 		window.handleSaveSucursal = async function(e) {
 			if(e) e.preventDefault();
 			
-			const id = document.getElementById('suc-id')?.value;
 			const data = {
 				sucursal: document.getElementById('suc-nombre').value,
 				direccion: document.getElementById('suc-direccion').value
 			};
 
-			// Determinamos el método y endpoint (Sin /api duplicado)
-			const method = id ? 'PUT' : 'POST';
-			const endpoint = id ? `/sucursales/${id}` : '/sucursales';
-
 			try {
-				// Usamos apiFetch para automatizar tokens y URL base
-				const res = await apiFetch(endpoint, method, data);
+				const response = await fetch(`${API_BASE}/sucursales`, {
+					method: 'POST',
+					headers: { 
+						'Content-Type': 'application/json',
+						'Authorization': `Bearer ${localStorage.getItem('viking_token')}`
+					},
+					body: JSON.stringify(data)
+				});
 
-				if (!res.error) {
-					// Usamos tu showVikingToast si existe para mantener la estética
-					const toastFn = typeof showVikingToast === 'function' ? showVikingToast : showToast;
-					toastFn("Sede Vikinga establecida");
-
-					// Cerramos el modal
+				if (response.ok) {
+					showToast("Sede Vikinga establecida");
 					if (typeof closeModal === 'function') {
 						closeModal('modal-sucursal');
 					} else {
 						document.getElementById('modal-sucursal').classList.add('hidden');
 					}
-
-					// Recargamos la lista y el estado global
-					await loadSucursales();
+					loadSucursales();
 				} else {
-					const toastFn = typeof showVikingToast === 'function' ? showVikingToast : showToast;
-					toastFn(res.error || "Error al procesar sucursal", true);
+					const error = await response.json();
+					showToast(error.detail || "Error al crear sucursal", "error");
 				}
 			} catch (error) {
-				console.error("Error en handleSaveSucursal:", error);
-				const toastFn = typeof showVikingToast === 'function' ? showVikingToast : showToast;
-				toastFn("Error de conexión con el servidor", true);
+				showToast("Error de conexión con el servidor", "error");
 			}
 		};
 

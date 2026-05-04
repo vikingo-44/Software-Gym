@@ -947,23 +947,14 @@
             </div>
 
             <div id="view-clases" class="view-content">
-				<div class="flex justify-between items-center mb-8">
-					<div class="flex items-center gap-4">
-						<h3 class="text-3xl font-black italic uppercase">Gestión de Clases</h3>
-						<!-- NUEVO: Selector de Filtro para Clases -->
-						<div class="flex flex-col gap-2 mb-4" id="clase-sucursal-container">
-							<label class="text-[10px] font-black text-white/40 ml-2 uppercase">Asignar a Sucursal</label>
-							<select id="clase-sucursal-select" class="bg-zinc-900 border border-white/10 rounded-xl p-3 text-white text-xs outline-none focus:border-red-600 uppercase font-bold italic">
-								<!-- Se llena dinámicamente -->
-							</select>
-						</div>
-					</div>
-					<button id="btn-nueva-clase" onclick="openModalClase()" class="viking-bg-red text-black px-8 py-4 rounded-2xl font-black uppercase italic text-[12px] shadow-xl flex items-center gap-3">
-						<i data-lucide="presentation" class="w-4 h-4"></i> Alta de Clase
-					</button>
-				</div>
-				<div class="grid grid-cols-1 md:grid-cols-3 gap-8" id="clases-container"></div>
-			</div>
+                <div class="flex justify-between items-center mb-8">
+                    <h3 class="text-3xl font-black italic uppercase">Gestión de Clases</h3>
+                    <button id="btn-nueva-clase" onclick="openModalClase()" class="viking-bg-red text-black px-8 py-4 rounded-2xl font-black uppercase italic text-[12px] shadow-xl flex items-center gap-3">
+                        <i data-lucide="presentation" class="w-4 h-4"></i> Alta de Clase
+                    </button>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-8" id="clases-container"></div>
+            </div>
 
             <div id="view-calendario" class="view-content">
 				<div class="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-8 gap-6">
@@ -1030,27 +1021,16 @@
 					</button>
 
 					<div id="menu-feriados-content" class="hidden p-6 border-t border-white/10 space-y-6 bg-black/20">
-						<!-- PRIMERA SECCIÓN: DEFINIR EL DÍA ESPECIAL -->
-						<div class="grid grid-cols-1 md:grid-cols-5 gap-4">
+						<div class="grid grid-cols-1 md:grid-cols-4 gap-4">
 							<div class="flex flex-col gap-2">
 								<label class="text-[10px] font-black text-white/40 ml-2 uppercase">Fecha del Evento</label>
 								<input type="date" id="feriado-fecha" class="bg-zinc-900 border border-white/10 rounded-xl p-3 text-white text-xs outline-none focus:border-red-600 transition-all">
 							</div>
-
-							<!-- NUEVO SELECTOR DE SUCURSAL -->
-							<div class="flex flex-col gap-2">
-								<label class="text-[10px] font-black text-white/40 ml-2 uppercase">Sucursal</label>
-								<select id="feriado-sucursal-select" class="bg-zinc-900 border border-white/10 rounded-xl p-3 text-white text-xs outline-none focus:border-red-600 transition-all uppercase font-bold italic">
-									<!-- Se llena dinámicamente con loadSucursales() -->
-								</select>
-							</div>
-
 							<div class="flex flex-col gap-2 md:col-span-2">
 								<label class="text-[10px] font-black text-white/40 ml-2 uppercase">Motivo / Descripción</label>
 								<input type="text" id="feriado-motivo" placeholder="Ej: Navidad / Feriado Nacional" 
 									class="bg-zinc-900 border border-white/10 rounded-xl p-3 text-white text-xs outline-none focus:border-red-600 transition-all">
 							</div>
-
 							<div class="flex flex-col gap-2">
 								<label class="text-[10px] font-black text-white/40 opacity-0">Acción</label>
 								<button onclick="crearFeriadoVikingo()" 
@@ -1060,14 +1040,12 @@
 							</div>
 						</div>
 						
-						<!-- LISTADO DE FERIADOS REGISTRADOS -->
 						<div class="pt-4 border-t border-white/5">
 							<h4 class="text-[10px] font-black text-white/20 uppercase mb-3 ml-2">Días Especiales Registrados</h4>
-							<div id="lista-feriados-activos" class="flex flex-wrap gap-2 text-white"></div>
+							<div id="lista-feriados-activos" class="flex flex-wrap gap-2 text-white">
+								</div>
 						</div>
-
-						<!-- SEGUNDA SECCIÓN: PROGRAMAR CLASES (ESTO YA LO TENÍAS) -->
-						<div class="p-6 border-t border-white/10 bg-black/40 space-y-4 rounded-3xl">
+						<div class="p-6 border-t border-white/10 bg-black/40 space-y-4">
 							<div class="flex justify-between items-center ml-2">
 								<h4 class="text-[10px] font-black text-red-500 uppercase tracking-widest italic">Programar Clases para el Feriado</h4>
 								<button onclick="agregarFilaClaseFeriado()" class="flex items-center gap-2 text-[10px] font-black text-white/60 hover:text-white transition-all">
@@ -1079,15 +1057,18 @@
 								<div class="grid grid-cols-1 md:grid-cols-4 gap-4 bg-white/5 p-4 rounded-2xl border border-white/5 fila-clase-feriado">
 									<div class="flex flex-col gap-2">
 										<label class="text-[10px] font-black text-white/40 ml-2">ACTIVIDAD</label>
-										<select class="clase-feriado-nombre bg-zinc-900 border border-white/10 rounded-xl p-3 text-white text-xs outline-none focus:border-red-600"></select>
+										<select class="clase-feriado-nombre bg-zinc-900 border border-white/10 rounded-xl p-3 text-white text-xs outline-none focus:border-red-600">
+											</select>
 									</div>
 									<div class="flex flex-col gap-2">
 										<label class="text-[10px] font-black text-white/40 ml-2">HORARIO INICIO</label>
-										<select class="clase-feriado-hora bg-zinc-900 border border-white/10 rounded-xl p-3 text-white text-xs outline-none focus:border-red-600"></select>
+										<select class="clase-feriado-hora bg-zinc-900 border border-white/10 rounded-xl p-3 text-white text-xs outline-none focus:border-red-600">
+											</select>
 									</div>
 									<div class="flex flex-col gap-2">
 										<label class="text-[10px] font-black text-white/40 ml-2">PROFESOR</label>
-										<select class="clase-feriado-profesor bg-zinc-900 border border-white/10 rounded-xl p-3 text-white text-xs outline-none focus:border-red-600"></select>
+										<select class="clase-feriado-profesor bg-zinc-900 border border-white/10 rounded-xl p-3 text-white text-xs outline-none focus:border-red-600">
+											</select>
 									</div>
 									<div class="flex flex-col gap-2">
 										<label class="text-[10px] font-black text-white/40 opacity-0">Acción</label>
@@ -1100,6 +1081,7 @@
 							</div>
 						</div>
 					</div>
+				</div>
 
 				<div class="glass-card rounded-[2.5rem] border border-white/5 bg-zinc-950/40 overflow-hidden shadow-2xl">
 					<div class="overflow-x-auto custom-scrollbar">
@@ -2035,7 +2017,7 @@
 	<!-- Fondo oscuro para cerrar el menú al tocar afuera -->
 		<div id="mobile-overlay" class="sidebar-overlay" onclick="toggleMobileMenu()"></div>
 
-	<script src="/static/script.js?v=1.2.0"></script>
+	<script src="/static/script.js?v=1.2.1"></script>
 
 	<script>
 		window.toggleCamposCompra = function(tipo) {

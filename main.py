@@ -315,7 +315,7 @@ class TipoBoxResponse(BaseModel):
 class ClaseUpdate(BaseModel):
     nombre: str
     coach: str
-    box_id: Optional[int] = 1
+    box_id: Optional[int] = 1 # Por defecto al Principal
     color: Optional[str] = "#FF0000"
     capacidad_max: Optional[int] = 40
     horarios_detalle: Optional[List[dict]] = None
@@ -1372,11 +1372,15 @@ def get_clases(db: Session = Depends(database.get_db), current_user = Depends(ge
 
 @app.post("/api/clases", tags=["Clases"])
 def create_clase(data: ClaseUpdate, db: Session = Depends(database.get_db), current_user = Depends(get_current_user)):
-    """Crea una nueva clase asignando la sucursal correcta."""
-    # Determinamos la sucursal: Admin elige, Staff usa la propia
+    """Crea una nueva clase. El Admin puede elegir sede, el resto usa la propia."""
+    
+    # Determinamos la sucursal final
     final_sucursal_id = current_user.sucursal_id
-    if current_user.perfil.nombre.lower() in ["administrador", "supervisor"] and data.sucursal_id:
-        final_sucursal_id = data.sucursal_id
+    
+    # 🛡️ Si el que crea es Admin y envió una sucursal en el JSON, usamos esa
+    if current_user.perfil.nombre.lower() in ["administrador", "supervisor"] and hasattr(data, 'sucursal_id'):
+        if data.sucursal_id:
+            final_sucursal_id = data.sucursal_id
 
     new_c = models.Clase(
         nombre=data.nombre,
@@ -1389,34 +1393,30 @@ def create_clase(data: ClaseUpdate, db: Session = Depends(database.get_db), curr
     )
     db.add(new_c)
     db.commit()
-    db.refresh(new_c)
-    return {"status": "success", "id": new_c.id}
+    return {"status": "success"}
 
 @app.put("/api/clases/{id}", tags=["Clases"])
 def update_clase(id: int, data: ClaseUpdate, db: Session = Depends(database.get_db), current_user = Depends(get_current_user)):
-    """Actualiza la clase y permite al Admin cambiar la sucursal."""
+    """Actualiza una clase validando permisos de sucursal o admin."""
     query = db.query(models.Clase).filter(models.Clase.id == id)
+    
+    # 🛡️ Si NO es Admin/Supervisor, solo puede editar lo de su sucursal
     if current_user.perfil.nombre.lower() not in ["administrador", "supervisor"]:
         query = query.filter(models.Clase.sucursal_id == current_user.sucursal_id)
     
     c = query.first()
-    if not c:
-        return {"status": "error", "message": "No encontrado o sin permiso"}
-
-    c.nombre = data.nombre
-    c.coach = data.coach
-    c.box_id = data.box_id
-    c.color = data.color
-    c.capacidad_max = data.capacidad_max
-    c.horarios_detalle = data.horarios_detalle
     
-    # Permitir al admin cambiar la sucursal en la edición
-    if current_user.perfil.nombre.lower() in ["administrador", "supervisor"] and data.sucursal_id:
-        c.sucursal_id = data.sucursal_id
-
-    flag_modified(c, "horarios_detalle")
-    db.commit()
-    return {"status": "success"}
+    if c:
+        c.nombre = data.nombre
+        c.coach = data.coach
+        c.box_id = data.box_id
+        c.color = data.color
+        c.capacidad_max = data.capacidad_max
+        c.horarios_detalle = data.horarios_detalle 
+        flag_modified(c, "horarios_detalle")
+        db.commit()
+        return {"status": "success"}
+    return {"status": "error", "message": "No tenés permiso para editar esta clase"}
 
 @app.put("/api/clases/{id}/move", tags=["Clases"])
 def move_clase(id: int, data: ClaseMove, db: Session = Depends(database.get_db), current_user = Depends(get_current_user)):
@@ -1473,32 +1473,19 @@ def get_feriados(db: Session = Depends(database.get_db)):
     return db.query(models.DiaEspecial).all()
 
 @app.post("/api/feriados", tags=["Feriados"])
-def create_feriado(data: DiaEspecialCreate, db: Session = Depends(database.get_db), current_user = Depends(get_current_user)):
+def create_feriado(data: DiaEspecialCreate, db: Session = Depends(database.get_db)):
     try:
-        # Mantenemos tu Fix de Zona Horaria
+        # Fix Zona Horaria: Tomamos solo la fecha pura
         fecha_dt = datetime.strptime(data.fecha, "%Y-%m-%d").date()
         
-        # Determinamos la sucursal (Prioridad: la que venga en data, sino la del usuario)
-        final_sucursal_id = getattr(data, 'sucursal_id', current_user.sucursal_id) or current_user.sucursal_id
-
-        # Mantenemos tu lógica de evitar el error de UNIQUE
-        existente = db.query(models.DiaEspecial).filter(
-            models.DiaEspecial.fecha == fecha_dt,
-            models.DiaEspecial.sucursal_id == final_sucursal_id # Filtramos por sede para permitir feriados distintos
-        ).first()
-        
+        # Evitamos el error de UNIQUE: Si existe, actualizamos el motivo
+        existente = db.query(models.DiaEspecial).filter(models.DiaEspecial.fecha == fecha_dt).first()
         if existente:
             existente.motivo = data.motivo
             db.commit()
             return {"status": "success", "message": "Actualizado"}
 
-        # Agregamos la sucursal_id al crear
-        nuevo = models.DiaEspecial(
-            fecha=fecha_dt, 
-            motivo=data.motivo, 
-            abierto=data.abierto,
-            sucursal_id=final_sucursal_id
-        )
+        nuevo = models.DiaEspecial(fecha=fecha_dt, motivo=data.motivo, abierto=data.abierto)
         db.add(nuevo)
         db.commit()
         return {"status": "success"}
@@ -1519,20 +1506,16 @@ def get_clases_feriado(fecha: Optional[str] = None, db: Session = Depends(databa
     return query.all()
 
 @app.post("/api/clases-feriado", tags=["Feriados"])
-def create_clase_feriado(data: ClaseFeriadoCreate, db: Session = Depends(database.get_db), current_user = Depends(get_current_user)):
+def create_clase_feriado(data: ClaseFeriadoCreate, db: Session = Depends(database.get_db)):
     try:
         fecha_dt = datetime.strptime(data.fecha, "%Y-%m-%d").date()
         
-        # Sucursal automática
-        final_sucursal_id = getattr(data, 'sucursal_id', current_user.sucursal_id) or current_user.sucursal_id
-
         nueva = models.ClaseFeriado(
             fecha=fecha_dt, 
             nombre=data.nombre, 
             horario=data.horario, 
             capacidad_max=data.capacidad_max,
-            color=data.color,
-            sucursal_id=final_sucursal_id # Se asocia a la sede
+            color=data.color
         )
         db.add(nueva)
         db.commit()
