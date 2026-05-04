@@ -371,6 +371,12 @@
     }
     .animate-scan-line { animation: scan-line 2.5s linear infinite; }
 
+    #filtro-clases-sucursal option {
+        background-color: #09090b; /* zinc-950 */
+        color: white;
+        padding: 10px;
+    }
+
     /* =================================================================
     PARCHE DE ADAPTABILIDAD MOBILE (PRIORIDAD 2 - APP-STYLE)
     ================================================================= */

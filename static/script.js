@@ -5129,7 +5129,10 @@ if (editorForm) {
 				const selectCl = document.getElementById('clase-sucursal-select');
 				if (selectCl) {
 					const currentValCl = selectCl.value;
-					selectCl.innerHTML = sucursales.map(s => `<option value="${s.id}">${s.sucursal.toUpperCase()}</option>`).join('');
+					// Agregamos clases de fondo oscuro y texto blanco a cada opción
+					selectCl.innerHTML = sucursales.map(s => 
+						`<option value="${s.id}" class="bg-zinc-900 text-white font-bold italic uppercase">${s.sucursal.toUpperCase()}</option>`
+					).join('');
 					if(currentValCl) selectCl.value = currentValCl;
 				}
 
@@ -5137,8 +5140,11 @@ if (editorForm) {
 				const selectFiltro = document.getElementById('filtro-clases-sucursal');
 				if (selectFiltro) {
 					const currentFiltro = selectFiltro.value || 'todas';
-					selectFiltro.innerHTML = '<option value="todas">TODAS LAS SEDES</option>' + 
-						sucursales.map(s => `<option value="${s.id}">${s.sucursal.toUpperCase()}</option>`).join('');
+					// Aplicamos el estilo oscuro tanto a la opción por defecto como a las sucursales
+					selectFiltro.innerHTML = '<option value="todas" class="bg-zinc-900 text-white font-bold italic uppercase">TODAS LAS SEDES</option>' + 
+						sucursales.map(s => 
+							`<option value="${s.id}" class="bg-zinc-900 text-white font-bold italic uppercase">${s.sucursal.toUpperCase()}</option>`
+						).join('');
 					selectFiltro.value = currentFiltro;
 				}
 
