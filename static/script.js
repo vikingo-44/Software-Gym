@@ -4145,27 +4145,52 @@ if (editorForm) {
 			reader.readAsDataURL(file);
 		}
 
-		// 1. CARGA: Trae los datos y activa el resto
+		// FUNCIÓN 1: La que llena el selector del modal
+		async function popularSucursalesModal(sucursalIdSeleccionada = null) {
+			const select = document.getElementById('clase-sucursal-select');
+			if (!select) return;
+
+			// Si el estado está vacío, esperamos a que carguen
+			if (!state.sucursales || state.sucursales.length === 0) {
+				await loadSucursales(); 
+			}
+
+			// Dibujamos las opciones (Sin vueltas)
+			select.innerHTML = state.sucursales.map(s => 
+				`<option value="${s.id}" ${parseInt(s.id) === parseInt(sucursalIdSeleccionada || state.user.sucursal_id) ? 'selected' : ''}>
+					${s.sucursal.toUpperCase()}
+				</option>`
+			).join('');
+		}
+
+		// 1. CARGA INICIAL: El motor que arranca todo
 		async function loadClases() {
-			const data = await apiFetch('/clases'); 
+			// Traemos las clases del servidor
+			const data = await apiFetch('/api/clases'); 
 			state.clases = Array.isArray(data) ? data : [];
 
-			// Llama al siguiente paso: el filtro
+			// CRÍTICO: Si no hay sucursales en memoria, las cargamos ANTES de filtrar
+			if (!state.sucursales || state.sucursales.length === 0) {
+				await loadSucursales();
+			}
+
+			// Una vez que tenemos clases y sucursales, disparamos el selector y el filtro
 			await renderFiltroSedesGestion(); 
 
-			// Refrescos visuales necesarios
+			// Refrescos visuales
 			if (window.lucide) lucide.createIcons();
 			if (document.getElementById('view-calendario')?.classList.contains('active')) renderCalendar();
 			applyPermissions();
 		}
 
-		// 2. SELECTOR: Crea el dropdown y pre-selecciona la sede del usuario
+		// 2. SELECTOR PRINCIPAL: Crea el dropdown de la vista de gestión
 		async function renderFiltroSedesGestion() {
 			const select = document.getElementById('filtro-clases-gestion');
 			if (!select) return;
 
+			// Re-chequeo de seguridad para sucursales
 			if (!state.sucursales || state.sucursales.length === 0) {
-				state.sucursales = await apiFetch('/sucursales');
+				state.sucursales = await apiFetch('/api/sucursales');
 			}
 
 			const isAdmin = (state.user?.rol_nombre === "Administrador" || state.user?.rol_nombre === "Supervisor");
@@ -4173,16 +4198,18 @@ if (editorForm) {
 			let options = isAdmin ? '<option value="TODAS">--- TODAS LAS SEDES ---</option>' : '';
 			
 			options += state.sucursales.map(s => 
-				`<option value="${s.id}" ${parseInt(s.id) === parseInt(state.user.sucursal_id) ? 'selected' : ''}>${s.sucursal.toUpperCase()}</option>`
+				`<option value="${s.id}" ${parseInt(s.id) === parseInt(state.user.sucursal_id) ? 'selected' : ''}>
+					${s.sucursal.toUpperCase()}
+				</option>`
 			).join('');
 
 			select.innerHTML = options;
 			
-			// Al terminar de cargar el select, ejecutamos el filtro con el valor inicial
+			// Ejecutamos el filtro inicial con el valor que quedó seleccionado
 			filtrarClasesGestion(select.value);
 		}
 
-		// 3. FILTRO: Separa las clases que coinciden con la sede
+		// 3. FILTRO LÓGICO: Separa las clases por sede sin perder datos "null"
 		function filtrarClasesGestion(sucursalId) {
 			const container = document.getElementById('clases-container');
 			if (!container || !state.clases) return;
@@ -4190,8 +4217,8 @@ if (editorForm) {
 			const filtradas = (sucursalId === "TODAS") 
 				? state.clases 
 				: state.clases.filter(c => {
-					// Si la clase no tiene sucursal_id (es null), la mostramos por defecto en la Sede 1 
-					// o en la sede del usuario para que no "desaparezca"
+					// Si la clase tiene sucursal_id lo usamos; si es null, 
+					// la asignamos a la sede del usuario para que no desaparezca de la vista.
 					const sId = c.sucursal_id ? parseInt(c.sucursal_id) : parseInt(state.user.sucursal_id);
 					return sId === parseInt(sucursalId);
 				});
@@ -4199,7 +4226,7 @@ if (editorForm) {
 			renderTarjetasClases(filtradas);
 		}
 
-		// 4. RENDER: Pone el HTML en el contenedor
+		// 4. RENDERIZADO: Dibuja las tarjetas en el HTML
 		function renderTarjetasClases(clasesAMostrar) {
 			const container = document.getElementById('clases-container');
 			if (!container) return;
@@ -4236,6 +4263,23 @@ if (editorForm) {
 			`).join('');
 
 			if (window.lucide) lucide.createIcons();
+		}
+
+		// 5. SELECTOR DE MODAL: Llena el dropdown interno del modal (Alta/Edición)
+		async function popularSucursalesModal(sucursalIdSeleccionada = null) {
+			const select = document.getElementById('clase-sucursal-select');
+			if (!select) return;
+
+			// Si el estado está vacío por alguna razón, forzamos la carga
+			if (!state.sucursales || state.sucursales.length === 0) {
+				await loadSucursales(); 
+			}
+
+			select.innerHTML = state.sucursales.map(s => 
+				`<option value="${s.id}" ${parseInt(s.id) === parseInt(sucursalIdSeleccionada || state.user.sucursal_id) ? 'selected' : ''}>
+					${s.sucursal.toUpperCase()}
+				</option>`
+			).join('');
 		}
 
 		async function loadProfesores() {
@@ -5014,26 +5058,6 @@ if (editorForm) {
 
 			addNewScheduleSlot();
 			openModal('modal-clase');
-		}
-
-		// ESTA ES LA DEFINICIÓN QUE TE FALTA
-		function popularSucursalesModal(sucursalIdSeleccionada = null) {
-			const select = document.getElementById('clase-sucursal-select');
-			if (!select) return;
-
-			// Si por algún motivo el state está vacío, intentamos usar lo que haya
-			const sedes = state.sucursales || [];
-
-			if (sedes.length === 0) {
-				select.innerHTML = '<option value="">Cargando sedes...</option>';
-				return;
-			}
-
-			select.innerHTML = sedes.map(s => 
-				`<option value="${s.id}" ${parseInt(s.id) === parseInt(sucursalIdSeleccionada || state.user.sucursal_id) ? 'selected' : ''}>
-					${s.sucursal.toUpperCase()}
-				</option>`
-			).join('');
 		}
 
 		async function loadProfesores() {
