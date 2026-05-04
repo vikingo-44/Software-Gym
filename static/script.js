@@ -4187,15 +4187,18 @@ if (editorForm) {
 			const container = document.getElementById('clases-container');
 			if (!container || !state.clases) return;
 
-			// Convertimos ambos a número (parseInt) para que la comparación sea real
-			// Ejemplo: parseInt("1") === parseInt(1) -> TRUE
 			const filtradas = (sucursalId === "TODAS") 
 				? state.clases 
-				: state.clases.filter(c => parseInt(c.sucursal_id) === parseInt(sucursalId));
+				: state.clases.filter(c => {
+					// Si la clase no tiene sucursal_id (es null), la mostramos por defecto en la Sede 1 
+					// o en la sede del usuario para que no "desaparezca"
+					const sId = c.sucursal_id ? parseInt(c.sucursal_id) : parseInt(state.user.sucursal_id);
+					return sId === parseInt(sucursalId);
+				});
 
 			renderTarjetasClases(filtradas);
 		}
-		
+
 		// 4. RENDER: Pone el HTML en el contenedor
 		function renderTarjetasClases(clasesAMostrar) {
 			const container = document.getElementById('clases-container');
@@ -4963,18 +4966,14 @@ if (editorForm) {
 		}
 
 		async function openEditClase(id) {
-			// 1. Buscamos la clase en el estado (usamos == por si el ID viene como string)
 			const c = state.clases.find(x => x.id == id); 
 			if(!c) return;
 
-			// 2. Cargamos datos auxiliares (Boxes y Sedes)
 			await loadBoxes(); 
-			
-			// NUEVO: Llenamos el selector de sucursales pasando el ID de la clase actual
-			// para que aparezca seleccionada su sede correspondiente
+
+			// Llenamos el selector pasando el ID de la sucursal de LA CLASE
 			popularSucursalesModal(c.sucursal_id);
 
-			// 3. Llenamos los campos básicos del modal
 			document.getElementById('cl-id').value = c.id; 
 			document.getElementById('modal-clase-title').innerText = "Editar: " + c.nombre;
 			document.getElementById('cl-nombre').value = c.nombre; 
@@ -4982,67 +4981,55 @@ if (editorForm) {
 			document.getElementById('cl-cupo').value = c.capacidad_max;
 			document.getElementById('cl-color').value = c.color || "#FF0000";
 			
-			// 4. Limpiamos y cargamos los horarios (Slots)
 			const slotsContainer = document.getElementById('cl-schedule-slots');
 			slotsContainer.innerHTML = "";
-
 			const horarios = Array.isArray(c.horarios_detalle) ? c.horarios_detalle : [];
 			if (horarios.length > 0) {
 				horarios.forEach(h => addNewScheduleSlot(h));
 			} else {
-				// Slot por defecto si no tiene horarios
 				addNewScheduleSlot({ dia: 1, horario: 7, coach: c.coach || "" });
 			}
 
-			// 5. Configuración de permisos para el botón Eliminar
 			const isAdmin = (state.user?.rol_nombre === "Administrador" || state.user?.rol_nombre === "Supervisor");
 			const delBtn = document.getElementById('btn-delete-clase'); 
-			
 			if(delBtn) {
-				// Solo mostramos el botón de borrar si es Admin/Supervisor
 				delBtn.classList.toggle('hidden', !isAdmin);
-				// Al borrar, pasamos loadClases como callback para que refresque y auto-filtre
 				delBtn.onclick = () => deleteRecord('clases', c.id, 'modal-clase', loadClases);
 			}
 
-			// 6. Abrir el modal físicamente
 			openModal('modal-clase');
 		}
 
-		function openNewClase() {
-			// 1. Limpiar el formulario y estados previos
+		async function openNewClase() {
 			document.getElementById('form-clase').reset();
 			document.getElementById('cl-id').value = "";
 			document.getElementById('cl-schedule-slots').innerHTML = "";
 			document.getElementById('modal-clase-title').innerText = "Nueva Clase";
 			
-			// 2. Cargar datos auxiliares (Boxes)
-			loadBoxes();
+			// 1. Cargamos boxes
+			await loadBoxes();
 
-			// 3. NUEVO: Llenar el selector de sucursales del modal
-			// Al no pasarle parámetros, seleccionará la sede del usuario logueado por defecto
+			// 2. Llenamos el selector de sedes (usa lo que ya está en el state)
 			popularSucursalesModal();
 
-			// 4. Agregar el primer slot de horario vacío
 			addNewScheduleSlot();
-
-			// 5. Abrir el modal
 			openModal('modal-clase');
 		}
 
 		// ESTA ES LA DEFINICIÓN QUE TE FALTA
 		function popularSucursalesModal(sucursalIdSeleccionada = null) {
 			const select = document.getElementById('clase-sucursal-select');
-			if (!select) {
-				console.error("No se encontró el elemento 'clase-sucursal-select' en el HTML");
-				return;
-			}
-			if (!state.sucursales || state.sucursales.length === 0) {
-				console.error("No hay sucursales cargadas en state.sucursales");
+			if (!select) return;
+
+			// Si por algún motivo el state está vacío, intentamos usar lo que haya
+			const sedes = state.sucursales || [];
+
+			if (sedes.length === 0) {
+				select.innerHTML = '<option value="">Cargando sedes...</option>';
 				return;
 			}
 
-			select.innerHTML = state.sucursales.map(s => 
+			select.innerHTML = sedes.map(s => 
 				`<option value="${s.id}" ${parseInt(s.id) === parseInt(sucursalIdSeleccionada || state.user.sucursal_id) ? 'selected' : ''}>
 					${s.sucursal.toUpperCase()}
 				</option>`
