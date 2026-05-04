@@ -363,6 +363,7 @@ class DiaEspecialCreate(BaseModel):
     fecha: str
     motivo: str
     abierto: bool = True
+    sucursal_id: int
 
 class ClaseFeriadoCreate(BaseModel):
     fecha: str
@@ -370,6 +371,7 @@ class ClaseFeriadoCreate(BaseModel):
     horario: float
     capacidad_max: int = 40
     color: str = "#FF0000"
+    sucursal_id: int
 
 # --- SCHEMAS RUTINAS (SINCRONIZADOS CON DB_SCHEMA.SQL) ---
 class SerieResponse(BaseModel):
