@@ -518,21 +518,23 @@
 				const cal = document.getElementById('calendar-grid');
 				if (!cal) return;
 
+				// Limpieza total antes de renderizar para evitar superposiciones
 				cal.innerHTML = "";
 				cal.className = "calendar-container min-w-[900px] h-[750px] overflow-y-auto custom-scrollbar grid grid-cols-[80px_repeat(6,1fr)] bg-white/[0.02]";
 				cal.style.gridAutoRows = "40px";
 
-				// 1. CARGA DE DATOS (Mantenemos tus peticiones al estado)
+				// 1. CARGA DE DATOS (Filtrados por la sede en visualización)
 				if (!state.clases || state.clases.length === 0) {
 					state.clases = await apiFetch('/clases');
 				}
-				if (!state.feriados) state.feriados = await apiFetch('/api/feriados') || [];
-				if (!state.clasesFeriado) state.clasesFeriado = await apiFetch('/api/clases-feriado') || [];
+				// Aseguramos que los feriados y clases especiales también respondan a la sede actual
+				const currentSucursalId = state.viewing_sucursal_id || state.user?.sucursal_id;
+				state.feriados = await apiFetch(`/feriados?sucursal_id=${currentSucursalId}`) || [];
+				state.clasesFeriado = await apiFetch(`/clases-feriado?sucursal_id=${currentSucursalId}`) || [];
 
 				const isAdminGlobal = (state.user?.rol_nombre === "Administrador" || state.user?.rol_nombre === "Supervisor");
-				const isProfesor = (state.user?.rol_nombre === "Profesor");
 				const esAlumno = (state.user?.rol_nombre === "Alumno");
-				const miSucursalId = state.viewing_sucursal_id || state.user?.sucursal_id;
+				const miSucursalId = currentSucursalId;
 
 				// Lógica de fechas
 				const hoy = new Date();
@@ -588,8 +590,8 @@
 						cell.style.height = "40px";
 						cell.className = `cal-cell relative border-b border-r border-white/5 hover:bg-white/5 transition-colors ${isClosed ? 'bg-black/40 pointer-events-none' : ''}`;
 
-						// Drag and Drop solo habilitado para los que pueden editar
-						if ((isAdminGlobal || !esAlumno) && !isClosed) {
+						// Drag and Drop solo habilitado para los roles con permiso de edición
+						if (isAdminGlobal && !isClosed) {
 							cell.ondragover = (e) => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; cell.classList.add('bg-red-600/10'); };
 							cell.ondragleave = () => cell.classList.remove('bg-red-600/10');
 							cell.ondrop = async (e) => {
@@ -598,7 +600,7 @@
 								const claseId = e.dataTransfer.getData("claseId");
 								const claseSucursal = e.dataTransfer.getData("claseSucursal");
 
-								// Bloqueo de seguridad: No podés soltar algo en una celda si no sos dueño o admin
+								// Validación hermética: Solo el Admin puede mover entre sedes si está visualizando otra sede
 								if (!isAdminGlobal && claseSucursal != miSucursalId) {
 									return showVikingToast("No podés mover clases de otra sucursal", true);
 								}
@@ -615,7 +617,8 @@
 									old_dia: parseInt(oldDia),
 									old_horario: parseFloat(oldHorario),
 									new_dia: newDia,
-									new_horario: newHorario
+									new_horario: newHorario,
+									sucursal_id: miSucursalId // Enviamos la sede actual
 								});
 								if (!res.error) {
 									showVikingToast("¡Turno Reubicado!");
@@ -630,22 +633,22 @@
 					}
 				}
 
-				// --- 4. RENDERIZADO DE CLASES ---
+				// --- 4. RENDERIZADO DE CONTENIDO (Clases y Feriados) ---
 				for (let d = 1; d <= 6; d++) {
 					const index = d - 1;
 					const fechaSlot = new Date(fechaLunes);
 					fechaSlot.setDate(fechaLunes.getDate() + index);
 					const fechaSlotStr = fechaSlot.toISOString().split('T')[0];
-					const infoFeriado = state.feriados?.find(f => f.fecha === fechaSlotStr);
+					
+					// Filtramos feriados de la sucursal actual
+					const infoFeriado = state.feriados?.find(f => f.fecha === fechaSlotStr && f.sucursal_id == miSucursalId);
 
 					if (infoFeriado) {
-						// Lógica Feriado (Simplificada para mantener el foco en sucursales)
 						const listaSegura = Array.isArray(state.clasesFeriado) ? state.clasesFeriado : [];
-						const clasesEspecialesHoy = listaSegura.filter(cf => cf.fecha === fechaSlotStr);
+						const clasesEspecialesHoy = listaSegura.filter(cf => cf.fecha === fechaSlotStr && cf.sucursal_id == miSucursalId);
 						clasesEspecialesHoy.forEach(c => {
 							pintarBadgeClase(c, d, c.horario, fechaSlotStr, true);
 						});
-						// Bloqueo de celdas vacías en feriado
 						for (let h = 7; h <= 21.5; h += 0.5) {
 							const cell = document.getElementById(`cell-${d}-${h.toString().replace('.', '_')}`);
 							if (cell && cell.innerHTML === "") {
@@ -654,10 +657,11 @@
 							}
 						}
 					} else {
-						// Lógica Normal
+						// Renderizamos solo clases que pertenezcan a la sucursal en vista
 						if (state.clases && Array.isArray(state.clases)) {
 							state.clases.forEach(c => {
-								// Filtro de Box
+								if (c.sucursal_id != miSucursalId) return; // Filtro hermético de sede
+
 								if (state.calendar.currentBox !== 'Principal') {
 									if (c.box_nombre !== state.calendar.currentBox) return;
 								} else if (c.box_nombre && c.box_nombre !== 'Principal') return;
@@ -673,15 +677,13 @@
 					}
 				}
 
-				// Función interna para pintar el badge con lógica de sucursal
+				// Función interna corregida para pintar el badge
 				function pintarBadgeClase(c, d, horario, fechaSlotStr, esEspecial, slotInfo = null) {
 					const hKey = horario.toString().replace('.', '_');
 					const cell = document.getElementById(`cell-${d}-${hKey}`);
 					if (!cell) return;
 
-					const esMiSede = (c.sucursal_id == miSucursalId || isAdminGlobal);
 					const colorBase = c.color || '#FF0000';
-					
 					const getTextColorClass = (hexColor) => {
 						if (!hexColor) return { text: 'text-white', bg: 'bg-white/20' };
 						const r = parseInt(hexColor.substr(1, 2), 16), g = parseInt(hexColor.substr(3, 2), 16), b = parseInt(hexColor.substr(5, 2), 16);
@@ -700,13 +702,12 @@
 					const estaLleno = cupoActual >= cupoMax;
 
 					const badge = document.createElement('div');
-					// Estilización: Si no es mi sede, aplicamos opacidad y borde punteado
-					badge.className = `absolute top-0.5 left-0.5 right-0.5 rounded-xl flex flex-col items-center justify-center text-center overflow-hidden z-20 p-1 shadow-xl transition-all ${!esMiSede ? 'opacity-40 border-2 border-dashed border-white/20' : ''}`;
+					badge.className = `absolute top-0.5 left-0.5 right-0.5 rounded-xl flex flex-col items-center justify-center text-center overflow-hidden z-20 p-1 shadow-xl transition-all`;
 					badge.style.height = "79px";
 					badge.style.backgroundColor = colorBase;
 
-					// Drag and drop solo si es mi sede o soy admin
-					if (esMiSede && !esAlumno && !esEspecial) {
+					// Drag and drop solo si soy Admin/Supervisor
+					if (isAdminGlobal && !esEspecial) {
 						badge.draggable = true;
 						badge.ondragstart = (e) => {
 							e.dataTransfer.setData("claseId", c.id);
@@ -723,7 +724,6 @@
 							<span class="text-[9px] font-black uppercase italic leading-[1.1] ${colores.text}">${c.nombre}</span>
 							<span class="text-[7px] font-bold uppercase opacity-80 ${colores.text}">${esEspecial ? 'ESPECIAL' : (slotInfo?.coach || 'STAFF')}</span>
 							<div class="mt-1 px-2 py-0.5 rounded-full text-[8px] font-black ${colores.bg} ${estaLleno ? 'text-red-500 bg-white' : colores.text}">${cupoActual}/${cupoMax}</div>
-							${!esMiSede ? '<span class="text-[6px] font-black text-white/50">OTRA SEDE</span>' : ''}
 						</div>`;
 
 					badge.onclick = (e) => {
@@ -731,13 +731,8 @@
 						if (esAlumno) {
 							if (estaLleno) showVikingToast("Cupo lleno", true);
 							else confirmarReservaVikinga(c, d, horario, fechaSlotStr);
-						} else {
-							// Solo abre edición si es mi sede o soy admin
-							if (esMiSede) {
-								openInscriptos(c.id, d, horario, fechaSlotStr);
-							} else {
-								showVikingToast("Acceso restringido: Clase de otra sucursal", true);
-							}
+						} else if (isAdminGlobal) {
+							openInscriptos(c.id, d, horario, fechaSlotStr);
 						}
 					};
 					cell.appendChild(badge);
@@ -746,35 +741,35 @@
 				if (window.lucide) lucide.createIcons();
 			}
 
-			// 1. Función para llenar el selector (llamala en tu initApp)
+			// 1. Función para llenar el selector (Llamala en tu initApp)
 			function setupCalendarFilters() {
 				const selector = document.getElementById('cal-sucursal-filter');
 				if (!selector) return;
 
-				// Llenamos con las sucursales que ya cargamos en el state
+				// Llenamos con las sucursales del state cargadas desde el backend
 				selector.innerHTML = state.sucursales.map(s => 
 					`<option value="${s.id}" ${s.id == state.user.sucursal_id ? 'selected' : ''}>${s.sucursal.toUpperCase()}</option>`
 				).join('');
 
-				// Si el usuario no es Admin/Supervisor, bloqueamos el selector
-				if (state.user.rol_nombre !== "Administrador" && state.user.rol_nombre !== "Supervisor") {
+				// Solo Administrador o Supervisor pueden cambiar la sede a visualizar
+				const tienePermisos = state.user?.rol_nombre === "Administrador" || state.user?.rol_nombre === "Supervisor";
+				if (!tienePermisos) {
 					selector.disabled = true;
 					selector.classList.add('opacity-50', 'cursor-not-allowed');
 				}
 			}
 
-			// 2. Función que reacciona al cambio
+			// 2. Función que reacciona al cambio de sucursal en el selector
 			async function cambiarSedeCalendario(sucursalId) {
-				showVikingToast("Cambiando vista de sede...");
+				if (typeof showVikingToast === 'function') showVikingToast("Cambiando vista de sede...");
 				
-				// IMPORTANTE: Para que el Admin vea otra sede, 
-				// tenemos que decirle al state qué sucursal estamos "simulando"
-				state.viewing_sucursal_id = sucursalId; 
+				// Seteamos la sucursal que estamos visualizando actualmente
+				state.viewing_sucursal_id = parseInt(sucursalId); 
 				
-				// Recargamos las clases (el backend filtrará si no somos admin, 
-				// o traerá todas si lo somos)
+				// Forzamos la recarga de clases. El backend devolverá las clases de la sucursal seleccionada.
 				state.clases = await apiFetch('/clases');
 				
+				// Refrescamos el calendario sin superposiciones
 				renderCalendar();
 			}
                 
@@ -6246,19 +6241,36 @@ if (editorForm) {
 		// 3. GUARDADO MASIVO (Manda todas las filas al servidor)
 		window.guardarClasesFeriadoBulk = async function() {
 			const fecha = document.getElementById('feriado-fecha').value;
+			// Tomamos la sede actual en visualización para asignar el feriado correctamente
+			const currentSucursalId = state.viewing_sucursal_id || state.user?.sucursal_id;
+
 			if (!fecha) return showVikingToast("Primero elegí la fecha", true);
+			if (!currentSucursalId) return showVikingToast("No se detectó la sucursal", true);
 
 			const filas = document.querySelectorAll('.fila-clase-feriado');
 			let errores = 0;
 
+			// Marcamos primero el día como feriado/especial para esa sucursal
+			const motivo = document.getElementById('feriado-motivo').value || "Día Especial";
+			await apiFetch('/feriados', 'POST', {
+				fecha: fecha,
+				motivo: motivo,
+				abierto: false,
+				sucursal_id: currentSucursalId
+			});
+
 			for (let fila of filas) {
+				const nombre = fila.querySelector('.clase-feriado-nombre').value;
+				if (!nombre) continue; // Saltamos filas vacías
+
 				const payload = {
 					fecha: fecha,
-					nombre: fila.querySelector('.clase-feriado-nombre').value,
+					nombre: nombre,
 					horario: parseFloat(fila.querySelector('.clase-feriado-hora').value),
-					profesor: fila.querySelector('.clase-feriado-profesor').value, // Asegurate de tener este campo en el modelo
+					profesor: fila.querySelector('.clase-feriado-profesor').value,
 					capacidad_max: 40,
-					color: "#FF0000"
+					color: "#FF0000",
+					sucursal_id: currentSucursalId // Hermetismo por sucursal
 				};
 
 				const res = await apiFetch('/clases-feriado', 'POST', payload);
@@ -6266,11 +6278,12 @@ if (editorForm) {
 			}
 
 			if (errores === 0) {
-				showVikingToast("¡Todas las clases cargadas!");
+				if (typeof showVikingToast === 'function') showVikingToast("¡Todas las clases cargadas!");
+				await loadFeriados();
 				await loadClasesFeriado();
 				renderCalendar();
 			} else {
-				showVikingToast(`Se cargaron algunas, pero hubo ${errores} errores`, true);
+				showVikingToast(`Hubo ${errores} errores al cargar`, true);
 			}
 		};
 
