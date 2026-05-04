@@ -5152,17 +5152,17 @@ if (editorForm) {
 		// --- GESTIÓN DE SUCURSALES ---
 		async function loadSucursales() {
 			try {
-				const response = await fetch(`${API_BASE}/sucursales`, {
-					headers: { 'Authorization': `Bearer ${localStorage.getItem('viking_token')}` }
-				});
+				// Usamos apiFetch para que maneje el token y la URL base correctamente
+				const sucursales = await apiFetch('/sucursales');
 				
-				if (!response.ok) throw new Error("Error en API");
-				const sucursales = await response.json();
+				if (sucursales.error) {
+					throw new Error(sucursales.error);
+				}
 
-				// --- 🆕 AGREGADO: Guardar en el estado para que el calendario lo use ---
+				// Guardamos en el estado global
 				state.sucursales = sucursales; 
 				
-				// --- 1. Renderizar Tarjetas en la vista de Sucursales (Tuyo, sin tocar) ---
+				// 1. Renderizar Tarjetas en la vista de Sucursales
 				const container = document.getElementById('sucursales-container');
 				if (container) {
 					if (sucursales.length === 0) {
@@ -5189,15 +5189,15 @@ if (editorForm) {
 					}
 				}
 
-				// Dentro de loadSucursales o renderFiltroSedesGestion
+				// 2. Llenar Select de Feriados
 				const feriadoSelect = document.getElementById('feriado-sucursal-select');
 				if (feriadoSelect) {
-					feriadoSelect.innerHTML = state.sucursales.map(s => 
+					feriadoSelect.innerHTML = sucursales.map(s => 
 						`<option value="${s.id}" ${s.id == state.user.sucursal_id ? 'selected' : ''}>${s.sucursal.toUpperCase()}</option>`
 					).join('');
 				}
 
-				// --- 2. Actualizar el Selector (Select) en el modal de alumnos (Tuyo, sin tocar) ---
+				// 3. Llenar Select de Alumnos
 				const selectAl = document.getElementById('al-sucursal');
 				if (selectAl) {
 					const currentVal = selectAl.value;
@@ -5206,10 +5206,9 @@ if (editorForm) {
 					if(currentVal) selectAl.value = currentVal;
 				}
 
-				// --- 🆕 3. AGREGADO: Actualizar el Selector en el modal de CLASES ---
+				// 4. Llenar Select de Clases (Modal)
 				const selectCl = document.getElementById('clase-sucursal-select');
 				if (selectCl) {
-					// Llenamos el select de clases con las mismas sucursales
 					selectCl.innerHTML = sucursales.map(s => `<option value="${s.id}">${s.sucursal.toUpperCase()}</option>`).join('');
 				}
 
@@ -6802,6 +6801,7 @@ if (editorForm) {
 		window.openModal = openModal;
 		window.closeModal = closeModal;
 
+		// 1. ABRIR MODAL: Prepara el formulario para una nueva sucursal
 		window.openModalSucursal = function() {
 			console.log("📂 Abriendo modal de sucursal...");
 			const form = document.getElementById('form-sucursal');
@@ -6813,46 +6813,58 @@ if (editorForm) {
 			const title = document.getElementById('modal-sucursal-title');
 			if (title) title.innerText = "Nueva Sucursal";
 			
-			const modal = document.getElementById('modal-sucursal');
-			if (modal) {
-				modal.classList.remove('hidden');
-				modal.style.display = 'flex'; 
+			// Usamos la función estándar para abrir el modal
+			if (typeof openModal === 'function') {
+				openModal('modal-sucursal');
+			} else {
+				const modal = document.getElementById('modal-sucursal');
+				if (modal) {
+					modal.classList.remove('hidden');
+					modal.style.display = 'flex'; 
+				}
 			}
 		};
 
-
+		// 2. GUARDAR SUCURSAL: Maneja el envío de datos al backend
 		window.handleSaveSucursal = async function(e) {
 			if(e) e.preventDefault();
 			
+			const id = document.getElementById('suc-id')?.value;
 			const data = {
 				sucursal: document.getElementById('suc-nombre').value,
 				direccion: document.getElementById('suc-direccion').value
 			};
 
-			try {
-				const response = await fetch(`${API_BASE}/sucursales`, {
-					method: 'POST',
-					headers: { 
-						'Content-Type': 'application/json',
-						'Authorization': `Bearer ${localStorage.getItem('viking_token')}`
-					},
-					body: JSON.stringify(data)
-				});
+			// Determinamos el método y endpoint (Sin /api duplicado)
+			const method = id ? 'PUT' : 'POST';
+			const endpoint = id ? `/sucursales/${id}` : '/sucursales';
 
-				if (response.ok) {
-					showToast("Sede Vikinga establecida");
+			try {
+				// Usamos apiFetch para automatizar tokens y URL base
+				const res = await apiFetch(endpoint, method, data);
+
+				if (!res.error) {
+					// Usamos tu showVikingToast si existe para mantener la estética
+					const toastFn = typeof showVikingToast === 'function' ? showVikingToast : showToast;
+					toastFn("Sede Vikinga establecida");
+
+					// Cerramos el modal
 					if (typeof closeModal === 'function') {
 						closeModal('modal-sucursal');
 					} else {
 						document.getElementById('modal-sucursal').classList.add('hidden');
 					}
-					loadSucursales();
+
+					// Recargamos la lista y el estado global
+					await loadSucursales();
 				} else {
-					const error = await response.json();
-					showToast(error.detail || "Error al crear sucursal", "error");
+					const toastFn = typeof showVikingToast === 'function' ? showVikingToast : showToast;
+					toastFn(res.error || "Error al procesar sucursal", true);
 				}
 			} catch (error) {
-				showToast("Error de conexión con el servidor", "error");
+				console.error("Error en handleSaveSucursal:", error);
+				const toastFn = typeof showVikingToast === 'function' ? showVikingToast : showToast;
+				toastFn("Error de conexión con el servidor", true);
 			}
 		};
 
