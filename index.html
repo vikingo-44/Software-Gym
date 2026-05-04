@@ -949,6 +949,13 @@
             <div id="view-clases" class="view-content">
                 <div class="flex justify-between items-center mb-8">
                     <h3 class="text-3xl font-black italic uppercase">Gestión de Clases</h3>
+					<div class="flex items-center gap-4 mb-8 bg-white/5 p-4 rounded-[2rem] border border-white/5">
+						<i data-lucide="filter" class="w-5 h-5 text-red-600"></i>
+						<select id="filtro-clases-sucursal" onchange="loadClases()" class="bg-transparent text-white font-black uppercase italic text-xs outline-none cursor-pointer">
+							<option value="todas" class="bg-zinc-900">TODAS LAS SEDES</option>
+							<!-- Se llena dinámicamente -->
+						</select>
+					</div>
                     <button id="btn-nueva-clase" onclick="openModalClase()" class="viking-bg-red text-black px-8 py-4 rounded-2xl font-black uppercase italic text-[12px] shadow-xl flex items-center gap-3">
                         <i data-lucide="presentation" class="w-4 h-4"></i> Alta de Clase
                     </button>
@@ -1393,10 +1400,12 @@
 				</div>
 
 				<!-- 🆕 CAMPO DE SUCURSAL (Agregado aquí) -->
-				<div class="w-full">
-					<label class="text-[9px] font-black text-white/30 uppercase tracking-widest italic ml-2">Seleccionar Sede</label>
-					<select id="clase-sucursal-select" class="viking-input mt-1" required onchange="loadBoxes()">
-						<!-- Se llena dinámicamente con las sucursales del sistema -->
+				<div class="flex flex-col gap-2 mb-4">
+					<label class="text-[10px] font-black uppercase italic text-white/40 tracking-widest px-2">
+						Sede Vikinga
+					</label>
+					<select id="clase-sucursal-select" class="viking-input w-full bg-black/40 border-white/10 text-white italic font-bold">
+						<!-- Se llena dinámicamente con loadSucursales() -->
 					</select>
 				</div>
 

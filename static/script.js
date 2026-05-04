@@ -3234,11 +3234,18 @@ if (editorForm) {
             // 1. Cargar datos necesarios del servidor
             // Traemos Stock, Reservas e Historial de Acceso real
             // IMPORTANTE: Respetamos tus strings de apiFetch tal cual los tenías
-            const [stockData, reservasData, accesoData] = await Promise.all([
-                apiFetch('/stock'),
-                apiFetch('/reservas'),
-                apiFetch('/acceso/historial')
-            ]);
+            const [stockData, reservasData, accesoData, cajaResumen] = await Promise.all([
+				apiFetch('/stock'),
+				apiFetch('/reservas'),
+				apiFetch('/acceso/historial'),
+				apiFetch('/caja/resumen') // Esto ahora vendrá filtrado por el backend
+			]);
+
+			// Actualiza los numeritos de la caja en el Dash
+			if (cajaResumen) {
+				const balanceEl = document.getElementById('dash-balance-hoy');
+				if (balanceEl) balanceEl.innerText = `$ ${cajaResumen.balance.toLocaleString()}`;
+			}
 
             const stock = Array.isArray(stockData) ? stockData : [];
             const reservas = Array.isArray(reservasData) ? reservasData : [];
@@ -4146,30 +4153,42 @@ if (editorForm) {
 		}
 
         async function loadClases() {
-			// 1. Pedir datos al servidor
 			const data = await apiFetch('/clases'); 
-			state.clases = Array.isArray(data) ? data : [];
+			const todasLasClases = Array.isArray(data) ? data : [];
 
-			// 2. Localizar el contenedor en el HTML
+			// Capturamos el filtro seleccionado en la interfaz
+			const filtroSede = document.getElementById('filtro-clases-sucursal')?.value || 'todas';
+			const rol = (state.user.rol_nombre || "").toLowerCase();
+
+			// FILTRO DE VISIBILIDAD COMBINADO
+			state.clases = todasLasClases.filter(c => {
+				// 🛡️ REGLA 1: Si NO soy administrador, estoy clavado a MI sucursal_id
+				if (rol !== 'administrador') {
+					return c.sucursal_id === state.user.sucursal_id;
+				}
+				
+				// 👑 REGLA 2: Si soy administrador, respondo al selector de filtro
+				if (filtroSede === 'todas') return true;
+				return c.sucursal_id == filtroSede;
+			});
+
 			const container = document.getElementById('clases-container');
 			if (!container) return;
 
-			// 3. Si no hay clases, mostrar mensaje de vacío
 			if (state.clases.length === 0) {
 				container.innerHTML = `
 					<div class="col-span-3 p-16 border border-dashed border-white/10 rounded-[3rem] text-center bg-white/2">
-						<p class="text-[12px] text-gray-600 font-black uppercase italic tracking-[0.2em]">No hay clases configuradas</p>
-						<p class="text-[10px] text-gray-700 mt-2 font-bold">Usa el botón "Alta de Clase" para comenzar.</p>
+						<i data-lucide="calendar-x-2" class="w-12 h-12 mx-auto mb-4 text-white/10"></i>
+						<p class="text-[12px] text-gray-600 font-black uppercase italic tracking-[0.2em]">No hay clases en esta sede</p>
+						<p class="text-[10px] text-gray-700 mt-2 font-bold">Cambia el filtro o usa "Alta de Clase".</p>
 					</div>`;
 			} else {
-				// 4. Dibujar las tarjetas (Solo con info técnica y botón de editar)
-				const canEdit = (state.user?.rol_nombre === "Administrador" || state.user?.rol_nombre === "Supervisor");
+				const canEdit = (rol === "administrador" || rol === "supervisor");
 				
 				container.innerHTML = state.clases.map(c => `
 					<div class="glass-card p-6 rounded-[2.5rem] border-white/5 flex flex-col justify-between hover:border-red-600/20 transition-all group">
 						<div>
 							<div class="flex items-center gap-4 mb-6">
-								<!-- Icono con el color de la clase -->
 								<div class="w-12 h-12 rounded-2xl flex items-center justify-center font-black text-black text-sm italic shadow-lg" style="background-color: ${c.color || '#FF0000'}">
 									${c.nombre ? c.nombre[0].toUpperCase() : '?'}
 								</div>
@@ -4182,7 +4201,6 @@ if (editorForm) {
 							</div>
 						</div>
 
-						<!-- Botón de edición: Solo aparece para Admin/Supervisor -->
 						${canEdit ? `
 						<button onclick="openEditClase(${c.id})" class="w-full py-4 bg-white/5 text-white rounded-2xl text-[10px] font-black uppercase italic hover:bg-white/10 hover:text-red-600 transition-all flex items-center justify-center gap-2 border border-white/5">
 							<i data-lucide="settings-2" class="w-3.5 h-3.5"></i>
@@ -4193,12 +4211,10 @@ if (editorForm) {
 				`).join('');
 			}
 
-			// 5. Refrescar iconos y otros componentes
 			lucide.createIcons();
 			if(document.getElementById('view-calendario')?.classList.contains('active')) renderCalendar();
 			applyPermissions();
 		}
-		
 		async function loadProfesores() {
 			// Esta función llena la memoria con los profesores para usarlos en el select de turnos
 			const res = await apiFetch('/profesores');
@@ -4863,6 +4879,13 @@ if (editorForm) {
 			document.getElementById('modal-clase-title').innerText = "Alta de Clase";
 			document.getElementById('btn-delete-clase').classList.add('hidden'); 
 			
+			const selectorSede = document.getElementById('clase-sucursal-select');
+				if (selectorSede) {
+					// Solo el Administrador/Dueño ve el selector para elegir dónde crear la clase
+					const esAdmin = state.user.rol_nombre.toLowerCase() === 'administrador';
+					selectorSede.closest('.flex-col').style.display = esAdmin ? 'flex' : 'none';
+				}
+
 			loadBoxes(); 
 			openModal('modal-clase'); 
 		}
@@ -4976,10 +4999,20 @@ if (editorForm) {
 			
 			const id = document.getElementById('cl-id').value;
 			const slotRows = document.querySelectorAll('.schedule-slot-row');
+			const sucursalSelect = document.getElementById('clase-sucursal-select');
 			
-			// Capturamos la sucursal seleccionada en el modal
-			const sucursalId = document.getElementById('clase-sucursal-select')?.value;
-			
+			// DETERMINACIÓN DE LA SEDE (RAÍZ DEL FILTRO)
+			// Si el usuario es Administrador, saca la sede del select. 
+			// Si no, la saca de su propio perfil de usuario (state.user.sucursal_id).
+			const rolActual = (state.user.rol_nombre || "").toLowerCase();
+			const sucursalFinal = (rolActual === 'administrador') 
+				? parseInt(sucursalSelect.value) 
+				: state.user.sucursal_id;
+
+			if(!sucursalFinal) {
+				return showVikingToast("ERROR: Debes seleccionar una sucursal", true);
+			}
+
 			const horarios_detalle = [];
 			slotRows.forEach(row => {
 				const diaEl = row.querySelector('.slot-dia');
@@ -5003,7 +5036,7 @@ if (editorForm) {
 			});
 
 			if(horarios_detalle.length === 0) {
-				return showVikingToast("Añade al menos un horario", true);
+				return showVikingToast("Añade al menos un turno para la clase", true);
 			}
 
 			const mainCoach = horarios_detalle[0].coach || "Staff";
@@ -5015,8 +5048,7 @@ if (editorForm) {
 				color: document.getElementById('cl-color').value,
 				capacidad_max: parseInt(document.getElementById('cl-cupo').value) || 20,
 				horarios_detalle: horarios_detalle,
-				// Agregamos el ID de sucursal al envío de datos
-				sucursal_id: sucursalId ? parseInt(sucursalId) : null 
+				sucursal_id: sucursalFinal // ASIGNACIÓN CRÍTICA
 			};
 
 			const method = id ? 'PUT' : 'POST';
@@ -5025,9 +5057,10 @@ if (editorForm) {
 			try {
 				const res = await apiFetch(endpoint, method, payload);
 				if(!res.error) {
-					showVikingToast(id ? "¡Clase Actualizada!" : "¡Clase Creada!");
+					showVikingToast(id ? "¡Sede Actualizada!" : "¡Clase Asignada a Sede!");
 					closeModal('modal-clase');
-					// Refrescamos el calendario para ver los cambios
+					// Refrescamos la lista de clases y el calendario
+					await loadClases(); 
 					if (typeof renderCalendar === 'function') renderCalendar();
 				} else {
 					showVikingToast("Error: " + JSON.stringify(res.detail || res.error), true);
@@ -5053,10 +5086,10 @@ if (editorForm) {
 				if (!response.ok) throw new Error("Error en API");
 				const sucursales = await response.json();
 
-				// --- 🆕 AGREGADO: Guardar en el estado para que el calendario lo use ---
+				// Guardar en el estado global
 				state.sucursales = sucursales; 
 				
-				// --- 1. Renderizar Tarjetas en la vista de Sucursales (Tuyo, sin tocar) ---
+				// --- 1. Renderizar Tarjetas en la vista de Sucursales ---
 				const container = document.getElementById('sucursales-container');
 				if (container) {
 					if (sucursales.length === 0) {
@@ -5083,7 +5116,7 @@ if (editorForm) {
 					}
 				}
 
-				// --- 2. Actualizar el Selector (Select) en el modal de alumnos (Tuyo, sin tocar) ---
+				// --- 2. Selector en modal de alumnos ---
 				const selectAl = document.getElementById('al-sucursal');
 				if (selectAl) {
 					const currentVal = selectAl.value;
@@ -5092,11 +5125,21 @@ if (editorForm) {
 					if(currentVal) selectAl.value = currentVal;
 				}
 
-				// --- 🆕 3. AGREGADO: Actualizar el Selector en el modal de CLASES ---
+				// --- 3. Selector en modal de CLASES (Para el ALTA) ---
 				const selectCl = document.getElementById('clase-sucursal-select');
 				if (selectCl) {
-					// Llenamos el select de clases con las mismas sucursales
+					const currentValCl = selectCl.value;
 					selectCl.innerHTML = sucursales.map(s => `<option value="${s.id}">${s.sucursal.toUpperCase()}</option>`).join('');
+					if(currentValCl) selectCl.value = currentValCl;
+				}
+
+				// --- 4. Selector de FILTRO en la sección CLASES (Para la VISTA) ---
+				const selectFiltro = document.getElementById('filtro-clases-sucursal');
+				if (selectFiltro) {
+					const currentFiltro = selectFiltro.value || 'todas';
+					selectFiltro.innerHTML = '<option value="todas">TODAS LAS SEDES</option>' + 
+						sucursales.map(s => `<option value="${s.id}">${s.sucursal.toUpperCase()}</option>`).join('');
+					selectFiltro.value = currentFiltro;
 				}
 
 				if(window.lucide) lucide.createIcons();

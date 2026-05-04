@@ -1196,13 +1196,15 @@ def delete_staff(id: int, db: Session = Depends(database.get_db), current_user =
     return {"status": "error", "message": "No se encontró el registro o pertenece a otra sede."}
 
 # --- STOCK (MODIFICADO PARA MULTISUCURSAL) ---
-
 @app.get("/api/stock", tags=["Inventario"])
 def get_stock(db: Session = Depends(database.get_db), current_user = Depends(get_current_user)):
-    """
-    Lista el stock filtrado por la sucursal del usuario logueado.
-    """
-    # Filtramos la consulta para que solo traiga lo que pertenece a la sucursal del staff
+    rol = current_user.perfil.nombre.lower()
+    
+    # El Admin ve TODO el inventario de la cadena
+    if rol in ["administrador", "dueño"]:
+        return db.query(models.Stock).all()
+    
+    # El resto solo ve lo de SU sucursal
     return db.query(models.Stock).filter(models.Stock.sucursal_id == current_user.sucursal_id).all()
 
 @app.post("/api/stock", tags=["Inventario"])
@@ -1343,20 +1345,23 @@ def get_todas_sucursales(db: Session = Depends(database.get_db), current_user = 
     return db.query(models.Sucursal).all()
 
 # --- CLASES ---
+# Modificá este endpoint en tu MAIN.PY
 @app.get("/api/clases", tags=["Clases"])
 def get_clases(db: Session = Depends(database.get_db), current_user = Depends(get_current_user)):
-    """Retorna las clases con lógica de sucursal y permisos de Admin."""
+    """Retorna las clases FILTRADAS por la sede del usuario logueado."""
     query = db.query(models.Clase).options(joinedload(models.Clase.box_rel))
     
-    # 🛡️ SI NO ES ADMIN/SUPERVISOR, FILTRAR POR SU SEDE
-    if current_user.perfil.nombre.lower() not in ["administrador", "supervisor"]:
+    # ⚔️ FILTRO RADICAL: Si no es Admin/Supervisor, solo ve su sede
+    # Si es Supervisor, también lo limitamos a su sede para que no gestione lo ajeno
+    rol = current_user.perfil.nombre.lower()
+    if rol != "administrador":
         query = query.filter(models.Clase.sucursal_id == current_user.sucursal_id)
     
     clases = query.all()
     
     result = []
     for c in clases:
-        c_dict = {
+        result.append({
             "id": c.id,
             "nombre": c.nombre,
             "coach": c.coach,
@@ -1365,9 +1370,8 @@ def get_clases(db: Session = Depends(database.get_db), current_user = Depends(ge
             "horarios_detalle": c.horarios_detalle,
             "box_id": c.box_id,
             "box_nombre": c.box_rel.nombre if c.box_rel else "Principal",
-            "sucursal_id": c.sucursal_id  # <--- ¡ESTO ES VITAL! Para el script.js
-        }
-        result.append(c_dict)
+            "sucursal_id": c.sucursal_id 
+        })
     return result
 
 @app.post("/api/clases", tags=["Clases"])
