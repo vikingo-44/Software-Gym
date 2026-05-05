@@ -518,19 +518,34 @@
 				const cal = document.getElementById('calendar-grid');
 				if (!cal) return;
 
+				// --- 🛡️ BLINDAJE DE SUCURSAL ---
+				// Obtenemos el ID de la sucursal. Si es null, abortamos para evitar el error 422.
+				const currentSucursalId = state.viewing_sucursal_id || state.user?.sucursal_id;
+				
+				if (!currentSucursalId) {
+					console.warn("⚠️ Abortando renderCalendar: No hay sucursal_id disponible todavía.");
+					return;
+				}
+
 				// Limpieza total antes de renderizar para evitar superposiciones
 				cal.innerHTML = "";
 				cal.className = "calendar-container min-w-[900px] h-[750px] overflow-y-auto custom-scrollbar grid grid-cols-[80px_repeat(6,1fr)] bg-white/[0.02]";
 				cal.style.gridAutoRows = "40px";
 
 				// 1. CARGA DE DATOS (Filtrados por la sede en visualización)
-				if (!state.clases || state.clases.length === 0) {
-					state.clases = await apiFetch('/clases');
+				try {
+					if (!state.clases || state.clases.length === 0) {
+						state.clases = await apiFetch('/clases');
+					}
+					
+					// Aseguramos que los feriados y clases especiales respondan a la sede actual
+					// Forzamos el parseo a Int para asegurar que no viaje basura en la URL
+					const sucursalQuery = parseInt(currentSucursalId);
+					state.feriados = await apiFetch(`/feriados?sucursal_id=${sucursalQuery}`) || [];
+					state.clasesFeriado = await apiFetch(`/clases-feriado?sucursal_id=${sucursalQuery}`) || [];
+				} catch (error) {
+					console.error("Error cargando datos del calendario:", error);
 				}
-				// Aseguramos que los feriados y clases especiales también respondan a la sede actual
-				const currentSucursalId = state.viewing_sucursal_id || state.user?.sucursal_id;
-				state.feriados = await apiFetch(`/feriados?sucursal_id=${currentSucursalId}`) || [];
-				state.clasesFeriado = await apiFetch(`/clases-feriado?sucursal_id=${currentSucursalId}`) || [];
 
 				const isAdminGlobal = (state.user?.rol_nombre === "Administrador" || state.user?.rol_nombre === "Supervisor");
 				const esAlumno = (state.user?.rol_nombre === "Alumno");
@@ -590,7 +605,6 @@
 						cell.style.height = "40px";
 						cell.className = `cal-cell relative border-b border-r border-white/5 hover:bg-white/5 transition-colors ${isClosed ? 'bg-black/40 pointer-events-none' : ''}`;
 
-						// Drag and Drop solo habilitado para los roles con permiso de edición
 						if (isAdminGlobal && !isClosed) {
 							cell.ondragover = (e) => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; cell.classList.add('bg-red-600/10'); };
 							cell.ondragleave = () => cell.classList.remove('bg-red-600/10');
@@ -600,7 +614,6 @@
 								const claseId = e.dataTransfer.getData("claseId");
 								const claseSucursal = e.dataTransfer.getData("claseSucursal");
 
-								// Validación hermética: Solo el Admin puede mover entre sedes si está visualizando otra sede
 								if (!isAdminGlobal && claseSucursal != miSucursalId) {
 									return showVikingToast("No podés mover clases de otra sucursal", true);
 								}
@@ -618,7 +631,7 @@
 									old_horario: parseFloat(oldHorario),
 									new_dia: newDia,
 									new_horario: newHorario,
-									sucursal_id: miSucursalId // Enviamos la sede actual
+									sucursal_id: miSucursalId
 								});
 								if (!res.error) {
 									showVikingToast("¡Turno Reubicado!");
@@ -640,7 +653,6 @@
 					fechaSlot.setDate(fechaLunes.getDate() + index);
 					const fechaSlotStr = fechaSlot.toISOString().split('T')[0];
 					
-					// Filtramos feriados de la sucursal actual
 					const infoFeriado = state.feriados?.find(f => 
 						f.fecha === fechaSlotStr && 
 						f.sucursal_id == currentSucursalId
@@ -660,10 +672,9 @@
 							}
 						}
 					} else {
-						// Renderizamos solo clases que pertenezcan a la sucursal en vista
 						if (state.clases && Array.isArray(state.clases)) {
 							state.clases.forEach(c => {
-								if (c.sucursal_id != miSucursalId) return; // Filtro hermético de sede
+								if (c.sucursal_id != miSucursalId) return;
 
 								if (state.calendar.currentBox !== 'Principal') {
 									if (c.box_nombre !== state.calendar.currentBox) return;
@@ -680,7 +691,6 @@
 					}
 				}
 
-				// Función interna corregida para pintar el badge
 				function pintarBadgeClase(c, d, horario, fechaSlotStr, esEspecial, slotInfo = null) {
 					const hKey = horario.toString().replace('.', '_');
 					const cell = document.getElementById(`cell-${d}-${hKey}`);
@@ -709,7 +719,6 @@
 					badge.style.height = "79px";
 					badge.style.backgroundColor = colorBase;
 
-					// Drag and drop solo si soy Admin/Supervisor
 					if (isAdminGlobal && !esEspecial) {
 						badge.draggable = true;
 						badge.ondragstart = (e) => {
@@ -2687,56 +2696,28 @@ if (editorForm) {
 				password: passInput.value
 			};
 
-			// --- BLOQUE DE USUARIO LOCAL (BYPASS) ---
-			// ---if (dni === "admin" && password === "1234") {
-				// ---console.log("🛡️ Acceso de emergencia local activado");
-				
-				// ---const mockUser = {
-				// ---  id: 999,
-				// ---  nombre_completo: "ADMINISTRADOR LOCAL",
-				// ---  dni: "admin",
-			// ---      rol_nombre: "Administrador",
-			// ---      access_token: "viking-bypass-token-local"
-			// ---  };
-
-				// Guardamos en memoria para que no se cierre con F5
-			// ---  localStorage.setItem('viking_token', mockUser.access_token);
-			// ---  localStorage.setItem('viking_user', JSON.stringify(mockUser));
-				
-			// ---  state.user = mockUser;
-
-				// Limpiamos y ocultamos el login
-			// ---  document.getElementById('login-overlay').style.display = 'none';
-			// ---  document.getElementById('sidebar').classList.remove('hidden');
-			// ---  document.getElementById('main-content').classList.remove('hidden');
-				
-				// Actualizamos la UI
-			// ---  if (document.getElementById('side-user-name')) document.getElementById('side-user-name').innerText = mockUser.nombre_completo;
-			// ---  if (document.getElementById('side-user-role')) document.getElementById('side-user-role').innerText = mockUser.rol_nombre;
-			// ---  if (document.getElementById('user-initials')) document.getElementById('user-initials').innerText = "AL";
-
-			// ---  switchView('dashboard');
-			// ---  if (window.lucide) lucide.createIcons();
-				
-			// ---  showVikingToast("MODO LOCAL ACTIVADO ⚔️");
-			// ---  return; // Detenemos aquí para que no intente ir a Render
-			// ---}
-			// --- FIN DEL BLOQUE LOCAL ---
-
 			try {
 				const res = await apiFetch('/login', 'POST', data);
 
 				if (res && !res.error) {
-					// --- NUEVO: GUARDAR TOKEN JWT ---
+					// --- GUARDAR TOKEN JWT ---
 					if (res.access_token) {
 						localStorage.setItem('viking_token', res.access_token);
 					}
 
-					// --- NUEVO: GUARDAR SESIÓN PARA F5 ---
+					// --- GUARDAR SESIÓN PARA F5 ---
 					localStorage.setItem('viking_user', JSON.stringify(res));
 
-					// Guardamos al usuario en el estado global
-					state.user = res;
+					// --- MEJORA CRÍTICA: ASEGURAR PERFIL COMPLETO ---
+					// Antes de arrancar la app, traemos el perfil fresco para asegurar que
+					// state.user tenga el sucursal_id correcto y evitar errores 422.
+					const profileRes = await apiFetch('/usuarios/me');
+					if (profileRes && !profileRes.error) {
+						state.user = profileRes;
+					} else {
+						// Si falla el /me, usamos los datos básicos del login como fallback
+						state.user = res;
+					}
 
 					// 2. Ocultar Login y mostrar App
 					document.getElementById('login-overlay').style.display = 'none';
@@ -2745,13 +2726,13 @@ if (editorForm) {
 
 					// 3. Cargar datos del usuario en la barra lateral
 					const elName = document.getElementById('side-user-name');
-					if (elName) elName.innerText = res.nombre_completo || "Usuario";
+					if (elName) elName.innerText = state.user.nombre_completo || "Usuario";
 
 					const elRole = document.getElementById('side-user-role');
-					if (elRole) elRole.innerText = res.rol_nombre || 'Staff';
+					if (elRole) elRole.innerText = state.user.rol_nombre || 'Staff';
 
 					// --- LÓGICA DE INICIALES ---
-					const name = res.nombre_completo || "Usuario Vikingo";
+					const name = state.user.nombre_completo || "Usuario Vikingo";
 					const initials = name.split(' ')
 						.filter(n => n)
 						.map(n => n[0])
@@ -2762,33 +2743,33 @@ if (editorForm) {
 					const elInitials = document.getElementById('user-initials');
 					if (elInitials) elInitials.innerText = initials;
 
-					// 4. Cargar datos maestros (Profesores, Clases, etc.)
+					// 4. Inicialización coordinada de la App
+					// Ahora que state.user está garantizado, initApp pedirá feriados con ID de sucursal.
 					await loadProfesores();
 
 					if (typeof initApp === 'function') {
 						await initApp();
 					} else {
-						if (typeof loadClases === 'function') loadClases();
-						if (typeof loadStock === 'function') loadStock();
+						if (typeof loadClases === 'function') await loadClases();
+						if (typeof loadStock === 'function') await loadStock();
 					}
 
 					// 5. Cambiar a la vista principal
 					switchView('dashboard');
 
-					// --- Renderizar Dashboard específico si es Alumno ---
-					if (res.rol_nombre === "Alumno" && typeof renderStudentDashboard === 'function') {
+					// --- Dashboards específicos ---
+					if (state.user.rol_nombre === "Alumno" && typeof renderStudentDashboard === 'function') {
 						await renderStudentDashboard();
 					}
 					
-					// --- MEJORA: Precarga de datos si es Profesor ---
-					if (res.rol_nombre === "Profesor" && typeof loadProfessorDashboard === 'function') {
+					if (state.user.rol_nombre === "Profesor" && typeof loadProfessorDashboard === 'function') {
 						await loadProfessorDashboard();
 					}
 
 					// Refrescar iconos
 					if (window.lucide) lucide.createIcons();
 
-					showVikingToast(`¡Bienvenido, ${res.nombre_completo.split(' ')[0]}!`);
+					showVikingToast(`¡Bienvenido, ${state.user.nombre_completo.split(' ')[0]}!`);
 
 				} else {
 					// Mostrar error si las credenciales fallan
@@ -6075,9 +6056,18 @@ if (editorForm) {
 		}
 
 		async function loadFeriados() {
+			// 🛡️ Capturamos la sucursal activa
+			const sucursalId = state.viewing_sucursal_id || state.user?.sucursal_id;
+			
+			// Si no hay ID de sucursal, no disparamos la petición para evitar el error 422
+			if (!sucursalId) {
+				state.feriados = [];
+				return;
+			}
+
 			try {
-				// QUITAMOS el /api porque apiFetch ya lo pone
-				const data = await apiFetch('/feriados'); 
+				// Enviamos el sucursal_id como parámetro de consulta (query param)
+				const data = await apiFetch(`/feriados?sucursal_id=${parseInt(sucursalId)}`); 
 				state.feriados = data || [];
 			} catch (e) {
 				console.error("Error cargando feriados:", e);
@@ -6086,9 +6076,18 @@ if (editorForm) {
 		}
 
 		async function loadClasesFeriado() {
+			// 🛡️ Capturamos la sucursal activa
+			const sucursalId = state.viewing_sucursal_id || state.user?.sucursal_id;
+			
+			// Si no hay ID de sucursal, no disparamos la petición para evitar el error 422
+			if (!sucursalId) {
+				state.clasesFeriado = [];
+				return;
+			}
+
 			try {
-				// QUITAMOS el /api aquí también
-				const data = await apiFetch('/clases-feriado'); 
+				// Enviamos el sucursal_id como parámetro de consulta (query param)
+				const data = await apiFetch(`/clases-feriado?sucursal_id=${parseInt(sucursalId)}`); 
 				state.clasesFeriado = data || [];
 			} catch (e) {
 				console.error("Error cargando clases de feriado:", e);
