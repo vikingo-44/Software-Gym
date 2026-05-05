@@ -2708,16 +2708,10 @@ if (editorForm) {
 					// --- GUARDAR SESIÓN PARA F5 ---
 					localStorage.setItem('viking_user', JSON.stringify(res));
 
-					// --- MEJORA CRÍTICA: ASEGURAR PERFIL COMPLETO ---
-					// Antes de arrancar la app, traemos el perfil fresco para asegurar que
-					// state.user tenga el sucursal_id correcto y evitar errores 422.
-					const profileRes = await apiFetch('/usuarios/me');
-					if (profileRes && !profileRes.error) {
-						state.user = profileRes;
-					} else {
-						// Si falla el /me, usamos los datos básicos del login como fallback
-						state.user = res;
-					}
+					// --- ASIGNACIÓN DIRECTA DEL ESTADO ---
+					// Usamos 'res' directamente porque ya contiene:
+					// nombre_completo, rol_nombre y sucursal_id.
+					state.user = res;
 
 					// 2. Ocultar Login y mostrar App
 					document.getElementById('login-overlay').style.display = 'none';
@@ -2744,7 +2738,7 @@ if (editorForm) {
 					if (elInitials) elInitials.innerText = initials;
 
 					// 4. Inicialización coordinada de la App
-					// Ahora que state.user está garantizado, initApp pedirá feriados con ID de sucursal.
+					// Al estar state.user ya definido arriba, initApp pedirá feriados con ID de sucursal.
 					await loadProfesores();
 
 					if (typeof initApp === 'function') {
