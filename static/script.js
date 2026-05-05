@@ -518,8 +518,15 @@
 				const cal = document.getElementById('calendar-grid');
 				if (!cal) return;
 
-				// --- 🛡️ BLINDAJE DE SUCURSAL ---
-				// Obtenemos el ID de la sucursal. Si es null, abortamos para evitar el error 422.
+				// --- 🛡️ BLINDAJE DE SUCURSAL (REFORZADO) ---
+				// Si state.user no está disponible, intentamos recuperarlo del storage local para no abortar.
+				if (!state.user) {
+					const savedUser = localStorage.getItem('viking_user');
+					if (savedUser) {
+						state.user = JSON.parse(savedUser);
+					}
+				}
+
 				const currentSucursalId = state.viewing_sucursal_id || state.user?.sucursal_id;
 				
 				if (!currentSucursalId) {
@@ -539,7 +546,6 @@
 					}
 					
 					// Aseguramos que los feriados y clases especiales respondan a la sede actual
-					// Forzamos el parseo a Int para asegurar que no viaje basura en la URL
 					const sucursalQuery = parseInt(currentSucursalId);
 					state.feriados = await apiFetch(`/feriados?sucursal_id=${sucursalQuery}`) || [];
 					state.clasesFeriado = await apiFetch(`/clases-feriado?sucursal_id=${sucursalQuery}`) || [];
@@ -691,6 +697,7 @@
 					}
 				}
 
+				// Función interna para los badges
 				function pintarBadgeClase(c, d, horario, fechaSlotStr, esEspecial, slotInfo = null) {
 					const hKey = horario.toString().replace('.', '_');
 					const cell = document.getElementById(`cell-${d}-${hKey}`);
@@ -2534,17 +2541,29 @@ if (editorForm) {
 			}
 		}
 
+		/**
+		* ACTUALIZACIÓN DE SWITCHVIEW
+		* Asegúrate de que al cambiar a esta vista, traiga los datos.
+		*/
+
+		if (typeof window.switchView === 'function' && !window.switchView.isVikingo) {
+				window.originalSwitchView = window.switchView;
+			}
+
+		const originalSwitchView = window.switchView;
+
         window.switchView = function(view) {
 			console.log(`🚀 Navegando a: ${view}`);
 
-			// 1. Ocultar todas las vistas de contenido
+			// --- 1. LÓGICA DE OCULTACIÓN (DOM) ---
+			// Ocultar todas las vistas de contenido
 			document.querySelectorAll('.view-content').forEach(v => {
 				v.classList.remove('active');
 				v.classList.add('hidden');
 				v.style.setProperty('display', 'none', 'important'); 
 			});
 
-			// 2. Ocultar layouts internos de Dashboard
+			// Ocultar layouts internos de Dashboard (Admin, Alumno, Profesor)
 			const layouts = ['admin-dashboard-layout', 'alumno-dashboard-layout', 'view-professor-dashboard'];
 			layouts.forEach(id => {
 				const l = document.getElementById(id);
@@ -2554,10 +2573,10 @@ if (editorForm) {
 				}
 			});
 
-			// 3. Desactivar botones de navegación
+			// Desactivar botones de navegación (clases active)
 			document.querySelectorAll('.nav-btn, .nav-item').forEach(b => b.classList.remove('active'));
 
-			// 4. Lógica de selección de Dashboard por ROL
+			// --- 2. SELECCIÓN DE TARGET POR ROL ---
 			let targetId = 'view-' + view;
 			const rol = (state.user?.rol_nombre || "").toLowerCase();
 
@@ -2582,26 +2601,29 @@ if (editorForm) {
 				}
 			}
 
-			// 5. Mostrar la vista final
+			// --- 3. MOSTRAR VISTA FINAL ---
 			const targetView = document.getElementById(targetId);
 			if (targetView) {
 				targetView.classList.add('active');
 				targetView.classList.remove('hidden');
+				// Dashboard usa block, el resto flex para alineación de tarjetas
 				targetView.style.setProperty('display', (view === 'dashboard' ? 'block' : 'flex'), 'important'); 
 			}
 
-			// 6. Activar botón de menú
+			// Activar botón en el menú
 			const n = document.getElementById('nav-' + view); 
 			if (n) n.classList.add('active');
 			
-			// 7. Cambiar título
+			// Cambiar título de la sección
 			const titleEl = document.getElementById('view-title');
 			if (titleEl) titleEl.innerText = view.replace('-', ' ').toUpperCase();
 
-			// 8. LÓGICA DE BLOQUEO POR VENCIMIENTO
+			// --- 4. LÓGICA DE NEGOCIO Y CARGA DE DATOS ---
+
+			// Membresías
 			if (typeof checkUserMembresia === 'function') checkUserMembresia(view);
 
-			// 9. CORRECCIÓN: Carga de datos en "Mi Perfil"
+			// Sección Mi Perfil
 			if (view === 'perfil' && state.user) {
 				const u = state.user;
 				const initials = u.nombre_completo ? u.nombre_completo.split(' ').filter(n => n).map(n => n[0]).join('').toUpperCase() : "??";
@@ -2638,41 +2660,57 @@ if (editorForm) {
 				}
 			}
 
-			// 10. Cargas de datos adicionales según sección
+			// Calendario y Panel de Feriados
 			if (view === 'calendario' && typeof renderCalendar === 'function') {
-                renderCalendar();
-
-                // --- LÓGICA DE VISIBILIDAD PARA EL PANEL DE FERIADOS ---
-                const isAdmin = (state.user?.rol_nombre === "Administrador" || state.user?.rol_nombre === "Supervisor");
-                const panelFeriados = document.getElementById('admin-feriados-panel');
-                
-                if (panelFeriados) {
-                    if (isAdmin) {
-                        panelFeriados.classList.remove('hidden');
-                        panelFeriados.style.setProperty('display', 'block', 'important');
-                    } else {
-                        panelFeriados.classList.add('hidden');
-                        panelFeriados.style.setProperty('display', 'none', 'important');
-                    }
-                }
-            }
-			if (view === 'cobrar' && typeof renderCobrar === 'function') renderCobrar();
-			if (view === 'acceso-virtual' && typeof renderAccesos === 'function') renderAccesos();
-			
-			// INTEGRACIÓN RUTINAS
-			if (view === 'rutinas') {
-				renderRutinas();
+				renderCalendar();
+				const isAdmin = (state.user?.rol_nombre === "Administrador" || state.user?.rol_nombre === "Supervisor");
+				const panelFeriados = document.getElementById('admin-feriados-panel');
+				if (panelFeriados) {
+					if (isAdmin) {
+						panelFeriados.classList.remove('hidden');
+						panelFeriados.style.setProperty('display', 'block', 'important');
+					} else {
+						panelFeriados.classList.add('hidden');
+						panelFeriados.style.setProperty('display', 'none', 'important');
+					}
+				}
 			}
 
+			// Cobros, Accesos, Rutinas
+			if (view === 'cobrar' && typeof renderCobrar === 'function') renderCobrar();
+			
+			if (view === 'acceso-virtual') {
+				if (typeof fetchAccesos === 'function') fetchAccesos();
+				else if (typeof renderAccesos === 'function') renderAccesos();
+			}
+			
+			if (view === 'rutinas' && typeof renderRutinas === 'function') renderRutinas();
+
+			// Alumnos (Sección y carga de sucursales para modales)
 			if (view === 'alumnos') {
 				if (typeof renderAlumnosSection === 'function') renderAlumnosSection();
+				if (typeof fetchAlumnos === 'function') fetchAlumnos();
+				if (typeof loadSucursales === 'function') loadSucursales();
 			}
 
-			// 11. Aplicar permisos de visibilidad final
+			// Sedes / Sucursales
+			if (view === 'sucursales' && typeof loadSucursales === 'function') {
+				loadSucursales();
+			}
+
+			// Inventario / Merca
+			if (view === 'merca' && typeof fetchStock === 'function') {
+				fetchStock();
+			}
+
+			// Permisos y Lucide
 			if (typeof applyPermissions === 'function') applyPermissions();
-			
-			if (window.lucide) lucide.createIcons();
+			if (window.lucide) {
+				setTimeout(() => lucide.createIcons(), 50);
+			}
 		};
+		window.switchView.isVikingo = true;
+		console.log("✅ Sistema de navegación extendido correctamente.");
 
 		async function handleLogin(e) {
 			// 1. Detener el refresco automático del formulario
@@ -5824,83 +5862,6 @@ if (editorForm) {
 				}
 			}
 
-			/**
-			 * 4. ACTUALIZACIÓN DE SWITCHVIEW
-			 * Asegúrate de que al cambiar a esta vista, traiga los datos.
-			 */
-
-			if (typeof window.switchView === 'function' && !window.switchView.isVikingo) {
-				window.originalSwitchView = window.switchView;
-			}
-
-			const originalSwitchView = window.switchView;
-
-			window.switchView = function(view) {
-				console.log(`🚀 Navegando a: ${view}`);
-
-				// 2. Ejecutamos primero la función original de navegación
-				if (typeof originalSwitchView === 'function') {
-					originalSwitchView(view);
-				} else {
-					console.warn("⚠️ originalSwitchView no definida. Solo se ejecutará lógica de carga.");
-					// Fallback para ocultar/mostrar vistas si no existe la original
-					document.querySelectorAll('.view-content').forEach(v => v.classList.add('hidden'));
-					const target = document.getElementById(`view-${view}`);
-					if(target) target.classList.remove('hidden');
-				}
-				
-				// 3. Lógica específica por vista (Carga de datos)
-				switch (view) {
-					case 'dashboard':
-						if (typeof loadDashboard === 'function') {
-							loadDashboard();
-						}
-						break;
-
-					case 'acceso-virtual':
-						if (typeof fetchAccesos === 'function') {
-							fetchAccesos();
-						} else if (typeof renderAccesos === 'function') {
-							renderAccesos();
-						}
-						break;
-
-					case 'alumnos':
-						// Aseguramos que la lista esté fresca y cargamos sucursales para el select del modal
-						if (typeof fetchAlumnos === 'function') {
-							fetchAlumnos();
-						}
-						if (typeof loadSucursales === 'function') {
-							loadSucursales();
-						}
-						break;
-
-					case 'sucursales':
-						// NUEVO: Cargamos la vista de sedes vikingas
-						if (typeof loadSucursales === 'function') {
-							loadSucursales();
-						}
-						break;
-
-					case 'merca':
-						if (typeof fetchStock === 'function') {
-							fetchStock();
-						}
-						break;
-
-					default:
-						break;
-				}
-
-				// 4. Refrescar iconos globales de Lucide si están presentes
-				if (window.lucide) {
-					setTimeout(() => lucide.createIcons(), 50);
-				}
-			};
-			window.switchView.isVikingo = true;
-
-			console.log("✅ Sistema de navegación extendido correctamente.");
-			
 			// FUNCIONES PARA EL MODAL DE MI QR
 			async function showMyQR() {
 				const user = state.user || JSON.parse(localStorage.getItem('user'));
