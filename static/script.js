@@ -2713,7 +2713,6 @@ if (editorForm) {
 		console.log("✅ Sistema de navegación extendido correctamente.");
 
 		async function handleLogin(e) {
-			// 1. Detener el refresco automático del formulario
 			if (e && e.preventDefault) e.preventDefault();
 
 			const dniInput = document.getElementById('login-dni');
@@ -2723,7 +2722,6 @@ if (editorForm) {
 
 			if (!dniInput || !passInput) return;
 
-			// Feedback visual de carga
 			if (loginBtn) {
 				loginBtn.disabled = true;
 				loginBtn.innerText = "VERIFICANDO...";
@@ -2738,58 +2736,47 @@ if (editorForm) {
 				const res = await apiFetch('/login', 'POST', data);
 
 				if (res && !res.error) {
-					// --- GUARDAR TOKEN JWT ---
+					// 1. SETEAR EL ESTADO GLOBAL DE INMEDIATO
+					// Esto garantiza que el sucursal_id esté presente antes de cualquier carga
+					state.user = res; 
+
+					// 2. GUARDAR EN STORAGE
 					if (res.access_token) {
 						localStorage.setItem('viking_token', res.access_token);
 					}
-
-					// --- GUARDAR SESIÓN PARA F5 ---
 					localStorage.setItem('viking_user', JSON.stringify(res));
 
-					// --- ASIGNACIÓN DIRECTA DEL ESTADO ---
-					// Usamos 'res' directamente porque ya contiene:
-					// nombre_completo, rol_nombre y sucursal_id.
-					state.user = res;
-
-					// 2. Ocultar Login y mostrar App
+					// 3. UI Y SIDEBAR (Usamos state.user directamente)
 					document.getElementById('login-overlay').style.display = 'none';
 					document.getElementById('sidebar').classList.remove('hidden');
 					document.getElementById('main-content').classList.remove('hidden');
 
-					// 3. Cargar datos del usuario en la barra lateral
 					const elName = document.getElementById('side-user-name');
 					if (elName) elName.innerText = state.user.nombre_completo || "Usuario";
 
 					const elRole = document.getElementById('side-user-role');
 					if (elRole) elRole.innerText = state.user.rol_nombre || 'Staff';
 
-					// --- LÓGICA DE INICIALES ---
+					// Iniciales
 					const name = state.user.nombre_completo || "Usuario Vikingo";
-					const initials = name.split(' ')
-						.filter(n => n)
-						.map(n => n[0])
-						.join('')
-						.toUpperCase()
-						.substring(0, 2);
-
+					const initials = name.split(' ').filter(n => n).map(n => n[0]).join('').toUpperCase().substring(0, 2);
 					const elInitials = document.getElementById('user-initials');
 					if (elInitials) elInitials.innerText = initials;
 
-					// 4. Inicialización coordinada de la App
-					// Al estar state.user ya definido arriba, initApp pedirá feriados con ID de sucursal.
+					// 4. CARGA SECUENCIAL
+					// Forzamos el await para que no renderice el calendario sin datos
 					await loadProfesores();
 
 					if (typeof initApp === 'function') {
-						await initApp();
+						await initApp(); 
 					} else {
 						if (typeof loadClases === 'function') await loadClases();
 						if (typeof loadStock === 'function') await loadStock();
 					}
 
-					// 5. Cambiar a la vista principal
+					// 5. NAVEGACIÓN
 					switchView('dashboard');
 
-					// --- Dashboards específicos ---
 					if (state.user.rol_nombre === "Alumno" && typeof renderStudentDashboard === 'function') {
 						await renderStudentDashboard();
 					}
@@ -2798,13 +2785,10 @@ if (editorForm) {
 						await loadProfessorDashboard();
 					}
 
-					// Refrescar iconos
 					if (window.lucide) lucide.createIcons();
-
 					showVikingToast(`¡Bienvenido, ${state.user.nombre_completo.split(' ')[0]}!`);
 
 				} else {
-					// Mostrar error si las credenciales fallan
 					if (errorDiv) {
 						errorDiv.innerText = res.error || "Credenciales incorrectas";
 						errorDiv.classList.remove('hidden');
@@ -2815,8 +2799,8 @@ if (editorForm) {
 					}
 				}
 			} catch (err) {
-				console.error("Error en el proceso de login:", err);
-				showVikingToast("Error de conexión con el servidor", true);
+				console.error("Error en el login:", err);
+				showVikingToast("Error de conexión", true);
 				if (loginBtn) {
 					loginBtn.disabled = false;
 					loginBtn.innerText = "Ingresar";
@@ -3214,8 +3198,9 @@ if (editorForm) {
 			
         async function initApp() {
 			try {
+				// 1. Carga masiva de datos maestros
 				await Promise.all([
-					loadSucursales(), // <--- CAMBIO CLAVE: Ejecuta la lógica completa de carga y renderizado
+					loadSucursales(), 
 					fetchAlumnos(), 
 					loadStaff(), 
 					loadPlanes(), 
@@ -3224,17 +3209,21 @@ if (editorForm) {
 					fetchReservas(), 
 					loadDashboard(), 
 					loadMusculacionMetadata(), 
-					loadCaja(),
-					loadFeriados().catch(e => console.error("Error en feriados")), 
-					loadClasesFeriado().catch(e => console.error("Error en clases feriado"))
+					loadCaja()
+					// loadFeriados y loadClasesFeriado se gestionan dentro de renderCalendar
 				]);
 				
-				// Setup inicial del filtro del calendario
-				if (typeof setupCalendarFilters === 'function') setupCalendarFilters();
+				// 2. Configuración de UI del calendario
+				if (typeof setupCalendarFilters === 'function') {
+					setupCalendarFilters();
+				}
 				
-				renderCalendar();
+				// 3. Renderizado final (asegurando que sea asíncrono)
+				await renderCalendar();
+
 			} catch (error) {
-				console.error("Error crítico:", error);
+				console.error("Error crítico en initApp:", error);
+				// Intentamos renderizar aunque falle algo para no dejar la pantalla en blanco
 				renderCalendar();
 			}
 		}
