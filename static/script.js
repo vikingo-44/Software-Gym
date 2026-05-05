@@ -6153,30 +6153,48 @@ if (editorForm) {
 			const nombre = document.getElementById('clase-feriado-nombre').value;
 			const horario = document.getElementById('clase-feriado-hora').value;
 			const cupo = document.getElementById('clase-feriado-cupo').value;
+			
+			// 🛡️ CAPTURA DE SEDE: 
+			// Priorizamos la sede que el Admin está viendo en el calendario. 
+			// Si no hay una vista específica (viewing_sucursal_id), usamos la del login.
+			const sucursalId = state.viewing_sucursal_id || state.user?.sucursal_id;
 
+			// Validación de datos y sucursal
 			if (!fecha || !nombre || !horario) {
 				showVikingToast("Falta fecha, nombre u horario", true);
 				return;
 			}
 
+			if (!sucursalId) {
+				showVikingToast("Error: No se detectó la sucursal activa", true);
+				return;
+			}
+
+			// Enviamos el payload incluyendo sucursal_id para evitar el NULL en la DB
 			const res = await apiFetch('/clases-feriado', 'POST', {
 				fecha: fecha,
 				nombre: nombre,
 				horario: parseFloat(horario),
-				capacidad_max: parseInt(cupo),
-				color: "#FF0000" // O el color que prefieras
+				capacidad_max: parseInt(cupo) || 40,
+				color: "#FF0000",
+				sucursal_id: parseInt(sucursalId) // <--- ASIGNACIÓN CRÍTICA
 			});
 
 			if (!res.error) {
-				showVikingToast("¡Clase especial cargada!");
+				showVikingToast("¡Clase especial cargada en esta sede!");
+				
+				// Limpiamos los campos específicos del formulario
 				document.getElementById('clase-feriado-nombre').value = "";
 				document.getElementById('clase-feriado-hora').value = "";
+				const cupoEl = document.getElementById('clase-feriado-cupo');
+				if(cupoEl) cupoEl.value = "40"; 
 				
-				// Recargamos y dibujamos
+				// Recargamos los datos del estado filtrados por sede y redibujamos
 				await loadClasesFeriado();
 				renderCalendar();
 			} else {
-				showVikingToast("Error: " + res.error, true);
+				// Mostramos el detalle del error que venga del backend
+				showVikingToast("Error: " + (res.detail || res.error), true);
 			}
 		}
 		window.crearClaseFeriadoVikinga = crearClaseFeriadoVikinga;

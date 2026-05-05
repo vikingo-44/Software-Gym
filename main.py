@@ -1521,31 +1521,47 @@ def create_feriado(data: dict, db: Session = Depends(database.get_db), current_u
 
 # 2. LAS CLASES QUE SE DAN ESE DÍA (TABLA: clases_feriado)
 @app.get("/api/clases-feriado", tags=["Feriados"])
-def get_clases_feriado(fecha: Optional[str] = None, db: Session = Depends(database.get_db)):
+def get_clases_feriado(fecha: Optional[str] = None, sucursal_id: Optional[int] = None, db: Session = Depends(database.get_db), current_user = Depends(get_current_user)):
     query = db.query(models.ClaseFeriado)
+    
+    # 🛡️ FILTRO DE SEDE: 
+    # 1. Si viene un sucursal_id por parámetro (Admin viendo otra sede), filtramos por ese.
+    # 2. Si no viene y no es Admin, filtramos por la sede del usuario.
+    # 3. Si es Admin y no viene parámetro, traemos todas (o podés forzar una).
+    
+    target_sede = sucursal_id if sucursal_id else current_user.sucursal_id
+    
+    if current_user.perfil.nombre.lower() != "administrador" or target_sede:
+        query = query.filter(models.ClaseFeriado.sucursal_id == target_sede)
+
     if fecha:
         try:
             fecha_dt = datetime.strptime(fecha, "%Y-%m-%d").date()
             query = query.filter(models.ClaseFeriado.fecha == fecha_dt)
         except:
             pass
+            
     return query.all()
 
 @app.post("/api/clases-feriado", tags=["Feriados"])
-def create_clase_feriado(data: ClaseFeriadoCreate, db: Session = Depends(database.get_db)):
+def create_clase_feriado(data: ClaseFeriadoCreate, db: Session = Depends(database.get_db), current_user = Depends(get_current_user)):
     try:
         fecha_dt = datetime.strptime(data.fecha, "%Y-%m-%d").date()
         
+        # ⚔️ CAPTURA DE SEDE: Si no viene en el data, usamos la del usuario
+        sede_id = data.sucursal_id if data.sucursal_id else current_user.sucursal_id
+
         nueva = models.ClaseFeriado(
             fecha=fecha_dt, 
             nombre=data.nombre, 
             horario=data.horario, 
             capacidad_max=data.capacidad_max,
-            color=data.color
+            color=data.color,
+            sucursal_id=sede_id  # <--- ESTO ES LO QUE TE FALTA PARA QUE NO SEA NULL
         )
         db.add(nueva)
         db.commit()
-        return {"status": "success"}
+        return {"status": "success", "message": "Clase especial creada en sede"}
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=400, detail=str(e))
