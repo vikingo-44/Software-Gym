@@ -3490,14 +3490,14 @@ if (editorForm) {
 
 			const isAdminGlobal = (state.user?.rol_nombre === "Administrador" || state.user?.rol_nombre === "Supervisor");
 			
-			// 2. Referencias a los filtros de sucursal
+			// 2. Manejo de Filtros por Sucursal
 			const profFilter = document.getElementById('filter-sucursal-profesores');
 			const admFilter = document.getElementById('filter-sucursal-administrativos');
 
-			// Función auxiliar para poblar los selects y mostrar la barra si es Admin
-			const setupFilter = (selectEl) => {
+			// Función interna para poblar los selectores si están vacíos
+			const setupFilterOptions = (selectEl) => {
 				if (selectEl) {
-					// Poblar con sucursales si está vacío (dejando la opción "Todas")
+					// Si el select solo tiene la opción "Todas", cargamos las sedes de state.sucursales
 					if (selectEl.options.length <= 1 && state.sucursales) {
 						state.sucursales.forEach(s => {
 							const opt = document.createElement('option');
@@ -3507,31 +3507,31 @@ if (editorForm) {
 							selectEl.appendChild(opt);
 						});
 					}
-					// Mostrar el contenedor del filtro solo si tiene permisos
+					// Mostramos el contenedor del filtro solo si es Admin/Supervisor
 					if (isAdminGlobal) {
 						selectEl.parentElement.classList.remove('hidden');
 					}
 				}
 			};
 
-			setupFilter(profFilter);
-			setupFilter(admFilter);
+			setupFilterOptions(profFilter);
+			setupFilterOptions(admFilter);
 
-			// 3. Aplicar filtrado según el selector de cada vista
-			let profesoresData = Array.isArray(p) ? p : [];
-			let administrativosData = Array.isArray(a) ? a : [];
+			// 3. Aplicar filtrado a los datos según la selección de cada página
+			let profesoresFiltrados = Array.isArray(p) ? p : [];
+			let administrativosFiltrados = Array.isArray(a) ? a : [];
 
 			if (profFilter && profFilter.value !== 'all') {
-				profesoresData = profesoresData.filter(u => u.sucursal_id == profFilter.value);
+				profesoresFiltrados = profesoresFiltrados.filter(u => u.sucursal_id == profFilter.value);
 			}
 			
 			if (admFilter && admFilter.value !== 'all') {
-				administrativosData = administrativosData.filter(u => u.sucursal_id == admFilter.value);
+				administrativosFiltrados = administrativosFiltrados.filter(u => u.sucursal_id == admFilter.value);
 			}
 
-			// Guardamos en el estado los datos filtrados para el renderizado
-			state.profesores = profesoresData;
-			state.administrativos = administrativosData;
+			// Guardamos en el estado los datos filtrados para que el renderizado use estos
+			state.profesores = profesoresFiltrados;
+			state.administrativos = administrativosFiltrados;
 
 			// 4. TRANSFORMACIÓN VISUAL: PROFESORES
 			const profTable = document.querySelector('#view-profesores table');
@@ -3547,7 +3547,11 @@ if (editorForm) {
 
 			if (profContainer) {
 				if (state.profesores.length === 0) {
-					profContainer.innerHTML = '<div class="text-center py-10"><i data-lucide="user-x" class="w-12 h-12 text-gray-600 mx-auto mb-4"></i><p class="text-gray-500 italic">No hay profesores para esta sede.</p></div>';
+					profContainer.innerHTML = `
+						<div class="text-center py-10">
+							<i data-lucide="user-x" class="w-12 h-12 text-gray-600 mx-auto mb-4"></i>
+							<p class="text-gray-500 italic">No hay profesores en esta sede.</p>
+						</div>`;
 				} else {
 					profContainer.innerHTML = state.profesores.map(u => createStaffRow(u, 'Profesor')).join('');
 				}
@@ -3567,21 +3571,26 @@ if (editorForm) {
 
 			if (admContainer) {
 				if (state.administrativos.length === 0) {
-					admContainer.innerHTML = '<div class="text-center py-10"><i data-lucide="shield-alert" class="w-12 h-12 text-gray-600 mx-auto mb-4"></i><p class="text-gray-500 italic">No hay administrativos para esta sede.</p></div>';
+					admContainer.innerHTML = `
+						<div class="text-center py-10">
+							<i data-lucide="shield-alert" class="w-12 h-12 text-gray-600 mx-auto mb-4"></i>
+							<p class="text-gray-500 italic">No hay administrativos en esta sede.</p>
+						</div>`;
 				} else {
 					admContainer.innerHTML = state.administrativos.map(u => createStaffRow(u, 'Administracion')).join('');
 				}
 			}
 
-			// 6. Actualizar selectores en modales (basado en la lista completa o filtrada según prefieras)
+			// 6. Actualizar selectores en modales (como en crear clase)
 			const coachSelect = document.getElementById('cl-coach-select');
 			if (coachSelect) {
 				coachSelect.innerHTML = '<option value="">Seleccionar Coach</option>' + 
 					state.profesores.map(x => `<option value="${x.nombre_completo}">${x.nombre_completo}</option>`).join('');
 			}
 
+			// Refrescar iconos y permisos
 			if (window.lucide) lucide.createIcons();
-			applyPermissions(); // Asegura visibilidad de botones según rol
+			applyPermissions(); 
 		}
 
 			// --- NUEVA FUNCIÓN AUXILIAR PARA CREAR TARJETAS DE STAFF ---
