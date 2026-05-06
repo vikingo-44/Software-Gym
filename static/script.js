@@ -3549,7 +3549,9 @@ if (editorForm) {
 				const icon = type === 'Profesor' ? 'dumbbell' : 'shield-check';
 
 				// Buscamos el nombre de la sucursal en el estado global si solo tenemos el ID
-				const sucursalNombre = u.sucursal_nombre || (state.sucursales?.find(s => s.id == u.sucursal_id)?.nombre) || "Sede No Asignada";
+				const sucursalNombre = u.sucursal_nombre || 
+				(state.sucursales?.find(s => String(s.id) === String(u.sucursal_id))?.nombre) || 
+				"Sede No Asignada";
 
 				return `
 				<div class="glass-card p-4 rounded-3xl border-white/5 flex flex-col md:flex-row md:items-center gap-4 hover:border-red-600/20 transition-all group relative overflow-hidden">
