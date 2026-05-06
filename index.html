@@ -769,12 +769,6 @@
             <div id="view-profesores" class="view-content">
                 <div class="flex justify-between items-center mb-8">
                     <h3 class="text-3xl font-black italic uppercase">Personal de Profesores</h3>
-					<div class="staff-filter-bar mb-6 flex items-center gap-4 bg-white/5 p-4 rounded-2xl border border-white/10 hidden">
-						<i data-lucide="filter" class="w-4 h-4 text-red-600"></i>
-						<select id="filter-sucursal-profesores" onchange="loadStaff()" class="bg-transparent text-white text-[10px] font-black uppercase italic outline-none cursor-pointer">
-							<option value="all" class="bg-black">TODAS LAS SEDES</option>
-						</select>
-					</div>
                     <button id="btn-nuevo-prof" onclick="openModalStaff('Profesor')" class="viking-bg-red text-black px-8 py-4 rounded-2xl font-black uppercase italic text-[12px] shadow-xl flex items-center gap-3">
                         <i data-lucide="user-plus" class="w-4 h-4"></i> Alta Profesor
                     </button>
@@ -799,12 +793,6 @@
             <div id="view-administrativos" class="view-content">
                 <div class="flex justify-between items-center mb-8">
                     <h3 class="text-3xl font-black italic uppercase">Personal Administrativo</h3>
-					<div class="staff-filter-bar mb-6 flex items-center gap-4 bg-white/5 p-4 rounded-2xl border border-white/10 hidden">
-						<i data-lucide="filter" class="w-4 h-4 text-red-600"></i>
-						<select id="filter-sucursal-administrativos" onchange="loadStaff()" class="bg-transparent text-white text-[10px] font-black uppercase italic outline-none cursor-pointer">
-							<option value="all" class="bg-black">TODAS LAS SEDES</option>
-						</select>
-					</div>
                     <button id="btn-nuevo-adm" onclick="openModalStaff('Administracion')" class="viking-bg-red text-black px-8 py-4 rounded-2xl font-black uppercase italic text-[12px] shadow-xl flex items-center gap-3">
                         <i data-lucide="shield-plus" class="w-4 h-4"></i> Alta Administrativo
                     </button>

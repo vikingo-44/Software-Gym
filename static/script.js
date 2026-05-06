@@ -657,10 +657,7 @@
 					const index = d - 1;
 					const fechaSlot = new Date(fechaLunes);
 					fechaSlot.setDate(fechaLunes.getDate() + index);
-					const yyyy = fechaSlot.getFullYear();
-					const mm = String(fechaSlot.getMonth() + 1).padStart(2, '0');
-					const dd = String(fechaSlot.getDate()).padStart(2, '0');
-					const fechaSlotStr = `${yyyy}-${mm}-${dd}`;
+					const fechaSlotStr = fechaSlot.toISOString().split('T')[0];
 					
 					const infoFeriado = state.feriados?.find(f => 
 						f.fecha === fechaSlotStr && 
@@ -3482,62 +3479,20 @@ if (editorForm) {
 
 		// --- REEMPLAZA TU FUNCIÓN loadStaff POR ESTA NUEVA VERSIÓN VISUAL ---
 		async function loadStaff() {
-			// 1. Obtener datos del servidor
+			// 1. Obtener datos
 			const [p, a] = await Promise.all([
 				apiFetch('/profesores'),
 				apiFetch('/administrativos')
 			]);
+			state.profesores = Array.isArray(p) ? p : [];
+			state.administrativos = Array.isArray(a) ? a : [];
 
-			const isAdminGlobal = (state.user?.rol_nombre === "Administrador" || state.user?.rol_nombre === "Supervisor");
-			
-			// 2. Manejo de Filtros por Sucursal
-			const profFilter = document.getElementById('filter-sucursal-profesores');
-			const admFilter = document.getElementById('filter-sucursal-administrativos');
-
-			// Función interna para poblar los selectores si están vacíos
-			const setupFilterOptions = (selectEl) => {
-				if (selectEl) {
-					// Si el select solo tiene la opción "Todas", cargamos las sedes de state.sucursales
-					if (selectEl.options.length <= 1 && state.sucursales) {
-						state.sucursales.forEach(s => {
-							const opt = document.createElement('option');
-							opt.value = s.id;
-							opt.innerText = s.nombre.toUpperCase();
-							opt.className = "bg-black";
-							selectEl.appendChild(opt);
-						});
-					}
-					// Mostramos el contenedor del filtro solo si es Admin/Supervisor
-					if (isAdminGlobal) {
-						selectEl.parentElement.classList.remove('hidden');
-					}
-				}
-			};
-
-			setupFilterOptions(profFilter);
-			setupFilterOptions(admFilter);
-
-			// 3. Aplicar filtrado a los datos según la selección de cada página
-			let profesoresFiltrados = Array.isArray(p) ? p : [];
-			let administrativosFiltrados = Array.isArray(a) ? a : [];
-
-			if (profFilter && profFilter.value !== 'all') {
-				profesoresFiltrados = profesoresFiltrados.filter(u => u.sucursal_id == profFilter.value);
-			}
-			
-			if (admFilter && admFilter.value !== 'all') {
-				administrativosFiltrados = administrativosFiltrados.filter(u => u.sucursal_id == admFilter.value);
-			}
-
-			// Guardamos en el estado los datos filtrados para que el renderizado use estos
-			state.profesores = profesoresFiltrados;
-			state.administrativos = administrativosFiltrados;
-
-			// 4. TRANSFORMACIÓN VISUAL: PROFESORES
+			// 2. TRANSFORMACIÓN VISUAL: PROFESORES
 			const profTable = document.querySelector('#view-profesores table');
 			const profListId = 'profesores-list-view';
 			let profContainer = document.getElementById(profListId);
 
+			// Si existe la tabla antigua, la reemplazamos por el contenedor de tarjetas
 			if (!profContainer && profTable) {
 				profContainer = document.createElement('div');
 				profContainer.id = profListId;
@@ -3547,17 +3502,13 @@ if (editorForm) {
 
 			if (profContainer) {
 				if (state.profesores.length === 0) {
-					profContainer.innerHTML = `
-						<div class="text-center py-10">
-							<i data-lucide="user-x" class="w-12 h-12 text-gray-600 mx-auto mb-4"></i>
-							<p class="text-gray-500 italic">No hay profesores en esta sede.</p>
-						</div>`;
+					profContainer.innerHTML = '<div class="text-center py-10"><i data-lucide="user-x" class="w-12 h-12 text-gray-600 mx-auto mb-4"></i><p class="text-gray-500 italic">No hay profesores registrados.</p></div>';
 				} else {
 					profContainer.innerHTML = state.profesores.map(u => createStaffRow(u, 'Profesor')).join('');
 				}
 			}
 
-			// 5. TRANSFORMACIÓN VISUAL: ADMINISTRATIVOS
+			// 3. TRANSFORMACIÓN VISUAL: ADMINISTRATIVOS
 			const admTable = document.querySelector('#view-administrativos table');
 			const admListId = 'administrativos-list-view';
 			let admContainer = document.getElementById(admListId);
@@ -3571,26 +3522,21 @@ if (editorForm) {
 
 			if (admContainer) {
 				if (state.administrativos.length === 0) {
-					admContainer.innerHTML = `
-						<div class="text-center py-10">
-							<i data-lucide="shield-alert" class="w-12 h-12 text-gray-600 mx-auto mb-4"></i>
-							<p class="text-gray-500 italic">No hay administrativos en esta sede.</p>
-						</div>`;
+					admContainer.innerHTML = '<div class="text-center py-10"><i data-lucide="shield-alert" class="w-12 h-12 text-gray-600 mx-auto mb-4"></i><p class="text-gray-500 italic">No hay administrativos registrados.</p></div>';
 				} else {
 					admContainer.innerHTML = state.administrativos.map(u => createStaffRow(u, 'Administracion')).join('');
 				}
 			}
 
-			// 6. Actualizar selectores en modales (como en crear clase)
+			// Actualizar selectores en modales (como en crear clase)
 			const coachSelect = document.getElementById('cl-coach-select');
 			if (coachSelect) {
 				coachSelect.innerHTML = '<option value="">Seleccionar Coach</option>' + 
 					state.profesores.map(x => `<option value="${x.nombre_completo}">${x.nombre_completo}</option>`).join('');
 			}
 
-			// Refrescar iconos y permisos
 			if (window.lucide) lucide.createIcons();
-			applyPermissions(); 
+			applyPermissions(); // Asegurar que solo Admin/Supervisor vea los botones de editar
 		}
 
 			// --- NUEVA FUNCIÓN AUXILIAR PARA CREAR TARJETAS DE STAFF ---
@@ -3617,12 +3563,6 @@ if (editorForm) {
 							<div class="flex flex-wrap gap-x-4 gap-y-1 mt-1">
 								<p class="text-[10px] text-white-500 font-bold flex items-center gap-1"><i data-lucide="id-card" class="w-3 h-3"></i> ${u.dni}</p>
 								${u.email ? `<p class="text-[10px] text-gray-500 font-bold flex items-center gap-1"><i data-lucide="mail" class="w-3 h-3"></i> ${u.email}</p>` : ''}
-								
-								<!-- DATO DE SUCURSAL AGREGADO AQUÍ -->
-								<p class="text-[10px] text-red-500 font-black flex items-center gap-1">
-									<i data-lucide="map-pin" class="w-3 h-3"></i> 
-									${u.sucursal_nombre || 'Sede Central'} 
-								</p>
 							</div>
 						</div>
 					</div>
