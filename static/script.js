@@ -3479,77 +3479,20 @@ if (editorForm) {
 
 		// --- REEMPLAZA TU FUNCIÓN loadStaff POR ESTA NUEVA VERSIÓN VISUAL ---
 		async function loadStaff() {
-			// 1. Obtener datos del servidor
+			// 1. Obtener datos
 			const [p, a] = await Promise.all([
 				apiFetch('/profesores'),
 				apiFetch('/administrativos')
 			]);
+			state.profesores = Array.isArray(p) ? p : [];
+			state.administrativos = Array.isArray(a) ? a : [];
 
-			// Detectar Rol y Sucursal del usuario actual
-			const userRole = state.user?.rol_nombre;
-			const userSucursalId = state.user?.sucursal_id;
-			const isAdmin = (userRole === "Administrador");
-
-			// 2. Control de Visibilidad y Población de Filtros (SOLO PARA ADMIN)
-			const setupFilter = (containerId, selectId) => {
-				const container = document.getElementById(containerId);
-				const select = document.getElementById(selectId);
-				
-				if (container && select) {
-					if (isAdmin) {
-						// Mostrar el filtro si es Administrador
-						container.classList.remove('hidden');
-						
-						// Poblar opciones si está vacío (solo la primera vez)
-						if (select.options.length <= 1 && state.sucursales) {
-							state.sucursales.forEach(s => {
-								const opt = document.createElement('option');
-								opt.value = s.id;
-								opt.innerText = s.nombre.toUpperCase();
-								opt.className = "bg-black";
-								select.appendChild(opt);
-							});
-						}
-					} else {
-						// Ocultar filtro para cualquier otro rol
-						container.classList.add('hidden');
-					}
-				}
-			};
-
-			setupFilter('container-filter-profesores', 'filter-sucursal-profesores');
-			setupFilter('container-filter-administrativos', 'filter-sucursal-administrativos');
-
-			// 3. Lógica de Filtrado Hermético
-			let profesoresFinal = Array.isArray(p) ? p : [];
-			let administrativosFinal = Array.isArray(a) ? a : [];
-
-			if (isAdmin) {
-				// El ADMIN filtra según el valor de los selects
-				const profSel = document.getElementById('filter-sucursal-profesores')?.value;
-				const admSel = document.getElementById('filter-sucursal-administrativos')?.value;
-
-				if (profSel && profSel !== 'all') {
-					profesoresFinal = profesoresFinal.filter(u => u.sucursal_id == profSel);
-				}
-				if (admSel && admSel !== 'all') {
-					administrativosFinal = administrativosFinal.filter(u => u.sucursal_id == admSel);
-				}
-			} else {
-				// SUPERVISOR / STAFF: Solo ven su propia sucursal por seguridad
-				profesoresFinal = profesoresFinal.filter(u => u.sucursal_id == userSucursalId);
-				administrativosFinal = administrativosFinal.filter(u => u.sucursal_id == userSucursalId);
-			}
-
-			// Guardar en estado para uso global
-			state.profesores = profesoresFinal;
-			state.administrativos = administrativosFinal;
-
-			// 4. RENDERIZADO VISUAL: PROFESORES
+			// 2. TRANSFORMACIÓN VISUAL: PROFESORES
 			const profTable = document.querySelector('#view-profesores table');
 			const profListId = 'profesores-list-view';
 			let profContainer = document.getElementById(profListId);
 
+			// Si existe la tabla antigua, la reemplazamos por el contenedor de tarjetas
 			if (!profContainer && profTable) {
 				profContainer = document.createElement('div');
 				profContainer.id = profListId;
@@ -3559,17 +3502,13 @@ if (editorForm) {
 
 			if (profContainer) {
 				if (state.profesores.length === 0) {
-					profContainer.innerHTML = `
-						<div class="text-center py-10">
-							<i data-lucide="user-x" class="w-12 h-12 text-gray-600 mx-auto mb-4"></i>
-							<p class="text-gray-500 italic">No hay profesores en esta sede.</p>
-						</div>`;
+					profContainer.innerHTML = '<div class="text-center py-10"><i data-lucide="user-x" class="w-12 h-12 text-gray-600 mx-auto mb-4"></i><p class="text-gray-500 italic">No hay profesores registrados.</p></div>';
 				} else {
 					profContainer.innerHTML = state.profesores.map(u => createStaffRow(u, 'Profesor')).join('');
 				}
 			}
 
-			// 5. RENDERIZADO VISUAL: ADMINISTRATIVOS
+			// 3. TRANSFORMACIÓN VISUAL: ADMINISTRATIVOS
 			const admTable = document.querySelector('#view-administrativos table');
 			const admListId = 'administrativos-list-view';
 			let admContainer = document.getElementById(admListId);
@@ -3583,26 +3522,21 @@ if (editorForm) {
 
 			if (admContainer) {
 				if (state.administrativos.length === 0) {
-					admContainer.innerHTML = `
-						<div class="text-center py-10">
-							<i data-lucide="shield-alert" class="w-12 h-12 text-gray-600 mx-auto mb-4"></i>
-							<p class="text-gray-500 italic">No hay administrativos en esta sede.</p>
-						</div>`;
+					admContainer.innerHTML = '<div class="text-center py-10"><i data-lucide="shield-alert" class="w-12 h-12 text-gray-600 mx-auto mb-4"></i><p class="text-gray-500 italic">No hay administrativos registrados.</p></div>';
 				} else {
 					admContainer.innerHTML = state.administrativos.map(u => createStaffRow(u, 'Administracion')).join('');
 				}
 			}
 
-			// 6. Actualizar selectores de Coach (Modales)
+			// Actualizar selectores en modales (como en crear clase)
 			const coachSelect = document.getElementById('cl-coach-select');
 			if (coachSelect) {
 				coachSelect.innerHTML = '<option value="">Seleccionar Coach</option>' + 
 					state.profesores.map(x => `<option value="${x.nombre_completo}">${x.nombre_completo}</option>`).join('');
 			}
 
-			// 7. Finalizar
 			if (window.lucide) lucide.createIcons();
-			applyPermissions(); 
+			applyPermissions(); // Asegurar que solo Admin/Supervisor vea los botones de editar
 		}
 
 			// --- NUEVA FUNCIÓN AUXILIAR PARA CREAR TARJETAS DE STAFF ---
