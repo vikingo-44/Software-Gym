@@ -657,7 +657,10 @@
 					const index = d - 1;
 					const fechaSlot = new Date(fechaLunes);
 					fechaSlot.setDate(fechaLunes.getDate() + index);
-					const fechaSlotStr = fechaSlot.toISOString().split('T')[0];
+					const yyyy = fechaSlot.getFullYear();
+					const mm = String(fechaSlot.getMonth() + 1).padStart(2, '0');
+					const dd = String(fechaSlot.getDate()).padStart(2, '0');
+					const fechaSlotStr = `${yyyy}-${mm}-${dd}`;
 					
 					const infoFeriado = state.feriados?.find(f => 
 						f.fecha === fechaSlotStr && 
@@ -3479,20 +3482,62 @@ if (editorForm) {
 
 		// --- REEMPLAZA TU FUNCIÓN loadStaff POR ESTA NUEVA VERSIÓN VISUAL ---
 		async function loadStaff() {
-			// 1. Obtener datos
+			// 1. Obtener datos del servidor
 			const [p, a] = await Promise.all([
 				apiFetch('/profesores'),
 				apiFetch('/administrativos')
 			]);
-			state.profesores = Array.isArray(p) ? p : [];
-			state.administrativos = Array.isArray(a) ? a : [];
 
-			// 2. TRANSFORMACIÓN VISUAL: PROFESORES
+			const isAdminGlobal = (state.user?.rol_nombre === "Administrador" || state.user?.rol_nombre === "Supervisor");
+			
+			// 2. Referencias a los filtros de sucursal
+			const profFilter = document.getElementById('filter-sucursal-profesores');
+			const admFilter = document.getElementById('filter-sucursal-administrativos');
+
+			// Función auxiliar para poblar los selects y mostrar la barra si es Admin
+			const setupFilter = (selectEl) => {
+				if (selectEl) {
+					// Poblar con sucursales si está vacío (dejando la opción "Todas")
+					if (selectEl.options.length <= 1 && state.sucursales) {
+						state.sucursales.forEach(s => {
+							const opt = document.createElement('option');
+							opt.value = s.id;
+							opt.innerText = s.nombre.toUpperCase();
+							opt.className = "bg-black";
+							selectEl.appendChild(opt);
+						});
+					}
+					// Mostrar el contenedor del filtro solo si tiene permisos
+					if (isAdminGlobal) {
+						selectEl.parentElement.classList.remove('hidden');
+					}
+				}
+			};
+
+			setupFilter(profFilter);
+			setupFilter(admFilter);
+
+			// 3. Aplicar filtrado según el selector de cada vista
+			let profesoresData = Array.isArray(p) ? p : [];
+			let administrativosData = Array.isArray(a) ? a : [];
+
+			if (profFilter && profFilter.value !== 'all') {
+				profesoresData = profesoresData.filter(u => u.sucursal_id == profFilter.value);
+			}
+			
+			if (admFilter && admFilter.value !== 'all') {
+				administrativosData = administrativosData.filter(u => u.sucursal_id == admFilter.value);
+			}
+
+			// Guardamos en el estado los datos filtrados para el renderizado
+			state.profesores = profesoresData;
+			state.administrativos = administrativosData;
+
+			// 4. TRANSFORMACIÓN VISUAL: PROFESORES
 			const profTable = document.querySelector('#view-profesores table');
 			const profListId = 'profesores-list-view';
 			let profContainer = document.getElementById(profListId);
 
-			// Si existe la tabla antigua, la reemplazamos por el contenedor de tarjetas
 			if (!profContainer && profTable) {
 				profContainer = document.createElement('div');
 				profContainer.id = profListId;
@@ -3502,13 +3547,13 @@ if (editorForm) {
 
 			if (profContainer) {
 				if (state.profesores.length === 0) {
-					profContainer.innerHTML = '<div class="text-center py-10"><i data-lucide="user-x" class="w-12 h-12 text-gray-600 mx-auto mb-4"></i><p class="text-gray-500 italic">No hay profesores registrados.</p></div>';
+					profContainer.innerHTML = '<div class="text-center py-10"><i data-lucide="user-x" class="w-12 h-12 text-gray-600 mx-auto mb-4"></i><p class="text-gray-500 italic">No hay profesores para esta sede.</p></div>';
 				} else {
 					profContainer.innerHTML = state.profesores.map(u => createStaffRow(u, 'Profesor')).join('');
 				}
 			}
 
-			// 3. TRANSFORMACIÓN VISUAL: ADMINISTRATIVOS
+			// 5. TRANSFORMACIÓN VISUAL: ADMINISTRATIVOS
 			const admTable = document.querySelector('#view-administrativos table');
 			const admListId = 'administrativos-list-view';
 			let admContainer = document.getElementById(admListId);
@@ -3522,13 +3567,13 @@ if (editorForm) {
 
 			if (admContainer) {
 				if (state.administrativos.length === 0) {
-					admContainer.innerHTML = '<div class="text-center py-10"><i data-lucide="shield-alert" class="w-12 h-12 text-gray-600 mx-auto mb-4"></i><p class="text-gray-500 italic">No hay administrativos registrados.</p></div>';
+					admContainer.innerHTML = '<div class="text-center py-10"><i data-lucide="shield-alert" class="w-12 h-12 text-gray-600 mx-auto mb-4"></i><p class="text-gray-500 italic">No hay administrativos para esta sede.</p></div>';
 				} else {
 					admContainer.innerHTML = state.administrativos.map(u => createStaffRow(u, 'Administracion')).join('');
 				}
 			}
 
-			// Actualizar selectores en modales (como en crear clase)
+			// 6. Actualizar selectores en modales (basado en la lista completa o filtrada según prefieras)
 			const coachSelect = document.getElementById('cl-coach-select');
 			if (coachSelect) {
 				coachSelect.innerHTML = '<option value="">Seleccionar Coach</option>' + 
@@ -3536,7 +3581,7 @@ if (editorForm) {
 			}
 
 			if (window.lucide) lucide.createIcons();
-			applyPermissions(); // Asegurar que solo Admin/Supervisor vea los botones de editar
+			applyPermissions(); // Asegura visibilidad de botones según rol
 		}
 
 			// --- NUEVA FUNCIÓN AUXILIAR PARA CREAR TARJETAS DE STAFF ---
@@ -3563,6 +3608,12 @@ if (editorForm) {
 							<div class="flex flex-wrap gap-x-4 gap-y-1 mt-1">
 								<p class="text-[10px] text-white-500 font-bold flex items-center gap-1"><i data-lucide="id-card" class="w-3 h-3"></i> ${u.dni}</p>
 								${u.email ? `<p class="text-[10px] text-gray-500 font-bold flex items-center gap-1"><i data-lucide="mail" class="w-3 h-3"></i> ${u.email}</p>` : ''}
+								
+								<!-- DATO DE SUCURSAL AGREGADO AQUÍ -->
+								<p class="text-[10px] text-red-500 font-black flex items-center gap-1">
+									<i data-lucide="map-pin" class="w-3 h-3"></i> 
+									${u.sucursal_nombre || 'Sede Central'} 
+								</p>
 							</div>
 						</div>
 					</div>
