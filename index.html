@@ -766,53 +766,77 @@
                 
             </div>
 
-            <div id="view-profesores" class="view-content">
-                <div class="flex justify-between items-center mb-8">
-                    <h3 class="text-3xl font-black italic uppercase">Personal de Profesores</h3>
-                    <button id="btn-nuevo-prof" onclick="openModalStaff('Profesor')" class="viking-bg-red text-black px-8 py-4 rounded-2xl font-black uppercase italic text-[12px] shadow-xl flex items-center gap-3">
-                        <i data-lucide="user-plus" class="w-4 h-4"></i> Alta Profesor
-                    </button>
-                </div>
-                <div class="glass-card p-10 rounded-[3rem]">
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-left">
-                            <thead>
-                                <tr class="text-[10px] font-black uppercase text-white-500 italic border-b border-white/5">
-                                    <th class="pb-5">Nombre</th>
-                                    <th class="pb-5">DNI (Usuario)</th>
-                                    <th class="pb-5">Especialidad</th>
-                                    <th class="pb-5 text-right action-col">Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody id="table-profesores" class="text-[11px] font-black uppercase italic"></tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
+            <!-- VISTA PROFESORES -->
+			<div id="view-profesores" class="view-content">
+				<div class="flex justify-between items-center mb-8">
+					<h3 class="text-3xl font-black italic uppercase">Personal de Profesores</h3>
+					<button id="btn-nuevo-prof" onclick="openModalStaff('Profesor')" class="viking-bg-red text-black px-8 py-4 rounded-2xl font-black uppercase italic text-[12px] shadow-xl flex items-center gap-3">
+						<i data-lucide="user-plus" class="w-4 h-4"></i> Alta Profesor
+					</button>
+				</div>
 
-            <div id="view-administrativos" class="view-content">
-                <div class="flex justify-between items-center mb-8">
-                    <h3 class="text-3xl font-black italic uppercase">Personal Administrativo</h3>
-                    <button id="btn-nuevo-adm" onclick="openModalStaff('Administracion')" class="viking-bg-red text-black px-8 py-4 rounded-2xl font-black uppercase italic text-[12px] shadow-xl flex items-center gap-3">
-                        <i data-lucide="shield-plus" class="w-4 h-4"></i> Alta Administrativo
-                    </button>
-                </div>
-                <div class="glass-card p-10 rounded-[3rem]">
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-left">
-                            <thead>
-                                <tr class="text-[10px] font-black uppercase text-white-500 italic border-b border-white/5">
-                                    <th class="pb-5">Nombre</th>
-                                    <th class="pb-5">DNI (Usuario)</th>
-                                    <th class="pb-5">Email</th>
-                                    <th class="pb-5 text-right action-col">Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody id="table-administrativos" class="text-[11px] font-black uppercase italic"></tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
+				<!-- Filtro exclusivo Admin (Añadido fuera de la glass-card) -->
+				<div id="container-filter-profesores" class="mb-6 hidden">
+					<div class="flex items-center gap-4 bg-white/5 p-4 rounded-2xl border border-white/10 w-fit">
+						<span class="text-[10px] font-black uppercase italic text-white/40">Sede:</span>
+						<select id="filter-sucursal-profesores" onchange="loadStaff()" class="bg-black border border-white/10 text-white text-[11px] font-black uppercase italic rounded-xl px-4 py-2 outline-none focus:border-red-600">
+							<option value="all">TODAS LAS SEDES</option>
+						</select>
+					</div>
+				</div>
+
+				<div class="glass-card p-10 rounded-[3rem]">
+					<div class="overflow-x-auto">
+						<table class="w-full text-left">
+							<thead>
+								<tr class="text-[10px] font-black uppercase text-white-500 italic border-b border-white/5">
+									<th class="pb-5">Nombre</th>
+									<th class="pb-5">DNI (Usuario)</th>
+									<th class="pb-5">Especialidad</th>
+									<th class="pb-5 text-right action-col">Acciones</th>
+								</tr>
+							</thead>
+							<tbody id="table-profesores" class="text-[11px] font-black uppercase italic"></tbody>
+						</table>
+					</div>
+				</div>
+			</div>
+
+			<!-- VISTA ADMINISTRATIVOS -->
+			<div id="view-administrativos" class="view-content">
+				<div class="flex justify-between items-center mb-8">
+					<h3 class="text-3xl font-black italic uppercase">Personal Administrativo</h3>
+					<button id="btn-nuevo-adm" onclick="openModalStaff('Administracion')" class="viking-bg-red text-black px-8 py-4 rounded-2xl font-black uppercase italic text-[12px] shadow-xl flex items-center gap-3">
+						<i data-lucide="shield-plus" class="w-4 h-4"></i> Alta Administrativo
+					</button>
+				</div>
+
+				<!-- Filtro exclusivo Admin -->
+				<div id="container-filter-administrativos" class="mb-6 hidden">
+					<div class="flex items-center gap-4 bg-white/5 p-4 rounded-2xl border border-white/10 w-fit">
+						<span class="text-[10px] font-black uppercase italic text-white/40">Sede:</span>
+						<select id="filter-sucursal-administrativos" onchange="loadStaff()" class="bg-black border border-white/10 text-white text-[11px] font-black uppercase italic rounded-xl px-4 py-2 outline-none focus:border-red-600">
+							<option value="all">TODAS LAS SEDES</option>
+						</select>
+					</div>
+				</div>
+
+				<div class="glass-card p-10 rounded-[3rem]">
+					<div class="overflow-x-auto">
+						<table class="w-full text-left">
+							<thead>
+								<tr class="text-[10px] font-black uppercase text-white-500 italic border-b border-white/5">
+									<th class="pb-5">Nombre</th>
+									<th class="pb-5">DNI (Usuario)</th>
+									<th class="pb-5">Email</th>
+									<th class="pb-5 text-right action-col">Acciones</th>
+								</tr>
+							</thead>
+							<tbody id="table-administrativos" class="text-[11px] font-black uppercase italic"></tbody>
+						</table>
+					</div>
+				</div>
+			</div>
 
             <div id="view-caja" class="view-content">
 				<div id="contenedor-totales-caja" class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-10">

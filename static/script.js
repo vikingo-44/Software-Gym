@@ -3479,65 +3479,92 @@ if (editorForm) {
 
 		// --- REEMPLAZA TU FUNCIÓN loadStaff POR ESTA NUEVA VERSIÓN VISUAL ---
 		async function loadStaff() {
-			// 1. Obtener datos
-			const [p, a] = await Promise.all([
-				apiFetch('/profesores'),
-				apiFetch('/administrativos')
-			]);
-			state.profesores = Array.isArray(p) ? p : [];
-			state.administrativos = Array.isArray(a) ? a : [];
+		// 1. Obtener datos
+		const [p, a] = await Promise.all([
+			apiFetch('/profesores'),
+			apiFetch('/administrativos')
+		]);
 
-			// 2. TRANSFORMACIÓN VISUAL: PROFESORES
-			const profTable = document.querySelector('#view-profesores table');
-			const profListId = 'profesores-list-view';
-			let profContainer = document.getElementById(profListId);
+		const userRole = state.user?.rol_nombre;
+		const userSucursalId = state.user?.sucursal_id;
+		const isAdmin = (userRole === "Administrador");
 
-			// Si existe la tabla antigua, la reemplazamos por el contenedor de tarjetas
-			if (!profContainer && profTable) {
-				profContainer = document.createElement('div');
-				profContainer.id = profListId;
-				profContainer.className = "flex flex-col gap-3";
-				if (profTable.parentNode) profTable.parentNode.replaceChild(profContainer, profTable);
-			}
+		// 2. Poblar Filtros (Solo si es Admin y hay sucursales cargadas)
+		const setupFilter = (containerId, selectId) => {
+			const container = document.getElementById(containerId);
+			const select = document.getElementById(selectId);
+			if (!container || !select) return;
 
-			if (profContainer) {
-				if (state.profesores.length === 0) {
-					profContainer.innerHTML = '<div class="text-center py-10"><i data-lucide="user-x" class="w-12 h-12 text-gray-600 mx-auto mb-4"></i><p class="text-gray-500 italic">No hay profesores registrados.</p></div>';
-				} else {
-					profContainer.innerHTML = state.profesores.map(u => createStaffRow(u, 'Profesor')).join('');
+			if (isAdmin) {
+				container.classList.remove('hidden');
+				// Llenar select solo si está vacío (evita duplicados al re-cargar)
+				if (select.options.length <= 1 && state.sucursales && state.sucursales.length > 0) {
+					state.sucursales.forEach(s => {
+						if (s && s.nombre) { // Blindaje contra nulos
+							const opt = document.createElement('option');
+							opt.value = s.id;
+							opt.innerText = s.nombre.toUpperCase();
+							opt.className = "bg-black";
+							select.appendChild(opt);
+						}
+					});
 				}
+			} else {
+				container.classList.add('hidden');
 			}
+		};
 
-			// 3. TRANSFORMACIÓN VISUAL: ADMINISTRATIVOS
-			const admTable = document.querySelector('#view-administrativos table');
-			const admListId = 'administrativos-list-view';
-			let admContainer = document.getElementById(admListId);
+		setupFilter('container-filter-profesores', 'filter-sucursal-profesores');
+		setupFilter('container-filter-administrativos', 'filter-sucursal-administrativos');
 
-			if (!admContainer && admTable) {
-				admContainer = document.createElement('div');
-				admContainer.id = admListId;
-				admContainer.className = "flex flex-col gap-3";
-				if (admTable.parentNode) admTable.parentNode.replaceChild(admContainer, admTable);
-			}
+		// 3. Filtrado Lógico (Hermetismo)
+		let profesoresFinal = Array.isArray(p) ? p : [];
+		let administrativosFinal = Array.isArray(a) ? a : [];
 
-			if (admContainer) {
-				if (state.administrativos.length === 0) {
-					admContainer.innerHTML = '<div class="text-center py-10"><i data-lucide="shield-alert" class="w-12 h-12 text-gray-600 mx-auto mb-4"></i><p class="text-gray-500 italic">No hay administrativos registrados.</p></div>';
-				} else {
-					admContainer.innerHTML = state.administrativos.map(u => createStaffRow(u, 'Administracion')).join('');
-				}
-			}
-
-			// Actualizar selectores en modales (como en crear clase)
-			const coachSelect = document.getElementById('cl-coach-select');
-			if (coachSelect) {
-				coachSelect.innerHTML = '<option value="">Seleccionar Coach</option>' + 
-					state.profesores.map(x => `<option value="${x.nombre_completo}">${x.nombre_completo}</option>`).join('');
-			}
-
-			if (window.lucide) lucide.createIcons();
-			applyPermissions(); // Asegurar que solo Admin/Supervisor vea los botones de editar
+		if (isAdmin) {
+			const profSel = document.getElementById('filter-sucursal-profesores')?.value;
+			const admSel = document.getElementById('filter-sucursal-administrativos')?.value;
+			if (profSel && profSel !== 'all') profesoresFinal = profesoresFinal.filter(u => u.sucursal_id == profSel);
+			if (admSel && admSel !== 'all') administrativosFinal = administrativosFinal.filter(u => u.sucursal_id == admSel);
+		} else {
+			// SUPERVISOR / STAFF: Solo ven su propia sucursal
+			profesoresFinal = profesoresFinal.filter(u => u.sucursal_id == userSucursalId);
+			administrativosFinal = administrativosFinal.filter(u => u.sucursal_id == userSucursalId);
 		}
+
+		state.profesores = profesoresFinal;
+		state.administrativos = administrativosFinal;
+
+		// 4. Renderizado en TBODY (Volvemos a tu forma original)
+		const profTableBody = document.getElementById('table-profesores');
+		const admTableBody = document.getElementById('table-administrativos');
+
+		if (profTableBody) {
+			if (state.profesores.length === 0) {
+				profTableBody.innerHTML = '<tr><td colspan="4" class="py-10 text-center text-white/20 italic">No hay profesores en esta sede.</td></tr>';
+			} else {
+				profTableBody.innerHTML = state.profesores.map(u => createStaffRow(u, 'Profesor')).join('');
+			}
+		}
+
+		if (admTableBody) {
+			if (state.administrativos.length === 0) {
+				admTableBody.innerHTML = '<tr><td colspan="4" class="py-10 text-center text-white/20 italic">No hay administrativos en esta sede.</td></tr>';
+			} else {
+				admTableBody.innerHTML = state.administrativos.map(u => createStaffRow(u, 'Administracion')).join('');
+			}
+		}
+
+		// 5. Select de Coach para otros modales
+		const coachSelect = document.getElementById('cl-coach-select');
+		if (coachSelect) {
+			coachSelect.innerHTML = '<option value="">Seleccionar Coach</option>' + 
+				state.profesores.map(x => `<option value="${x.nombre_completo}">${x.nombre_completo}</option>`).join('');
+		}
+
+		if (window.lucide) lucide.createIcons();
+		applyPermissions();
+	}
 
 			// --- NUEVA FUNCIÓN AUXILIAR PARA CREAR TARJETAS DE STAFF ---
 			function createStaffRow(u, type) {
