@@ -1740,33 +1740,33 @@ window.renderWizardStep = function() {
             <div class="flex-1 p-10 lg:p-20 overflow-y-auto custom-scrollbar animate-in zoom-in-95">
                 <div class="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-12 text-left">
                     <div class="col-span-full space-y-2">
-                        <label class="text-[10px] font-black text-red-600 uppercase tracking-widest italic ml-2">Nombre del Plan (Ej: Volumen Vikingo)</label>
+                        <label class="text-[10px] font-black text-red-600 uppercase tracking-widest italic ml-2">Nombre del Plan</label>
                         <input type="text" value="${state.routineWizard.nombre_grupo}" oninput="state.routineWizard.nombre_grupo = this.value" class="viking-input !h-16 text-2xl font-black italic uppercase">
                     </div>
 
                     <div class="col-span-full space-y-2">
-                        <label class="text-[10px] font-black text-white/30 uppercase tracking-widest italic ml-2">Objetivo o Resumen Técnico</label>
-                        <textarea oninput="state.routineWizard.objetivo = this.value" class="viking-input h-32 py-5 text-sm font-medium" placeholder="Describe el enfoque del ciclo (ej: Enfoque en hipertrofia sarcoplasmática)...">${state.routineWizard.objetivo || ''}</textarea>
+                        <label class="text-[10px] font-black text-white/30 uppercase tracking-widest italic ml-2">Objetivo Técnico</label>
+                        <textarea oninput="state.routineWizard.objetivo = this.value" class="viking-input h-32 py-5 text-sm font-medium">${state.routineWizard.objetivo || ''}</textarea>
                     </div>
 
                     <div class="space-y-2">
-                        <label class="text-[10px] font-black text-white/30 uppercase tracking-widest italic ml-2">Metodología de Carga</label>
+                        <label class="text-[10px] font-black text-white/30 uppercase tracking-widest italic ml-2">Metodología</label>
                         <div class="flex gap-4">
                             <button onclick="state.routineWizard.tipo = 'normal'; state.routineWizard.tipo_id = 1; window.renderWizardStep();" 
                                 class="flex-1 h-14 rounded-2xl border-2 font-black text-[10px] transition-all 
-                                ${state.routineWizard.tipo_id === 1 ? 'bg-red-600 text-black border-red-600 shadow-lg shadow-red-900/20' : 'bg-white/5 border-white/5 text-white/30'}">
+                                ${state.routineWizard.tipo_id === 1 ? 'bg-red-600 text-black border-red-600' : 'bg-white/5 border-white/5 text-white/30'}">
                                 ESTÁNDAR
                             </button>
                             <button onclick="state.routineWizard.tipo = 'progresiva'; state.routineWizard.tipo_id = 2; state.routineWizard.cantSemanas = state.routineWizard.cantSemanas || 4; window.updateRoutineVencimiento(); window.renderWizardStep();" 
                                 class="flex-1 h-14 rounded-2xl border-2 font-black text-[10px] transition-all
-                                ${state.routineWizard.tipo_id === 2 ? 'bg-amber-600 text-black border-amber-600 shadow-lg shadow-amber-900/20' : 'bg-white/5 border-white/5 text-white/30'}">
+                                ${state.routineWizard.tipo_id === 2 ? 'bg-amber-600 text-black border-amber-600' : 'bg-white/5 border-white/5 text-white/30'}">
                                 PROGRESIVA
                             </button>
                         </div>
                     </div>
 
-                    <div class="space-y-2 ${state.routineWizard.tipo === 'progresiva' ? 'animate-in fade-in slide-in-from-top-2' : 'hidden'}">
-                        <label class="text-[10px] font-black text-amber-500 uppercase tracking-widest italic ml-2">Duración del Ciclo (Semanas)</label>
+                    <div class="space-y-2 ${state.routineWizard.tipo === 'progresiva' ? '' : 'hidden'}">
+                        <label class="text-[10px] font-black text-amber-500 uppercase tracking-widest italic ml-2">Semanas</label>
                         <div class="grid grid-cols-4 gap-2">
                             ${[2,4,6,8].map(sw => `
                                 <button onclick="state.routineWizard.cantSemanas = ${sw}; window.updateRoutineVencimiento(); window.renderWizardStep();" 
@@ -1779,7 +1779,7 @@ window.renderWizardStep = function() {
                     </div>
 
                     <div class="space-y-2">
-                        <label class="text-[10px] font-black text-white/30 uppercase tracking-widest italic ml-2">Fecha de Vencimiento (Automática)</label>
+                        <label class="text-[10px] font-black text-white/30 uppercase tracking-widest italic ml-2">Vencimiento</label>
                         <input type="date" id="wizard-vencimiento" value="${state.routineWizard.vencimiento}" oninput="state.routineWizard.vencimiento = this.value" class="viking-input !h-14">
                     </div>
 
@@ -1789,7 +1789,7 @@ window.renderWizardStep = function() {
                             ${[1,2,3,4,5,6].map(n => `
                                 <button onclick="state.routineWizard.cantDias = ${n}; window.renderWizardStep();" 
                                     class="h-14 rounded-2xl border-2 font-black transition-all
-                                    ${state.routineWizard.cantDias === n ? 'bg-red-600 text-black border-red-600' : 'bg-white/5 border-white/5 text-white/20 hover:border-white/20'}">
+                                    ${state.routineWizard.cantDias === n ? 'bg-red-600 text-black border-red-600' : 'bg-white/5 border-white/5 text-white/20'}">
                                     ${n}
                                 </button>`).join('')}
                         </div>
@@ -1798,105 +1798,84 @@ window.renderWizardStep = function() {
             </div>`;
     } else {
         label.innerText = "PASO 2: ASIGNACIÓN DE ARSENAL";
-        const numSemanas = state.routineWizard.tipo === 'progresiva' ? (state.routineWizard.cantSemanas || 4) : 1;
+        const isProg = state.routineWizard.tipo === 'progresiva';
+        const numSemanas = isProg ? (state.routineWizard.cantSemanas || 4) : 1;
+        
+        // Seteamos día activo por defecto si no existe
+        if(!state.routineWizard.semanaActivaWizard) state.routineWizard.semanaActivaWizard = 1;
+        if(!state.routineWizard.diaActivoWizard) state.routineWizard.diaActivoWizard = 1;
+
+        const currentKey = isProg 
+            ? `week${state.routineWizard.semanaActivaWizard}_day${state.routineWizard.diaActivoWizard}` 
+            : `day_${state.routineWizard.diaActivoWizard}`;
+        
+        const data = state.routineWizard.config[currentKey] || { label: `JORNADA ${state.routineWizard.diaActivoWizard}`, objetivo_dia: '', exercises: [] };
 
         body.innerHTML = `
             <div class="flex h-full w-full overflow-hidden bg-zinc-950">
+                <!-- LIBRERIA IZQUIERDA -->
                 <div class="w-[320px] border-r border-white/5 flex flex-col bg-black/40 shrink-0">
                     <div class="p-6 border-b border-white/5 bg-black/20 space-y-4">
                         <label class="text-[9px] font-black text-red-600 uppercase tracking-[0.3em] block italic">Arsenal Disponible</label>
                         <input type="text" placeholder="BUSCAR EJERCICIO..." 
                             class="viking-input h-12 text-[10px] font-black italic border-white/10 focus:border-red-600" 
                             oninput="window.renderWizardLib(this.value)">
-                        
-                        <button onclick="window.openModalNewExercise()" class="w-full py-3 border border-dashed border-white/20 rounded-xl text-[9px] font-black uppercase text-white/40 hover:border-red-600 hover:text-red-600 transition-all flex items-center justify-center gap-2">
-                            <i data-lucide="plus-circle" class="w-3 h-3"></i> Crear nuevo en Librería
-                        </button>
                     </div>
-                    <div class="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar" id="wizard-lib-results">
-                        </div>
+                    <div class="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar" id="wizard-lib-results"></div>
                 </div>
 
+                <!-- CONTENIDO DERECHO -->
                 <div class="flex-1 flex flex-col min-w-0">
-                    
-                    ${state.routineWizard.tipo === 'progresiva' ? `
+                    <!-- TABS SEMANAS (Solo Progresiva) -->
+                    ${isProg ? `
                     <div class="px-8 py-4 bg-black/60 border-b border-white/5 flex gap-3 overflow-x-auto no-scrollbar shrink-0">
                         ${Array.from({length: numSemanas}).map((_, i) => {
                             const w = i + 1;
                             const activa = state.routineWizard.semanaActivaWizard === w;
-                            return `
-                            <button onclick="state.routineWizard.semanaActivaWizard = ${w}; window.renderWizardStep();" 
-                                class="px-8 py-3 rounded-xl font-black italic text-[11px] transition-all whitespace-nowrap border-2
-                                ${activa ? 'bg-red-600 text-black border-red-600 shadow-[0_0_20px_rgba(220,38,38,0.3)]' : 'bg-white/5 text-white/30 border-transparent hover:border-white/10'}">
+                            return `<button onclick="state.routineWizard.semanaActivaWizard = ${w}; window.renderWizardStep();" 
+                                class="px-6 py-3 rounded-xl font-black italic text-[10px] transition-all border-2
+                                ${activa ? 'bg-amber-600 text-black border-amber-600 shadow-lg' : 'bg-white/5 text-white/30 border-transparent'}">
                                 SEMANA ${w}
                             </button>`;
                         }).join('')}
                     </div>` : ''}
 
+                    <!-- TABS JORNADAS (NUEVO: PARA AMBOS TIPOS) -->
+                    <div class="px-8 py-4 bg-zinc-900 border-b border-white/5 flex gap-3 overflow-x-auto no-scrollbar shrink-0">
+                        ${Array.from({length: state.routineWizard.cantDias}).map((_, i) => {
+                            const d = i + 1;
+                            const activa = state.routineWizard.diaActivoWizard === d;
+                            return `<button onclick="state.routineWizard.diaActivoWizard = ${d}; window.renderWizardStep();" 
+                                class="px-6 py-3 rounded-xl font-black italic text-[10px] transition-all border-2
+                                ${activa ? 'bg-red-600 text-black border-red-600 shadow-lg' : 'bg-white/5 text-white/30 border-transparent'}">
+                                JORNADA ${d}
+                            </button>`;
+                        }).join('')}
+                    </div>
+
+                    <!-- AREA DE EJERCICIOS -->
                     <div class="flex-1 overflow-y-auto p-8 lg:p-12 custom-scrollbar bg-gradient-to-b from-transparent to-black/20">
-                        <div class="w-full max-w-[1200px] mx-auto space-y-8">
+                        <div class="w-full max-w-[1200px] mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4">
                             
-                            ${Array.from({length: state.routineWizard.cantDias}).map((_, i) => {
-                                const dayNum = i + 1;
-                                const key = state.routineWizard.tipo === 'progresiva' ? `week${state.routineWizard.semanaActivaWizard}_day${dayNum}` : `day_${dayNum}`;
-                                const isOpen = state.routineWizard.activeDayKey === key;
-                                // Recuperamos data incluyendo el objetivo_dia
-                                const data = state.routineWizard.config[key] || { label: `JORNADA ${dayNum}`, objetivo_dia: '', exercises: [] };
-                                
-                                return `
-                                <div class="group border-2 rounded-[2.5rem] transition-all duration-500 
-                                    ${isOpen ? 'border-red-600 bg-red-600/[0.03] shadow-[0_0_40px_rgba(220,38,38,0.05)]' : 'border-white/5 bg-white/[0.02] hover:border-white/20'}">
-                                    
-                                    <div onclick="window.toggleWizardDay('${key}')" class="w-full flex items-center justify-between p-8 cursor-pointer">
-                                        <div class="flex items-center gap-8">
-                                            <div class="w-14 h-14 rounded-2xl flex items-center justify-center text-xl font-black italic transition-all duration-500
-                                                ${isOpen ? 'bg-red-600 text-black rotate-3' : 'bg-white/5 text-white/20 group-hover:text-white'}">
-                                                ${dayNum}
-                                            </div>
-                                            <div>
-                                                <span class="block text-[10px] font-black text-red-600/50 uppercase tracking-[0.3em] mb-1">Configuración</span>
-                                                <span class="text-2xl font-black italic uppercase text-white tracking-tighter">${data.label}</span>
-                                                ${data.objetivo_dia ? `<p class="text-[10px] text-red-600 font-bold uppercase italic mt-1">${data.objetivo_dia}</p>` : ''}
-                                            </div>
-                                        </div>
+                            <!-- CABECERA JORNADA -->
+                            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 bg-white/5 p-8 rounded-[2.5rem] border border-white/10">
+                                <div class="space-y-2">
+                                    <label class="text-[10px] font-black text-white/20 uppercase tracking-widest">Título de la Jornada</label>
+                                    <input type="text" value="${data.label}" oninput="window.updateSessionData('${currentKey}', 'label', this.value)" 
+                                        class="viking-input !bg-black/40 !h-14 !text-sm font-black uppercase italic border-white/10">
+                                </div>
+                                <div class="space-y-2">
+                                    <label class="text-[10px] font-black text-white/20 uppercase tracking-widest">Objetivo del Día</label>
+                                    <input type="text" value="${data.objetivo_dia || ''}" oninput="window.updateSessionData('${currentKey}', 'objetivo_dia', this.value)" 
+                                        class="viking-input !bg-black/40 !h-14 !text-sm font-medium border-white/10">
+                                </div>
+                            </div>
 
-                                        <div class="flex items-center gap-6">
-                                            ${state.routineWizard.tipo === 'progresiva' && state.routineWizard.semanaActivaWizard > 1 ? `
-                                                <button onclick="event.stopPropagation(); window.clonePrevWeekDay(${dayNum})" 
-                                                    class="bg-amber-600/10 text-amber-500 border border-amber-600/20 px-6 py-3 rounded-2xl text-[10px] font-black uppercase italic hover:bg-amber-600 hover:text-black transition-all shadow-xl">
-                                                    CLONAR ANTERIOR
-                                                </button>` : ''}
-                                            <div class="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center transition-transform duration-500 ${isOpen ? 'rotate-180 bg-red-600/20' : ''}">
-                                                <i data-lucide="chevron-down" class="w-6 h-6 ${isOpen ? 'text-red-600' : 'text-white/20'}"></i>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    
-                                    ${isOpen ? `
-                                    <div class="p-10 border-t border-white/5 space-y-10 animate-in fade-in slide-in-from-top-4 duration-500">
-                                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                                            <div class="space-y-2">
-                                                <label class="text-[10px] font-black text-white/20 uppercase tracking-widest ml-1">Título de la Jornada</label>
-                                                <input type="text" value="${data.label}" oninput="window.updateSessionData('${key}', 'label', this.value)" 
-                                                    class="viking-input !bg-black/40 !h-14 !text-sm font-black uppercase italic border-white/10" placeholder="EJ: PECHO PESADO">
-                                            </div>
-                                            <div class="space-y-2">
-                                                <label class="text-[10px] font-black text-white/20 uppercase tracking-widest ml-1">Objetivo del Día (Consigna)</label>
-                                                <input type="text" value="${data.objetivo_dia || ''}" oninput="window.updateSessionData('${key}', 'objetivo_dia', this.value)" 
-                                                    class="viking-input !bg-black/40 !h-14 !text-sm font-medium border-white/10" placeholder="Ej: Foco en la fase excéntrica...">
-                                            </div>
-                                        </div>
-
-                                        <div class="grid grid-cols-1 gap-4">
-                                            ${data.exercises.map((ex, exIdx) => window.renderExerciseItemWizard(key, ex, exIdx)).join('')}
-                                            ${data.exercises.length === 0 ? `
-                                                <div class="py-20 border-2 border-dashed border-white/5 rounded-[2rem] text-center">
-                                                    <p class="text-white/10 font-black italic text-xs uppercase tracking-[0.4em]">Arsenal Vacío</p>
-                                                </div>` : ''}
-                                        </div>
-                                    </div>` : ''}
-                                </div>`;
-                            }).join('')}
+                            <!-- LISTA EJERCICIOS -->
+                            <div class="space-y-4" id="wizard-exercises-list">
+                                ${data.exercises.map((ex, exIdx) => window.renderExerciseItemWizard(currentKey, ex, exIdx)).join('')}
+                                ${data.exercises.length === 0 ? `<div class="py-20 border-2 border-dashed border-white/5 rounded-[2.5rem] text-center opacity-20 font-black uppercase italic tracking-[0.3em]">Arsenal Vacío</div>` : ''}
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1927,13 +1906,12 @@ window.updateRoutineVencimiento = function() {
 };
 
 window.renderExerciseItemWizard = (key, ex, idx) => {
-    // Aseguramos que tenga al menos una serie inicializada
     if (!ex.series_detalle) {
         ex.series_detalle = [{ numero_serie: 1, reps: ex.reps, weight: ex.weight, rest: ex.rest }];
     }
 
     return `
-    <div class="bg-black/60 border border-white/5 rounded-3xl p-6 shadow-xl group hover:border-red-600/30 transition-all">
+    <div class="bg-black/60 border border-white/5 rounded-3xl p-6 shadow-xl group hover:border-red-600/30 transition-all" id="ex-card-${ex.uid}">
         <div class="flex justify-between items-center mb-6">
             <div class="flex items-center gap-4">
                 <span class="w-8 h-8 rounded-xl bg-red-600 text-black text-[10px] flex items-center justify-center font-black italic">${idx + 1}</span>
@@ -1952,29 +1930,18 @@ window.renderExerciseItemWizard = (key, ex, idx) => {
             </div>
         </div>
 
-        <div class="space-y-3">
+        <div class="space-y-3" id="series-container-${ex.uid}">
             ${ex.series_detalle.map((s, sIdx) => `
                 <div class="grid grid-cols-4 gap-3 items-center bg-white/[0.02] p-3 rounded-2xl border border-white/5">
                     <div class="text-[10px] font-black text-white/20 ml-2">#${s.numero_serie}</div>
-                    <input type="text" value="${s.reps}" placeholder="Reps" 
-						oninput="window.updateSerieDetalle('${key}', '${ex.uid}', ${sIdx}, 'reps', this.value)"
-						class="bg-white/5 border border-white/5 rounded-lg text-[11px] font-black italic text-center text-red-600 h-9 outline-none focus:border-red-600">
-
-					<input type="text" value="${s.weight}" placeholder="Peso"
-						oninput="window.updateSerieDetalle('${key}', '${ex.uid}', ${sIdx}, 'weight', this.value)"
-						class="bg-white/5 border border-white/5 rounded-lg text-[11px] font-black italic text-center text-red-600 h-9 outline-none focus:border-red-600">
-
-					<input type="text" value="${s.rest}" placeholder="Desc."
-						oninput="window.updateSerieDetalle('${key}', '${ex.uid}', ${sIdx}, 'rest', this.value)"
-						class="bg-white/5 border border-white/5 rounded-lg text-[11px] font-black italic text-center text-red-600 h-9 outline-none focus:border-red-600">
+                    <input type="text" value="${s.reps}" oninput="window.updateSerieDetalle('${key}', '${ex.uid}', ${sIdx}, 'reps', this.value)"
+                        class="bg-white/5 border border-white/5 rounded-lg text-[11px] font-black italic text-center text-red-600 h-9 outline-none focus:border-red-600 transition-all">
+                    <input type="text" value="${s.weight}" oninput="window.updateSerieDetalle('${key}', '${ex.uid}', ${sIdx}, 'weight', this.value)"
+                        class="bg-white/5 border border-white/5 rounded-lg text-[11px] font-black italic text-center text-red-600 h-9 outline-none focus:border-red-600 transition-all">
+                    <input type="text" value="${s.rest}" oninput="window.updateSerieDetalle('${key}', '${ex.uid}', ${sIdx}, 'rest', this.value)"
+                        class="bg-white/5 border border-white/5 rounded-lg text-[11px] font-black italic text-center text-red-600 h-9 outline-none focus:border-red-600 transition-all">
                 </div>
             `).join('')}
-        </div>
-
-        <div class="mt-4">
-            <label class="text-[8px] font-black text-white/20 uppercase ml-1">Consigna Especial</label>
-            <input type="text" value="${ex.comentario || ''}" oninput="window.updateExFieldWizard('${key}', '${ex.uid}', 'comentario', this.value)" 
-                class="w-full bg-white/5 border border-white/5 rounded-xl text-[10px] font-medium text-white/60 px-3 h-10 outline-none focus:border-red-600 transition-all" placeholder="Ej: Pausa de 2 segundos en contracción...">
         </div>
     </div>`;
 };
@@ -1982,6 +1949,10 @@ window.renderExerciseItemWizard = (key, ex, idx) => {
 window.renderWizardLib = (query = '') => {
     const container = document.getElementById('wizard-lib-results');
     if (!container) return;
+    
+    // Guardamos el scroll actual
+    const currentScroll = container.scrollTop;
+
     const filtered = (state.ejerciciosLibreria || []).filter(e => e.nombre.toLowerCase().includes(query.toLowerCase()));
     const groups = {};
     filtered.forEach(e => { 
@@ -1991,17 +1962,20 @@ window.renderWizardLib = (query = '') => {
     });
     
     container.innerHTML = Object.entries(groups).map(([name, exs]) => `
-        <div class="animate-in fade-in slide-in-from-left-2">
+        <div>
             <h5 class="text-[9px] font-black text-red-600 uppercase tracking-widest mb-4 ml-2 italic border-l-2 border-red-600 pl-3">${name}</h5>
             <div class="space-y-2">
                 ${exs.map(e => `
                     <button onclick="window.addExToWizard(${e.id}, '${e.nombre}')" 
-                        class="w-full flex justify-between items-center p-4 bg-white/[0.03] border border-white/5 rounded-2xl text-[11px] font-black uppercase italic text-white/50 hover:bg-red-600 hover:text-black hover:border-red-600 transition-all group">
+                        class="w-full flex justify-between items-center p-4 bg-white/[0.03] border border-white/5 rounded-2xl text-[11px] font-black uppercase italic text-white/50 hover:bg-red-600 hover:text-black transition-all group">
                         ${e.nombre} 
-                        <i data-lucide="plus" class="w-4 h-4 opacity-0 group-hover:opacity-100 transition-all"></i>
+                        <i data-lucide="plus" class="w-4 h-4 opacity-0 group-hover:opacity-100"></i>
                     </button>`).join('')}
             </div>
         </div>`).join('');
+
+    // Restauramos el scroll
+    container.scrollTop = currentScroll;
     if (window.lucide) lucide.createIcons();
 };
 
@@ -2011,14 +1985,18 @@ window.toggleWizardDay = (key) => {
 };
 
 window.addExToWizard = (id, nombre) => {
-    const key = state.routineWizard.activeDayKey;
-    if (!key) return showVikingToast("Selecciona una jornada primero", true);
+    const isProg = state.routineWizard.tipo === 'progresiva';
+    const key = isProg 
+        ? `week${state.routineWizard.semanaActivaWizard}_day${state.routineWizard.diaActivoWizard}` 
+        : `day_${state.routineWizard.diaActivoWizard}`;
+
     if (!state.routineWizard.config[key]) state.routineWizard.config[key] = { label: `JORNADA`, exercises: [] };
+    
     state.routineWizard.config[key].exercises.push({ 
         id, 
         uid: Math.random().toString(36).substr(2, 9), 
         nombre,
-		series: '3', 
+        series: '3', 
         reps: '12', 
         weight: '0', 
         rest: '90s', 
@@ -2055,20 +2033,16 @@ window.updateExFieldWizard = (key, uid, f, v) => {
         if (nuevaCant > seriesActuales.length) {
             for (let i = seriesActuales.length; i < nuevaCant; i++) {
                 const base = seriesActuales[seriesActuales.length - 1] || { reps: '12', weight: '0', rest: '90s' };
-                seriesActuales.push({
-                    numero_serie: i + 1,
-                    reps: base.reps,
-                    weight: base.weight,
-                    rest: base.rest
-                });
+                seriesActuales.push({ numero_serie: i + 1, reps: base.reps, weight: base.weight, rest: base.rest });
             }
         } else if (nuevaCant < seriesActuales.length) {
             ex.series_detalle = seriesActuales.slice(0, nuevaCant);
         }
         ex.series = nuevaCant;
-        window.renderWizardStep(); // Solo renderiza si cambia la CANTIDAD de filas
+        // Solo aquí re-renderizamos la lista de ejercicios porque cambió la estructura de la tarjeta
+        window.renderWizardStep(); 
     } else {
-        ex[f] = v; // Para comentarios u otros campos, no hace falta re-renderizar
+        ex[f] = v;
     }
 };
 
@@ -2196,10 +2170,9 @@ window.saveFinalRutina = async function() {
 
 window.updateSerieDetalle = (key, uid, sIdx, campo, valor) => {
     const ex = state.routineWizard.config[key].exercises.find(e => e.uid === uid);
-    if (ex && ex.series_detalle && ex.series_detalle[sIdx]) {
-        // Guardamos el valor directamente en el objeto
+    if (ex && ex.series_detalle[sIdx]) {
         ex.series_detalle[sIdx][campo] = valor;
-        // NO llamamos a renderWizardStep aquí para que no salte el scroll
+        // NO RENDERIZAMOS NADA, solo guardamos el dato en memoria.
     }
 };
 
