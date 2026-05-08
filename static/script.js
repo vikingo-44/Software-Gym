@@ -1926,39 +1926,56 @@ window.updateRoutineVencimiento = function() {
     if (inputVenc) inputVenc.value = state.routineWizard.vencimiento;
 };
 
-window.renderExerciseItemWizard = (key, ex, idx) => `
+window.renderExerciseItemWizard = (key, ex, idx) => {
+    // Aseguramos que tenga al menos una serie inicializada
+    if (!ex.series_detalle) {
+        ex.series_detalle = [{ numero_serie: 1, reps: ex.reps, weight: ex.weight, rest: ex.rest }];
+    }
+
+    return `
     <div class="bg-black/60 border border-white/5 rounded-3xl p-6 shadow-xl group hover:border-red-600/30 transition-all">
         <div class="flex justify-between items-center mb-6">
             <div class="flex items-center gap-4">
                 <span class="w-8 h-8 rounded-xl bg-red-600 text-black text-[10px] flex items-center justify-center font-black italic">${idx + 1}</span>
                 <h6 class="text-sm font-black italic uppercase text-white tracking-tighter">${ex.nombre}</h6>
             </div>
-            <button onclick="window.removeExFromWizard('${key}', '${ex.uid}')" class="text-white/10 hover:text-red-600 transition-colors">
-                <i data-lucide="trash-2" class="w-5 h-5"></i>
-            </button>
+            <div class="flex items-center gap-4">
+                <div class="flex items-center gap-2 bg-white/5 px-3 py-1.5 rounded-xl border border-white/10">
+                    <span class="text-[9px] font-black text-white/30 uppercase italic">Series:</span>
+                    <input type="number" value="${ex.series || 1}" 
+                        onchange="window.updateExFieldWizard('${key}', '${ex.uid}', 'series', this.value)"
+                        class="w-8 bg-transparent text-red-500 font-black text-xs outline-none text-center">
+                </div>
+                <button onclick="window.removeExFromWizard('${key}', '${ex.uid}')" class="text-white/10 hover:text-red-600 transition-colors">
+                    <i data-lucide="trash-2" class="w-5 h-5"></i>
+                </button>
+            </div>
         </div>
-        <div class="grid grid-cols-5 gap-4"> <!-- CAMBIADO A 5 COLUMNAS -->
-			<!-- NUEVO BLOQUE DE SERIES -->
-			<div class="space-y-1">
-				<label class="text-[8px] font-black text-white/20 uppercase ml-1">Series</label>
-				<input type="number" value="${ex.series || '3'}" oninput="window.updateExFieldWizard('${key}', '${ex.uid}', 'series', this.value)" 
-					class="w-full bg-white/5 border border-white/5 rounded-xl text-[11px] font-black italic text-center text-red-600 h-10 outline-none focus:border-red-600 transition-all">
-			</div>
 
-			${['reps', 'weight', 'rest'].map(f => `
-				<div class="space-y-1">
-					<label class="text-[8px] font-black text-white/20 uppercase ml-1">${f === 'reps' ? 'Reps' : f === 'weight' ? 'Peso' : 'Desc.'}</label>
-					<input type="text" value="${ex[f]}" oninput="window.updateExFieldWizard('${key}', '${ex.uid}', '${f}', this.value)" 
-						class="w-full bg-white/5 border border-white/5 rounded-xl text-[11px] font-black italic text-center text-red-600 h-10 outline-none focus:border-red-600 transition-all">
-				</div>`).join('')}
-			
-			<div class="space-y-1">
-				<label class="text-[8px] font-black text-white/20 uppercase ml-1">Consigna</label>
-				<input type="text" value="${ex.comentario || ''}" oninput="window.updateExFieldWizard('${key}', '${ex.uid}', 'comentario', this.value)" 
-					class="w-full bg-white/5 border border-white/5 rounded-xl text-[10px] font-medium text-white/60 px-3 h-10 outline-none focus:border-red-600 transition-all" placeholder="...">
-			</div>
-		</div>
+        <div class="space-y-3">
+            ${ex.series_detalle.map((s, sIdx) => `
+                <div class="grid grid-cols-4 gap-3 items-center bg-white/[0.02] p-3 rounded-2xl border border-white/5">
+                    <div class="text-[10px] font-black text-white/20 ml-2">#${s.numero_serie}</div>
+                    <input type="text" value="${s.reps}" placeholder="Reps" 
+                        oninput="ex.series_detalle[${sIdx}].reps = this.value"
+                        class="bg-white/5 border border-white/5 rounded-lg text-[11px] font-black italic text-center text-red-600 h-9 outline-none focus:border-red-600">
+                    <input type="text" value="${s.weight}" placeholder="Peso"
+                        oninput="ex.series_detalle[${sIdx}].weight = this.value"
+                        class="bg-white/5 border border-white/5 rounded-lg text-[11px] font-black italic text-center text-red-600 h-9 outline-none focus:border-red-600">
+                    <input type="text" value="${s.rest}" placeholder="Desc."
+                        oninput="ex.series_detalle[${sIdx}].rest = this.value"
+                        class="bg-white/5 border border-white/5 rounded-lg text-[11px] font-black italic text-center text-red-600 h-9 outline-none focus:border-red-600">
+                </div>
+            `).join('')}
+        </div>
+
+        <div class="mt-4">
+            <label class="text-[8px] font-black text-white/20 uppercase ml-1">Consigna Especial</label>
+            <input type="text" value="${ex.comentario || ''}" oninput="window.updateExFieldWizard('${key}', '${ex.uid}', 'comentario', this.value)" 
+                class="w-full bg-white/5 border border-white/5 rounded-xl text-[10px] font-medium text-white/60 px-3 h-10 outline-none focus:border-red-600 transition-all" placeholder="Ej: Pausa de 2 segundos en contracción...">
+        </div>
     </div>`;
+};
 
 window.renderWizardLib = (query = '') => {
     const container = document.getElementById('wizard-lib-results');
@@ -2027,7 +2044,33 @@ window.updateSessionData = (key, f, v) => {
 
 window.updateExFieldWizard = (key, uid, f, v) => { 
     const ex = state.routineWizard.config[key].exercises.find(e => e.uid === uid); 
-    if (ex) ex[f] = v; 
+    if (!ex) return;
+
+    if (f === 'series') {
+        const nuevaCant = parseInt(v) || 1;
+        const seriesActuales = ex.series_detalle || [];
+        
+        // Si aumenta, agregamos nuevas series usando la última como base
+        if (nuevaCant > seriesActuales.length) {
+            for (let i = seriesActuales.length; i < nuevaCant; i++) {
+                const base = seriesActuales[seriesActuales.length - 1] || { reps: ex.reps, weight: ex.weight, rest: ex.rest };
+                seriesActuales.push({
+                    numero_serie: i + 1,
+                    reps: base.reps,
+                    weight: base.weight,
+                    rest: base.rest
+                });
+            }
+        } 
+        // Si disminuye, recortamos el array
+        else if (nuevaCant < seriesActuales.length) {
+            ex.series_detalle = seriesActuales.slice(0, nuevaCant);
+        }
+        ex.series = nuevaCant;
+    } else {
+        ex[f] = v; 
+    }
+    window.renderWizardStep(); // Re-renderizamos para mostrar los nuevos renglones
 };
 
 window.removeExFromWizard = (key, uid) => { 
@@ -2080,11 +2123,11 @@ window.saveFinalRutina = async function() {
                             ejercicio_id: ex.id,
                             semana_id: wNum, // Aquí se asigna dinámicamente la semana 2, 4, 6 u 8
                             comentario: ex.comentario || '',
-                            series: Array.from({ length: parseInt(ex.series) || 1 }).map((_, sIdx) => ({
-								numero_serie: sIdx + 1,
-								repeticiones: ex.reps,
-								peso: ex.weight,
-								descanso: ex.rest
+                            series: ex.series_detalle.map(s => ({
+								numero_serie: s.numero_serie,
+								repeticiones: s.reps,
+								peso: s.weight,
+								descanso: s.rest
 							})),
                             progreso_json: null // El backend espera un objeto o null
                         });
@@ -2100,12 +2143,12 @@ window.saveFinalRutina = async function() {
                         ejercicio_id: ex.id,
                         semana_id: 1, // Por defecto semana 1 en rutinas estándar
                         comentario: ex.comentario || '',
-                        series: Array.from({ length: parseInt(ex.series) || 1 }).map((_, sIdx) => ({
-                            numero_serie: sIdx + 1,
-                            repeticiones: ex.reps,
-                            peso: ex.weight,
-                            descanso: ex.rest
-                        })),
+                        series: ex.series_detalle.map(s => ({
+							numero_serie: s.numero_serie,
+							repeticiones: s.reps,
+							peso: s.weight,
+							descanso: s.rest
+						})),
                         progreso_json: null
                     });
                 });
