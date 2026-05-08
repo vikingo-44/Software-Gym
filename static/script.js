@@ -3479,7 +3479,7 @@ if (editorForm) {
 
 		// --- REEMPLAZA TU FUNCIÓN loadStaff POR ESTA NUEVA VERSIÓN VISUAL ---
 		async function loadStaff() {
-			// 1. Asegurar que tenemos las sucursales cargadas antes de seguir
+			// 1. Asegurar sucursales antes de procesar
 			if (!state.sucursales || state.sucursales.length === 0) {
 				await loadSucursales();
 			}
@@ -3492,41 +3492,21 @@ if (editorForm) {
 			const isAdmin = state.user?.rol_nombre === "Administrador";
 			const userSucursalId = state.user?.sucursal_id;
 
-			// 2. Poblar Filtros
-			const setupFilter = (containerId, selectId) => {
-				const container = document.getElementById(containerId);
-				const select = document.getElementById(selectId);
-				if (!container || !select) return;
-
-				if (isAdmin) {
-					container.classList.remove('hidden');
-					if (select.options.length <= 1 && state.sucursales) {
-						state.sucursales.forEach(s => {
-							if (s && s.nombre) {
-								const opt = document.createElement('option');
-								opt.value = s.id;
-								opt.innerText = s.nombre.toUpperCase();
-								select.appendChild(opt);
-							}
-						});
-					}
-				} else {
-					container.classList.add('hidden');
-				}
-			};
-
-			setupFilter('container-filter-profesores', 'filter-sucursal-profesores');
-			setupFilter('container-filter-administrativos', 'filter-sucursal-administrativos');
+			// 2. Mostrar/Ocultar contenedores de filtros según rol
+			const contProf = document.getElementById('container-filter-profesores');
+			const contAdm = document.getElementById('container-filter-administrativos');
+			if (contProf) isAdmin ? contProf.classList.remove('hidden') : contProf.classList.add('hidden');
+			if (contAdm) isAdmin ? contAdm.classList.remove('hidden') : contAdm.classList.add('hidden');
 
 			// 3. Filtrado
 			let profesores = Array.isArray(p) ? p : [];
 			let administrativos = Array.isArray(a) ? a : [];
 
 			if (isAdmin) {
-				const fProf = document.getElementById('filter-sucursal-profesores')?.value;
-				const fAdm = document.getElementById('filter-sucursal-administrativos')?.value;
-				if (fProf && fProf !== 'all') profesores = profesores.filter(u => String(u.sucursal_id) === String(fProf));
-				if (fAdm && fAdm !== 'all') administrativos = administrativos.filter(u => String(u.sucursal_id) === String(fAdm));
+				const fProf = document.getElementById('filter-sucursal-profesores')?.value || 'all';
+				const fAdm = document.getElementById('filter-sucursal-administrativos')?.value || 'all';
+				if (fProf !== 'all') profesores = profesores.filter(u => String(u.sucursal_id) === String(fProf));
+				if (fAdm !== 'all') administrativos = administrativos.filter(u => String(u.sucursal_id) === String(fAdm));
 			} else {
 				profesores = profesores.filter(u => String(u.sucursal_id) === String(userSucursalId));
 				administrativos = administrativos.filter(u => String(u.sucursal_id) === String(userSucursalId));
@@ -3535,7 +3515,7 @@ if (editorForm) {
 			state.profesores = profesores;
 			state.administrativos = administrativos;
 
-			// 4. Renderizado (Transformación de tabla a DIV de tarjetas)
+			// 4. Renderizado (Transformación Visual)
 			const renderContent = (list, viewId, listId, type) => {
 				const table = document.querySelector(`#${viewId} table`);
 				let container = document.getElementById(listId);
@@ -3549,7 +3529,7 @@ if (editorForm) {
 
 				if (container) {
 					container.innerHTML = list.length === 0 
-						? '<div class="text-center py-10 opacity-40 italic">Sin registros.</div>' 
+						? '<div class="text-center py-10 opacity-40 italic font-black uppercase">Sin registros en esta sede</div>' 
 						: list.map(u => createStaffRow(u, type)).join('');
 				}
 			};
@@ -3567,9 +3547,9 @@ if (editorForm) {
 			const roleValue = u.especialidad || (type === 'Profesor' ? 'Entrenador General' : 'Administrativo');
 			const icon = type === 'Profesor' ? 'dumbbell' : 'shield-check';
 
-			// Búsqueda de sucursal con blindaje
+			// 🛡️ Búsqueda de sucursal corregida: usamos .sucursal
 			const sede = state.sucursales?.find(s => String(s.id) === String(u.sucursal_id));
-			const sucursalNombre = u.sucursal_nombre || sede?.nombre || "SEDE NO ASIGNADA";
+			const sucursalNombre = sede?.sucursal || "SEDE NO ASIGNADA";
 
 			return `
 			<div class="glass-card p-4 rounded-3xl border-white/5 flex flex-col md:flex-row md:items-center gap-4 hover:border-red-600/20 transition-all group relative overflow-hidden">
@@ -3584,7 +3564,7 @@ if (editorForm) {
 							<p class="text-[10px] text-white-500 font-bold flex items-center gap-1"><i data-lucide="id-card" class="w-3 h-3"></i> ${u.dni}</p>
 							${u.email ? `<p class="text-[10px] text-gray-500 font-bold flex items-center gap-1"><i data-lucide="mail" class="w-3 h-3"></i> ${u.email}</p>` : ''}
 							<p class="text-[10px] text-red-500 font-black flex items-center gap-1 uppercase italic">
-								<i data-lucide="map-pin" class="w-3 h-3"></i> ${sucursalNombre}
+								<i data-lucide="map-pin" class="w-3 h-3"></i> ${sucursalNombre.toUpperCase()}
 							</p>
 						</div>
 					</div>
@@ -3605,6 +3585,7 @@ if (editorForm) {
 				</div>
 			</div>`;
 		}
+
 		/**
 		 * GESTIÓN AVANZADA DE ALUMNOS (PUNTO 5)
 		 * Incluye: Buscador, Filtros de Estado y Paginación (20 por hoja)
@@ -5107,17 +5088,12 @@ if (editorForm) {
 				// Guardar en el estado global
 				state.sucursales = sucursales; 
 				
-				// --- 1. Renderizar Tarjetas en la vista de Sucursales ---
+				// 1. Renderizar Tarjetas en la vista de Sucursales
 				const container = document.getElementById('sucursales-container');
 				if (container) {
-					if (sucursales.length === 0) {
-						container.innerHTML = `
-							<div class="col-span-full py-20 text-center opacity-30 italic font-black uppercase">
-								<i data-lucide="map-pin-off" class="w-12 h-12 mx-auto mb-4"></i>
-								<p class="font-black uppercase italic">No hay sedes registradas en el arsenal</p>
-							</div>`;
-					} else {
-						container.innerHTML = sucursales.map(s => `
+					container.innerHTML = sucursales.length === 0 
+						? '<div class="col-span-full py-20 text-center opacity-30 italic font-black uppercase"><i data-lucide="map-pin-off" class="w-12 h-12 mx-auto mb-4"></i><p>No hay sedes registradas</p></div>'
+						: sucursales.map(s => `
 							<div class="glass-card p-8 rounded-[2.5rem] border border-white/5 hover:border-red-600/30 transition-all group relative overflow-hidden">
 								<div class="flex justify-between items-start mb-6">
 									<div class="p-4 bg-red-600/10 rounded-2xl text-red-500 group-hover:bg-red-600 group-hover:text-black transition-all">
@@ -5129,45 +5105,46 @@ if (editorForm) {
 								</div>
 								<h4 class="text-2xl font-black italic uppercase text-white mb-2 tracking-tighter">${s.sucursal}</h4>
 								<p class="text-[10px] text-white-500 font-bold uppercase tracking-[0.2em] italic">${s.direccion}</p>
-							</div>
-						`).join('');
-					}
+							</div>`).join('');
 				}
 
-				// --- 2. Selector en modal de alumnos ---
+				// 2. Selectores de Filtro de Staff (Profesores y Administrativos)
+				const selectProf = document.getElementById('filter-sucursal-profesores');
+				const selectAdm = document.getElementById('filter-sucursal-administrativos');
+				
+				[selectProf, selectAdm].forEach(sel => {
+					if (sel) {
+						const current = sel.value || 'all';
+						sel.innerHTML = '<option value="all" class="bg-zinc-900 text-white font-black italic uppercase">TODAS LAS SEDES</option>' + 
+							sucursales.map(s => `<option value="${s.id}" class="bg-zinc-900 text-white font-black italic uppercase">${s.sucursal.toUpperCase()}</option>`).join('');
+						sel.value = current;
+					}
+				});
+
+				// 3. Selector en modal de Alumnos (Poblado corregido)
 				const selectAl = document.getElementById('al-sucursal');
 				if (selectAl) {
 					const currentVal = selectAl.value;
-					selectAl.innerHTML = '<option value="">Seleccionar Sucursal...</option>' + 
-						sucursales.map(s => `<option value="${s.id}">${s.sucursal.toUpperCase()}</option>`).join('');
+					selectAl.innerHTML = '<option value="" class="bg-zinc-900 text-white">Seleccionar Sucursal...</option>' + 
+						sucursales.map(s => `<option value="${s.id}" class="bg-zinc-900 text-white">${s.sucursal.toUpperCase()}</option>`).join('');
 					if(currentVal) selectAl.value = currentVal;
 				}
 
-				// --- 3. Selector en modal de CLASES (Para el ALTA) ---
+				// 4. Selector en modal de CLASES y Filtro de CLASES
 				const selectCl = document.getElementById('clase-sucursal-select');
-				if (selectCl) {
-					const currentValCl = selectCl.value;
-					// Agregamos clases de fondo oscuro y texto blanco a cada opción
-					selectCl.innerHTML = sucursales.map(s => 
-						`<option value="${s.id}" class="bg-zinc-900 text-white font-bold italic uppercase">${s.sucursal.toUpperCase()}</option>`
-					).join('');
-					if(currentValCl) selectCl.value = currentValCl;
-				}
+				const selectFiltroCl = document.getElementById('filtro-clases-sucursal');
 
-				// --- 4. Selector de FILTRO en la sección CLASES (Para la VISTA) ---
-				const selectFiltro = document.getElementById('filtro-clases-sucursal');
-				if (selectFiltro) {
-					const currentFiltro = selectFiltro.value || 'todas';
-					// Aplicamos el estilo oscuro tanto a la opción por defecto como a las sucursales
-					selectFiltro.innerHTML = '<option value="todas" class="bg-zinc-900 text-white font-bold italic uppercase">TODAS LAS SEDES</option>' + 
-						sucursales.map(s => 
-							`<option value="${s.id}" class="bg-zinc-900 text-white font-bold italic uppercase">${s.sucursal.toUpperCase()}</option>`
-						).join('');
-					selectFiltro.value = currentFiltro;
+				if (selectCl) {
+					selectCl.innerHTML = sucursales.map(s => `<option value="${s.id}" class="bg-zinc-900 text-white font-bold italic uppercase">${s.sucursal.toUpperCase()}</option>`).join('');
+				}
+				if (selectFiltroCl) {
+					const current = selectFiltroCl.value || 'todas';
+					selectFiltroCl.innerHTML = '<option value="todas" class="bg-zinc-900 text-white font-bold italic uppercase">TODAS LAS SEDES</option>' + 
+						sucursales.map(s => `<option value="${s.id}" class="bg-zinc-900 text-white font-bold italic uppercase">${s.sucursal.toUpperCase()}</option>`).join('');
+					selectFiltroCl.value = current;
 				}
 
 				if(window.lucide) lucide.createIcons();
-
 			} catch (error) {
 				console.error("❌ Error cargando sucursales:", error);
 			}
