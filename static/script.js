@@ -91,70 +91,92 @@
 			if (!state.user) return;
 			const rol = (state.user.rol_nombre || "").toLowerCase();
 			
-			// 1. SECCIONES (Títulos del Sidebar)
+			// 1. CONTENEDORES (Secciones de título/grupos)
 			const contenedoresSeccion = {
-				staff: document.getElementById('nav-section-staff'),     // Gestión de profes/admins
-				operativa: document.getElementById('nav-section-operativa'), // Alumnos, Clases, etc.
-				virtual: document.getElementById('nav-section-virtual')    // Acceso QR/Totem
+				staff: document.getElementById('nav-section-staff'),
+				operativa: document.getElementById('nav-section-operativa'),
+				virtual: document.getElementById('nav-section-virtual'),
+				facturacion: document.getElementById('nav-section-facturacion') // Contenedor de Caja/Stock/Rentabilidad
 			};
 
-			// 2. BOTONES INDIVIDUALES
+			// 2. ITEMS INDIVIDUALES (Botones específicos)
 			const itemsMenu = {
 				alumnos: document.getElementById('nav-alumnos'),
 				planes: document.getElementById('nav-planes'),
 				clases: document.getElementById('nav-clases'),
-				facturacion: document.getElementById('nav-cobrar'), // Incluye Caja/Stock internamente
+				facturacion: document.getElementById('nav-cobrar'),
+				caja: document.getElementById('nav-caja'),
+				stock: document.getElementById('nav-stock'),
+				rentabilidad: document.getElementById('nav-rentabilidad'),
+				acceso: document.getElementById('nav-acceso-virtual'),
 				sucursales: document.getElementById('nav-sucursales'),
 				rutinas: document.getElementById('nav-rutinas')
 			};
 
 			// --- RESET: MOSTRAR TODO POR DEFECTO ---
+			// Esto asegura que tú como Administrador vuelvas a ver todo el sistema.
 			Object.values(contenedoresSeccion).forEach(el => {
 				if (el) el.style.setProperty('display', 'block', 'important');
 			});
+
 			Object.values(itemsMenu).forEach(el => {
 				if (el) el.style.setProperty('display', 'flex', 'important');
 			});
 
-			// --- FILTROS DE SEGURIDAD POR ROL ---
+			// --- LÓGICA DE RESTRICCIONES POR ROL ---
 
-			if (rol === "profesor") {
-				// 🛡️ 1. SACAR SECCIÓN STAFF COMPLETA
-				if (contenedoresSeccion.staff) {
-					contenedoresSeccion.staff.style.setProperty('display', 'none', 'important');
-				}
-
-				// 🛡️ 2. SACAR BOTONES RESTRINGIDOS (Alumnos, Clases, Facturación, Planes, Sucursales)
-				const aOcultar = ['alumnos', 'clases', 'facturacion', 'planes', 'sucursales'];
-				aOcultar.forEach(key => {
-					if (itemsMenu[key]) {
-						itemsMenu[key].style.setProperty('display', 'none', 'important');
-					}
-				});
-
-				// 🛡️ 3. DEJAR SOLO RUTINAS
-				// El profesor entra directo a la gestión de rutinas/ficha técnica.
-				if (itemsMenu.rutinas) {
-					itemsMenu.rutinas.style.setProperty('display', 'flex', 'important');
-				}
-			} 
-
-			else if (rol === "alumno") {
-				// Restricciones de alumno que ya tenías
+			// A. ALUMNOS
+			if (rol === "alumno") {
 				Object.values(contenedoresSeccion).forEach(el => { 
 					if(el) el.style.setProperty('display', 'none', 'important'); 
 				});
-				['planes', 'facturacion', 'sucursales', 'alumnos', 'clases', 'rutinas'].forEach(key => {
+				
+				const itemsOcultar = ['planes', 'facturacion', 'caja', 'stock', 'rentabilidad', 'sucursales', 'alumnos', 'clases', 'rutinas'];
+				itemsOcultar.forEach(key => {
 					if(itemsMenu[key]) itemsMenu[key].style.setProperty('display', 'none', 'important');
 				});
 			}
 
-			else if (rol === "administrador" || rol === "administrativo") {
-				// El admin no se ve a sí mismo ni a otros admins en Staff (opcional según tu flujo)
-				if (contenedoresSeccion.staff) {
-					contenedoresSeccion.staff.style.setProperty('display', 'none', 'important');
+			// B. PROFESORES (Blindaje estricto)
+			else if (rol === "profesor") {
+				// 1. Ocultamos secciones completas de Staff y Facturación
+				if (contenedoresSeccion.staff) contenedoresSeccion.staff.style.setProperty('display', 'none', 'important');
+				if (contenedoresSeccion.facturacion) contenedoresSeccion.facturacion.style.setProperty('display', 'none', 'important');
+
+				// 2. Ocultamos botones individuales (incluyendo Clases y Alumnos)
+				const prohibidos = [
+					'alumnos', 
+					'clases', 
+					'facturacion', 
+					'caja', 
+					'stock', 
+					'rentabilidad', 
+					'planes', 
+					'sucursales'
+				];
+				
+				prohibidos.forEach(key => {
+					if (itemsMenu[key]) itemsMenu[key].style.setProperty('display', 'none', 'important');
+				});
+
+				// 3. El profesor solo mantiene visible el botón de Rutinas
+				if (itemsMenu.rutinas) itemsMenu.rutinas.style.setProperty('display', 'flex', 'important');
+			}
+
+			// C. ADMINISTRATIVO
+			else if (rol === "administracion" || rol === "administrativo") {
+				// El administrativo no ve la gestión de Staff (otros profes/admins)
+				if (contenedoresSeccion.staff) contenedoresSeccion.staff.style.setProperty('display', 'none', 'important');
+				
+				const staffDashboardPanel = document.getElementById('dash-staff-access');
+				if (staffDashboardPanel) {
+					const card = staffDashboardPanel.closest('.glass-card');
+					if (card) card.style.setProperty('display', 'none', 'important');
 				}
 			}
+
+			// D. ADMINISTRADOR / SUPERVISOR
+			// No agregamos lógica de ocultamiento, por lo que el RESET inicial les deja ver TODO.
 
 			if (window.lucide) lucide.createIcons();
 		}
