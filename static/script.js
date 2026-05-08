@@ -3479,20 +3479,71 @@ if (editorForm) {
 
 		// --- REEMPLAZA TU FUNCIÓN loadStaff POR ESTA NUEVA VERSIÓN VISUAL ---
 		async function loadStaff() {
-			// 1. Obtener datos
+			// 1. Obtener datos de profesores y administrativos
 			const [p, a] = await Promise.all([
 				apiFetch('/profesores'),
 				apiFetch('/administrativos')
 			]);
-			state.profesores = Array.isArray(p) ? p : [];
-			state.administrativos = Array.isArray(a) ? a : [];
 
-			// 2. TRANSFORMACIÓN VISUAL: PROFESORES
+			const isAdmin = state.user?.rol_nombre === "Administrador";
+			const userSucursalId = state.user?.sucursal_id;
+
+			// 2. POBLAR Y MOSTRAR FILTROS (Solo si es Admin)
+			const setupFilter = (containerId, selectId) => {
+				const container = document.getElementById(containerId);
+				const select = document.getElementById(selectId);
+				if (!container || !select) return;
+
+				if (isAdmin) {
+					container.classList.remove('hidden');
+					// Llenar select si está vacío y hay sucursales en el estado
+					if (select.options.length <= 1 && state.sucursales && state.sucursales.length > 0) {
+						state.sucursales.forEach(s => {
+							if (s && s.nombre) {
+								const opt = document.createElement('option');
+								opt.value = s.id;
+								opt.innerText = s.nombre.toUpperCase();
+								opt.className = "bg-black text-white";
+								select.appendChild(opt);
+							}
+						});
+					}
+				} else {
+					container.classList.add('hidden');
+				}
+			};
+
+			setupFilter('container-filter-profesores', 'filter-sucursal-profesores');
+			setupFilter('container-filter-administrativos', 'filter-sucursal-administrativos');
+
+			// 3. LÓGICA DE FILTRADO (Admin filtra por select, otros por su propia sede)
+			let profesoresFinal = Array.isArray(p) ? p : [];
+			let administrativosFinal = Array.isArray(a) ? a : [];
+
+			if (isAdmin) {
+				const fProf = document.getElementById('filter-sucursal-profesores')?.value;
+				const fAdm = document.getElementById('filter-sucursal-administrativos')?.value;
+				
+				if (fProf && fProf !== 'all') {
+					profesoresFinal = profesoresFinal.filter(u => String(u.sucursal_id) === String(fProf));
+				}
+				if (fAdm && fAdm !== 'all') {
+					administrativosFinal = administrativosFinal.filter(u => String(u.sucursal_id) === String(fAdm));
+				}
+			} else {
+				// Hermetismo: Supervisor/Staff solo ve su sede
+				profesoresFinal = profesoresFinal.filter(u => String(u.sucursal_id) === String(userSucursalId));
+				administrativosFinal = administrativosFinal.filter(u => String(u.sucursal_id) === String(userSucursalId));
+			}
+
+			state.profesores = profesoresFinal;
+			state.administrativos = administrativosFinal;
+
+			// 4. TRANSFORMACIÓN VISUAL: PROFESORES (Tarjetas)
 			const profTable = document.querySelector('#view-profesores table');
 			const profListId = 'profesores-list-view';
 			let profContainer = document.getElementById(profListId);
 
-			// Si existe la tabla antigua, la reemplazamos por el contenedor de tarjetas
 			if (!profContainer && profTable) {
 				profContainer = document.createElement('div');
 				profContainer.id = profListId;
@@ -3502,13 +3553,13 @@ if (editorForm) {
 
 			if (profContainer) {
 				if (state.profesores.length === 0) {
-					profContainer.innerHTML = '<div class="text-center py-10"><i data-lucide="user-x" class="w-12 h-12 text-gray-600 mx-auto mb-4"></i><p class="text-gray-500 italic">No hay profesores registrados.</p></div>';
+					profContainer.innerHTML = '<div class="text-center py-10"><i data-lucide="user-x" class="w-12 h-12 text-gray-600 mx-auto mb-4"></i><p class="text-gray-500 italic">No hay profesores en esta sede.</p></div>';
 				} else {
 					profContainer.innerHTML = state.profesores.map(u => createStaffRow(u, 'Profesor')).join('');
 				}
 			}
 
-			// 3. TRANSFORMACIÓN VISUAL: ADMINISTRATIVOS
+			// 5. TRANSFORMACIÓN VISUAL: ADMINISTRATIVOS (Tarjetas)
 			const admTable = document.querySelector('#view-administrativos table');
 			const admListId = 'administrativos-list-view';
 			let admContainer = document.getElementById(admListId);
@@ -3522,13 +3573,13 @@ if (editorForm) {
 
 			if (admContainer) {
 				if (state.administrativos.length === 0) {
-					admContainer.innerHTML = '<div class="text-center py-10"><i data-lucide="shield-alert" class="w-12 h-12 text-gray-600 mx-auto mb-4"></i><p class="text-gray-500 italic">No hay administrativos registrados.</p></div>';
+					admContainer.innerHTML = '<div class="text-center py-10"><i data-lucide="shield-alert" class="w-12 h-12 text-gray-600 mx-auto mb-4"></i><p class="text-gray-500 italic">No hay administrativos en esta sede.</p></div>';
 				} else {
 					admContainer.innerHTML = state.administrativos.map(u => createStaffRow(u, 'Administracion')).join('');
 				}
 			}
 
-			// Actualizar selectores en modales (como en crear clase)
+			// 6. Actualizar selectores en modales
 			const coachSelect = document.getElementById('cl-coach-select');
 			if (coachSelect) {
 				coachSelect.innerHTML = '<option value="">Seleccionar Coach</option>' + 
@@ -3536,22 +3587,20 @@ if (editorForm) {
 			}
 
 			if (window.lucide) lucide.createIcons();
-			applyPermissions(); // Asegurar que solo Admin/Supervisor vea los botones de editar
+			applyPermissions();
 		}
 
 			// --- NUEVA FUNCIÓN AUXILIAR PARA CREAR TARJETAS DE STAFF ---
 			function createStaffRow(u, type) {
-				const initials = u.nombre_completo ? u.nombre_completo.split(' ').map(n=>n[0]).join('').substring(0,2).toUpperCase() : "??";
+				const initials = u.nombre_completo ? u.nombre_completo.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : "??";
 				const roleLabel = type === 'Profesor' ? 'Coach / Especialidad' : 'Cargo / Función';
 				const roleValue = u.especialidad || (type === 'Profesor' ? 'Entrenador General' : 'Administrativo');
 				
-				// Icono según tipo
 				const icon = type === 'Profesor' ? 'dumbbell' : 'shield-check';
 
-				// Buscamos el nombre de la sucursal en el estado global si solo tenemos el ID
-				const sucursalNombre = u.sucursal_nombre || 
-				(state.sucursales?.find(s => String(s.id) === String(u.sucursal_id))?.nombre) || 
-				"Sede No Asignada";
+				// 🛡️ CORRECCIÓN CLAVE: Buscar nombre de sucursal con comparación de String para evitar "Sede no asignada"
+				const sedeObj = state.sucursales?.find(s => String(s.id) === String(u.sucursal_id));
+				const sucursalNombre = u.sucursal_nombre || sedeObj?.nombre || "SEDE NO ASIGNADA";
 
 				return `
 				<div class="glass-card p-4 rounded-3xl border-white/5 flex flex-col md:flex-row md:items-center gap-4 hover:border-red-600/20 transition-all group relative overflow-hidden">
