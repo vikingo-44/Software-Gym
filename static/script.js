@@ -5108,11 +5108,12 @@ if (editorForm) {
 							</div>`).join('');
 				}
 
-				// 2. Selectores de Filtro de Staff (Profesores y Administrativos)
+				// 2. Selectores de Filtro (Profesores, Administrativos y ALUMNOS)
 				const selectProf = document.getElementById('filter-sucursal-profesores');
 				const selectAdm = document.getElementById('filter-sucursal-administrativos');
+				const selectAlu = document.getElementById('filter-sucursal-alumnos'); // <--- AGREGADO
 				
-				[selectProf, selectAdm].forEach(sel => {
+				[selectProf, selectAdm, selectAlu].forEach(sel => {
 					if (sel) {
 						const current = sel.value || 'all';
 						sel.innerHTML = '<option value="all" class="bg-zinc-900 text-white font-black italic uppercase">TODAS LAS SEDES</option>' + 
@@ -5121,12 +5122,12 @@ if (editorForm) {
 					}
 				});
 
-				// 3. Selector en modal de Alumnos (Poblado corregido)
+				// 3. Selector en modal de Alumnos
 				const selectAl = document.getElementById('al-sucursal');
 				if (selectAl) {
 					const currentVal = selectAl.value;
 					selectAl.innerHTML = '<option value="" class="bg-zinc-900 text-white">Seleccionar Sucursal...</option>' + 
-						sucursales.map(s => `<option value="${s.id}" class="bg-zinc-900 text-white">${s.sucursal.toUpperCase()}</option>`).join('');
+						sucursales.map(s => `<option value="${s.id}">${s.sucursal.toUpperCase()}</option>`).join('');
 					if(currentVal) selectAl.value = currentVal;
 				}
 
@@ -6452,59 +6453,66 @@ if (editorForm) {
              * 2. Función de Filtrado
              */
             function filterAlumnos(filtro) {
-				// 1. Validar que existan alumnos en el estado
+				// 1. Validar que existan alumnos
 				if (!state.alumnos) return;
 
-				// 2. Actualizar el estado global del filtro y resetear página
-				state.alumnosStatusFilter = filtro; // Guardamos qué filtro está activo
-				state.alumnosPage = 1;              // Resetear a la página 1
-				state.currentPageAlumnos = 1;       // Sincronizar con tu otra variable de página si existe
-
-				// 3. Limpiar el buscador para evitar conflictos visuales
-				const searchInput = document.getElementById('search-alumno-input');
-				if (searchInput) {
-					searchInput.value = "";
-					state.alumnosSearch = ""; // Limpiamos también el texto de búsqueda en el estado
+				// 2. Si se pasa un nuevo filtro (desde botones), actualizar estado. 
+				// Si no (desde el select), usar el que ya estaba.
+				if (filtro) {
+					state.alumnosStatusFilter = filtro;
+				} else {
+					filtro = state.alumnosStatusFilter || 'todos';
 				}
 
-				// 4. UI: REINICIAR BOTONES (Limpiar colores de todos)
+				// 3. Resetear página
+				state.currentPageAlumnos = 1; 
+
+				// 4. Obtener valores de los otros filtros (Sucursal y Buscador)
+				const sucursalSelect = document.getElementById('filter-sucursal-alumnos');
+				const sucursalId = sucursalSelect ? sucursalSelect.value : 'all';
+				
+				const searchInput = document.getElementById('search-alumno-input');
+				const searchVal = searchInput ? searchInput.value.toLowerCase() : "";
+
+				// 5. UI: Gestionar botones de estado (Activos/Vencidos)
 				document.querySelectorAll('.filter-btn, .filter-btn-alumno').forEach(btn => {
 					btn.classList.remove('bg-red-600', 'text-black');
 					btn.classList.add('text-white-500', 'hover:text-white');
 				});
 
-				// 5. UI: MARCAR EL BOTÓN SELECCIONADO
 				const activeBtn = document.getElementById('filter-' + filtro);
 				if (activeBtn) {
 					activeBtn.classList.remove('text-white-500', 'hover:text-white');
 					activeBtn.classList.add('bg-red-600', 'text-black');
 				}
 
-				// --- AGREGADO: Obtener el valor del filtro de sucursal ---
-				const sucursalSelect = document.getElementById('filter-sucursal-alumnos');
-				const sucursalId = sucursalSelect ? sucursalSelect.value : 'all';
-
-				// 6. LÓGICA DE FILTRADO (Combinando Estado + Sucursal)
+				// 6. LÓGICA DE FILTRADO COMBINADA
 				const hoy = new Date().toISOString().split('T')[0];
-				
-				// Primero filtramos por sucursal si no es "all"
-				let filtrados = sucursalId === 'all' 
-					? state.alumnos 
-					: state.alumnos.filter(a => a.sucursal_id == sucursalId);
+				let filtrados = [...state.alumnos];
 
-				// Luego filtramos por el estado (todos, activos o vencidos)
+				// A. Filtrar por Sede
+				if (sucursalId !== 'all') {
+					filtrados = filtrados.filter(a => String(a.sucursal_id) === String(sucursalId));
+				}
+
+				// B. Filtrar por Estado (Todos, Activos o Vencidos)
 				if (filtro === 'activos') {
 					filtrados = filtrados.filter(a => a.fecha_vencimiento && a.fecha_vencimiento >= hoy);
 				} else if (filtro === 'vencidos') {
 					filtrados = filtrados.filter(a => !a.fecha_vencimiento || a.fecha_vencimiento < hoy);
 				}
 
-				// 7. RENDERIZAR RESULTADOS
+				// C. Filtrar por Buscador (Si el usuario escribió algo)
+				if (searchVal) {
+					filtrados = filtrados.filter(a => 
+						(a.nombre_completo && a.nombre_completo.toLowerCase().includes(searchVal)) || 
+						(a.dni && a.dni.includes(searchVal))
+					);
+				}
+
+				// 7. Renderizar
 				if (typeof renderAlumnosList === 'function') {
 					renderAlumnosList(filtrados);
-				} else {
-					// Si tu renderizador principal usa el estado global, recordá actualizar la lista filtrada allí si es necesario
-					renderAlumnos(); 
 				}
 			}
 
