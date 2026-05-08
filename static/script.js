@@ -6341,113 +6341,112 @@ if (editorForm) {
              * 1. Renderizado de la Lista (DISEÑO STAFF + PAGINACIÓN + STATS)
              */
             function renderAlumnosList(listaDatos) {
-                const contenedor = document.getElementById('lista-alumnos-container');
-                if(!contenedor) return;
+				const contenedor = document.getElementById('lista-alumnos-container');
+				if (!contenedor) return;
 
-                // Guardamos la lista actual para que la paginación sepa sobre qué trabajar
-                state.filteredAlumnos = listaDatos;
+				// Guardamos la lista actual para que la paginación sepa sobre qué trabajar
+				state.filteredAlumnos = listaDatos;
 
-                // --- ACTUALIZACIÓN DE ESTADÍSTICAS VIKINGAS ---
-                const hoy = new Date().toISOString().split('T')[0];
-                const listaSegura = state.alumnos || [];
-				const total = listaSegura.length;
-				const activos = listaSegura.filter(a => a.fecha_vencimiento && a.fecha_vencimiento >= hoy).length;
-                const vencidos = total - activos;
+				// --- ACTUALIZACIÓN DE ESTADÍSTICAS VIKINGAS ---
+				// Corregido: Las estadísticas ahora se basan en listaDatos (la lista ya filtrada por sede/busqueda)
+				const hoy = new Date().toISOString().split('T')[0];
+				const total = listaDatos.length;
+				const activos = listaDatos.filter(a => a.fecha_vencimiento && a.fecha_vencimiento >= hoy).length;
+				const vencidos = total - activos;
 
-                if (document.getElementById('stats-total')) document.getElementById('stats-total').innerText = total;
-                if (document.getElementById('stats-activos')) document.getElementById('stats-activos').innerText = activos;
-                if (document.getElementById('stats-vencidos')) document.getElementById('stats-vencidos').innerText = vencidos;
-                if (document.getElementById('stats-pagina')) document.getElementById('stats-pagina').innerText = state.currentPageAlumnos;
+				if (document.getElementById('stats-total')) document.getElementById('stats-total').innerText = total;
+				if (document.getElementById('stats-activos')) document.getElementById('stats-activos').innerText = activos;
+				if (document.getElementById('stats-vencidos')) document.getElementById('stats-vencidos').innerText = vencidos;
+				if (document.getElementById('stats-pagina')) document.getElementById('stats-pagina').innerText = state.currentPageAlumnos;
 
-                // --- LÓGICA DE PAGINACIÓN ---
-                const totalItems = listaDatos.length;
-                const totalPages = Math.ceil(totalItems / state.itemsPerPage);
-                
-                // Recorte de la lista según la página
-                const inicio = (state.currentPageAlumnos - 1) * state.itemsPerPage;
-                const fin = inicio + state.itemsPerPage;
-                const listaPaginada = listaDatos.slice(inicio, fin);
+				// --- LÓGICA DE PAGINACIÓN ---
+				const totalItems = listaDatos.length;
+				const totalPages = Math.ceil(totalItems / state.itemsPerPage);
+				
+				const inicio = (state.currentPageAlumnos - 1) * state.itemsPerPage;
+				const fin = inicio + state.itemsPerPage;
+				const listaPaginada = listaDatos.slice(inicio, fin);
 
-                if(listaPaginada.length === 0) {
-                    contenedor.innerHTML = `
-                        <div class="h-full flex flex-col items-center justify-center text-white/20 py-10">
-                            <i data-lucide="users" class="w-12 h-12 mb-2"></i>
-                            <p class="text-xs font-black uppercase italic tracking-widest">Sin resultados en el arsenal</p>
-                        </div>`;
-                    renderPaginationControls(0); // Limpiar paginación si no hay datos
-                    if(window.lucide) lucide.createIcons();
-                    return;
-                }
+				if (listaPaginada.length === 0) {
+					contenedor.innerHTML = `
+						<div class="h-full flex flex-col items-center justify-center text-white/20 py-10">
+							<i data-lucide="users" class="w-12 h-12 mb-2"></i>
+							<p class="text-xs font-black uppercase italic tracking-widest">Sin resultados en el arsenal</p>
+						</div>`;
+					renderPaginationControls(0);
+					if (window.lucide) lucide.createIcons();
+					return;
+				}
 
-                contenedor.innerHTML = listaPaginada.map(a => {
-                    // Lógica de Estado
-                    const estaVencido = !a.fecha_vencimiento || a.fecha_vencimiento < hoy;
-                    const colorEstado = estaVencido ? 'bg-red-600' : 'bg-green-600'; 
-                    const textoEstado = estaVencido ? 'VENCIDO' : 'ACTIVO';
-                    const colorBadge = estaVencido ? 'text-red-500 bg-red-500/10 border-red-500/20' : 'text-green-500 bg-green-500/10 border-green-500/20';
+				contenedor.innerHTML = listaPaginada.map(a => {
+					// Lógica de Estado
+					const estaVencido = !a.fecha_vencimiento || a.fecha_vencimiento < hoy;
+					const colorEstado = estaVencido ? 'bg-red-600' : 'bg-green-600'; 
+					const textoEstado = estaVencido ? 'VENCIDO' : 'ACTIVO';
+					const colorBadge = estaVencido ? 'text-red-500 bg-red-500/10 border-red-500/20' : 'text-green-500 bg-green-500/10 border-green-500/20';
 
-                    const initials = a.nombre_completo ? a.nombre_completo.substring(0,2).toUpperCase() : "??";
-                    const planNombre = a.plan ? a.plan.nombre : 'Sin Plan';
+					const initials = a.nombre_completo ? a.nombre_completo.substring(0, 2).toUpperCase() : "??";
+					const planNombre = a.plan ? a.plan.nombre : 'Sin Plan';
 
-                    return `
-                    <div class="glass-card p-5 rounded-3xl border-white/5 flex flex-col md:flex-row md:items-center gap-6 hover:border-red-600/20 transition-all group relative overflow-hidden">
-                        <!-- Barra lateral decorativa -->
-                        <div class="absolute left-0 top-0 bottom-0 w-1.5 ${colorEstado} opacity-40 group-hover:opacity-100 transition-opacity"></div>
-                        
-                        <!-- COLUMNA 1: IDENTIDAD -->
-                        <div class="flex items-center gap-4 w-full md:w-1/3">
-                            <div class="w-14 h-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center font-black text-white text-lg italic shadow-lg group-hover:bg-red-600 group-hover:text-black transition-colors shrink-0">
-                                ${initials}
-                            </div>
-                            <div class="overflow-hidden">
-                                <h4 class="text-sm font-black uppercase italic text-white group-hover:text-red-500 transition-colors truncate">${a.nombre_completo}</h4>
-                                <div class="flex flex-col mt-1">
-                                    <p class="text-[10px] text-white-500 font-bold flex items-center gap-1.5"><i data-lucide="id-card" class="w-3 h-3"></i> ${a.dni}</p>
-                                    ${a.email ? `<p class="text-[10px] text-white-500 font-bold flex items-center gap-1.5 truncate"><i data-lucide="mail" class="w-3 h-3"></i> ${a.email}</p>` : ''}
-                                </div>
-                            </div>
-                        </div>
+					// 🛡️ BÚSQUEDA DE SUCURSAL (Igual que en Staff)
+					const sedeObj = state.sucursales?.find(s => String(s.id) === String(a.sucursal_id));
+					const sucursalNombre = a.sucursal_nombre || sedeObj?.sucursal || "SEDE NO ASIGNADA";
 
-                        <!-- COLUMNA 2: PLAN Y ESTADO -->
-                        <div class="flex-1 border-t md:border-t-0 md:border-l border-white/5 pt-4 md:pt-0 md:pl-8">
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
-                                
-                                <!-- Info Plan -->
-                                <div>
-                                    <p class="text-[9px] text-white-500 font-black uppercase tracking-widest mb-1 flex items-center gap-1.5">
-                                        <i data-lucide="ticket" class="w-3 h-3 text-red-600"></i> Plan Actual
-                                    </p>
-                                    <p class="text-sm font-black uppercase italic text-white truncate">${planNombre}</p>
-                                </div>
+					return `
+					<div class="glass-card p-5 rounded-3xl border-white/5 flex flex-col md:flex-row md:items-center gap-6 hover:border-red-600/20 transition-all group relative overflow-hidden">
+						<div class="absolute left-0 top-0 bottom-0 w-1.5 ${colorEstado} opacity-40 group-hover:opacity-100 transition-opacity"></div>
+						
+						<div class="flex items-center gap-4 w-full md:w-1/3">
+							<div class="w-14 h-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center font-black text-white text-lg italic shadow-lg group-hover:bg-red-600 group-hover:text-black transition-colors shrink-0">
+								${initials}
+							</div>
+							<div class="overflow-hidden">
+								<h4 class="text-sm font-black uppercase italic text-white group-hover:text-red-500 transition-colors truncate">${a.nombre_completo}</h4>
+								<div class="flex flex-col mt-1 gap-1">
+									<p class="text-[10px] text-white-500 font-bold flex items-center gap-1.5"><i data-lucide="id-card" class="w-3 h-3"></i> ${a.dni}</p>
+									<p class="text-[9px] text-red-500 font-black flex items-center gap-1.5 uppercase italic">
+										<i data-lucide="map-pin" class="w-3 h-3"></i> ${sucursalNombre.toUpperCase()}
+									</p>
+								</div>
+							</div>
+						</div>
 
-                                <!-- Estado y Fechas -->
-                                <div class="flex flex-row md:flex-col items-center md:items-start justify-between gap-2">
-                                    <div class="flex items-center gap-2">
-                                        <span class="px-3 py-1 rounded-lg text-[9px] font-black uppercase border ${colorBadge}">
-                                            ${textoEstado}
-                                        </span>
-                                    </div>
-                                    <p class="text-[10px] text-white-500 font-bold italic flex items-center gap-1">
-                                        Vence: <span class="text-white">${a.fecha_vencimiento || 'N/A'}</span>
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
+						<div class="flex-1 border-t md:border-t-0 md:border-l border-white/5 pt-4 md:pt-0 md:pl-8">
+							<div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
+								
+								<div>
+									<p class="text-[9px] text-white-500 font-black uppercase tracking-widest mb-1 flex items-center gap-1.5">
+										<i data-lucide="ticket" class="w-3 h-3 text-red-600"></i> Plan Actual
+									</p>
+									<p class="text-sm font-black uppercase italic text-white truncate">${planNombre}</p>
+								</div>
 
-                        <!-- COLUMNA 3: ACCIONES -->
-                        <div class="flex items-center justify-end min-w-[100px] border-t md:border-t-0 border-white/5 pt-3 md:pt-0">
-                            <button onclick="openEditAlumno(${a.id})" class="px-6 py-3 bg-white/5 text-white rounded-xl text-[10px] font-black uppercase italic hover:bg-white/10 hover:text-red-500 transition-all flex items-center gap-2 shadow-lg w-full md:w-auto justify-center">
-                                <i data-lucide="settings-2" class="w-3.5 h-3.5"></i>
-                                <span>Editar</span>
-                            </button>
-                        </div>
-                    </div>
-                    `;
-                }).join('');
-                
-                renderPaginationControls(totalPages);
-                if(window.lucide) lucide.createIcons();
-            }
+								<div class="flex flex-row md:flex-col items-center md:items-start justify-between gap-2">
+									<div class="flex items-center gap-2">
+										<span class="px-3 py-1 rounded-lg text-[9px] font-black uppercase border ${colorBadge}">
+											${textoEstado}
+										</span>
+									</div>
+									<p class="text-[10px] text-white-500 font-bold italic flex items-center gap-1">
+										Vence: <span class="text-white">${a.fecha_vencimiento || 'N/A'}</span>
+									</p>
+								</div>
+							</div>
+						</div>
+
+						<div class="flex items-center justify-end min-w-[100px] border-t md:border-t-0 border-white/5 pt-3 md:pt-0">
+							<button onclick="openEditAlumno(${a.id})" class="px-6 py-3 bg-white/5 text-white rounded-xl text-[10px] font-black uppercase italic hover:bg-white/10 hover:text-red-500 transition-all flex items-center gap-2 shadow-lg w-full md:w-auto justify-center">
+								<i data-lucide="settings-2" class="w-3.5 h-3.5"></i>
+								<span>Editar</span>
+							</button>
+						</div>
+					</div>
+					`;
+				}).join('');
+				
+				renderPaginationControls(totalPages);
+				if (window.lucide) lucide.createIcons();
+			}
 
             /**
              * 2. Función de Filtrado
