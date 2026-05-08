@@ -105,6 +105,7 @@
 				planes: document.getElementById('nav-planes'),
 				clases: document.getElementById('nav-clases'),
 				facturacion: document.getElementById('nav-cobrar'),
+				btnFacturacion: document.getElementById('nav-facturacion'),
 				caja: document.getElementById('nav-caja'),
 				stock: document.getElementById('nav-stock'),
 				rentabilidad: document.getElementById('nav-rentabilidad'),
