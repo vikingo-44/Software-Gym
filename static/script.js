@@ -1731,6 +1731,10 @@ window.renderWizardStep = function() {
     const fill = document.getElementById('editor-progress-fill');
     if (!body || !label) return;
 
+    // 🛡️ CAPTURAR SCROLL DERECHO ANTES DE BORRAR EL HTML
+    const scrollContainer = document.getElementById('wizard-main-scroll-area');
+    const currentScroll = scrollContainer ? scrollContainer.scrollTop : 0;
+
     const step = state.routineWizard.currentStep;
     if (fill) fill.style.width = step === 1 ? '30%' : '100%';
 
@@ -1801,7 +1805,6 @@ window.renderWizardStep = function() {
         const isProg = state.routineWizard.tipo === 'progresiva';
         const numSemanas = isProg ? (state.routineWizard.cantSemanas || 4) : 1;
         
-        // Seteamos día activo por defecto si no existe
         if(!state.routineWizard.semanaActivaWizard) state.routineWizard.semanaActivaWizard = 1;
         if(!state.routineWizard.diaActivoWizard) state.routineWizard.diaActivoWizard = 1;
 
@@ -1813,7 +1816,6 @@ window.renderWizardStep = function() {
 
         body.innerHTML = `
             <div class="flex h-full w-full overflow-hidden bg-zinc-950">
-                <!-- LIBRERIA IZQUIERDA -->
                 <div class="w-[320px] border-r border-white/5 flex flex-col bg-black/40 shrink-0">
                     <div class="p-6 border-b border-white/5 bg-black/20 space-y-4">
                         <label class="text-[9px] font-black text-red-600 uppercase tracking-[0.3em] block italic">Arsenal Disponible</label>
@@ -1824,9 +1826,7 @@ window.renderWizardStep = function() {
                     <div class="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar" id="wizard-lib-results"></div>
                 </div>
 
-                <!-- CONTENIDO DERECHO -->
                 <div class="flex-1 flex flex-col min-w-0">
-                    <!-- TABS SEMANAS (Solo Progresiva) -->
                     ${isProg ? `
                     <div class="px-8 py-4 bg-black/60 border-b border-white/5 flex gap-3 overflow-x-auto no-scrollbar shrink-0">
                         ${Array.from({length: numSemanas}).map((_, i) => {
@@ -1834,44 +1834,47 @@ window.renderWizardStep = function() {
                             const activa = state.routineWizard.semanaActivaWizard === w;
                             return `<button onclick="state.routineWizard.semanaActivaWizard = ${w}; window.renderWizardStep();" 
                                 class="px-6 py-3 rounded-xl font-black italic text-[10px] transition-all border-2
-                                ${activa ? 'bg-amber-600 text-black border-amber-600 shadow-lg' : 'bg-white/5 text-white/30 border-transparent'}">
-                                SEMANA ${w}
-                            </button>`;
+                                ${activa ? 'bg-amber-600 text-black border-amber-600 shadow-lg' : 'bg-white/5 text-white/30 border-transparent'}">SEMANA ${w}</button>`;
                         }).join('')}
                     </div>` : ''}
 
-                    <!-- TABS JORNADAS (NUEVO: PARA AMBOS TIPOS) -->
                     <div class="px-8 py-4 bg-zinc-900 border-b border-white/5 flex gap-3 overflow-x-auto no-scrollbar shrink-0">
                         ${Array.from({length: state.routineWizard.cantDias}).map((_, i) => {
                             const d = i + 1;
                             const activa = state.routineWizard.diaActivoWizard === d;
                             return `<button onclick="state.routineWizard.diaActivoWizard = ${d}; window.renderWizardStep();" 
                                 class="px-6 py-3 rounded-xl font-black italic text-[10px] transition-all border-2
-                                ${activa ? 'bg-red-600 text-black border-red-600 shadow-lg' : 'bg-white/5 text-white/30 border-transparent'}">
-                                JORNADA ${d}
-                            </button>`;
+                                ${activa ? 'bg-red-600 text-black border-red-600 shadow-lg' : 'bg-white/5 text-white/30 border-transparent'}">JORNADA ${d}</button>`;
                         }).join('')}
                     </div>
 
-                    <!-- AREA DE EJERCICIOS -->
-                    <div class="flex-1 overflow-y-auto p-8 lg:p-12 custom-scrollbar bg-gradient-to-b from-transparent to-black/20">
-                        <div class="w-full max-w-[1200px] mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4">
+                    <div id="wizard-main-scroll-area" class="flex-1 overflow-y-auto p-8 lg:p-12 custom-scrollbar bg-gradient-to-b from-transparent to-black/20">
+                        <div class="w-full max-w-[1200px] mx-auto space-y-8 animate-in fade-in duration-500">
                             
-                            <!-- CABECERA JORNADA -->
-                            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 bg-white/5 p-8 rounded-[2.5rem] border border-white/10">
-                                <div class="space-y-2">
-                                    <label class="text-[10px] font-black text-white/20 uppercase tracking-widest">Título de la Jornada</label>
-                                    <input type="text" value="${data.label}" oninput="window.updateSessionData('${currentKey}', 'label', this.value)" 
-                                        class="viking-input !bg-black/40 !h-14 !text-sm font-black uppercase italic border-white/10">
+                            <div class="flex flex-col gap-6 bg-white/5 p-8 rounded-[2.5rem] border border-white/10 relative overflow-hidden">
+                                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 relative z-10">
+                                    <div class="space-y-2">
+                                        <label class="text-[10px] font-black text-white/20 uppercase tracking-widest">Título de la Jornada</label>
+                                        <input type="text" value="${data.label}" oninput="window.updateSessionData('${currentKey}', 'label', this.value)" 
+                                            class="viking-input !bg-black/40 !h-14 !text-sm font-black uppercase italic border-white/10">
+                                    </div>
+                                    <div class="space-y-2">
+                                        <label class="text-[10px] font-black text-white/20 uppercase tracking-widest">Objetivo del Día</label>
+                                        <input type="text" value="${data.objetivo_dia || ''}" oninput="window.updateSessionData('${currentKey}', 'objetivo_dia', this.value)" 
+                                            class="viking-input !bg-black/40 !h-14 !text-sm font-medium border-white/10">
+                                    </div>
                                 </div>
-                                <div class="space-y-2">
-                                    <label class="text-[10px] font-black text-white/20 uppercase tracking-widest">Objetivo del Día</label>
-                                    <input type="text" value="${data.objetivo_dia || ''}" oninput="window.updateSessionData('${currentKey}', 'objetivo_dia', this.value)" 
-                                        class="viking-input !bg-black/40 !h-14 !text-sm font-medium border-white/10">
-                                </div>
+                                
+                                <!-- BOTÓN DE CLONACIÓN REINTEGRADO -->
+                                ${isProg && state.routineWizard.semanaActivaWizard > 1 ? `
+                                <div class="flex justify-end pt-4 border-t border-white/5 relative z-10">
+                                    <button onclick="window.clonePrevWeekDay(${state.routineWizard.diaActivoWizard})" 
+                                        class="bg-amber-600/20 text-amber-500 border border-amber-600/30 px-6 py-3 rounded-2xl text-[10px] font-black uppercase italic hover:bg-amber-600 hover:text-black transition-all shadow-xl flex items-center gap-2">
+                                        <i data-lucide="copy" class="w-4 h-4"></i> CLONAR SEMANA ANTERIOR
+                                    </button>
+                                </div>` : ''}
                             </div>
 
-                            <!-- LISTA EJERCICIOS -->
                             <div class="space-y-4" id="wizard-exercises-list">
                                 ${data.exercises.map((ex, exIdx) => window.renderExerciseItemWizard(currentKey, ex, exIdx)).join('')}
                                 ${data.exercises.length === 0 ? `<div class="py-20 border-2 border-dashed border-white/5 rounded-[2.5rem] text-center opacity-20 font-black uppercase italic tracking-[0.3em]">Arsenal Vacío</div>` : ''}
@@ -1880,6 +1883,11 @@ window.renderWizardStep = function() {
                     </div>
                 </div>
             </div>`;
+
+        // 🛡️ RESTAURAR SCROLL DERECHO
+        const newScrollContainer = document.getElementById('wizard-main-scroll-area');
+        if (newScrollContainer) newScrollContainer.scrollTop = currentScroll;
+
         window.renderWizardLib();
     }
     if (window.lucide) lucide.createIcons();
@@ -1950,7 +1958,7 @@ window.renderWizardLib = (query = '') => {
     const container = document.getElementById('wizard-lib-results');
     if (!container) return;
     
-    // Guardamos el scroll actual
+    // 🛡️ CAPTURAR SCROLL IZQUIERDO
     const currentScroll = container.scrollTop;
 
     const filtered = (state.ejerciciosLibreria || []).filter(e => e.nombre.toLowerCase().includes(query.toLowerCase()));
@@ -1968,13 +1976,12 @@ window.renderWizardLib = (query = '') => {
                 ${exs.map(e => `
                     <button onclick="window.addExToWizard(${e.id}, '${e.nombre}')" 
                         class="w-full flex justify-between items-center p-4 bg-white/[0.03] border border-white/5 rounded-2xl text-[11px] font-black uppercase italic text-white/50 hover:bg-red-600 hover:text-black transition-all group">
-                        ${e.nombre} 
-                        <i data-lucide="plus" class="w-4 h-4 opacity-0 group-hover:opacity-100"></i>
+                        ${e.nombre} <i data-lucide="plus" class="w-4 h-4 opacity-0 group-hover:opacity-100"></i>
                     </button>`).join('')}
             </div>
         </div>`).join('');
 
-    // Restauramos el scroll
+    // 🛡️ RESTAURAR SCROLL IZQUIERDO
     container.scrollTop = currentScroll;
     if (window.lucide) lucide.createIcons();
 };
@@ -2008,13 +2015,24 @@ window.addExToWizard = (id, nombre) => {
 window.clonePrevWeekDay = (dayNum) => {
     const curW = state.routineWizard.semanaActivaWizard;
     if (curW <= 1) return;
-    const src = state.routineWizard.config[`week${curW-1}_day${dayNum}`];
-    if (!src || src.exercises.length === 0) return showVikingToast("No hay arsenal en la semana anterior", true);
     
-    state.routineWizard.config[`week${curW}_day${dayNum}`] = JSON.parse(JSON.stringify(src));
-    state.routineWizard.config[`week${curW}_day${dayNum}`].exercises.forEach(e => e.uid = Math.random().toString(36).substr(2, 9));
+    const srcKey = `week${curW-1}_day${dayNum}`;
+    const src = state.routineWizard.config[srcKey];
+    
+    if (!src || !src.exercises || src.exercises.length === 0) {
+        return showVikingToast("No hay arsenal en la semana anterior", true);
+    }
+    
+    const targetKey = `week${curW}_day${dayNum}`;
+    state.routineWizard.config[targetKey] = JSON.parse(JSON.stringify(src));
+    
+    // Generar nuevos UIDs para que las referencias no se pisen
+    state.routineWizard.config[targetKey].exercises.forEach(e => {
+        e.uid = Math.random().toString(36).substr(2, 9);
+    });
+
     window.renderWizardStep();
-    showVikingToast(`Semana ${curW-1} clonada con éxito.`);
+    showVikingToast(`Arsenal de Semana ${curW-1} clonado correctamente.`);
 };
 
 window.updateSessionData = (key, f, v) => { 
