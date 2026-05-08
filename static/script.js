@@ -91,73 +91,73 @@
 			if (!state.user) return;
 			const rol = (state.user.rol_nombre || "").toLowerCase();
 			
-			// 1. CONTENEDORES (Secciones de título)
+			// 1. SECCIONES (Títulos del Sidebar)
 			const contenedoresSeccion = {
-				staff: document.getElementById('nav-section-staff'),
-				operativa: document.getElementById('nav-section-operativa'),
-				virtual: document.getElementById('nav-section-virtual')
+				staff: document.getElementById('nav-section-staff'),     // Gestión de profes/admins
+				operativa: document.getElementById('nav-section-operativa'), // Alumnos, Clases, etc.
+				virtual: document.getElementById('nav-section-virtual')    // Acceso QR/Totem
 			};
 
-			// 2. ITEMS INDIVIDUALES (Botones)
-			// AGREGAMOS 'sucursales' a la lista para poder controlarlo
+			// 2. BOTONES INDIVIDUALES
 			const itemsMenu = {
 				alumnos: document.getElementById('nav-alumnos'),
 				planes: document.getElementById('nav-planes'),
 				clases: document.getElementById('nav-clases'),
-				facturacion: document.getElementById('nav-cobrar'),
-				acceso: document.getElementById('nav-acceso-virtual'),
+				facturacion: document.getElementById('nav-cobrar'), // Incluye Caja/Stock internamente
 				sucursales: document.getElementById('nav-sucursales'),
-				rutinas: document.getElementById('nav-rutinas') // <-- AGREGADO
+				rutinas: document.getElementById('nav-rutinas')
 			};
 
-			// RESET: Contenedores a BLOCK
+			// --- RESET: MOSTRAR TODO POR DEFECTO ---
 			Object.values(contenedoresSeccion).forEach(el => {
 				if (el) el.style.setProperty('display', 'block', 'important');
 			});
-
-			// RESET: Items a FLEX (Volvemos a mostrar todo por defecto)
 			Object.values(itemsMenu).forEach(el => {
 				if (el) el.style.setProperty('display', 'flex', 'important');
 			});
 
-			// --- LÓGICA POR ROL ---
+			// --- FILTROS DE SEGURIDAD POR ROL ---
 
-			// A. Alumnos (Ocultan secciones y casi todos los botones)
-			if (rol === "alumno") {
-				// Escondemos todas las secciones de título
+			if (rol === "profesor") {
+				// 🛡️ 1. SACAR SECCIÓN STAFF COMPLETA
+				if (contenedoresSeccion.staff) {
+					contenedoresSeccion.staff.style.setProperty('display', 'none', 'important');
+				}
+
+				// 🛡️ 2. SACAR BOTONES RESTRINGIDOS (Alumnos, Clases, Facturación, Planes, Sucursales)
+				const aOcultar = ['alumnos', 'clases', 'facturacion', 'planes', 'sucursales'];
+				aOcultar.forEach(key => {
+					if (itemsMenu[key]) {
+						itemsMenu[key].style.setProperty('display', 'none', 'important');
+					}
+				});
+
+				// 🛡️ 3. DEJAR SOLO RUTINAS
+				// El profesor entra directo a la gestión de rutinas/ficha técnica.
+				if (itemsMenu.rutinas) {
+					itemsMenu.rutinas.style.setProperty('display', 'flex', 'important');
+				}
+			} 
+
+			else if (rol === "alumno") {
+				// Restricciones de alumno que ya tenías
 				Object.values(contenedoresSeccion).forEach(el => { 
 					if(el) el.style.setProperty('display', 'none', 'important'); 
 				});
-				
-				// Escondemos los botones restringidos (Sucursales, Planes, Facturación, etc.)
-				const itemsParaOcultar = ['planes', 'facturacion', 'sucursales', 'alumnos', 'clases', 'rutinas'];
-				itemsParaOcultar.forEach(key => {
+				['planes', 'facturacion', 'sucursales', 'alumnos', 'clases', 'rutinas'].forEach(key => {
 					if(itemsMenu[key]) itemsMenu[key].style.setProperty('display', 'none', 'important');
 				});
 			}
 
-			// B. Profesores (Pueden ver alumnos, pero no facturación ni sucursales)
-			else if (rol === "profesor") {
-				if(itemsMenu.facturacion) itemsMenu.facturacion.style.setProperty('display', 'none', 'important');
-				if(itemsMenu.sucursales) itemsMenu.sucursales.style.setProperty('display', 'none', 'important');
-				if(itemsMenu.planes) itemsMenu.planes.style.setProperty('display', 'none', 'important');
-				// El profesor suele necesitar ver 'alumnos' para las rutinas
-			}
-
-			// C. Administrativo (Oculta solo Staff)
-			else if (rol === "administracion" || rol === "administrativo") {
-				if (contenedoresSeccion.staff) contenedoresSeccion.staff.style.setProperty('display', 'none', 'important');
-				
-				const staffDashboardPanel = document.getElementById('dash-staff-access');
-				if (staffDashboardPanel) {
-					const card = staffDashboardPanel.closest('.glass-card');
-					if (card) card.style.setProperty('display', 'none', 'important');
+			else if (rol === "administrador" || rol === "administrativo") {
+				// El admin no se ve a sí mismo ni a otros admins en Staff (opcional según tu flujo)
+				if (contenedoresSeccion.staff) {
+					contenedoresSeccion.staff.style.setProperty('display', 'none', 'important');
 				}
 			}
 
 			if (window.lucide) lucide.createIcons();
 		}
-
 		/**
 		* REQUERIMIENTO: Mostrar fecha exacta en el Dashboard del Alumno.
 		* Se actualiza la función renderStudentDashboard para formatear 'fecha_clase'.
