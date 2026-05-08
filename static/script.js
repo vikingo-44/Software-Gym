@@ -96,16 +96,16 @@
 				staff: document.getElementById('nav-section-staff'),
 				operativa: document.getElementById('nav-section-operativa'),
 				virtual: document.getElementById('nav-section-virtual'),
-				facturacion: document.getElementById('nav-section-facturacion') // Contenedor de Caja/Stock/Rentabilidad
+				facturacion: document.getElementById('nav-section-facturacion')
 			};
 
-			// 2. ITEMS INDIVIDUALES (Botones específicos)
+			// 2. ITEMS INDIVIDUALES (Botones y Desplegables)
 			const itemsMenu = {
 				alumnos: document.getElementById('nav-alumnos'),
 				planes: document.getElementById('nav-planes'),
 				clases: document.getElementById('nav-clases'),
 				facturacion: document.getElementById('nav-cobrar'),
-				btnFacturacion: document.getElementById('nav-facturacion'),
+				btnFacturacion: document.getElementById('nav-facturacion'), // El botón con el icono de billetera
 				caja: document.getElementById('nav-caja'),
 				stock: document.getElementById('nav-stock'),
 				rentabilidad: document.getElementById('nav-rentabilidad'),
@@ -115,7 +115,6 @@
 			};
 
 			// --- RESET: MOSTRAR TODO POR DEFECTO ---
-			// Esto asegura que tú como Administrador vuelvas a ver todo el sistema.
 			Object.values(contenedoresSeccion).forEach(el => {
 				if (el) el.style.setProperty('display', 'block', 'important');
 			});
@@ -138,17 +137,21 @@
 				});
 			}
 
-			// B. PROFESORES (Blindaje estricto)
+			// B. PROFESORES (Blindaje Total)
 			else if (rol === "profesor") {
-				// 1. Ocultamos secciones completas de Staff y Facturación
+				// 1. Ocultamos las secciones de título completas para limpiar el Sidebar
 				if (contenedoresSeccion.staff) contenedoresSeccion.staff.style.setProperty('display', 'none', 'important');
 				if (contenedoresSeccion.facturacion) contenedoresSeccion.facturacion.style.setProperty('display', 'none', 'important');
+				
+				// Ocultamos 'Operativa' para que no quede el texto suelto de la imagen
+				if (contenedoresSeccion.operativa) contenedoresSeccion.operativa.style.setProperty('display', 'none', 'important');
 
-				// 2. Ocultamos botones individuales (incluyendo Clases y Alumnos)
+				// 2. Ocultamos botones individuales (incluyendo el icono de billetera 'btnFacturacion')
 				const prohibidos = [
 					'alumnos', 
 					'clases', 
 					'facturacion', 
+					'btnFacturacion',
 					'caja', 
 					'stock', 
 					'rentabilidad', 
@@ -160,13 +163,15 @@
 					if (itemsMenu[key]) itemsMenu[key].style.setProperty('display', 'none', 'important');
 				});
 
-				// 3. El profesor solo mantiene visible el botón de Rutinas
-				if (itemsMenu.rutinas) itemsMenu.rutinas.style.setProperty('display', 'flex', 'important');
+				// 3. Forzamos que 'Rutinas' sea lo único visible
+				// Si estaba dentro de 'Operativa', al ponerle FLEX e IMPORTANT, aparecerá solo.
+				if (itemsMenu.rutinas) {
+					itemsMenu.rutinas.style.setProperty('display', 'flex', 'important');
+				}
 			}
 
 			// C. ADMINISTRATIVO
 			else if (rol === "administracion" || rol === "administrativo") {
-				// El administrativo no ve la gestión de Staff (otros profes/admins)
 				if (contenedoresSeccion.staff) contenedoresSeccion.staff.style.setProperty('display', 'none', 'important');
 				
 				const staffDashboardPanel = document.getElementById('dash-staff-access');
@@ -176,11 +181,12 @@
 				}
 			}
 
-			// D. ADMINISTRADOR / SUPERVISOR
-			// No agregamos lógica de ocultamiento, por lo que el RESET inicial les deja ver TODO.
+			// D. ADMINISTRADOR / SUPERVISOR 
+			// (Sin restricciones, el RESET inicial les permite ver todo)
 
 			if (window.lucide) lucide.createIcons();
 		}
+
 		/**
 		* REQUERIMIENTO: Mostrar fecha exacta en el Dashboard del Alumno.
 		* Se actualiza la función renderStudentDashboard para formatear 'fecha_clase'.
