@@ -1957,14 +1957,16 @@ window.renderExerciseItemWizard = (key, ex, idx) => {
                 <div class="grid grid-cols-4 gap-3 items-center bg-white/[0.02] p-3 rounded-2xl border border-white/5">
                     <div class="text-[10px] font-black text-white/20 ml-2">#${s.numero_serie}</div>
                     <input type="text" value="${s.reps}" placeholder="Reps" 
-                        oninput="ex.series_detalle[${sIdx}].reps = this.value"
-                        class="bg-white/5 border border-white/5 rounded-lg text-[11px] font-black italic text-center text-red-600 h-9 outline-none focus:border-red-600">
-                    <input type="text" value="${s.weight}" placeholder="Peso"
-                        oninput="ex.series_detalle[${sIdx}].weight = this.value"
-                        class="bg-white/5 border border-white/5 rounded-lg text-[11px] font-black italic text-center text-red-600 h-9 outline-none focus:border-red-600">
-                    <input type="text" value="${s.rest}" placeholder="Desc."
-                        oninput="ex.series_detalle[${sIdx}].rest = this.value"
-                        class="bg-white/5 border border-white/5 rounded-lg text-[11px] font-black italic text-center text-red-600 h-9 outline-none focus:border-red-600">
+						oninput="window.updateSerieDetalle('${key}', '${ex.uid}', ${sIdx}, 'reps', this.value)"
+						class="bg-white/5 border border-white/5 rounded-lg text-[11px] font-black italic text-center text-red-600 h-9 outline-none focus:border-red-600">
+
+					<input type="text" value="${s.weight}" placeholder="Peso"
+						oninput="window.updateSerieDetalle('${key}', '${ex.uid}', ${sIdx}, 'weight', this.value)"
+						class="bg-white/5 border border-white/5 rounded-lg text-[11px] font-black italic text-center text-red-600 h-9 outline-none focus:border-red-600">
+
+					<input type="text" value="${s.rest}" placeholder="Desc."
+						oninput="window.updateSerieDetalle('${key}', '${ex.uid}', ${sIdx}, 'rest', this.value)"
+						class="bg-white/5 border border-white/5 rounded-lg text-[11px] font-black italic text-center text-red-600 h-9 outline-none focus:border-red-600">
                 </div>
             `).join('')}
         </div>
@@ -2042,18 +2044,17 @@ window.updateSessionData = (key, f, v) => {
     state.routineWizard.config[key][f] = v; 
 };
 
-window.updateExFieldWizard = (key, uid, f, v) => { 
-    const ex = state.routineWizard.config[key].exercises.find(e => e.uid === uid); 
+window.updateExFieldWizard = (key, uid, f, v) => {
+    const ex = state.routineWizard.config[key].exercises.find(e => e.uid === uid);
     if (!ex) return;
 
     if (f === 'series') {
         const nuevaCant = parseInt(v) || 1;
         const seriesActuales = ex.series_detalle || [];
         
-        // Si aumenta, agregamos nuevas series usando la última como base
         if (nuevaCant > seriesActuales.length) {
             for (let i = seriesActuales.length; i < nuevaCant; i++) {
-                const base = seriesActuales[seriesActuales.length - 1] || { reps: ex.reps, weight: ex.weight, rest: ex.rest };
+                const base = seriesActuales[seriesActuales.length - 1] || { reps: '12', weight: '0', rest: '90s' };
                 seriesActuales.push({
                     numero_serie: i + 1,
                     reps: base.reps,
@@ -2061,16 +2062,14 @@ window.updateExFieldWizard = (key, uid, f, v) => {
                     rest: base.rest
                 });
             }
-        } 
-        // Si disminuye, recortamos el array
-        else if (nuevaCant < seriesActuales.length) {
+        } else if (nuevaCant < seriesActuales.length) {
             ex.series_detalle = seriesActuales.slice(0, nuevaCant);
         }
         ex.series = nuevaCant;
+        window.renderWizardStep(); // Solo renderiza si cambia la CANTIDAD de filas
     } else {
-        ex[f] = v; 
+        ex[f] = v; // Para comentarios u otros campos, no hace falta re-renderizar
     }
-    window.renderWizardStep(); // Re-renderizamos para mostrar los nuevos renglones
 };
 
 window.removeExFromWizard = (key, uid) => { 
@@ -2192,6 +2191,15 @@ window.saveFinalRutina = async function() {
         
     } else {
         showVikingToast("Error en la forja: " + res.error, true);
+    }
+};
+
+window.updateSerieDetalle = (key, uid, sIdx, campo, valor) => {
+    const ex = state.routineWizard.config[key].exercises.find(e => e.uid === uid);
+    if (ex && ex.series_detalle && ex.series_detalle[sIdx]) {
+        // Guardamos el valor directamente en el objeto
+        ex.series_detalle[sIdx][campo] = valor;
+        // NO llamamos a renderWizardStep aquí para que no salte el scroll
     }
 };
 
