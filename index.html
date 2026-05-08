@@ -773,6 +773,16 @@
                         <i data-lucide="user-plus" class="w-4 h-4"></i> Alta Profesor
                     </button>
                 </div>
+
+				<div id="container-filter-profesores" class="mb-6 hidden">
+					<div class="flex items-center gap-4 bg-white/5 p-4 rounded-2xl border border-white/10 w-fit">
+						<span class="text-[10px] font-black uppercase italic text-white/40">Sede:</span>
+						<select id="filter-sucursal-profesores" onchange="loadStaff()" class="bg-black border border-white/10 text-white text-[11px] font-black uppercase italic rounded-xl px-4 py-2 outline-none focus:border-red-600 cursor-pointer">
+							<option value="all">TODAS LAS SEDES</option>
+						</select>
+					</div>
+				</div>
+
                 <div class="glass-card p-10 rounded-[3rem]">
                     <div class="overflow-x-auto">
                         <table class="w-full text-left">
@@ -797,6 +807,16 @@
                         <i data-lucide="shield-plus" class="w-4 h-4"></i> Alta Administrativo
                     </button>
                 </div>
+
+				<div id="container-filter-administrativos" class="mb-6 hidden">
+					<div class="flex items-center gap-4 bg-white/5 p-4 rounded-2xl border border-white/10 w-fit">
+						<span class="text-[10px] font-black uppercase italic text-white/40">Sede:</span>
+						<select id="filter-sucursal-administrativos" onchange="loadStaff()" class="bg-black border border-white/10 text-white text-[11px] font-black uppercase italic rounded-xl px-4 py-2 outline-none focus:border-red-600 cursor-pointer">
+							<option value="all">TODAS LAS SEDES</option>
+						</select>
+					</div>
+				</div>
+
                 <div class="glass-card p-10 rounded-[3rem]">
                     <div class="overflow-x-auto">
                         <table class="w-full text-left">

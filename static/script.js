@@ -3479,7 +3479,11 @@ if (editorForm) {
 
 		// --- REEMPLAZA TU FUNCIÓN loadStaff POR ESTA NUEVA VERSIÓN VISUAL ---
 		async function loadStaff() {
-			// 1. Obtener datos de profesores y administrativos
+			// 1. Asegurar que tenemos las sucursales cargadas antes de seguir
+			if (!state.sucursales || state.sucursales.length === 0) {
+				await loadSucursales();
+			}
+
 			const [p, a] = await Promise.all([
 				apiFetch('/profesores'),
 				apiFetch('/administrativos')
@@ -3488,7 +3492,7 @@ if (editorForm) {
 			const isAdmin = state.user?.rol_nombre === "Administrador";
 			const userSucursalId = state.user?.sucursal_id;
 
-			// 2. POBLAR Y MOSTRAR FILTROS (Solo si es Admin)
+			// 2. Poblar Filtros
 			const setupFilter = (containerId, selectId) => {
 				const container = document.getElementById(containerId);
 				const select = document.getElementById(selectId);
@@ -3496,14 +3500,12 @@ if (editorForm) {
 
 				if (isAdmin) {
 					container.classList.remove('hidden');
-					// Llenar select si está vacío y hay sucursales en el estado
-					if (select.options.length <= 1 && state.sucursales && state.sucursales.length > 0) {
+					if (select.options.length <= 1 && state.sucursales) {
 						state.sucursales.forEach(s => {
 							if (s && s.nombre) {
 								const opt = document.createElement('option');
 								opt.value = s.id;
 								opt.innerText = s.nombre.toUpperCase();
-								opt.className = "bg-black text-white";
 								select.appendChild(opt);
 							}
 						});
@@ -3516,131 +3518,93 @@ if (editorForm) {
 			setupFilter('container-filter-profesores', 'filter-sucursal-profesores');
 			setupFilter('container-filter-administrativos', 'filter-sucursal-administrativos');
 
-			// 3. LÓGICA DE FILTRADO (Admin filtra por select, otros por su propia sede)
-			let profesoresFinal = Array.isArray(p) ? p : [];
-			let administrativosFinal = Array.isArray(a) ? a : [];
+			// 3. Filtrado
+			let profesores = Array.isArray(p) ? p : [];
+			let administrativos = Array.isArray(a) ? a : [];
 
 			if (isAdmin) {
 				const fProf = document.getElementById('filter-sucursal-profesores')?.value;
 				const fAdm = document.getElementById('filter-sucursal-administrativos')?.value;
-				
-				if (fProf && fProf !== 'all') {
-					profesoresFinal = profesoresFinal.filter(u => String(u.sucursal_id) === String(fProf));
-				}
-				if (fAdm && fAdm !== 'all') {
-					administrativosFinal = administrativosFinal.filter(u => String(u.sucursal_id) === String(fAdm));
-				}
+				if (fProf && fProf !== 'all') profesores = profesores.filter(u => String(u.sucursal_id) === String(fProf));
+				if (fAdm && fAdm !== 'all') administrativos = administrativos.filter(u => String(u.sucursal_id) === String(fAdm));
 			} else {
-				// Hermetismo: Supervisor/Staff solo ve su sede
-				profesoresFinal = profesoresFinal.filter(u => String(u.sucursal_id) === String(userSucursalId));
-				administrativosFinal = administrativosFinal.filter(u => String(u.sucursal_id) === String(userSucursalId));
+				profesores = profesores.filter(u => String(u.sucursal_id) === String(userSucursalId));
+				administrativos = administrativos.filter(u => String(u.sucursal_id) === String(userSucursalId));
 			}
 
-			state.profesores = profesoresFinal;
-			state.administrativos = administrativosFinal;
+			state.profesores = profesores;
+			state.administrativos = administrativos;
 
-			// 4. TRANSFORMACIÓN VISUAL: PROFESORES (Tarjetas)
-			const profTable = document.querySelector('#view-profesores table');
-			const profListId = 'profesores-list-view';
-			let profContainer = document.getElementById(profListId);
+			// 4. Renderizado (Transformación de tabla a DIV de tarjetas)
+			const renderContent = (list, viewId, listId, type) => {
+				const table = document.querySelector(`#${viewId} table`);
+				let container = document.getElementById(listId);
 
-			if (!profContainer && profTable) {
-				profContainer = document.createElement('div');
-				profContainer.id = profListId;
-				profContainer.className = "flex flex-col gap-3";
-				if (profTable.parentNode) profTable.parentNode.replaceChild(profContainer, profTable);
-			}
-
-			if (profContainer) {
-				if (state.profesores.length === 0) {
-					profContainer.innerHTML = '<div class="text-center py-10"><i data-lucide="user-x" class="w-12 h-12 text-gray-600 mx-auto mb-4"></i><p class="text-gray-500 italic">No hay profesores en esta sede.</p></div>';
-				} else {
-					profContainer.innerHTML = state.profesores.map(u => createStaffRow(u, 'Profesor')).join('');
+				if (!container && table) {
+					container = document.createElement('div');
+					container.id = listId;
+					container.className = "flex flex-col gap-3";
+					table.parentNode.replaceChild(container, table);
 				}
-			}
 
-			// 5. TRANSFORMACIÓN VISUAL: ADMINISTRATIVOS (Tarjetas)
-			const admTable = document.querySelector('#view-administrativos table');
-			const admListId = 'administrativos-list-view';
-			let admContainer = document.getElementById(admListId);
-
-			if (!admContainer && admTable) {
-				admContainer = document.createElement('div');
-				admContainer.id = admListId;
-				admContainer.className = "flex flex-col gap-3";
-				if (admTable.parentNode) admTable.parentNode.replaceChild(admContainer, admTable);
-			}
-
-			if (admContainer) {
-				if (state.administrativos.length === 0) {
-					admContainer.innerHTML = '<div class="text-center py-10"><i data-lucide="shield-alert" class="w-12 h-12 text-gray-600 mx-auto mb-4"></i><p class="text-gray-500 italic">No hay administrativos en esta sede.</p></div>';
-				} else {
-					admContainer.innerHTML = state.administrativos.map(u => createStaffRow(u, 'Administracion')).join('');
+				if (container) {
+					container.innerHTML = list.length === 0 
+						? '<div class="text-center py-10 opacity-40 italic">Sin registros.</div>' 
+						: list.map(u => createStaffRow(u, type)).join('');
 				}
-			}
+			};
 
-			// 6. Actualizar selectores en modales
-			const coachSelect = document.getElementById('cl-coach-select');
-			if (coachSelect) {
-				coachSelect.innerHTML = '<option value="">Seleccionar Coach</option>' + 
-					state.profesores.map(x => `<option value="${x.nombre_completo}">${x.nombre_completo}</option>`).join('');
-			}
+			renderContent(state.profesores, 'view-profesores', 'profesores-list-view', 'Profesor');
+			renderContent(state.administrativos, 'view-administrativos', 'administrativos-list-view', 'Administracion');
 
 			if (window.lucide) lucide.createIcons();
 			applyPermissions();
 		}
 
-			// --- NUEVA FUNCIÓN AUXILIAR PARA CREAR TARJETAS DE STAFF ---
-			function createStaffRow(u, type) {
-				const initials = u.nombre_completo ? u.nombre_completo.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : "??";
-				const roleLabel = type === 'Profesor' ? 'Coach / Especialidad' : 'Cargo / Función';
-				const roleValue = u.especialidad || (type === 'Profesor' ? 'Entrenador General' : 'Administrativo');
-				
-				const icon = type === 'Profesor' ? 'dumbbell' : 'shield-check';
+		function createStaffRow(u, type) {
+			const initials = u.nombre_completo ? u.nombre_completo.split(' ').map(n=>n[0]).join('').substring(0,2).toUpperCase() : "??";
+			const roleLabel = type === 'Profesor' ? 'Coach / Especialidad' : 'Cargo / Función';
+			const roleValue = u.especialidad || (type === 'Profesor' ? 'Entrenador General' : 'Administrativo');
+			const icon = type === 'Profesor' ? 'dumbbell' : 'shield-check';
 
-				// 🛡️ CORRECCIÓN CLAVE: Buscar nombre de sucursal con comparación de String para evitar "Sede no asignada"
-				const sedeObj = state.sucursales?.find(s => String(s.id) === String(u.sucursal_id));
-				const sucursalNombre = u.sucursal_nombre || sedeObj?.nombre || "SEDE NO ASIGNADA";
+			// Búsqueda de sucursal con blindaje
+			const sede = state.sucursales?.find(s => String(s.id) === String(u.sucursal_id));
+			const sucursalNombre = u.sucursal_nombre || sede?.nombre || "SEDE NO ASIGNADA";
 
-				return `
-				<div class="glass-card p-4 rounded-3xl border-white/5 flex flex-col md:flex-row md:items-center gap-4 hover:border-red-600/20 transition-all group relative overflow-hidden">
-					<div class="absolute left-0 top-0 bottom-0 w-1 bg-red-600 opacity-30 group-hover:opacity-100 transition-opacity"></div>
-					
-					<div class="flex items-center gap-4 flex-1">
-						<div class="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center font-black text-white text-sm italic shadow-lg group-hover:bg-red-600 group-hover:text-black transition-colors">
-							${initials}
-						</div>
-						<div>
-							<h4 class="text-sm font-black uppercase italic text-white group-hover:text-red-500 transition-colors">${u.nombre_completo}</h4>
-							<div class="flex flex-wrap gap-x-4 gap-y-1 mt-1">
-								<p class="text-[10px] text-white-500 font-bold flex items-center gap-1"><i data-lucide="id-card" class="w-3 h-3"></i> ${u.dni}</p>
-								${u.email ? `<p class="text-[10px] text-gray-500 font-bold flex items-center gap-1"><i data-lucide="mail" class="w-3 h-3"></i> ${u.email}</p>` : ''}
-								
-								<p class="text-[10px] text-red-500 font-black flex items-center gap-1">
-									<i data-lucide="map-pin" class="w-3 h-3"></i> ${sucursalNombre.toUpperCase()}
-								</p>
-							</div>
-						</div>
+			return `
+			<div class="glass-card p-4 rounded-3xl border-white/5 flex flex-col md:flex-row md:items-center gap-4 hover:border-red-600/20 transition-all group relative overflow-hidden">
+				<div class="absolute left-0 top-0 bottom-0 w-1 bg-red-600 opacity-30 group-hover:opacity-100 transition-opacity"></div>
+				<div class="flex items-center gap-4 flex-1">
+					<div class="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center font-black text-white text-sm italic shadow-lg group-hover:bg-red-600 group-hover:text-black transition-colors">
+						${initials}
 					</div>
-
-					<div class="flex flex-wrap items-center gap-6 md:justify-center border-t md:border-t-0 md:border-l border-white/5 pt-3 md:pt-0 md:pl-6">
-						<div class="min-w-[150px]">
-							<p class="text-[9px] text-white-500 font-black uppercase tracking-widest mb-1 flex items-center gap-1">
-								<i data-lucide="${icon}" class="w-3 h-3 text-red-600"></i> ${roleLabel}
+					<div>
+						<h4 class="text-sm font-black uppercase italic text-white group-hover:text-red-500 transition-colors">${u.nombre_completo}</h4>
+						<div class="flex flex-wrap gap-x-4 gap-y-1 mt-1">
+							<p class="text-[10px] text-white-500 font-bold flex items-center gap-1"><i data-lucide="id-card" class="w-3 h-3"></i> ${u.dni}</p>
+							${u.email ? `<p class="text-[10px] text-gray-500 font-bold flex items-center gap-1"><i data-lucide="mail" class="w-3 h-3"></i> ${u.email}</p>` : ''}
+							<p class="text-[10px] text-red-500 font-black flex items-center gap-1 uppercase italic">
+								<i data-lucide="map-pin" class="w-3 h-3"></i> ${sucursalNombre}
 							</p>
-							<p class="text-[11px] font-black uppercase italic text-white truncate max-w-[200px]">${roleValue}</p>
 						</div>
 					</div>
-
-					<div class="flex items-center justify-end border-t md:border-t-0 md:border-l border-white/5 pt-3 md:pt-0 md:pl-6 min-w-[100px]">
-						<button onclick="openEditStaff(${u.id}, '${type}')" class="px-5 py-2.5 bg-white/5 text-white rounded-xl text-[10px] font-black uppercase italic hover:bg-white/10 hover:text-red-500 transition-all flex items-center gap-2 shadow-lg action-col">
-							<i data-lucide="settings-2" class="w-3.5 h-3.5"></i>
-							<span>Editar</span>
-						</button>
+				</div>
+				<div class="flex flex-wrap items-center gap-6 md:justify-center border-t md:border-t-0 md:border-l border-white/5 pt-3 md:pt-0 md:pl-6">
+					<div class="min-w-[150px]">
+						<p class="text-[9px] text-white-500 font-black uppercase tracking-widest mb-1 flex items-center gap-1">
+							<i data-lucide="${icon}" class="w-3 h-3 text-red-600"></i> ${roleLabel}
+						</p>
+						<p class="text-[11px] font-black uppercase italic text-white truncate max-w-[200px]">${roleValue}</p>
 					</div>
-				</div>`;
-			}
-		
+				</div>
+				<div class="flex items-center justify-end border-t md:border-t-0 md:border-l border-white/5 pt-3 md:pt-0 md:pl-6 min-w-[100px]">
+					<button onclick="openEditStaff(${u.id}, '${type}')" class="px-5 py-2.5 bg-white/5 text-white rounded-xl text-[10px] font-black uppercase italic hover:bg-white/10 hover:text-red-500 transition-all flex items-center gap-2 shadow-lg action-col">
+						<i data-lucide="settings-2" class="w-3.5 h-3.5"></i>
+						<span>Editar</span>
+					</button>
+				</div>
+			</div>`;
+		}
 		/**
 		 * GESTIÓN AVANZADA DE ALUMNOS (PUNTO 5)
 		 * Incluye: Buscador, Filtros de Estado y Paginación (20 por hoja)
