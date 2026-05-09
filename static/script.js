@@ -1428,44 +1428,64 @@ async function finalizarVentaMercaderia() {
         if (errores === 0) {
             showVikingToast("¡Cobro exitoso! Datos actualizados.");
 
-            // ⚔️ 1. CAPTURAR DATOS PARA LA FACTURA (Antes de limpiar el carrito)
-            // Buscamos si hay un alumno asociado al primer ítem del carrito
-            const alumnoId = state.cart.length > 0 ? state.cart[0].alumno_id : null;
-            const alumno = alumnoId ? state.alumnos.find(a => a.id === alumnoId) : null;
-            
-            // Calculamos el total para el PDF (puedes usar la variable 'total' que ya tenías calculada arriba)
-            const datosParaFactura = {
-                alumno: alumno,
-                items: [...state.cart],
-                total: state.cart.reduce((acc, item) => acc + (item.precio * item.cantidad), 0),
-                metodo: metodoPago,
-                ticket: state.cart[0]?.descripcion2 || "" // El "Nro Ticket" del primer ítem
+            const item = state.cart[0];
+            const alumno = item.alumno_id ? state.alumnos.find(a => a.id === item.alumno_id) : null;
+
+            // 1. VIAJE AL BACKEND: Guardamos la factura en la base de datos
+            const infoFactura = {
+                pago_id: 0, // Aquí deberías capturar el ID que devuelve procesarPagoVikingo
+                usuario_id: item.alumno_id,
+                monto_total: total,
+                metodo_pago: metodoPago,
+                nro_ticket_postnet: item.descripcion2 || "",
+                plan_nombre_snapshot: item.nombre
             };
 
-            // ⚔️ 2. PREGUNTAR POR LA FACTURA
-            if (confirm("¿Deseas generar la Factura A de este cobro?")) {
-                if (typeof window.generateFacturaA === 'function') {
-                    window.generateFacturaA(datosParaFactura);
-                } else {
-                    console.error("La función window.generateFacturaA no está definida.");
-                }
+            const facturaGuardada = await guardarComprobanteEnBD(infoFactura);
+
+            // 2. GENERACIÓN DEL DOCUMENTO: Usamos el nro real que devolvió la DB
+            if (facturaGuardada && confirm("¿Deseas generar la Factura A?")) {
+                window.generateFacturaA({
+                    alumno: alumno,
+                    items: [...state.cart],
+                    total: total,
+                    metodo: metodoPago,
+                    ticket: item.descripcion2,
+                    nro_oficial: facturaGuardada.nro_factura // <--- El número real de la DB
+                });
             }
 
-            // ⚔️ 3. LIMPIEZA Y REFRESCO
-            state.cart = []; 
+            // 3. LIMPIEZA
+            state.cart = [];
             updateCartUI();
-            
-            // --- REFRESCAMOS TODO INCLUYENDO RENTABILIDAD ---
-            const promesas = [loadStock(), loadCaja(), fetchAlumnos()];
-            if (typeof generarInformeRentabilidad === 'function') promesas.push(generarInformeRentabilidad());
-            
-            await Promise.all(promesas);
+            await Promise.all([loadStock(), loadCaja(), fetchAlumnos()]);
             renderCobrar();
-
         } else {
             showVikingToast(`Hubo ${errores} errores en el proceso.`, true);
         }
     }
+}
+
+async function guardarComprobanteEnBD(datos) {
+    try {
+        // Llamamos al nuevo endpoint que creamos en el main.py
+        const res = await apiFetch('/cobros/comprobante', 'POST', {
+            pago_id: datos.pago_id,
+            usuario_id: datos.usuario_id,
+            monto_total: datos.monto_total,
+            metodo_pago: datos.metodo_pago,
+            nro_ticket_postnet: datos.nro_ticket_postnet,
+            plan_nombre_snapshot: datos.plan_nombre_snapshot
+        });
+
+        if (res && !res.error) {
+            console.log("Comprobante guardado en NeonDB:", res.nro_factura);
+            return res; // Devuelve el ID y el Nro oficial (ej: 0001-00000001)
+        }
+    } catch (err) {
+        console.error("Error al persistir comprobante:", err);
+    }
+    return null;
 }
 
 window.generateFacturaA = (data) => {
