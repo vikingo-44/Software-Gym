@@ -1589,39 +1589,45 @@ def delete_feriado(id: int, db: Session = Depends(database.get_db)):
     return {"status": "success"}
 
 # MÓDULO DE COMPROBANTES (FACTURACIÓN A)
-
 @app.post("/api/cobros/comprobante", response_model=ComprobanteResponse, tags=["Comprobantes"])
 async def crear_comprobante(obj: ComprobanteCreate, db: Session = Depends(database.get_db), current_user = Depends(get_current_user)):
     """
-    Genera un comprobante oficial de GYMFIT PRO con numeración correlativa.
+    Genera un comprobante oficial de GYMFIT PRO con numeración correlativa automática.
+    Maneja la creación inicial y valida la integridad de los datos.
     """
     try:
-        # 1. Lógica de numeración correlativa
-        # Buscamos el último número de factura emitido
+        # 1. LÓGICA DE NUMERACIÓN ROBUSTA
+        # Buscamos el último comprobante emitido, ordenando por ID descendente
         ultimo = db.query(models.Comprobante).order_by(models.Comprobante.id.desc()).first()
         
         nuevo_numero = 1
         if ultimo and ultimo.nro_factura:
             try:
-                # Separamos '0001-00000045' y sumamos 1 a la parte derecha
+                # Extraemos la parte numérica después del guion (ej: de '0001-00000045' a 45)
                 partes = ultimo.nro_factura.split("-")
-                nuevo_numero = int(partes[1]) + 1
-            except:
+                if len(partes) > 1:
+                    nuevo_numero = int(partes[1]) + 1
+            except (ValueError, IndexError):
+                # Si por algún motivo el formato fallara, empezamos de 1 para no bloquear el sistema
                 nuevo_numero = 1
         
-        # Formateamos a 8 dígitos: 00000001, 00000002, etc.
+        # Formateamos a 8 dígitos con ceros a la izquierda
         formateado = f"0001-{str(nuevo_numero).zfill(8)}"
 
-        # 2. Guardar en la DB
+        # 2. VALIDACIÓN DE VÍNCULO (MOVIMIENTO_ID)
+        # Si pago_id es 0 o menor, lo tratamos como NULL para evitar errores de clave foránea
+        p_id = obj.pago_id if obj.pago_id > 0 else None
+
+        # 3. GUARDADO EN LA DB
         nuevo_comprobante = models.Comprobante(
-            movimiento_id=obj.pago_id,
+            movimiento_id=p_id, # Usamos el ID validado
             usuario_id=obj.usuario_id,
             nro_factura=formateado,
             monto_total=obj.monto_total,
             metodo_pago=obj.metodo_pago,
             nro_ticket_postnet=obj.nro_ticket_postnet,
             plan_nombre_snapshot=obj.plan_nombre_snapshot,
-            sucursal_id=current_user.sucursal_id # Se asigna a la sucursal de quien cobra
+            sucursal_id=current_user.sucursal_id # Basado en la sede de quien opera
         )
         
         db.add(nuevo_comprobante)
@@ -1632,8 +1638,12 @@ async def crear_comprobante(obj: ComprobanteCreate, db: Session = Depends(databa
         
     except Exception as e:
         db.rollback()
-        logger.error(f"Error generando comprobante: {str(e)}")
-        raise HTTPException(status_code=500, detail="Error interno al generar el número de factura")
+        # Logueamos el error exacto para auditoría técnica
+        logger.error(f"FALLO CRÍTICO EN COMPROBANTES: {str(e)}")
+        raise HTTPException(
+            status_code=500, 
+            detail=f"Error en el servidor al generar comprobante: {str(e)}"
+        )
 
 @app.get("/api/comprobantes/usuario/{usuario_id}", tags=["Comprobantes"])
 def get_comprobantes_alumno(usuario_id: int, db: Session = Depends(database.get_db)):
