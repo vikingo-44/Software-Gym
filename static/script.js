@@ -1469,9 +1469,18 @@ async function finalizarVentaMercaderia() {
 }
 
 window.generateFacturaA = (data) => {
+    // 1. Intentamos abrir la ventana
     const win = window.open('', '_blank');
-    const nroRemito = Math.floor(Math.random() * 1000000); // Luego lo haremos correlativo real
+
+    // 2. Verificamos si el navegador la bloqueó
+    if (!win || win.closed || typeof win.closed === 'undefined') {
+        alert("⚠️ El navegador bloqueó la factura. Por favor, habilita los pop-ups para este sitio y reintenta desde el historial.");
+        return;
+    }
+
+    const nroRemito = Math.floor(Math.random() * 1000000); 
     
+    // 3. Si win existe, escribimos el contenido
     win.document.write(`
         <html>
             <head>
@@ -1482,7 +1491,7 @@ window.generateFacturaA = (data) => {
                 <div class="max-w-3xl mx-auto border-2 border-black p-8">
                     <div class="flex justify-between border-b-2 border-black pb-4">
                         <div>
-                            <h1 class="text-3xl font-black italic">GYMFIT PRO</h1>
+                            <h1 class="text-3xl font-black italic text-red-600">GYMFIT PRO</h1>
                             <p class="text-[10px]">AV. SUAREZ 1581, CABA</p>
                             <p class="text-[10px]">CUIT: 20371620819</p>
                         </div>
@@ -1493,31 +1502,43 @@ window.generateFacturaA = (data) => {
                         </div>
                     </div>
                     <div class="my-6">
-                        <p class="font-bold">CLIENTE: ${data.alumno?.nombre_completo || 'Consumidor Final'}</p>
-                        <p>DNI: ${data.alumno?.dni || 'N/A'}</p>
-                        <p>TICKET POSNET: #${data.ticket || 'S/N'}</p>
+                        <p class="font-bold uppercase">CLIENTE: ${data.alumno?.nombre_completo || 'Consumidor Final'}</p>
+                        <p class="text-sm italic">DNI: ${data.alumno?.dni || 'N/A'}</p>
+                        <p class="text-sm font-bold mt-2">TICKET POSNET: #${data.ticket || 'S/N'}</p>
                     </div>
                     <table class="w-full mb-8">
-                        <tr class="border-b">
-                            <th class="text-left">CONCEPTO</th>
-                            <th class="text-right">TOTAL</th>
-                        </tr>
-                        ${data.items.map(it => `
-                            <tr>
-                                <td>${it.nombre} (x${it.cantidad})</td>
-                                <td class="text-right">$ ${it.precio.toLocaleString()}</td>
+                        <thead>
+                            <tr class="border-b-2 border-black">
+                                <th class="text-left py-1 text-xs">CONCEPTO</th>
+                                <th class="text-right py-1 text-xs">TOTAL</th>
                             </tr>
-                        `).join('')}
+                        </thead>
+                        <tbody>
+                            ${data.items.map(it => `
+                                <tr class="border-b border-gray-100">
+                                    <td class="py-2 text-sm">${it.nombre} (x${it.cantidad})</td>
+                                    <td class="text-right font-bold text-sm">$ ${it.precio.toLocaleString()}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
                     </table>
                     <div class="text-right font-black text-2xl">
                         TOTAL: $ ${data.total.toLocaleString()}
                     </div>
                     <p class="text-[9px] mt-10 italic text-center text-gray-400">Documento de control interno no válido como factura fiscal.</p>
                 </div>
-                <script>window.onload = () => { window.print(); window.close(); }</script>
+                <script>
+                    window.onload = () => { 
+                        setTimeout(() => {
+                            window.print(); 
+                            // Opcional: window.close(); 
+                        }, 500);
+                    };
+                </script>
             </body>
         </html>
     `);
+    win.document.close();
 };
 
 		/**
