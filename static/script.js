@@ -1428,40 +1428,56 @@ async function finalizarVentaMercaderia() {
         if (errores === 0) {
             showVikingToast("¡Cobro exitoso! Datos actualizados.");
 
-            const item = state.cart[0];
-            const alumno = item.alumno_id ? state.alumnos.find(a => a.id === item.alumno_id) : null;
+            // Capturamos el ítem de referencia para extraer datos del alumno y ticket
+            const itemReferencia = state.cart[0];
+            const alumnoActual = itemReferencia.alumno_id ? state.alumnos.find(a => a.id === itemReferencia.alumno_id) : null;
 
-            // 1. VIAJE AL BACKEND: Guardamos la factura en la base de datos
+            // 1. VIAJE AL BACKEND: Preparamos y persistimos el comprobante en la base de datos
+            // Forzamos tipos numéricos para cumplir con el esquema ComprobanteCreate de FastAPI
             const infoFactura = {
-                pago_id: 0, // Aquí deberías capturar el ID que devuelve procesarPagoVikingo
-                usuario_id: item.alumno_id,
-                monto_total: total,
+                pago_id: 0, // El backend lo convertirá a NULL automáticamente al ser 0
+                usuario_id: parseInt(itemReferencia.alumno_id) || 0,
+                monto_total: parseFloat(total),
                 metodo_pago: metodoPago,
-                nro_ticket_postnet: item.descripcion2 || "",
-                plan_nombre_snapshot: item.nombre
+                nro_ticket_postnet: String(itemReferencia.descripcion2 || "S/N"),
+                plan_nombre_snapshot: String(itemReferencia.nombre || "Venta")
             };
 
+            // Intentamos guardar en la BD antes de limpiar el estado del carrito
             const facturaGuardada = await guardarComprobanteEnBD(infoFactura);
 
-            // 2. GENERACIÓN DEL DOCUMENTO: Usamos el nro real que devolvió la DB
-            if (facturaGuardada && confirm("¿Deseas generar la Factura A?")) {
-                window.generateFacturaA({
-                    alumno: alumno,
-                    items: [...state.cart],
-                    total: total,
-                    metodo: metodoPago,
-                    ticket: item.descripcion2,
-                    nro_oficial: facturaGuardada.nro_factura // <--- El número real de la DB
-                });
+            // 2. GENERACIÓN DEL DOCUMENTO VISUAL: Usamos el número oficial retornado por el servidor
+            if (facturaGuardada) {
+                if (confirm(`Comprobante ${facturaGuardada.nro_factura} generado con éxito. ¿Deseas imprimir la Factura A?`)) {
+                    window.generateFacturaA({
+                        alumno: alumnoActual,
+                        items: [...state.cart],
+                        total: total,
+                        metodo: metodoPago,
+                        ticket: itemReferencia.descripcion2,
+                        nro_oficial: facturaGuardada.nro_factura // Número real de la DB
+                    });
+                }
+            } else {
+                console.error("Error crítico: El cobro se procesó pero no se pudo persistir el comprobante.");
             }
 
-            // 3. LIMPIEZA
+            // 3. LIMPIEZA Y ACTUALIZACIÓN DE INTERFAZ
+            // Vaciamos el carrito y refrescamos los datos para reflejar nuevo stock y saldos
             state.cart = [];
-            updateCartUI();
-            await Promise.all([loadStock(), loadCaja(), fetchAlumnos()]);
-            renderCobrar();
+            if (typeof updateCartUI === 'function') updateCartUI();
+            
+            // Recarga sincronizada de datos maestros
+            const promesasRefresco = [loadStock(), loadCaja(), fetchAlumnos()];
+            if (typeof generarInformeRentabilidad === 'function') promesasRefresco.push(generarInformeRentabilidad());
+            
+            await Promise.all(promesasRefresco);
+            
+            // Redibujamos la vista de cobro
+            if (typeof renderCobrar === 'function') renderCobrar();
+            
         } else {
-            showVikingToast(`Hubo ${errores} errores en el proceso.`, true);
+            showVikingToast(`Hubo ${errores} errores en el proceso de cobro.`, true);
         }
     }
 }
