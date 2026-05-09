@@ -469,6 +469,21 @@ class SucursalResponse(BaseModel):
     direccion: str
     class Config: from_attributes = True
 
+# --- SCHEMAS PARA COMPROBANTES ---
+class ComprobanteCreate(BaseModel):
+    pago_id: int
+    usuario_id: int
+    monto_total: float
+    metodo_pago: str
+    nro_ticket_postnet: Optional[str] = None
+    plan_nombre_snapshot: str
+
+class ComprobanteResponse(BaseModel):
+    id: int
+    nro_factura: str
+    fecha_emision: datetime
+    class Config: from_attributes = True
+
 def calcular_meses(inicio_str, fin_str):
     """Calcula la diferencia en meses redondeada para matchear con TipoPlan"""
     try:
@@ -1572,6 +1587,59 @@ def delete_feriado(id: int, db: Session = Depends(database.get_db)):
     db.query(models.DiaEspecial).filter(models.DiaEspecial.id == id).delete()
     db.commit()
     return {"status": "success"}
+
+# MÓDULO DE COMPROBANTES (FACTURACIÓN A)
+
+@app.post("/api/cobros/comprobante", response_model=ComprobanteResponse, tags=["Comprobantes"])
+async def crear_comprobante(obj: ComprobanteCreate, db: Session = Depends(database.get_db), current_user = Depends(get_current_user)):
+    """
+    Genera un comprobante oficial de GYMFIT PRO con numeración correlativa.
+    """
+    try:
+        # 1. Lógica de numeración correlativa
+        # Buscamos el último número de factura emitido
+        ultimo = db.query(models.Comprobante).order_by(models.Comprobante.id.desc()).first()
+        
+        nuevo_numero = 1
+        if ultimo and ultimo.nro_factura:
+            try:
+                # Separamos '0001-00000045' y sumamos 1 a la parte derecha
+                partes = ultimo.nro_factura.split("-")
+                nuevo_numero = int(partes[1]) + 1
+            except:
+                nuevo_numero = 1
+        
+        # Formateamos a 8 dígitos: 00000001, 00000002, etc.
+        formateado = f"0001-{str(nuevo_numero).zfill(8)}"
+
+        # 2. Guardar en la DB
+        nuevo_comprobante = models.Comprobante(
+            movimiento_id=obj.pago_id,
+            usuario_id=obj.usuario_id,
+            nro_factura=formateado,
+            monto_total=obj.monto_total,
+            metodo_pago=obj.metodo_pago,
+            nro_ticket_postnet=obj.nro_ticket_postnet,
+            plan_nombre_snapshot=obj.plan_nombre_snapshot,
+            sucursal_id=current_user.sucursal_id # Se asigna a la sucursal de quien cobra
+        )
+        
+        db.add(nuevo_comprobante)
+        db.commit()
+        db.refresh(nuevo_comprobante)
+        
+        return nuevo_comprobante
+        
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error generando comprobante: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error interno al generar el número de factura")
+
+@app.get("/api/comprobantes/usuario/{usuario_id}", tags=["Comprobantes"])
+def get_comprobantes_alumno(usuario_id: int, db: Session = Depends(database.get_db)):
+    """Trae todas las facturas generadas para un alumno específico."""
+    facturas = db.query(models.Comprobante).filter(models.Comprobante.usuario_id == usuario_id).order_by(models.Comprobante.id.desc()).all()
+    return facturas
 
 # --- CAJA ---
 @app.get("/api/caja/resumen", tags=["Finanzas"])

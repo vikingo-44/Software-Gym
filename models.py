@@ -2,6 +2,9 @@ from sqlalchemy import Column, Integer, String, Float, Date, DateTime, ForeignKe
 from sqlalchemy.orm import relationship
 from pydantic import BaseModel
 from database import Base
+from datetime import datetime
+from typing import Optional, List
+from sqlalchemy import func
 import datetime
 
 # =========================================
@@ -269,3 +272,21 @@ class SerieEjercicio(Base):
     peso = Column(String)
     descanso = Column(String)
     ejercicio_en_rutina = relationship("EjercicioEnRutina", back_populates="series_detalle")
+
+# --- NUEVA TABLA PARA FACTURACIÓN (AGREGAR AL FINAL DE MODELS.PY) ---
+class Comprobante(Base):
+    __tablename__ = "comprobantes"
+    id = Column(Integer, primary_key=True, index=True)
+    movimiento_id = Column(Integer, ForeignKey("caja.id"), nullable=True) # Vincula con el ID del cobro
+    usuario_id = Column(Integer, ForeignKey("usuarios.id"), nullable=True)
+    nro_factura = Column(String(20), unique=True, index=True) # Ej: 0001-00000001
+    fecha_emision = Column(DateTime, default=func.now())
+    monto_total = Column(Float)
+    metodo_pago = Column(String(50))
+    nro_ticket_postnet = Column(String(100))
+    plan_nombre_snapshot = Column(String(100)) # El nombre del plan en ese momento
+    sucursal_id = Column(Integer, ForeignKey("sucursales.id"), nullable=True)
+
+    # Relaciones para poder traer datos del alumno en el PDF
+    usuario = relationship("Usuario")
+    sucursal = relationship("Sucursal")

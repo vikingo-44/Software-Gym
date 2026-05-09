@@ -1427,6 +1427,31 @@ async function finalizarVentaMercaderia() {
 
         if (errores === 0) {
             showVikingToast("¡Cobro exitoso! Datos actualizados.");
+
+            // ⚔️ 1. CAPTURAR DATOS PARA LA FACTURA (Antes de limpiar el carrito)
+            // Buscamos si hay un alumno asociado al primer ítem del carrito
+            const alumnoId = state.cart.length > 0 ? state.cart[0].alumno_id : null;
+            const alumno = alumnoId ? state.alumnos.find(a => a.id === alumnoId) : null;
+            
+            // Calculamos el total para el PDF (puedes usar la variable 'total' que ya tenías calculada arriba)
+            const datosParaFactura = {
+                alumno: alumno,
+                items: [...state.cart],
+                total: state.cart.reduce((acc, item) => acc + (item.precio * item.cantidad), 0),
+                metodo: metodoPago,
+                ticket: state.cart[0]?.descripcion2 || "" // El "Nro Ticket" del primer ítem
+            };
+
+            // ⚔️ 2. PREGUNTAR POR LA FACTURA
+            if (confirm("¿Deseas generar la Factura A de este cobro?")) {
+                if (typeof window.generateFacturaA === 'function') {
+                    window.generateFacturaA(datosParaFactura);
+                } else {
+                    console.error("La función window.generateFacturaA no está definida.");
+                }
+            }
+
+            // ⚔️ 3. LIMPIEZA Y REFRESCO
             state.cart = []; 
             updateCartUI();
             
@@ -1436,11 +1461,64 @@ async function finalizarVentaMercaderia() {
             
             await Promise.all(promesas);
             renderCobrar();
+
         } else {
             showVikingToast(`Hubo ${errores} errores en el proceso.`, true);
         }
     }
 }
+
+window.generateFacturaA = (data) => {
+    const win = window.open('', '_blank');
+    const nroRemito = Math.floor(Math.random() * 1000000); // Luego lo haremos correlativo real
+    
+    win.document.write(`
+        <html>
+            <head>
+                <title>Comprobante GYMFIT PRO</title>
+                <script src="https://cdn.tailwindcss.com"></script>
+            </head>
+            <body class="p-10 bg-white text-black">
+                <div class="max-w-3xl mx-auto border-2 border-black p-8">
+                    <div class="flex justify-between border-b-2 border-black pb-4">
+                        <div>
+                            <h1 class="text-3xl font-black italic">GYMFIT PRO</h1>
+                            <p class="text-[10px]">AV. SUAREZ 1581, CABA</p>
+                            <p class="text-[10px]">CUIT: 20371620819</p>
+                        </div>
+                        <div class="text-right">
+                            <h2 class="text-xl font-bold">FACTURA "A"</h2>
+                            <p>N° 0001-${String(nroRemito).padStart(8, '0')}</p>
+                            <p>Fecha: ${new Date().toLocaleDateString()}</p>
+                        </div>
+                    </div>
+                    <div class="my-6">
+                        <p class="font-bold">CLIENTE: ${data.alumno?.nombre_completo || 'Consumidor Final'}</p>
+                        <p>DNI: ${data.alumno?.dni || 'N/A'}</p>
+                        <p>TICKET POSNET: #${data.ticket || 'S/N'}</p>
+                    </div>
+                    <table class="w-full mb-8">
+                        <tr class="border-b">
+                            <th class="text-left">CONCEPTO</th>
+                            <th class="text-right">TOTAL</th>
+                        </tr>
+                        ${data.items.map(it => `
+                            <tr>
+                                <td>${it.nombre} (x${it.cantidad})</td>
+                                <td class="text-right">$ ${it.precio.toLocaleString()}</td>
+                            </tr>
+                        `).join('')}
+                    </table>
+                    <div class="text-right font-black text-2xl">
+                        TOTAL: $ ${data.total.toLocaleString()}
+                    </div>
+                    <p class="text-[9px] mt-10 italic text-center text-gray-400">Documento de control interno no válido como factura fiscal.</p>
+                </div>
+                <script>window.onload = () => { window.print(); window.close(); }</script>
+            </body>
+        </html>
+    `);
+};
 
 		/**
  * ============================================================
