@@ -1432,48 +1432,48 @@ async function finalizarVentaMercaderia() {
             const itemReferencia = state.cart[0];
             const alumnoActual = itemReferencia.alumno_id ? state.alumnos.find(a => a.id === itemReferencia.alumno_id) : null;
 
-            // 1. VIAJE AL BACKEND: Preparamos y persistimos el comprobante en la base de datos
-            // Forzamos tipos numéricos para cumplir con el esquema ComprobanteCreate de FastAPI
-            const infoFactura = {
-                pago_id: 0, // El backend lo convertirá a NULL automáticamente al ser 0
-                usuario_id: parseInt(itemReferencia.alumno_id) || 0,
-                monto_total: parseFloat(total),
-                metodo_pago: metodoPago,
-                nro_ticket_postnet: String(itemReferencia.descripcion2 || "S/N"),
-                plan_nombre_snapshot: String(itemReferencia.nombre || "Venta")
-            };
+            // ⚔️ LÓGICA DE FACTURACIÓN: Solo si el ítem es un 'Plan'
+            if (itemReferencia.tipo === 'Plan') {
+                const infoFactura = {
+                    pago_id: 0, // El backend lo convertirá a NULL automáticamente si es 0
+                    usuario_id: parseInt(itemReferencia.alumno_id) || 0,
+                    monto_total: parseFloat(total),
+                    metodo_pago: metodoPago,
+                    nro_ticket_postnet: String(itemReferencia.descripcion2 || "S/N"),
+                    plan_nombre_snapshot: String(itemReferencia.nombre || "Plan Guerrero")
+                };
 
-            // Intentamos guardar en la BD antes de limpiar el estado del carrito
-            const facturaGuardada = await guardarComprobanteEnBD(infoFactura);
+                // 1. VIAJE AL BACKEND: Intentamos guardar en la DB (Sin popup de impresión)
+                const facturaGuardada = await guardarComprobanteEnBD(infoFactura);
 
-            // 2. GENERACIÓN DEL DOCUMENTO VISUAL: Usamos el número oficial retornado por el servidor
-            if (facturaGuardada) {
-                if (confirm(`Comprobante ${facturaGuardada.nro_factura} generado con éxito. ¿Deseas imprimir la Factura A?`)) {
-                    window.generateFacturaA({
-                        alumno: alumnoActual,
-                        items: [...state.cart],
-                        total: total,
-                        metodo: metodoPago,
-                        ticket: itemReferencia.descripcion2,
-                        nro_oficial: facturaGuardada.nro_factura // Número real de la DB
-                    });
+                if (facturaGuardada) {
+                    // 2. WHATSAPP: Solo si el alumno tiene teléfono cargado en su ficha
+                    if (alumnoActual && alumnoActual.telefono && alumnoActual.telefono.trim() !== "") {
+                        if (confirm(`Comprobante ${facturaGuardada.nro_factura} generado. ¿Deseas enviárselo por WhatsApp al alumno?`)) {
+                            enviarFacturaWhatsApp(facturaGuardada);
+                        }
+                    } else {
+                        console.log("Comprobante guardado, pero el alumno no tiene teléfono registrado para envío.");
+                    }
+                } else {
+                    console.error("Error crítico: El cobro se procesó pero no se pudo persistir el comprobante.");
                 }
             } else {
-                console.error("Error crítico: El cobro se procesó pero no se pudo persistir el comprobante.");
+                // Si es mercadería (agua, snacks, etc.), no hacemos nada extra
+                console.log("Venta de mercadería detectada: Se omite generación de Factura A.");
             }
 
-            // 3. LIMPIEZA Y ACTUALIZACIÓN DE INTERFAZ
-            // Vaciamos el carrito y refrescamos los datos para reflejar nuevo stock y saldos
+            // 3. LIMPIEZA Y ACTUALIZACIÓN DE INTERFAZ (Siempre se ejecuta)
             state.cart = [];
             if (typeof updateCartUI === 'function') updateCartUI();
             
-            // Recarga sincronizada de datos maestros
+            // Recarga sincronizada de datos maestros para reflejar stock y caja real
             const promesasRefresco = [loadStock(), loadCaja(), fetchAlumnos()];
             if (typeof generarInformeRentabilidad === 'function') promesasRefresco.push(generarInformeRentabilidad());
             
             await Promise.all(promesasRefresco);
             
-            // Redibujamos la vista de cobro
+            // Redibujamos la vista de cobro para vaciar el panel
             if (typeof renderCobrar === 'function') renderCobrar();
             
         } else {
