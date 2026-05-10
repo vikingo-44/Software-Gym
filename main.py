@@ -14,6 +14,7 @@ from pydantic import BaseModel, ConfigDict
 from datetime import datetime, timedelta, date
 from dateutil.relativedelta import relativedelta
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import HTMLResponse
 
 # Librerías para Seguridad (JWT y Hashing de contraseñas)
 from jose import JWTError, jwt
@@ -1633,6 +1634,91 @@ def get_comprobantes_alumno(usuario_id: int, db: Session = Depends(database.get_
     """Trae todas las facturas generadas para un alumno específico."""
     facturas = db.query(models.Comprobante).filter(models.Comprobante.usuario_id == usuario_id).order_by(models.Comprobante.id.desc()).all()
     return facturas
+
+@router.get("/comprobantes/{comprobante_id}/pdf")
+async def descargar_pdf_comprobante(comprobante_id: int):
+    # Aquí la lógica que ya tienes para generar el PDF
+    # pero en lugar de abrirlo en el navegador del admin, 
+    # lo devuelve como un StreamingResponse o FileResponse.
+    # Por ahora, usaremos esta URL como base.
+    return {"url": f"https://tu-api.com/comprobantes/{comprobante_id}/pdf"}
+
+@app.get("/api/comprobantes/{comprobante_id}/view", response_class=HTMLResponse, tags=["Comprobantes"])
+async def ver_comprobante_alumno(comprobante_id: int, db: Session = Depends(database.get_db)):
+    # 1. Buscamos el comprobante
+    c = db.query(models.Comprobante).filter(models.Comprobante.id == comprobante_id).first()
+    if not c:
+        raise HTTPException(status_code=404, detail="Comprobante no encontrado")
+    
+    # 2. Buscamos los datos del alumno para el encabezado
+    alumno = db.query(models.Usuario).filter(models.Usuario.id == c.usuario_id).first()
+    nombre_alumno = alumno.nombre_completo if alumno else "Consumidor Final"
+    dni_alumno = alumno.dni if alumno else "---"
+
+    # 3. Devolvemos el HTML (Copiamos el diseño que ya te gusta de GYMFIT PRO)
+    html_content = f"""
+    <html>
+        <head>
+            <title>Comprobante {c.nro_factura}</title>
+            <script src="https://cdn.tailwindcss.com"></script>
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        </head>
+        <body class="bg-zinc-100 p-4 md:p-10 font-sans">
+            <div class="max-w-xl mx-auto bg-white border-2 border-black p-6 shadow-xl">
+                <div class="flex justify-between border-b-2 border-black pb-4 mb-6">
+                    <div>
+                        <h1 class="text-2xl font-black italic text-red-600">GYMFIT PRO</h1>
+                        <p class="text-[10px] font-bold">AV. SUAREZ 1581, CABA</p>
+                        <p class="text-[10px]">CUIT: 20371620819</p>
+                    </div>
+                    <div class="text-right">
+                        <h2 class="text-lg font-bold">FACTURA "A"</h2>
+                        <p class="text-sm font-black text-red-600">{c.nro_factura}</p>
+                        <p class="text-[10px]">Fecha: {c.fecha_emision.strftime('%d/%m/%Y')}</p>
+                    </div>
+                </div>
+                
+                <div class="mb-6 space-y-1">
+                    <p class="text-xs font-bold uppercase text-gray-500">CLIENTE</p>
+                    <p class="font-black uppercase">{nombre_alumno}</p>
+                    <p class="text-xs italic">DNI: {dni_alumno}</p>
+                </div>
+
+                <table class="w-full mb-8 text-sm">
+                    <thead>
+                        <tr class="border-b-2 border-black">
+                            <th class="text-left py-2">CONCEPTO</th>
+                            <th class="text-right py-2">TOTAL</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="py-4 border-b border-gray-100">{c.plan_nombre_snapshot}</td>
+                            <td class="text-right font-black">$ {c.monto_total:,.2f}</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="text-right mb-10">
+                    <p class="text-[10px] font-bold text-gray-400 uppercase">Monto Total</p>
+                    <p class="text-3xl font-black italic">$ {c.monto_total:,.2f}</p>
+                    <p class="text-[10px] text-gray-500 italic mt-1">Medodo de pago: {c.metodo_pago}</p>
+                </div>
+
+                <div class="border-t border-dashed border-gray-300 pt-4 text-center">
+                    <p class="text-[9px] text-gray-400 italic">Este documento es un comprobante de control interno emitido por la sede.</p>
+                    <button onclick="window.print()" class="mt-4 px-6 py-2 bg-black text-white text-[10px] font-black uppercase italic rounded-full no-print">
+                        Descargar / Imprimir
+                    </button>
+                </div>
+            </div>
+            <style>
+                @media print {{ .no-print {{ display: none; }} }}
+            </style>
+        </body>
+    </html>
+    """
+    return HTMLResponse(content=html_content)
 
 # --- CAJA ---
 @app.get("/api/caja/resumen", tags=["Finanzas"])

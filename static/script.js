@@ -1447,26 +1447,31 @@ async function finalizarVentaMercaderia() {
                 const facturaGuardada = await guardarComprobanteEnBD(infoFactura);
 
                 if (facturaGuardada) {
-					// 2. WHATSAPP: Solo si el alumno tiene teléfono
+					// 1. Verificamos si el alumno tiene teléfono cargado
 					const tieneTelefono = alumnoActual && alumnoActual.telefono && alumnoActual.telefono.trim() !== "";
 
 					if (tieneTelefono) {
-						// ELIMINAMOS EL SETTIMEOUT: El confirm debe ser directo tras el cobro exitoso
-						if (confirm(`Comprobante ${facturaGuardada.nro_factura} generado.\n\n¿Deseas enviárselo por WhatsApp a ${alumnoActual.nombre_completo}?`)) {
-							
+						// El confirm es una acción bloqueante del usuario, ideal para disparar window.open después
+						const respuesta = confirm(`Comprobante ${facturaGuardada.nro_factura} generado con éxito.\n\n¿Deseas enviárselo por WhatsApp a ${alumnoActual.nombre_completo}?`);
+						
+						if (respuesta) {
+							// Verificamos la existencia de la función antes de llamar
 							if (typeof window.enviarFacturaWhatsApp === 'function') {
 								window.enviarFacturaWhatsApp(facturaGuardada);
 							} else {
-								console.error("Error: window.enviarFacturaWhatsApp no definida.");
-								showVikingToast("Error al abrir WhatsApp", true);
+								console.error("Error: window.enviarFacturaWhatsApp no está definida en el script.");
+								showVikingToast("Error técnico al abrir WhatsApp", true);
 							}
 						}
 					} else {
-						console.log("Comprobante guardado: El alumno no posee teléfono registrado.");
-						showVikingToast("Comprobante guardado (Sin WhatsApp)");
+						// Si no tiene teléfono, solo notificamos el éxito del guardado
+						console.log("Comprobante guardado en DB. Alumno sin teléfono registrado.");
+						showVikingToast("Comprobante registrado (Sin Teléfono)");
 					}
 				} else {
-					console.error("Error crítico: No se pudo persistir el comprobante.");
+					// Si el backend falló (Error 500 o similar)
+					console.error("Error crítico: El cobro impactó pero no se pudo generar el registro de factura.");
+					showVikingToast("Error al registrar comprobante en DB", true);
 				}
             } else {
                 // Si es mercadería (agua, snacks, etc.), no hacemos nada extra
@@ -4672,42 +4677,53 @@ if (editorForm) {
 
 		// Función para enviar por WhatsApp
 		window.enviarFacturaWhatsApp = (comprobante) => {
-			// 1. Buscamos al alumno en el estado global
-			const alumno = state.alumnos.find(a => a.id == comprobante.usuario_id);
-			
-			if (!alumno || !alumno.telefono) {
-				showVikingToast("El guerrero no tiene un WhatsApp registrado.", true);
-				return;
-			}
+			try {
+				// 1. Buscamos al alumno en el estado global
+				const alumno = state.alumnos.find(a => a.id == comprobante.usuario_id);
+				
+				if (!alumno || !alumno.telefono) {
+					showVikingToast("El alumno no tiene teléfono registrado.", true);
+					return;
+				}
 
-			// 2. Limpiamos el número de teléfono (solo números)
-			let tel = alumno.telefono.replace(/\D/g, '');
-			
-			// Si tiene 10 dígitos (ej: 1122334455), le ponemos el prefijo de Argentina
-			if (tel.length === 10) tel = '549' + tel; 
-			// Si empieza con 15, corregimos a 549 + 11 (o el área que corresponda)
-			if (tel.startsWith('15')) tel = '549' + tel.substring(2);
+				// 2. Formateo de teléfono (Sin símbolos, solo números)
+				let tel = alumno.telefono.replace(/\D/g, '');
+				if (tel.length === 10) tel = '549' + tel;
 
-			// 3. Preparamos el mensaje
-			const texto = `*GYMFIT PRO - Comprobante de Pago* ⚔️\n\n` +
-						`Hola *${alumno.nombre_completo}*, confirmamos la recepción de tu pago.\n\n` +
-						`• *Factura:* ${comprobante.nro_factura}\n` +
-						`• *Detalle:* ${comprobante.plan_nombre_snapshot}\n` +
-						`• *Monto:* $${parseFloat(comprobante.monto_total).toLocaleString()}\n` +
-						`• *Fecha:* ${new Date(comprobante.fecha_emision).toLocaleDateString()}\n\n` +
-						`¡Gracias por elegirnos!`;
+				// ⚔️ 3. LINK DE DESCARGA DINÁMICO
+				// Usamos la URL de tu API en Render. 
+				// El alumno al hacer clic podrá ver su factura online.
+				const urlDescarga = `https://gymfit-pro.onrender.com/api/comprobantes/${comprobante.id}/pdf`;
 
-			const mensajeEncoded = encodeURIComponent(texto);
-			const url = `https://api.whatsapp.com/send?phone=${tel}&text=${mensajeEncoded}`;
+				// 4. Construcción del mensaje (Texto enriquecido + Link)
+				const texto = `*GYMFIT PRO - Comprobante de Pago* ⚔️\n\n` +
+							`Hola *${alumno.nombre_completo}*, confirmamos la recepción de tu pago:\n\n` +
+							`• *Factura:* ${comprobante.nro_factura}\n` +
+							`• *Detalle:* ${comprobante.plan_nombre_snapshot}\n` +
+							`• *Monto:* $${parseFloat(comprobante.monto_total).toLocaleString()}\n` +
+							`• *Fecha:* ${new Date(comprobante.fecha_emision).toLocaleDateString()}\n\n` +
+							`📥 *Descargá tu comprobante aquí:* \n${urlDescarga}\n\n` +
+							`¡Gracias por entrenar con nosotros!`;
 
-			// 4. DISPARO USANDO EL TRIGGER (Evita el bloqueo de pop-ups)
-			const trigger = document.getElementById('whatsapp-trigger');
-			if (trigger) {
-				trigger.href = url;
-				trigger.click();
-			} else {
-				// Fallback si no encontrara el elemento
-				window.open(url, '_blank');
+				const urlWA = `https://api.whatsapp.com/send?phone=${tel}&text=${encodeURIComponent(texto)}`;
+
+				// 5. Apertura inmediata
+				console.log("Disparando WhatsApp con link de descarga...");
+				const win = window.open(urlWA, '_blank');
+				
+				if (!win) {
+					// Plan B: Trigger invisible para evitar bloqueos
+					const trigger = document.getElementById('whatsapp-trigger');
+					if (trigger) {
+						trigger.href = urlWA;
+						trigger.click();
+					} else {
+						alert("⚠️ Por favor, habilitá los pop-ups para enviar el WhatsApp.");
+					}
+				}
+			} catch (error) {
+				console.error("Error en enviarFacturaWhatsApp:", error);
+				showVikingToast("Error al procesar el envío", true);
 			}
 		};
 
