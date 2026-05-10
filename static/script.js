@@ -4508,11 +4508,12 @@ if (editorForm) {
 				activeBtn.classList.add('border-red-600', 'text-white');
 			}
 
+			// Obtenemos el ID del alumno del input oculto del modal
+			const alId = document.getElementById('al-id').value;
+			if (!alId) return; // Si es un alumno nuevo, no cargamos historiales
+
 			// 5. Lógica específica para la pestaña de Suscripción/Pagos
 			if (tab === 'suscripcion') {
-				const alId = document.getElementById('al-id').value;
-				if (!alId) return; // Si es un alumno nuevo, no hay historial que cargar
-
 				const al = state.alumnos.find(x => x.id == alId);
 				
 				if (al) {
@@ -4531,8 +4532,20 @@ if (editorForm) {
 					if(elNombre) elNombre.innerText = planActual ? planActual.nombre : "SIN PLAN ASIGNADO";
 					if(elVence) elVence.innerText = al.fecha_vencimiento || "---";
 					
-					// Cargamos el historial de pagos desde la API
-					loadAlumnoHistorial(alId);
+					// Cargamos el historial de pagos de caja desde la API
+					if (typeof loadAlumnoHistorial === 'function') {
+						loadAlumnoHistorial(alId);
+					}
+				}
+			}
+
+			// ⚔️ 6. Lógica específica para la pestaña de COMPROBANTES (NUEVA)
+			if (tab === 'comprobantes') {
+				// Llamamos a la función que busca las Facturas A en la tabla 'comprobantes'
+				if (typeof loadComprobantesAlumno === 'function') {
+					loadComprobantesAlumno(alId);
+				} else {
+					console.error("La función loadComprobantesAlumno no está definida.");
 				}
 			}
 		};
@@ -4583,6 +4596,89 @@ if (editorForm) {
 			
 			if(window.lucide) lucide.createIcons();
 		}
+
+		async function loadComprobantesAlumno(alumnoId) {
+			const lista = document.getElementById('historial-comprobantes-lista');
+			lista.innerHTML = '<p class="text-center text-white/20 text-[10px] py-10 italic">Buscando en los archivos...</p>';
+
+			try {
+				// Llamada al endpoint que creamos en el Backend
+				const comprobantes = await apiFetch(`/comprobantes/usuario/${alumnoId}`, 'GET');
+
+				if (!comprobantes || comprobantes.length === 0) {
+					lista.innerHTML = '<p class="text-center text-white/20 text-[10px] py-10 italic uppercase">No hay facturas registradas para este guerrero.</p>';
+					return;
+				}
+
+				lista.innerHTML = comprobantes.map(c => {
+					const fecha = new Date(c.fecha_emision).toLocaleDateString();
+					
+					return `
+					<div class="glass-card p-4 rounded-2xl border border-white/5 flex justify-between items-center group hover:border-red-600/30 transition-all">
+						<div class="flex items-center gap-4">
+							<div class="w-10 h-10 rounded-xl bg-red-600/10 flex items-center justify-center text-red-500">
+								<i data-lucide="file-text" class="w-5 h-5"></i>
+							</div>
+							<div>
+								<p class="text-[11px] font-black text-white italic uppercase tracking-tighter">${c.nro_factura}</p>
+								<p class="text-[9px] text-white/40 font-bold uppercase">${fecha} • ${c.metodo_pago}</p>
+							</div>
+						</div>
+
+						<div class="flex gap-2">
+							<button onclick='reimprimirFactura(${JSON.stringify(c)})' class="p-2 bg-white/5 rounded-lg text-white/40 hover:text-white hover:bg-white/10 transition-all" title="Ver / Imprimir">
+								<i data-lucide="printer" class="w-4 h-4"></i>
+							</button>
+							
+							<button onclick='enviarFacturaWhatsApp(${JSON.stringify(c)})' class="p-2 bg-green-600/10 rounded-lg text-green-500 hover:bg-green-600 hover:text-black transition-all" title="Enviar por WhatsApp">
+								<i data-lucide="message-circle" class="w-4 h-4"></i>
+							</button>
+						</div>
+					</div>`;
+				}).join('');
+
+				if (window.lucide) lucide.createIcons();
+
+			} catch (err) {
+				console.error("Error al cargar comprobantes:", err);
+				lista.innerHTML = '<p class="text-center text-red-500 text-[10px] py-10 uppercase">Error al conectar con el servidor.</p>';
+			}
+		}
+
+		// Función para volver a abrir el PDF generado anteriormente
+		window.reimprimirFactura = (c) => {
+			// Buscamos el alumno actual en el estado para tener sus datos (DNI, Nombre)
+			const alumno = state.alumnos.find(a => a.id === c.usuario_id);
+			
+			window.generateFacturaA({
+				alumno: alumno,
+				items: [{ nombre: c.plan_nombre_snapshot, precio: c.monto_total, cantidad: 1 }],
+				total: c.monto_total,
+				metodo: c.metodo_pago,
+				ticket: c.nro_ticket_postnet,
+				nro_oficial: c.nro_factura // Usamos el Nro que ya estaba en la DB
+			});
+		};
+
+		// Función para enviar por WhatsApp
+		window.enviarFacturaWhatsApp = (c) => {
+			const alumno = state.alumnos.find(a => a.id === c.usuario_id);
+			if (!alumno || !alumno.telefono) {
+				return showVikingToast("El alumno no tiene un teléfono registrado", true);
+			}
+
+			const mensaje = `Hola ${alumno.nombre_completo}! Te adjuntamos el comprobante de tu pago en GYMFIT PRO.\n\n` +
+							`Factura: ${c.nro_factura}\n` +
+							`Monto: $${c.monto_total.toLocaleString()}\n` +
+							`Fecha: ${new Date(c.fecha_emision).toLocaleDateString()}\n\n` +
+							`¡Gracias por entrenar con nosotros! ⚔️`;
+
+			// Limpiamos el número (sacamos espacios, guiones, etc)
+			const telLimpio = alumno.telefono.replace(/\D/g, '');
+			const url = `https://wa.me/${telLimpio}?text=${encodeURIComponent(mensaje)}`;
+			
+			window.open(url, '_blank');
+		};
 
         document.getElementById('form-alumno').onsubmit = async (e) => {
 			e.preventDefault(); 
