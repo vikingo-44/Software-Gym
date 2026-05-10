@@ -4679,40 +4679,41 @@ if (editorForm) {
 		window.enviarFacturaWhatsApp = (comprobante) => {
 			try {
 				// 1. Buscamos al alumno en el estado global
+				// Usamos == para evitar problemas si uno es string y el otro number
 				const alumno = state.alumnos.find(a => a.id == comprobante.usuario_id);
 				
 				if (!alumno || !alumno.telefono) {
-					showVikingToast("El alumno no tiene teléfono registrado.", true);
+					showVikingToast("El guerrero no tiene teléfono registrado.", true);
 					return;
 				}
 
-				// 2. Formateo de teléfono (Sin símbolos, solo números)
+				// 2. Formateo de teléfono robusto
 				let tel = alumno.telefono.replace(/\D/g, '');
+				// Si tiene 10 dígitos (ej: 11...), le ponemos el prefijo de Argentina
 				if (tel.length === 10) tel = '549' + tel;
 
-				// ⚔️ 3. LINK DE DESCARGA DINÁMICO
-				// Usamos la URL de tu API en Render. 
-				// El alumno al hacer clic podrá ver su factura online.
-				const urlDescarga = `https://gymfit-pro.onrender.com/api/comprobantes/${comprobante.id}/pdf`;
+				// ⚔️ 3. URL DE VISUALIZACIÓN (Sincronizada con el Backend)
+				// Importante: Usamos /view para que FastAPI devuelva el HTML y no el error 404
+				const compId = comprobante.id || comprobante.pago_id; 
+				const urlVisualizacion = `https://gymfit-pro.onrender.com/api/comprobantes/${compId}/view`;
 
-				// 4. Construcción del mensaje (Texto enriquecido + Link)
-				const texto = `*GYMFIT PRO - Comprobante de Pago* ⚔️\n\n` +
+				// 4. Construcción del mensaje
+				const texto = `*GYMFIT PRO* ⚔️\n\n` +
 							`Hola *${alumno.nombre_completo}*, confirmamos la recepción de tu pago:\n\n` +
 							`• *Factura:* ${comprobante.nro_factura}\n` +
 							`• *Detalle:* ${comprobante.plan_nombre_snapshot}\n` +
-							`• *Monto:* $${parseFloat(comprobante.monto_total).toLocaleString()}\n` +
-							`• *Fecha:* ${new Date(comprobante.fecha_emision).toLocaleDateString()}\n\n` +
-							`📥 *Descargá tu comprobante aquí:* \n${urlDescarga}\n\n` +
+							`• *Monto:* $${parseFloat(comprobante.monto_total).toLocaleString()}\n\n` +
+							`📥 *Mirá tu comprobante aquí:* \n${urlVisualizacion}\n\n` +
 							`¡Gracias por entrenar con nosotros!`;
 
 				const urlWA = `https://api.whatsapp.com/send?phone=${tel}&text=${encodeURIComponent(texto)}`;
 
-				// 5. Apertura inmediata
-				console.log("Disparando WhatsApp con link de descarga...");
+				// 5. Intento de apertura directa
+				console.log("Abriendo WhatsApp: ", urlVisualizacion);
 				const win = window.open(urlWA, '_blank');
 				
 				if (!win) {
-					// Plan B: Trigger invisible para evitar bloqueos
+					// Plan B: Trigger invisible para saltar bloqueadores de pop-ups
 					const trigger = document.getElementById('whatsapp-trigger');
 					if (trigger) {
 						trigger.href = urlWA;
@@ -4723,10 +4724,9 @@ if (editorForm) {
 				}
 			} catch (error) {
 				console.error("Error en enviarFacturaWhatsApp:", error);
-				showVikingToast("Error al procesar el envío", true);
+				showVikingToast("Error al procesar el mensaje", true);
 			}
 		};
-
         document.getElementById('form-alumno').onsubmit = async (e) => {
 			e.preventDefault(); 
 			

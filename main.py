@@ -1643,78 +1643,75 @@ async def descargar_pdf_comprobante(comprobante_id: int):
     # Por ahora, usaremos esta URL como base.
     return {"url": f"https://tu-api.com/comprobantes/{comprobante_id}/pdf"}
 
+from fastapi.responses import HTMLResponse
+
+# ⚔️ ASEGURATE QUE LA RUTA EMPIECE CON /api PARA COINCIDIR CON EL FRONT
 @app.get("/api/comprobantes/{comprobante_id}/view", response_class=HTMLResponse, tags=["Comprobantes"])
 async def ver_comprobante_alumno(comprobante_id: int, db: Session = Depends(database.get_db)):
-    # 1. Buscamos el comprobante
+    # 1. Buscamos el comprobante por ID real de la tabla
     c = db.query(models.Comprobante).filter(models.Comprobante.id == comprobante_id).first()
-    if not c:
-        raise HTTPException(status_code=404, detail="Comprobante no encontrado")
     
-    # 2. Buscamos los datos del alumno para el encabezado
+    if not c:
+        # Si no lo encuentra, tiramos error 404
+        raise HTTPException(status_code=404, detail="Comprobante no encontrado en la base de datos")
+    
+    # 2. Buscamos al alumno para los datos del encabezado
     alumno = db.query(models.Usuario).filter(models.Usuario.id == c.usuario_id).first()
-    nombre_alumno = alumno.nombre_completo if alumno else "Consumidor Final"
-    dni_alumno = alumno.dni if alumno else "---"
+    nombre_al = alumno.nombre_completo if alumno else "Consumidor Final"
+    dni_al = alumno.dni if alumno else "---"
 
-    # 3. Devolvemos el HTML (Copiamos el diseño que ya te gusta de GYMFIT PRO)
+    # 3. HTML Vikingo Optimizado para Celulares
     html_content = f"""
+    <!DOCTYPE html>
     <html>
         <head>
             <title>Comprobante {c.nro_factura}</title>
             <script src="https://cdn.tailwindcss.com"></script>
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
         </head>
-        <body class="bg-zinc-100 p-4 md:p-10 font-sans">
-            <div class="max-w-xl mx-auto bg-white border-2 border-black p-6 shadow-xl">
-                <div class="flex justify-between border-b-2 border-black pb-4 mb-6">
+        <body class="bg-zinc-900 p-4 font-sans text-zinc-900">
+            <div class="max-w-md mx-auto bg-white border-t-8 border-red-600 p-6 shadow-2xl rounded-b-xl">
+                <div class="flex justify-between items-start mb-8">
                     <div>
-                        <h1 class="text-2xl font-black italic text-red-600">GYMFIT PRO</h1>
-                        <p class="text-[10px] font-bold">AV. SUAREZ 1581, CABA</p>
-                        <p class="text-[10px]">CUIT: 20371620819</p>
+                        <h1 class="text-xl font-black italic text-red-600">GYMFIT PRO</h1>
+                        <p class="text-[9px] font-bold uppercase text-zinc-400">Comprobante de Pago</p>
                     </div>
-                    <div class="text-right">
-                        <h2 class="text-lg font-bold">FACTURA "A"</h2>
-                        <p class="text-sm font-black text-red-600">{c.nro_factura}</p>
-                        <p class="text-[10px]">Fecha: {c.fecha_emision.strftime('%d/%m/%Y')}</p>
+                    <div class="text-right text-[10px]">
+                        <p class="font-black uppercase">Factura A</p>
+                        <p class="text-red-600 font-bold">{c.nro_factura}</p>
+                        <p>{c.fecha_emision.strftime('%d/%m/%Y')}</p>
                     </div>
+                </div>
+
+                <div class="mb-8 p-3 bg-zinc-50 rounded-lg border border-zinc-100">
+                    <p class="text-[8px] font-black text-zinc-400 uppercase tracking-widest">Guerrero</p>
+                    <p class="font-bold text-sm uppercase">{nombre_al}</p>
+                    <p class="text-[10px] text-zinc-500">DNI: {dni_al}</p>
+                </div>
+
+                <div class="space-y-4 mb-8">
+                    <div class="flex justify-between items-center text-sm border-b border-zinc-100 pb-2">
+                        <span class="text-zinc-500">{c.plan_nombre_snapshot}</span>
+                        <span class="font-bold">$ {c.monto_total:,.2f}</span>
+                    </div>
+                </div>
+
+                <div class="text-center py-6 bg-zinc-50 rounded-2xl mb-6">
+                    <p class="text-[10px] font-bold text-zinc-400 uppercase mb-1">Total Abonado</p>
+                    <p class="text-4xl font-black italic tracking-tighter text-zinc-900">$ {c.monto_total:,.2f}</p>
+                    <p class="text-[9px] font-bold text-red-600 uppercase mt-2 italic">{c.metodo_pago}</p>
+                </div>
+
+                <div class="text-[8px] text-zinc-400 text-center italic leading-tight">
+                    <p>Av. Suarez 1581, CABA • CUIT: 20371620819</p>
+                    <p class="mt-2 text-[7px] uppercase">Documento de control interno no válido como factura fiscal AFIP.</p>
                 </div>
                 
-                <div class="mb-6 space-y-1">
-                    <p class="text-xs font-bold uppercase text-gray-500">CLIENTE</p>
-                    <p class="font-black uppercase">{nombre_alumno}</p>
-                    <p class="text-xs italic">DNI: {dni_alumno}</p>
-                </div>
-
-                <table class="w-full mb-8 text-sm">
-                    <thead>
-                        <tr class="border-b-2 border-black">
-                            <th class="text-left py-2">CONCEPTO</th>
-                            <th class="text-right py-2">TOTAL</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td class="py-4 border-b border-gray-100">{c.plan_nombre_snapshot}</td>
-                            <td class="text-right font-black">$ {c.monto_total:,.2f}</td>
-                        </tr>
-                    </tbody>
-                </table>
-
-                <div class="text-right mb-10">
-                    <p class="text-[10px] font-bold text-gray-400 uppercase">Monto Total</p>
-                    <p class="text-3xl font-black italic">$ {c.monto_total:,.2f}</p>
-                    <p class="text-[10px] text-gray-500 italic mt-1">Medodo de pago: {c.metodo_pago}</p>
-                </div>
-
-                <div class="border-t border-dashed border-gray-300 pt-4 text-center">
-                    <p class="text-[9px] text-gray-400 italic">Este documento es un comprobante de control interno emitido por la sede.</p>
-                    <button onclick="window.print()" class="mt-4 px-6 py-2 bg-black text-white text-[10px] font-black uppercase italic rounded-full no-print">
-                        Descargar / Imprimir
-                    </button>
-                </div>
+                <button onclick="window.print()" class="w-full mt-6 py-3 bg-red-600 text-white text-[10px] font-black uppercase italic rounded-xl shadow-lg shadow-red-600/20 no-print">
+                    Descargar Comprobante
+                </button>
             </div>
-            <style>
-                @media print {{ .no-print {{ display: none; }} }}
-            </style>
+            <style>@media print {{ .no-print {{ display: none; }} }}</style>
         </body>
     </html>
     """
