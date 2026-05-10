@@ -1447,31 +1447,27 @@ async function finalizarVentaMercaderia() {
                 const facturaGuardada = await guardarComprobanteEnBD(infoFactura);
 
                 if (facturaGuardada) {
-					// 2. WHATSAPP: Solo si el alumno tiene teléfono cargado en su ficha
+					// 2. WHATSAPP: Solo si el alumno tiene teléfono
 					const tieneTelefono = alumnoActual && alumnoActual.telefono && alumnoActual.telefono.trim() !== "";
 
 					if (tieneTelefono) {
-						// Usamos un pequeño timeout para que el confirm no bloquee el hilo principal
-						// y permita que los procesos anteriores (como el toast) se vean bien.
-						setTimeout(() => {
-							if (confirm(`Comprobante ${facturaGuardada.nro_factura} generado.\n\n¿Deseas enviárselo por WhatsApp a ${alumnoActual.nombre_completo}?`)) {
-								
-								// ⚔️ IMPORTANTE: Llamamos a la función desde el objeto window
-								if (typeof window.enviarFacturaWhatsApp === 'function') {
-									window.enviarFacturaWhatsApp(facturaGuardada);
-								} else {
-									console.error("Error: window.enviarFacturaWhatsApp no está definida.");
-									showVikingToast("Error al abrir WhatsApp", true);
-								}
+						// ELIMINAMOS EL SETTIMEOUT: El confirm debe ser directo tras el cobro exitoso
+						if (confirm(`Comprobante ${facturaGuardada.nro_factura} generado.\n\n¿Deseas enviárselo por WhatsApp a ${alumnoActual.nombre_completo}?`)) {
+							
+							if (typeof window.enviarFacturaWhatsApp === 'function') {
+								window.enviarFacturaWhatsApp(facturaGuardada);
+							} else {
+								console.error("Error: window.enviarFacturaWhatsApp no definida.");
+								showVikingToast("Error al abrir WhatsApp", true);
 							}
-						}, 500);
+						}
 					} else {
 						console.log("Comprobante guardado: El alumno no posee teléfono registrado.");
 						showVikingToast("Comprobante guardado (Sin WhatsApp)");
 					}
 				} else {
-                    console.error("Error crítico: El cobro se procesó pero no se pudo persistir el comprobante.");
-                }
+					console.error("Error crítico: No se pudo persistir el comprobante.");
+				}
             } else {
                 // Si es mercadería (agua, snacks, etc.), no hacemos nada extra
                 console.log("Venta de mercadería detectada: Se omite generación de Factura A.");
@@ -4676,22 +4672,23 @@ if (editorForm) {
 
 		// Función para enviar por WhatsApp
 		window.enviarFacturaWhatsApp = (comprobante) => {
-			// 1. Buscamos al alumno en el estado global usando el usuario_id del comprobante
+			// 1. Buscamos al alumno en el estado global
 			const alumno = state.alumnos.find(a => a.id == comprobante.usuario_id);
 			
 			if (!alumno || !alumno.telefono) {
-				showVikingToast("El guerrero no tiene un WhatsApp registrado en su ficha.", true);
+				showVikingToast("El guerrero no tiene un WhatsApp registrado.", true);
 				return;
 			}
 
 			// 2. Limpiamos el número de teléfono (solo números)
-			// Eliminamos +, espacios, guiones
 			let tel = alumno.telefono.replace(/\D/g, '');
 			
-			// Si el número no empieza con código de país, le agregamos el de Argentina por defecto (ajustar si es necesario)
+			// Si tiene 10 dígitos (ej: 1122334455), le ponemos el prefijo de Argentina
 			if (tel.length === 10) tel = '549' + tel; 
+			// Si empieza con 15, corregimos a 549 + 11 (o el área que corresponda)
+			if (tel.startsWith('15')) tel = '549' + tel.substring(2);
 
-			// 3. Preparamos el mensaje codificado correctamente
+			// 3. Preparamos el mensaje
 			const texto = `*GYMFIT PRO - Comprobante de Pago* ⚔️\n\n` +
 						`Hola *${alumno.nombre_completo}*, confirmamos la recepción de tu pago.\n\n` +
 						`• *Factura:* ${comprobante.nro_factura}\n` +
@@ -4701,17 +4698,16 @@ if (editorForm) {
 						`¡Gracias por elegirnos!`;
 
 			const mensajeEncoded = encodeURIComponent(texto);
-			
-			// 4. Intentamos abrir con la URL de API de WhatsApp que es más compatible
 			const url = `https://api.whatsapp.com/send?phone=${tel}&text=${mensajeEncoded}`;
-			
-			console.log("Abriendo WhatsApp para:", tel);
 
-			// Abrimos en pestaña nueva
-			const win = window.open(url, '_blank');
-			
-			if (!win) {
-				alert("⚠️ El navegador bloqueó la apertura de WhatsApp. Por favor, permite los pop-ups.");
+			// 4. DISPARO USANDO EL TRIGGER (Evita el bloqueo de pop-ups)
+			const trigger = document.getElementById('whatsapp-trigger');
+			if (trigger) {
+				trigger.href = url;
+				trigger.click();
+			} else {
+				// Fallback si no encontrara el elemento
+				window.open(url, '_blank');
 			}
 		};
 
