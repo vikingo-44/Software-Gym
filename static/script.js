@@ -819,19 +819,22 @@
 
 			// 1. Función para llenar el selector (Llamala en tu initApp)
 			function setupCalendarFilters() {
-				const selector = document.getElementById('cal-sucursal-filter');
-				if (!selector) return;
+				const selectorSede = document.getElementById('filtro-clases-sucursal');
+				if (!selectorSede) return;
 
-				// Llenamos con las sucursales del state cargadas desde el backend
-				selector.innerHTML = state.sucursales.map(s => 
-					`<option value="${s.id}" ${s.id == state.user.sucursal_id ? 'selected' : ''}>${s.sucursal.toUpperCase()}</option>`
-				).join('');
+				const rol = state.user.rol_nombre.toLowerCase();
 
-				// Solo Administrador o Supervisor pueden cambiar la sede a visualizar
-				const tienePermisos = state.user?.rol_nombre === "Administrador" || state.user?.rol_nombre === "Supervisor";
-				if (!tienePermisos) {
-					selector.disabled = true;
-					selector.classList.add('opacity-50', 'cursor-not-allowed');
+				// ⚔️ El Administrativo y el Alumno ahora pueden "pasear" por las sedes
+				if (rol === "administrador" || rol === "staff" || rol === "alumno") {
+					selectorSede.disabled = false;
+					// Por defecto, lo dejamos en su sede, pero puede cambiarla
+					if (!selectorSede.value) {
+						selectorSede.value = state.user.sucursal_id;
+					}
+				} else {
+					// Profesores solo ven su sede asignada
+					selectorSede.value = state.user.sucursal_id;
+					selectorSede.disabled = true;
 				}
 			}
 
