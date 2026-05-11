@@ -195,16 +195,31 @@
 		async function renderStudentDashboard() {
 			const u = state.user; 
 			if (!u) return;
-			
+
+			// Seteamos "hoy" a las 00:00 para comparaciones de fecha precisas
+			const ahora = new Date();
+			const hoySinHora = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate());
+
 			// 1. CARGA DE DATOS BÁSICOS
-			// Usamos ?. para evitar errores si algún elemento no existe en el DOM
 			const elName = document.getElementById('al-dash-name');
 			const elPlan = document.getElementById('al-dash-plan');
 			const elVenc = document.getElementById('al-dash-vencimiento');
 
 			if (elName) elName.innerText = u.nombre_completo || "Usuario Vikingo";
 			if (document.getElementById('al-dash-dni')) document.getElementById('al-dash-dni').innerText = u.dni || "-";
-			if (elPlan) elPlan.innerText = u.plan?.nombre || u.plan_nombre || 'SIN PLAN';
+			
+			// --- LÓGICA TIPO DE PLAN ---
+			// Extraemos el nombre del plan y el tipo (Mensual, Trimestral, etc.)
+			const nombrePlan = u.plan?.nombre || u.plan_nombre || 'SIN PLAN';
+			const tipoPlan = u.plan?.tipo?.nombre || u.tipo_plan_nombre || "";
+			
+			if (elPlan) {
+				elPlan.innerHTML = `
+					${nombrePlan} 
+					<span class="block text-[8px] text-white/40 tracking-[0.2em] mt-0.5 uppercase">${tipoPlan}</span>
+				`;
+			}
+
 			if (elVenc) elVenc.innerText = u.fecha_vencimiento ? new Date(u.fecha_vencimiento).toLocaleDateString('es-AR') : '-';
 			if (document.getElementById('al-dash-renovacion')) document.getElementById('al-dash-renovacion').innerText = u.fecha_ultima_renovacion || '-';
 			if (document.getElementById('al-dash-email')) document.getElementById('al-dash-email').innerText = u.email || '-';
@@ -222,48 +237,66 @@
 			// Lógica de certificado médico
 			if (u.fecha_certificado && elPlan) {
 				const fCert = new Date(u.fecha_certificado);
-				const hoy = new Date();
-				const diff = (hoy - fCert) / (1000 * 60 * 60 * 24);
+				const diff = (ahora - fCert) / (1000 * 60 * 60 * 24);
 				if (diff > 365) {
 					elPlan.innerHTML += ` <span class="text-[8px] bg-red-600 text-black font-black px-2 py-0.5 rounded ml-2 italic">CERTIF. VENCIDO</span>`;
 				}
 			}
 
-			// 2. GESTIÓN DE CRÉDITOS Y RESERVAS (Membresía)
+			// 2. GESTIÓN DE CRÉDITOS Y RESERVAS
 			const limite = u.plan?.clases_mensuales || 0;
 			const esFull = limite >= 99; 
 
-			// Sincronizamos reservas
+			// Sincronizamos todas las reservas del sistema
 			const allReservas = await apiFetch('/reservas');
 			if (!allReservas.error && Array.isArray(allReservas)) {
 				state.reservas = allReservas; 
 			}
 			
-			const hoy = new Date();
-			const reservasMes = (state.reservas || []).filter(r => {
-				const fecha = new Date(r.fecha_clase + 'T00:00:00'); 
-				return (r.alumno_dni === u.dni || r.usuario_id === u.id) && 
-					fecha.getMonth() === hoy.getMonth() &&
-					fecha.getFullYear() === hoy.getFullYear();
-			});
+			// Filtramos solo las reservas del alumno logueado
+			const misReservasTotales = (state.reservas || []).filter(r => (r.alumno_dni === u.dni || r.usuario_id === u.id));
 
-			const usadas = reservasMes.length;
-			const restantes = esFull ? "∞" : Math.max(0, limite - usadas);
+			// SEPARACIÓN: Próximas (Hoy en adelante) e Historial (Pasado)
+			const proximas = misReservasTotales.filter(r => new Date(r.fecha_clase + 'T00:00:00') >= hoySinHora)
+											.sort((a, b) => new Date(a.fecha_clase) - new Date(b.fecha_clase));
+
+			const historial = misReservasTotales.filter(r => new Date(r.fecha_clase + 'T00:00:00') < hoySinHora)
+												.sort((a, b) => new Date(b.fecha_clase) - new Date(a.fecha_clase));
+
+			// Renderizado de Próximas Clases (Con scroll controlado en CSS)
+			const upcomingContainer = document.getElementById('al-dash-upcoming');
+			if (upcomingContainer) {
+				upcomingContainer.innerHTML = proximas.length ? proximas.map(r => renderReservaCard(r, true)).join('') : 
+					'<p class="text-gray-500 italic text-[11px] text-center py-4">No tienes reservas activas.</p>';
+			}
+
+			// Renderizado de Historial (Opacity reducida para diferenciar)
+			const historyContainer = document.getElementById('al-dash-history');
+			if (historyContainer) {
+				historyContainer.innerHTML = historial.length ? historial.map(r => renderReservaCard(r, false)).join('') : 
+					'<p class="text-gray-500 italic text-[11px] text-center py-4">Sin historial de clases.</p>';
+			}
+
+			// Créditos del mes actual
+			const usadasMes = misReservasTotales.filter(r => {
+				const f = new Date(r.fecha_clase + 'T00:00:00');
+				return f.getMonth() === ahora.getMonth() && f.getFullYear() === ahora.getFullYear();
+			}).length;
 
 			const elUsadas = document.getElementById('al-dash-usadas');
-			if(elUsadas) elUsadas.innerText = usadas;
+			if(elUsadas) elUsadas.innerText = usadasMes;
 			
 			const elCreditos = document.getElementById('al-dash-creditos');
 			if(elCreditos) {
+				const restantes = esFull ? "∞" : Math.max(0, limite - usadasMes);
 				elCreditos.innerHTML = esFull ? 
 					`<span class="text-2xl">∞</span>` : 
 					`<span class="${restantes <= 2 ? 'text-red-500' : 'text-white'}">${restantes}</span>`;
 			}
 
-			// 3. RESUMEN DE RUTINA (Vinculado a openFichaTecnica)
+			// 3. RESUMEN DE RUTINA
 			try {
 				let resRutina = await apiFetch(`/rutinas/usuario/${u.id}`);
-				// Normalizamos la respuesta por si viene un array o un objeto
 				let rutina = (Array.isArray(resRutina) && resRutina.length > 0) ? resRutina[0] : (resRutina?.id ? resRutina : null);
 
 				const summaryContainer = document.getElementById('al-dash-rutina-summary'); 
@@ -272,67 +305,50 @@
 				if (summaryContainer && contentContainer) {
 					if (rutina && rutina.nombre_grupo) {
 						summaryContainer.classList.remove('hidden');
-						summaryContainer.classList.add('flex'); // Aseguramos que sea flex para el justify-between
-						
+						summaryContainer.classList.add('flex');
 						contentContainer.innerHTML = `
 							<p class="text-[12px] font-black italic text-white mb-0.5 uppercase tracking-tighter">${rutina.nombre_grupo}</p>
 							<p class="text-[9px] text-red-600 font-black uppercase tracking-widest">${rutina.descripcion || 'PLAN PERSONALIZADO'}</p>
 						`;
-						
-						// Actualizamos el botón para que dispare la ficha
 						const btnVer = summaryContainer.querySelector('button');
-						if (btnVer) {
-							btnVer.innerText = "ENTRENAR AHORA";
-							btnVer.onclick = () => window.openFichaTecnica(u.id);
-						}
+						if (btnVer) btnVer.onclick = () => window.openFichaTecnica(u.id);
 					} else {
 						summaryContainer.classList.add('hidden');
 					}
 				}
 			} catch (err) {
-				console.error("Error al cargar rutina en dashboard:", err);
+				console.error("Error en rutina dashboard:", err);
 			}
-			
-			// 4. PRÓXIMAS CLASES
-			const upcoming = document.getElementById('al-dash-upcoming');
-			const misR = (state.reservas || []).filter(r => 
-				(r.alumno_dni === u.dni || r.usuario_id === u.id) && 
-				new Date(r.fecha_clase + 'T23:59:59') >= hoy
-			);
-			
-			// Ordenar cronológicamente
-			misR.sort((a, b) => new Date(a.fecha_clase) - new Date(b.fecha_clase));
 
-			if (upcoming) {
-				upcoming.innerHTML = misR.length ? misR.map(r => {
-					let fechaDisplay = "S/F";
-					if (r.fecha_clase) {
-						const [y, m, d] = r.fecha_clase.split('-');
-						const dateObj = new Date(y, m - 1, d);
-						fechaDisplay = dateObj.toLocaleDateString('es-AR', { weekday: 'short', day: '2-digit', month: '2-digit' });
-					}
-
-					return `
-						<div class="flex items-center justify-between p-4 bg-white/[0.03] rounded-2xl border border-white/5 mb-3 group hover:border-red-600/30 transition-all">
-							<div class="flex items-center gap-3">
-								<div class="w-8 h-8 rounded-lg bg-red-600/10 flex items-center justify-center text-red-500">
-									<i data-lucide="clock" class="w-4 h-4"></i>
-								</div>
-								<div>
-									<p class="text-[11px] font-black uppercase italic text-white leading-none mb-1">${r.clase_nombre}</p>
-									<p class="text-[9px] text-gray-500 font-bold uppercase tracking-widest">${fechaDisplay} @ ${r.horario || ''} HS</p>
-								</div>
-							</div>
-							<button onclick="cancelBooking(${r.id})" class="w-8 h-8 rounded-full flex items-center justify-center text-white/10 hover:text-red-600 hover:bg-red-600/10 transition-all">
-								<i data-lucide="trash-2" class="w-4 h-4"></i>
-							</button>
-						</div>
-					`}).join('') : '<p class="text-gray-500 italic text-[11px] text-center py-4">No tienes reservas activas.</p>';
-				
-				if (window.lucide) lucide.createIcons();
-			}
+			if (window.lucide) lucide.createIcons();
 		}
-		
+
+		/**
+		 * Función auxiliar para renderizar las tarjetas de reserva
+		 */
+		function renderReservaCard(r, isUpcoming) {
+			const [y, m, d] = r.fecha_clase.split('-');
+			const dateObj = new Date(y, m - 1, d);
+			const fechaDisplay = dateObj.toLocaleDateString('es-AR', { weekday: 'short', day: '2-digit', month: '2-digit' });
+
+			return `
+				<div class="flex items-center justify-between p-4 bg-white/[0.03] rounded-2xl border border-white/5 mb-3 group hover:border-red-600/30 transition-all ${!isUpcoming ? 'opacity-50 grayscale' : ''}">
+					<div class="flex items-center gap-3">
+						<div class="w-8 h-8 rounded-lg ${isUpcoming ? 'bg-red-600/10 text-red-500' : 'bg-white/5 text-white/30'} flex items-center justify-center">
+							<i data-lucide="${isUpcoming ? 'clock' : 'check-circle'}" class="w-4 h-4"></i>
+						</div>
+						<div>
+							<p class="text-[11px] font-black uppercase italic text-white leading-none mb-1">${r.clase_nombre}</p>
+							<p class="text-[9px] text-gray-500 font-bold uppercase tracking-widest">${fechaDisplay} @ ${r.horario || ''} HS</p>
+						</div>
+					</div>
+					${isUpcoming ? `
+					<button onclick="cancelBooking(${r.id})" class="w-8 h-8 rounded-full flex items-center justify-center text-white/10 hover:text-red-600 hover:bg-red-600/10 transition-all">
+						<i data-lucide="trash-2" class="w-4 h-4"></i>
+					</button>` : ''}
+				</div>`;
+		}
+				
 		// 1. Dibuja una fila de horario (Día + Hora + Coach)
 			function addNewScheduleSlot(data = { dia: 1, horario: 7, coach: "" }) {
 				const container = document.getElementById('cl-schedule-slots');
