@@ -828,7 +828,7 @@
 				).join('');
 
 				// Solo Administrador o Supervisor pueden cambiar la sede a visualizar
-				const tienePermisos = state.user?.rol_nombre === "Administrador" || state.user?.rol_nombre === "Supervisor";
+				const tienePermisos = state.user?.rol_nombre === "Administrador" || state.user?.rol_nombre === "Supervisor" || state.user?.rol_nombre === "Administrativos";
 				if (!tienePermisos) {
 					selector.disabled = true;
 					selector.classList.add('opacity-50', 'cursor-not-allowed');
