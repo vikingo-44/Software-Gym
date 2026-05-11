@@ -945,59 +945,58 @@ function renderCobrar() {
     if (!state.cobrarTab) state.cobrarTab = 'mercaderia';
     if (window.updatePaymentButtons) window.updatePaymentButtons();
 
+    // Capturamos valores de los filtros (Buscador + Sucursal)
     const searchVal = document.getElementById('cobrar-search').value.toLowerCase();
+    const sucursalFilter = document.getElementById('cobrar-sucursal-filter')?.value || "";
     
     if (state.cobrarTab === 'mercaderia') {
-        const filtered = state.stock.filter(s => 
-            (s.nombre_producto || "").toLowerCase().includes(searchVal)
-        );
+        // --- FILTRADO MERCADERÍA (Nombre + Sucursal) ---
+        const filtered = state.stock.filter(s => {
+            const coincideNombre = (s.nombre_producto || "").toLowerCase().includes(searchVal);
+            const coincideSucursal = sucursalFilter === "" || s.sucursal_id == sucursalFilter;
+            return coincideNombre && coincideSucursal;
+        });
 
         displayArea.innerHTML = `<div class="grid grid-cols-2 md:grid-cols-4 gap-4 overflow-y-auto max-h-[600px] pr-2 custom-scrollbar" id="cobrar-catalogo"></div>`;
         const catalog = document.getElementById('cobrar-catalogo');
         
         catalog.innerHTML = filtered.map(s => {
-			// --- CORRECCIÓN DEFINITIVA: Se utiliza 'stock_actual' de la DB ---
-			const stockActual = parseInt(s.stock_actual) || 0;
-			
-			let stockColorClass = "text-white/40"; 
-			if (stockActual <= 0) {
-				stockColorClass = "text-red-500 font-black";
-			} else if (stockActual < 5) {
-				stockColorClass = "text-yellow-500 font-bold";
-			}
+            const stockActual = parseInt(s.stock_actual) || 0;
+            let stockColorClass = "text-white/40"; 
+            if (stockActual <= 0) stockColorClass = "text-red-500 font-black";
+            else if (stockActual < 5) stockColorClass = "text-yellow-500 font-bold";
 
-			const precioFormateado = new Intl.NumberFormat('es-AR').format(s.precio_venta || 0);
+            const precioFormateado = new Intl.NumberFormat('es-AR').format(s.precio_venta || 0);
 
-			return `
-			<div class="glass-card p-4 rounded-3xl relative group cursor-pointer hover:border-red-600/50 flex flex-col h-full" onclick="addToCart(${s.id}, 'stock')">
-				<div class="w-full h-24 bg-white/5 rounded-2xl mb-3 flex items-center justify-center overflow-hidden">
-					${s.url_imagen ? 
-						`<img src="${s.url_imagen}" class="w-full h-full object-cover" onerror="this.parentElement.innerHTML='<i data-lucide=\'package\' class=\'w-6 h-6 opacity-20\'></i>'">` : 
-						`<i data-lucide="package" class="w-6 h-6 opacity-20 text-white"></i>`
-					}
-				</div>
-				<h4 class="text-[10px] font-black uppercase italic mb-1 truncate text-white/90">${s.nombre_producto}</h4>
-				
-				<div class="flex justify-between items-end mt-auto pt-2 border-t border-white/5">
-					<div>
-						<p class="text-[14px] font-black text-white italic tracking-tighter">$${precioFormateado}</p>
-						<p class="text-[8px] uppercase tracking-tighter ${stockColorClass}">
-							Stock: ${stockActual}
-						</p>
-					</div>
-					<div class="w-8 h-8 rounded-xl bg-red-600/10 border border-red-600/20 flex items-center justify-center text-red-500 group-hover:bg-red-600 group-hover:text-black transition-all">
-						<i data-lucide="plus" class="w-4 h-4"></i>
-					</div>
-				</div>
-			</div>`;
-		}).join('');
+            return `
+            <div class="glass-card p-4 rounded-3xl relative group cursor-pointer hover:border-red-600/50 flex flex-col h-full" onclick="addToCart(${s.id}, 'stock')">
+                <div class="w-full h-24 bg-white/5 rounded-2xl mb-3 flex items-center justify-center overflow-hidden">
+                    ${s.url_imagen ? 
+                        `<img src="${s.url_imagen}" class="w-full h-full object-cover" onerror="this.parentElement.innerHTML='<i data-lucide=\'package\' class=\'w-6 h-6 opacity-20\'></i>'">` : 
+                        `<i data-lucide="package" class="w-6 h-6 opacity-20 text-white"></i>`
+                    }
+                </div>
+                <h4 class="text-[10px] font-black uppercase italic mb-1 truncate text-white/90">${s.nombre_producto}</h4>
+                <div class="flex justify-between items-end mt-auto pt-2 border-t border-white/5">
+                    <div>
+                        <p class="text-[14px] font-black text-white italic tracking-tighter">$${precioFormateado}</p>
+                        <p class="text-[8px] uppercase tracking-tighter ${stockColorClass}">Stock: ${stockActual}</p>
+                    </div>
+                    <div class="w-8 h-8 rounded-xl bg-red-600/10 border border-red-600/20 flex items-center justify-center text-red-500 group-hover:bg-red-600 group-hover:text-black transition-all">
+                        <i data-lucide="plus" class="w-4 h-4"></i>
+                    </div>
+                </div>
+            </div>`;
+        }).join('');
 
     } else {
-        // --- SECCIÓN PLANES (Sin cambios, ya que funciona) ---
+        // --- SECCIÓN PLANES (Filtrado por Nombre/DNI + Sucursal) ---
         const hoy = new Date().toISOString().split('T')[0];
-        const filteredAl = state.alumnos.filter(a => 
-            (a.nombre_completo || "").toLowerCase().includes(searchVal) || (a.dni || "").includes(searchVal)
-        );
+        const filteredAl = state.alumnos.filter(a => {
+            const coincideBusqueda = (a.nombre_completo || "").toLowerCase().includes(searchVal) || (a.dni || "").includes(searchVal);
+            const coincideSucursal = sucursalFilter === "" || a.sucursal_id == sucursalFilter;
+            return coincideBusqueda && coincideSucursal;
+        });
 
         displayArea.innerHTML = `
             <div class="glass-card p-8 rounded-[2.5rem] h-[800px] flex flex-col border border-white/5">
@@ -1062,6 +1061,25 @@ function renderCobrar() {
     if (typeof updateCartUI === 'function') updateCartUI();
 }
 document.getElementById('cobrar-search').oninput = renderCobrar;
+
+function renderSucursalSelector() {
+    const selector = document.getElementById('cobrar-sucursal-filter');
+    if (!selector) return;
+
+    // Tomamos las sucursales del estado global
+    const sucursales = state.sucursales || [];
+
+    // Llenamos el select: Una opción para "Todas" y luego una por cada sede
+    selector.innerHTML = `
+        <option value="">TODAS LAS SEDES</option>
+        ${sucursales.map(s => `
+            <option value="${s.id}">${s.nombre.toUpperCase()}</option>
+        `).join('')}
+    `;
+
+    // ⚔️ IMPORTANTE: Cada vez que cambies de sede, se vuelve a ejecutar el render de Cobro
+    selector.onchange = () => renderCobrar();
+}
 
 /**
  * =========================================================
@@ -3468,20 +3486,21 @@ if (editorForm) {
 					loadDashboard(), 
 					loadMusculacionMetadata(), 
 					loadCaja()
-					// loadFeriados y loadClasesFeriado se gestionan dentro de renderCalendar
 				]);
 				
+				// ⚔️ 1b. Inicializamos el selector de sucursales de la solapa Cobrar
+				renderSucursalSelector();
+
 				// 2. Configuración de UI del calendario
 				if (typeof setupCalendarFilters === 'function') {
 					setupCalendarFilters();
 				}
 				
-				// 3. Renderizado final (asegurando que sea asíncrono)
+				// 3. Renderizado final
 				await renderCalendar();
 
 			} catch (error) {
 				console.error("Error crítico en initApp:", error);
-				// Intentamos renderizar aunque falle algo para no dejar la pantalla en blanco
 				renderCalendar();
 			}
 		}
