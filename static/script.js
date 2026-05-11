@@ -819,35 +819,20 @@
 
 			// 1. Función para llenar el selector (Llamala en tu initApp)
 			function setupCalendarFilters() {
-				const selectorSede = document.getElementById('filtro-clases-sucursal');
-				if (!selectorSede) return;
+				const selector = document.getElementById('cal-sucursal-filter');
+				if (!selector) return;
 
-				// Pasamos a minúsculas para evitar errores de "Staff" vs "staff"
-				const rol = state.user.rol_nombre ? state.user.rol_nombre.toLowerCase() : "";
+				// Llenamos con las sucursales del state cargadas desde el backend
+				selector.innerHTML = state.sucursales.map(s => 
+					`<option value="${s.id}" ${s.id == state.user.sucursal_id ? 'selected' : ''}>${s.sucursal.toUpperCase()}</option>`
+				).join('');
 
-				// ⚔️ CRITERIO VIKINGO: 
-				// Administrativos (staff), Alumnos y el Admin principal PUEDEN cambiar de sede.
-				const puedeCambiarSede = ["administrador", "staff", "administrativo", "alumno"].includes(rol);
-
-				if (puedeCambiarSede) {
-					selectorSede.disabled = false;
-					selectorSede.classList.remove('opacity-50', 'cursor-not-allowed'); // Quitamos estilos de bloqueo
-					
-					// Si no tiene una sede seleccionada aún, le ponemos la suya por defecto
-					if (!selectorSede.value) {
-						selectorSede.value = state.user.sucursal_id;
-					}
-				} else {
-					// Profesores o roles restringidos: Solo ven su sede y no pueden cambiarla
-					selectorSede.value = state.user.sucursal_id;
-					selectorSede.disabled = true;
-					selectorSede.classList.add('opacity-50', 'cursor-not-allowed');
+				// Solo Administrador o Supervisor pueden cambiar la sede a visualizar
+				const tienePermisos = state.user?.rol_nombre === "Administrador" || state.user?.rol_nombre === "Supervisor";
+				if (!tienePermisos) {
+					selector.disabled = true;
+					selector.classList.add('opacity-50', 'cursor-not-allowed');
 				}
-
-				// Escuchamos el cambio para repintar el calendario con la nueva sede
-				selectorSede.onchange = () => {
-					if (typeof renderCalendar === 'function') renderCalendar();
-				};
 			}
 
 			// 2. Función que reacciona al cambio de sucursal en el selector
