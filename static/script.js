@@ -203,6 +203,7 @@
 			// 1. CARGA DE DATOS BÁSICOS
 			const elName = document.getElementById('al-dash-name');
 			const elPlan = document.getElementById('al-dash-plan');
+			const elMembresia = document.getElementById('al-dash-membresia');
 			const elVenc = document.getElementById('al-dash-vencimiento');
 
 			if (elName) elName.innerText = u.nombre_completo || "Usuario Vikingo";
@@ -210,15 +211,22 @@
 			
 			// --- ⚔️ LÓGICA TIPO DE PLAN (EXTRACCIÓN SEGÚN MODELS) ---
 			// Según tu relación en Python: al.plan.tipo.nombre
-			const nombrePlan = u.plan?.nombre || 'SIN PLAN';
-			const tipoMembresia = u.plan?.tipo?.nombre || ""; // Aquí capturamos: MENSUAL, TRIMESTRAL, etc.
+			const nombrePlan = u.plan?.nombre || u.plan_nombre || 'SIN PLAN';
+    		let tipoTexto = "-";
 			
-			if (elPlan) {
-				elPlan.innerHTML = `
-					<span class="text-white font-black uppercase italic">${nombrePlan}</span>
-					${tipoMembresia ? `<span class="block text-[9px] text-red-600 font-black tracking-[0.2em] mt-1 uppercase italic">${tipoMembresia}</span>` : ''}
-				`;
+			if (u.plan?.tipo?.nombre) {
+				tipoTexto = u.plan.tipo.nombre;
+			} else if (u.tipo_plan_nombre) {
+				tipoTexto = u.tipo_plan_nombre;
+			} else if (u.plan_id && state.planes) {
+				const pInfo = state.planes.find(p => p.id == u.plan_id);
+				if (pInfo && pInfo.tipo) tipoTexto = pInfo.tipo.nombre;
+				else if (pInfo && pInfo.tipo_nombre) tipoTexto = pInfo.tipo_nombre;
 			}
+
+			// AHORA SÍ: Inyectamos los datos en el HTML
+			if (elPlan) elPlan.innerText = nombrePlan.toUpperCase();
+			if (elMembresia) elMembresia.innerText = tipoTexto.toUpperCase();
 
 			// Fechas y Contacto
 			if (elVenc) elVenc.innerText = u.fecha_vencimiento ? new Date(u.fecha_vencimiento).toLocaleDateString('es-AR') : '-';
