@@ -208,20 +208,25 @@
 			if (elName) elName.innerText = u.nombre_completo || "Usuario Vikingo";
 			if (document.getElementById('al-dash-dni')) document.getElementById('al-dash-dni').innerText = u.dni || "-";
 			
-			// --- LÓGICA TIPO DE PLAN ---
-			// Extraemos el nombre del plan y el tipo (Mensual, Trimestral, etc.)
-			const nombrePlan = u.plan?.nombre || u.plan_nombre || 'SIN PLAN';
-			const tipoPlan = u.plan?.tipo?.nombre || u.tipo_plan_nombre || "";
+			// --- ⚔️ LÓGICA TIPO DE PLAN (EXTRACCIÓN SEGÚN MODELS) ---
+			// Según tu relación en Python: al.plan.tipo.nombre
+			const nombrePlan = u.plan?.nombre || 'SIN PLAN';
+			const tipoMembresia = u.plan?.tipo?.nombre || ""; // Aquí capturamos: MENSUAL, TRIMESTRAL, etc.
 			
 			if (elPlan) {
 				elPlan.innerHTML = `
-					${nombrePlan} 
-					<span class="block text-[8px] text-white/40 tracking-[0.2em] mt-0.5 uppercase">${tipoPlan}</span>
+					<span class="text-white font-black uppercase italic">${nombrePlan}</span>
+					${tipoMembresia ? `<span class="block text-[9px] text-red-600 font-black tracking-[0.2em] mt-1 uppercase italic">${tipoMembresia}</span>` : ''}
 				`;
 			}
 
+			// Fechas y Contacto
 			if (elVenc) elVenc.innerText = u.fecha_vencimiento ? new Date(u.fecha_vencimiento).toLocaleDateString('es-AR') : '-';
-			if (document.getElementById('al-dash-renovacion')) document.getElementById('al-dash-renovacion').innerText = u.fecha_ultima_renovacion || '-';
+			if (document.getElementById('al-dash-renovacion')) {
+				// Formateamos la fecha de renovación si existe
+				const fRenov = u.fecha_ultima_renovacion;
+				document.getElementById('al-dash-renovacion').innerText = fRenov ? new Date(fRenov).toLocaleDateString('es-AR') : '-';
+			}
 			if (document.getElementById('al-dash-email')) document.getElementById('al-dash-email').innerText = u.email || '-';
 			
 			// Iniciales
@@ -253,31 +258,32 @@
 				state.reservas = allReservas; 
 			}
 			
-			// Filtramos solo las reservas del alumno logueado
+			// Filtramos solo las reservas de este alumno
 			const misReservasTotales = (state.reservas || []).filter(r => (r.alumno_dni === u.dni || r.usuario_id === u.id));
 
-			// SEPARACIÓN: Próximas (Hoy en adelante) e Historial (Pasado)
+			// ⚔️ SEPARACIÓN AUTOMÁTICA: Próximas vs Historial
+			// Cualquier clase con fecha menor a hoy se va al historial
 			const proximas = misReservasTotales.filter(r => new Date(r.fecha_clase + 'T00:00:00') >= hoySinHora)
 											.sort((a, b) => new Date(a.fecha_clase) - new Date(b.fecha_clase));
 
 			const historial = misReservasTotales.filter(r => new Date(r.fecha_clase + 'T00:00:00') < hoySinHora)
 												.sort((a, b) => new Date(b.fecha_clase) - new Date(a.fecha_clase));
 
-			// Renderizado de Próximas Clases (Con scroll controlado en CSS)
+			// Renderizado de Próximas Clases (El scroll se maneja por CSS en el contenedor)
 			const upcomingContainer = document.getElementById('al-dash-upcoming');
 			if (upcomingContainer) {
 				upcomingContainer.innerHTML = proximas.length ? proximas.map(r => renderReservaCard(r, true)).join('') : 
-					'<p class="text-gray-500 italic text-[11px] text-center py-4">No tienes reservas activas.</p>';
+					'<p class="text-zinc-500 italic text-[11px] text-center py-6 uppercase tracking-widest">No tienes reservas activas</p>';
 			}
 
-			// Renderizado de Historial (Opacity reducida para diferenciar)
+			// Renderizado de Historial (Con estilo suavizado)
 			const historyContainer = document.getElementById('al-dash-history');
 			if (historyContainer) {
 				historyContainer.innerHTML = historial.length ? historial.map(r => renderReservaCard(r, false)).join('') : 
-					'<p class="text-gray-500 italic text-[11px] text-center py-4">Sin historial de clases.</p>';
+					'<p class="text-zinc-500 italic text-[11px] text-center py-6 uppercase tracking-widest">Sin actividad pasada</p>';
 			}
 
-			// Créditos del mes actual
+			// Créditos consumidos en el mes calendario actual
 			const usadasMes = misReservasTotales.filter(r => {
 				const f = new Date(r.fecha_clase + 'T00:00:00');
 				return f.getMonth() === ahora.getMonth() && f.getFullYear() === ahora.getFullYear();
@@ -290,8 +296,8 @@
 			if(elCreditos) {
 				const restantes = esFull ? "∞" : Math.max(0, limite - usadasMes);
 				elCreditos.innerHTML = esFull ? 
-					`<span class="text-2xl">∞</span>` : 
-					`<span class="${restantes <= 2 ? 'text-red-500' : 'text-white'}">${restantes}</span>`;
+					`<span class="text-2xl font-black italic">∞</span>` : 
+					`<span class="${restantes <= 2 ? 'text-red-500' : 'text-white'} font-black italic">${restantes}</span>`;
 			}
 
 			// 3. RESUMEN DE RUTINA
@@ -302,22 +308,20 @@
 				const summaryContainer = document.getElementById('al-dash-rutina-summary'); 
 				const contentContainer = document.getElementById('al-dash-rutina-content');
 
-				if (summaryContainer && contentContainer) {
-					if (rutina && rutina.nombre_grupo) {
-						summaryContainer.classList.remove('hidden');
-						summaryContainer.classList.add('flex');
-						contentContainer.innerHTML = `
-							<p class="text-[12px] font-black italic text-white mb-0.5 uppercase tracking-tighter">${rutina.nombre_grupo}</p>
-							<p class="text-[9px] text-red-600 font-black uppercase tracking-widest">${rutina.descripcion || 'PLAN PERSONALIZADO'}</p>
-						`;
-						const btnVer = summaryContainer.querySelector('button');
-						if (btnVer) btnVer.onclick = () => window.openFichaTecnica(u.id);
-					} else {
-						summaryContainer.classList.add('hidden');
-					}
+				if (summaryContainer && contentContainer && rutina && rutina.nombre_grupo) {
+					summaryContainer.classList.remove('hidden');
+					summaryContainer.classList.add('flex');
+					contentContainer.innerHTML = `
+						<p class="text-[12px] font-black italic text-white mb-0.5 uppercase tracking-tighter">${rutina.nombre_grupo}</p>
+						<p class="text-[9px] text-red-600 font-black uppercase tracking-widest">${rutina.descripcion || 'PLAN PERSONALIZADO'}</p>
+					`;
+					const btnVer = summaryContainer.querySelector('button');
+					if (btnVer) btnVer.onclick = () => window.openFichaTecnica(u.id);
+				} else if (summaryContainer) {
+					summaryContainer.classList.add('hidden');
 				}
 			} catch (err) {
-				console.error("Error en rutina dashboard:", err);
+				console.error("Error en carga de rutina:", err);
 			}
 
 			if (window.lucide) lucide.createIcons();
