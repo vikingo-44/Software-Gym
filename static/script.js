@@ -821,43 +821,42 @@
 				const selector = document.getElementById('cal-sucursal-filter');
 				if (!selector) return;
 
-				// Llenamos con las sucursales del state cargadas desde el backend
-				selector.innerHTML = (state.sucursales || []).map(s => 
-					`<option value="${s.id}" ${s.id == state.user.sucursal_id ? 'selected' : ''}>${s.sucursal.toUpperCase()}</option>`
-				).join('');
+				// 1. Llenamos el selector con las sucursales del state (si no se llenó antes)
+				if (state.sucursales && state.sucursales.length > 0) {
+					selector.innerHTML = state.sucursales.map(s => 
+						`<option value="${s.id}" ${s.id == state.user.sucursal_id ? 'selected' : ''}>${s.sucursal.toUpperCase()}</option>`
+					).join('');
+				}
 
-				// --- ⚔️ LÓGICA DE VISIBILIDAD ACTUALIZADA ---
+				// 2. LÓGICA DE VISIBILIDAD: ¿Quién puede desplegar el selector?
 				const rol = (state.user?.rol_nombre || "").toLowerCase();
 				
-				// Ahora permitimos que Administrador, Supervisor, Staff/Administrativo y Alumno cambien la sede
+				// Agregamos 'staff' y 'administrativo' para que no les aparezca grisado
 				const puedeVerOtrasSedes = ["administrador", "supervisor", "staff", "administrativo", "alumno"].includes(rol);
 
 				if (puedeVerOtrasSedes) {
 					selector.disabled = false;
 					selector.classList.remove('opacity-50', 'cursor-not-allowed');
+					selector.style.pointerEvents = 'auto'; // Aseguramos que responda al click
 				} else {
-					// Profesores u otros roles quedan fijos en su sede
+					// Profesores quedan fijos en su sede
 					selector.disabled = true;
 					selector.classList.add('opacity-50', 'cursor-not-allowed');
 				}
-
-				// Listener para que al cambiar la sede se refresque el calendario
-				selector.onchange = () => {
-					if (typeof renderCalendar === 'function') renderCalendar();
-				};
 			}
 
 			// 2. Función que reacciona al cambio de sucursal en el selector
 			async function cambiarSedeCalendario(sucursalId) {
+				if (!sucursalId) return;
 				if (typeof showVikingToast === 'function') showVikingToast("Cambiando vista de sede...");
 				
-				// Seteamos la sucursal que estamos visualizando actualmente
+				// Guardamos qué sede estamos mirando para que renderCalendar sepa qué dibujar
 				state.viewing_sucursal_id = parseInt(sucursalId); 
 				
-				// Forzamos la recarga de clases. El backend devolverá las clases de la sucursal seleccionada.
+				// Recargamos clases (el GET que corregimos en Python nos mandará todas las sedes si somos Staff/Alumno)
 				state.clases = await apiFetch('/clases');
 				
-				// Refrescamos el calendario sin superposiciones
+				// Refrescamos el calendario
 				renderCalendar();
 			}
                 
