@@ -576,7 +576,6 @@
 				if (!cal) return;
 
 				// --- 🛡️ BLINDAJE DE SUCURSAL (REFORZADO) ---
-				// Si state.user no está disponible, intentamos recuperarlo del storage local para no abortar.
 				if (!state.user) {
 					const savedUser = localStorage.getItem('viking_user');
 					if (savedUser) {
@@ -584,7 +583,9 @@
 					}
 				}
 
-				const currentSucursalId = state.viewing_sucursal_id || state.user?.sucursal_id;
+				// ⚔️ PRIORIDAD DE FILTRO: Primero el selector, luego el estado global, luego el usuario
+				const selectorSede = document.getElementById('cal-sucursal-filter');
+				const currentSucursalId = selectorSede ? selectorSede.value : (state.viewing_sucursal_id || state.user?.sucursal_id);
 				
 				if (!currentSucursalId) {
 					console.warn("⚠️ Abortando renderCalendar: No hay sucursal_id disponible todavía.");
@@ -598,9 +599,8 @@
 
 				// 1. CARGA DE DATOS (Filtrados por la sede en visualización)
 				try {
-					if (!state.clases || state.clases.length === 0) {
-						state.clases = await apiFetch('/clases');
-					}
+					// Forzamos actualización de clases para traer las de la sede actual (si el backend lo permite)
+					state.clases = await apiFetch('/clases');
 					
 					// Aseguramos que los feriados y clases especiales respondan a la sede actual
 					const sucursalQuery = parseInt(currentSucursalId);
@@ -668,6 +668,7 @@
 						cell.style.height = "40px";
 						cell.className = `cal-cell relative border-b border-r border-white/5 hover:bg-white/5 transition-colors ${isClosed ? 'bg-black/40 pointer-events-none' : ''}`;
 
+						// ⚔️ SOLO ADMIN PUEDE MOVER (DROP)
 						if (isAdminGlobal && !isClosed) {
 							cell.ondragover = (e) => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; cell.classList.add('bg-red-600/10'); };
 							cell.ondragleave = () => cell.classList.remove('bg-red-600/10');
@@ -675,18 +676,14 @@
 								e.preventDefault();
 								cell.classList.remove('bg-red-600/10');
 								const claseId = e.dataTransfer.getData("claseId");
-								const claseSucursal = e.dataTransfer.getData("claseSucursal");
-
-								if (!isAdminGlobal && claseSucursal != miSucursalId) {
-									return showVikingToast("No podés mover clases de otra sucursal", true);
-								}
-
 								const oldDia = e.dataTransfer.getData("oldDia");
 								const oldHorario = e.dataTransfer.getData("oldHorario");
+								
 								if (!claseId) return;
 								const parts = cell.id.split('-');
 								const newDia = parseInt(parts[1]);
 								const newHorario = parseFloat(parts[2].replace('_', '.'));
+								
 								if (oldDia == newDia && oldHorario == newHorario) return;
 
 								const res = await apiFetch(`/clases/${claseId}/move`, 'PUT', {
@@ -701,7 +698,7 @@
 									state.clases = await apiFetch('/clases');
 									renderCalendar();
 								} else {
-									showVikingToast("Error al mover: " + res.error, true);
+									showVikingToast("Error: " + res.error, true);
 								}
 							};
 						}
@@ -718,7 +715,7 @@
 					
 					const infoFeriado = state.feriados?.find(f => 
 						f.fecha === fechaSlotStr && 
-						f.sucursal_id == currentSucursalId
+						f.sucursal_id == miSucursalId
 					);
 
 					if (infoFeriado) {
@@ -737,6 +734,7 @@
 					} else {
 						if (state.clases && Array.isArray(state.clases)) {
 							state.clases.forEach(c => {
+								// FILTRO DE SUCURSAL PARA RENDER
 								if (c.sucursal_id != miSucursalId) return;
 
 								if (state.calendar.currentBox !== 'Principal') {
@@ -754,7 +752,7 @@
 					}
 				}
 
-				// Función interna para los badges
+				// --- ⚔️ FUNCIÓN INTERNA PARA BADGES (PROTEGIDA) ---
 				function pintarBadgeClase(c, d, horario, fechaSlotStr, esEspecial, slotInfo = null) {
 					const hKey = horario.toString().replace('.', '_');
 					const cell = document.getElementById(`cell-${d}-${hKey}`);
@@ -779,10 +777,11 @@
 					const estaLleno = cupoActual >= cupoMax;
 
 					const badge = document.createElement('div');
-					badge.className = `absolute top-0.5 left-0.5 right-0.5 rounded-xl flex flex-col items-center justify-center text-center overflow-hidden z-20 p-1 shadow-xl transition-all`;
+					badge.className = `absolute top-0.5 left-0.5 right-0.5 rounded-xl flex flex-col items-center justify-center text-center overflow-hidden z-20 p-1 shadow-xl transition-all cursor-pointer`;
 					badge.style.height = "79px";
 					badge.style.backgroundColor = colorBase;
 
+					// ⚔️ SOLO ADMIN PUEDE INICIAR DRAG
 					if (isAdminGlobal && !esEspecial) {
 						badge.draggable = true;
 						badge.ondragstart = (e) => {
@@ -806,9 +805,9 @@
 						e.stopPropagation();
 						if (esAlumno) {
 							if (estaLleno) showVikingToast("Cupo lleno", true);
-							else confirmarReservaVikinga(c, d, horario, fechaSlotStr);
-						} else if (isAdminGlobal) {
-							openInscriptos(c.id, d, horario, fechaSlotStr);
+							else if (typeof confirmarReservaVikinga === 'function') confirmarReservaVikinga(c, d, horario, fechaSlotStr);
+						} else if (isAdminGlobal || state.user?.rol_nombre?.toLowerCase() === "staff" || state.user?.rol_nombre?.toLowerCase() === "administrativo") {
+							if (typeof openInscriptos === 'function') openInscriptos(c.id, d, horario, fechaSlotStr);
 						}
 					};
 					cell.appendChild(badge);
@@ -823,16 +822,29 @@
 				if (!selector) return;
 
 				// Llenamos con las sucursales del state cargadas desde el backend
-				selector.innerHTML = state.sucursales.map(s => 
+				selector.innerHTML = (state.sucursales || []).map(s => 
 					`<option value="${s.id}" ${s.id == state.user.sucursal_id ? 'selected' : ''}>${s.sucursal.toUpperCase()}</option>`
 				).join('');
 
-				// Solo Administrador o Supervisor pueden cambiar la sede a visualizar
-				const tienePermisos = state.user?.rol_nombre === "Administrador" || state.user?.rol_nombre === "Supervisor" || state.user?.rol_nombre === "Administrativos";
-				if (!tienePermisos) {
+				// --- ⚔️ LÓGICA DE VISIBILIDAD ACTUALIZADA ---
+				const rol = (state.user?.rol_nombre || "").toLowerCase();
+				
+				// Ahora permitimos que Administrador, Supervisor, Staff/Administrativo y Alumno cambien la sede
+				const puedeVerOtrasSedes = ["administrador", "supervisor", "staff", "administrativo", "alumno"].includes(rol);
+
+				if (puedeVerOtrasSedes) {
+					selector.disabled = false;
+					selector.classList.remove('opacity-50', 'cursor-not-allowed');
+				} else {
+					// Profesores u otros roles quedan fijos en su sede
 					selector.disabled = true;
 					selector.classList.add('opacity-50', 'cursor-not-allowed');
 				}
+
+				// Listener para que al cambiar la sede se refresque el calendario
+				selector.onchange = () => {
+					if (typeof renderCalendar === 'function') renderCalendar();
+				};
 			}
 
 			// 2. Función que reacciona al cambio de sucursal en el selector
