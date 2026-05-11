@@ -1074,15 +1074,19 @@ function renderSucursalSelector() {
     const selector = document.getElementById('cobrar-sucursal-filter');
     if (!selector) return;
 
+    // Usamos state.sucursales que se carga en initApp
     const sucursales = state.sucursales || [];
 
-    // ⚔️ BLINDAJE: Validamos que s.nombre exista antes de llamar a toUpperCase()
+    if (sucursales.length === 0) {
+        selector.innerHTML = `<option value="">CARGANDO SEDES...</option>`;
+        return;
+    }
+
     selector.innerHTML = `
         <option value="">TODAS LAS SEDES</option>
-        ${sucursales.map(s => {
-            const nombreSeguro = (s.nombre || s.nombre_sucursal || "Sede").toUpperCase();
-            return `<option value="${s.id}">${nombreSeguro}</option>`;
-        }).join('')}
+        ${sucursales.map(s => `
+            <option value="${s.id}">${(s.nombre || 'S/N').toUpperCase()}</option>
+        `).join('')}
     `;
 
     selector.onchange = () => renderCobrar();
