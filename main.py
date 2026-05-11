@@ -1042,21 +1042,30 @@ def get_reservas(fecha: Optional[str] = None, db: Session = Depends(database.get
 
 @app.post("/api/reservas", tags=["Reservas"])
 def book_clase(data: ReservaCreate, db: Session = Depends(database.get_db)):
-    # 1. Convertimos la fecha que viene de la Web a objeto Date de Python
     try:
         fecha_objeto = datetime.strptime(data.fecha_clase, "%Y-%m-%d").date()
     except ValueError:
-        raise HTTPException(status_code=400, detail="Formato de fecha inválido. Use YYYY-MM-DD")
+        raise HTTPException(status_code=400, detail="Formato de fecha inválido.")
 
+    # Buscamos al usuario con su plan
     user = db.query(models.Usuario).options(joinedload(models.Usuario.plan)).filter(models.Usuario.id == data.usuario_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
 
-    # --- VALIDACIÓN DE PLAN VENCIDO ---
+    # 1. VALIDACIÓN DE PLAN VENCIDO
     if user.fecha_vencimiento and user.fecha_vencimiento < date.today():
-        raise HTTPException(status_code=400, detail="Tu membresía ha vencido. No puedes realizar reservas.")
+        raise HTTPException(status_code=400, detail="Tu membresía ha vencido.")
 
-    # --- VALIDACIÓN DE CUPO MENSUAL POR CICLO PERSONAL ---
+    # 2. LÓGICA DE DOBLE BÚSQUEDA (NORMAL O FERIADO)
+    # Buscamos la clase para saber de qué sucursal es
+    clase = db.query(models.Clase).filter(models.Clase.id == data.clase_id).first()
+    if not clase:
+        clase = db.query(models.ClaseFeriado).filter(models.ClaseFeriado.id == data.clase_id).first()
+    
+    if not clase:
+        raise HTTPException(status_code=404, detail="La clase no existe.")
+
+    # 3. VALIDACIÓN DE CUPO MENSUAL (GLOBAL - No importa la sede)
     if user.plan:
         limite_mensual = user.plan.clases_mensuales
         if limite_mensual < 999:
@@ -1065,6 +1074,7 @@ def book_clase(data: ReservaCreate, db: Session = Depends(database.get_db)):
             inicio_ciclo = fecha_inicio_base + relativedelta(months=delta_meses)
             fin_ciclo = inicio_ciclo + relativedelta(months=1)
 
+            # Contamos TODAS sus reservas del mes en CUALQUIER sede
             count_reservas = db.query(models.Reserva).filter(
                 models.Reserva.usuario_id == user.id,
                 models.Reserva.fecha_reserva >= inicio_ciclo,
@@ -1074,33 +1084,20 @@ def book_clase(data: ReservaCreate, db: Session = Depends(database.get_db)):
             if count_reservas >= limite_mensual:
                 raise HTTPException(
                     status_code=400, 
-                    detail=f"Límite alcanzado: Tenés {limite_mensual} clases por mes. Ciclo actual: {inicio_ciclo.strftime('%d/%m')} al {fin_ciclo.strftime('%d/%m')}."
+                    detail=f"Límite alcanzado ({limite_mensual} clases/mes)."
                 )
 
-    # --- VALIDACIÓN DE DUPLICADOS ---
+    # 4. VALIDACIÓN DE DUPLICADOS
     exists = db.query(models.Reserva).filter(
         models.Reserva.usuario_id == data.usuario_id,
         models.Reserva.clase_id == data.clase_id,
         models.Reserva.horario == data.horario,
         models.Reserva.fecha_reserva == fecha_objeto
     ).first()
-    
     if exists:
-        raise HTTPException(status_code=400, detail="Ya tienes reservado este turno en esta fecha.")
+        raise HTTPException(status_code=400, detail="Ya tienes este turno reservado.")
 
-    # --- LOGICA DE DOBLE BUSQUEDA (NORMAL O FERIADO) ---
-    # Primero buscamos en clases normales
-    clase = db.query(models.Clase).filter(models.Clase.id == data.clase_id).first()
-    
-    # Si no existe en normales, buscamos en la tabla de clases de feriado
-    if not clase:
-        clase = db.query(models.ClaseFeriado).filter(models.ClaseFeriado.id == data.clase_id).first()
-    
-    # Si no está en ninguna de las dos, recién ahí tiramos el error
-    if not clase:
-        raise HTTPException(status_code=404, detail="La clase no existe o fue reprogramada.")
-
-    # --- VALIDACIÓN DE CUPO (Usando el cupo de la clase encontrada) ---
+    # 5. VALIDACIÓN DE CUPO DE LA CLASE (Específico de la clase/sede)
     cupo_actual = db.query(models.Reserva).filter(
         models.Reserva.clase_id == data.clase_id,
         models.Reserva.horario == data.horario,
@@ -1108,15 +1105,17 @@ def book_clase(data: ReservaCreate, db: Session = Depends(database.get_db)):
     ).count()
     
     if cupo_actual >= clase.capacidad_max:
-        raise HTTPException(status_code=400, detail="Este horario no tiene cupos disponibles para esta fecha")
+        raise HTTPException(status_code=400, detail="Sin cupos disponibles.")
 
-    # --- GUARDADO ---
+    # 6. GUARDADO CON SUCURSAL DE LA CLASE
     new_res = models.Reserva(
         usuario_id=data.usuario_id,
         clase_id=data.clase_id,
         fecha_reserva=fecha_objeto,
         horario=data.horario,       
-        dia_semana=data.dia_semana 
+        dia_semana=data.dia_semana,
+        # ⚔️ CLAVE: Guardamos el ID de la sucursal de la CLASE, no del alumno
+        sucursal_id=clase.sucursal_id 
     )
     
     try:
@@ -1125,7 +1124,7 @@ def book_clase(data: ReservaCreate, db: Session = Depends(database.get_db)):
         return {"status": "success"}
     except Exception as e:
         db.rollback()
-        raise HTTPException(status_code=500, detail="Error interno al guardar.")
+        raise HTTPException(status_code=500, detail="Error al guardar.")
 
 @app.delete("/api/reservas/{id}", tags=["Reservas"])
 def cancel_reserva(id: int, db: Session = Depends(database.get_db)):
@@ -1369,10 +1368,12 @@ def get_clases(db: Session = Depends(database.get_db), current_user = Depends(ge
     """Retorna las clases FILTRADAS por la sede del usuario logueado."""
     query = db.query(models.Clase).options(joinedload(models.Clase.box_rel))
     
-    # ⚔️ FILTRO RADICAL: Si no es Admin/Supervisor, solo ve su sede
-    # Si es Supervisor, también lo limitamos a su sede para que no gestione lo ajeno
+    # ⚔️ FILTRO ACTUALIZADO: Admin, Alumno y Staff (Administrativo) ven todo.
+    # Los Profesores (Coach) siguen viendo solo su sede para no marearse.
     rol = current_user.perfil.nombre.lower()
-    if rol != "administrador":
+    roles_que_ven_todo = ["administrador", "alumno", "staff", "administrativo"]
+    
+    if rol not in roles_que_ven_todo:
         query = query.filter(models.Clase.sucursal_id == current_user.sucursal_id)
     
     clases = query.all()
