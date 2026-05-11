@@ -1074,7 +1074,6 @@ function renderSucursalSelector() {
     const selector = document.getElementById('cobrar-sucursal-filter');
     if (!selector) return;
 
-    // Usamos state.sucursales que se carga en initApp
     const sucursales = state.sucursales || [];
 
     if (sucursales.length === 0) {
@@ -1085,7 +1084,7 @@ function renderSucursalSelector() {
     selector.innerHTML = `
         <option value="">TODAS LAS SEDES</option>
         ${sucursales.map(s => `
-            <option value="${s.id}">${(s.nombre || 'S/N').toUpperCase()}</option>
+            <option value="${s.id}">${(s.sucursal || "S/N").toUpperCase()}</option>
         `).join('')}
     `;
 
@@ -5528,17 +5527,26 @@ if (editorForm) {
 							</div>`).join('');
 				}
 
-				// 2. Selectores de Filtro (Profesores, Administrativos y ALUMNOS)
+				// 2. Selectores de Filtro (Profesores, Administrativos, ALUMNOS y COBRO)
 				const selectProf = document.getElementById('filter-sucursal-profesores');
 				const selectAdm = document.getElementById('filter-sucursal-administrativos');
-				const selectAlu = document.getElementById('filter-sucursal-alumnos'); // <--- AGREGADO
-				
-				[selectProf, selectAdm, selectAlu].forEach(sel => {
+				const selectAlu = document.getElementById('filter-sucursal-alumnos');
+				const selectCob = document.getElementById('cobrar-sucursal-filter'); // <--- AGREGADO PARA COBRO
+
+				[selectProf, selectAdm, selectAlu, selectCob].forEach(sel => {
 					if (sel) {
-						const current = sel.value || 'all';
-						sel.innerHTML = '<option value="all" class="bg-zinc-900 text-white font-black italic uppercase">TODAS LAS SEDES</option>' + 
+						const current = sel.value || (sel.id === 'cobrar-sucursal-filter' ? "" : "all");
+						const firstOptionText = sel.id === 'cobrar-sucursal-filter' ? "TODAS LAS SEDES" : "TODAS LAS SEDES";
+						const firstOptionValue = sel.id === 'cobrar-sucursal-filter' ? "" : "all";
+
+						sel.innerHTML = `<option value="${firstOptionValue}" class="bg-zinc-900 text-white font-black italic uppercase">${firstOptionText}</option>` + 
 							sucursales.map(s => `<option value="${s.id}" class="bg-zinc-900 text-white font-black italic uppercase">${s.sucursal.toUpperCase()}</option>`).join('');
 						sel.value = current;
+						
+						// Si es el selector de cobro, le asignamos el evento de render
+						if (sel.id === 'cobrar-sucursal-filter') {
+							sel.onchange = () => renderCobrar();
+						}
 					}
 				});
 
