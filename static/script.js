@@ -942,15 +942,16 @@ function renderCobrar() {
     const displayArea = document.getElementById('cobrar-display-area');
     if (!displayArea) return;
 
+    // Seteamos pestaña por defecto si no existe
     if (!state.cobrarTab) state.cobrarTab = 'mercaderia';
     if (window.updatePaymentButtons) window.updatePaymentButtons();
 
-    // Capturamos valores de los filtros (Buscador + Sucursal)
+    // 1. CAPTURA DE FILTROS
     const searchVal = document.getElementById('cobrar-search').value.toLowerCase();
     const sucursalFilter = document.getElementById('cobrar-sucursal-filter')?.value || "";
     
     if (state.cobrarTab === 'mercaderia') {
-        // --- FILTRADO MERCADERÍA (Nombre + Sucursal) ---
+        // --- ⚔️ SECCIÓN MERCADERÍA (Filtrado por Nombre + Sucursal) ---
         const filtered = state.stock.filter(s => {
             const coincideNombre = (s.nombre_producto || "").toLowerCase().includes(searchVal);
             const coincideSucursal = sucursalFilter === "" || s.sucursal_id == sucursalFilter;
@@ -962,6 +963,7 @@ function renderCobrar() {
         
         catalog.innerHTML = filtered.map(s => {
             const stockActual = parseInt(s.stock_actual) || 0;
+            
             let stockColorClass = "text-white/40"; 
             if (stockActual <= 0) stockColorClass = "text-red-500 font-black";
             else if (stockActual < 5) stockColorClass = "text-yellow-500 font-bold";
@@ -977,10 +979,13 @@ function renderCobrar() {
                     }
                 </div>
                 <h4 class="text-[10px] font-black uppercase italic mb-1 truncate text-white/90">${s.nombre_producto}</h4>
+                
                 <div class="flex justify-between items-end mt-auto pt-2 border-t border-white/5">
                     <div>
                         <p class="text-[14px] font-black text-white italic tracking-tighter">$${precioFormateado}</p>
-                        <p class="text-[8px] uppercase tracking-tighter ${stockColorClass}">Stock: ${stockActual}</p>
+                        <p class="text-[8px] uppercase tracking-tighter ${stockColorClass}">
+                            Stock: ${stockActual}
+                        </p>
                     </div>
                     <div class="w-8 h-8 rounded-xl bg-red-600/10 border border-red-600/20 flex items-center justify-center text-red-500 group-hover:bg-red-600 group-hover:text-black transition-all">
                         <i data-lucide="plus" class="w-4 h-4"></i>
@@ -990,8 +995,9 @@ function renderCobrar() {
         }).join('');
 
     } else {
-        // --- SECCIÓN PLANES (Filtrado por Nombre/DNI + Sucursal) ---
+        // --- ⚔️ SECCIÓN PLANES (Filtrado por Nombre/DNI + Sucursal) ---
         const hoy = new Date().toISOString().split('T')[0];
+        
         const filteredAl = state.alumnos.filter(a => {
             const coincideBusqueda = (a.nombre_completo || "").toLowerCase().includes(searchVal) || (a.dni || "").includes(searchVal);
             const coincideSucursal = sucursalFilter === "" || a.sucursal_id == sucursalFilter;
@@ -1004,7 +1010,7 @@ function renderCobrar() {
                     Guerreros para Renovación
                 </h4>
                 <div class="overflow-y-auto custom-scrollbar flex-1 space-y-3 pr-2">
-                    ${filteredAl.map(a => {
+                    ${filteredAl.length > 0 ? filteredAl.map(a => {
                         const isActive = a.fecha_vencimiento && a.fecha_vencimiento >= hoy;
                         const statusColor = isActive ? 'text-green-500' : 'text-red-500';
                         const statusBg = isActive ? 'bg-green-500/10' : 'bg-red-500/10';
@@ -1053,10 +1059,12 @@ function renderCobrar() {
                                 <i data-lucide="shopping-cart" class="w-3 h-3"></i> CONFIRMAR PARA CARRITO
                             </button>
                         </div>`;
-                    }).join('')}
+                    }).join('') : `<p class="text-white/20 text-center py-10 uppercase italic text-[10px]">No se encontraron guerreros en esta sede</p>`}
                 </div>
             </div>`;
     }
+
+    // Refrescamos iconos y UI del carrito
     if (window.lucide) lucide.createIcons();
     if (typeof updateCartUI === 'function') updateCartUI();
 }
@@ -1066,18 +1074,17 @@ function renderSucursalSelector() {
     const selector = document.getElementById('cobrar-sucursal-filter');
     if (!selector) return;
 
-    // Tomamos las sucursales del estado global
     const sucursales = state.sucursales || [];
 
-    // Llenamos el select: Una opción para "Todas" y luego una por cada sede
+    // ⚔️ BLINDAJE: Validamos que s.nombre exista antes de llamar a toUpperCase()
     selector.innerHTML = `
         <option value="">TODAS LAS SEDES</option>
-        ${sucursales.map(s => `
-            <option value="${s.id}">${s.nombre.toUpperCase()}</option>
-        `).join('')}
+        ${sucursales.map(s => {
+            const nombreSeguro = (s.nombre || s.nombre_sucursal || "Sede").toUpperCase();
+            return `<option value="${s.id}">${nombreSeguro}</option>`;
+        }).join('')}
     `;
 
-    // ⚔️ IMPORTANTE: Cada vez que cambies de sede, se vuelve a ejecutar el render de Cobro
     selector.onchange = () => renderCobrar();
 }
 
@@ -3488,8 +3495,10 @@ if (editorForm) {
 					loadCaja()
 				]);
 				
-				// ⚔️ 1b. Inicializamos el selector de sucursales de la solapa Cobrar
-				renderSucursalSelector();
+				// ⚔️ 1b. Inicializamos el selector de sucursales una vez cargado state.sucursales
+				if (typeof renderSucursalSelector === 'function') {
+					renderSucursalSelector();
+				}
 
 				// 2. Configuración de UI del calendario
 				if (typeof setupCalendarFilters === 'function') {
@@ -3501,7 +3510,9 @@ if (editorForm) {
 
 			} catch (error) {
 				console.error("Error crítico en initApp:", error);
+				// Fallback para no romper la UI
 				renderCalendar();
+				if (typeof renderSucursalSelector === 'function') renderSucursalSelector();
 			}
 		}
 
