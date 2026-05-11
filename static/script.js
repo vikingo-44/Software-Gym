@@ -822,20 +822,32 @@
 				const selectorSede = document.getElementById('filtro-clases-sucursal');
 				if (!selectorSede) return;
 
-				const rol = state.user.rol_nombre.toLowerCase();
+				// Pasamos a minúsculas para evitar errores de "Staff" vs "staff"
+				const rol = state.user.rol_nombre ? state.user.rol_nombre.toLowerCase() : "";
 
-				// ⚔️ El Administrativo y el Alumno ahora pueden "pasear" por las sedes
-				if (rol === "administrador" || rol === "staff" || rol === "alumno") {
+				// ⚔️ CRITERIO VIKINGO: 
+				// Administrativos (staff), Alumnos y el Admin principal PUEDEN cambiar de sede.
+				const puedeCambiarSede = ["administrador", "staff", "administrativo", "alumno"].includes(rol);
+
+				if (puedeCambiarSede) {
 					selectorSede.disabled = false;
-					// Por defecto, lo dejamos en su sede, pero puede cambiarla
+					selectorSede.classList.remove('opacity-50', 'cursor-not-allowed'); // Quitamos estilos de bloqueo
+					
+					// Si no tiene una sede seleccionada aún, le ponemos la suya por defecto
 					if (!selectorSede.value) {
 						selectorSede.value = state.user.sucursal_id;
 					}
 				} else {
-					// Profesores solo ven su sede asignada
+					// Profesores o roles restringidos: Solo ven su sede y no pueden cambiarla
 					selectorSede.value = state.user.sucursal_id;
 					selectorSede.disabled = true;
+					selectorSede.classList.add('opacity-50', 'cursor-not-allowed');
 				}
+
+				// Escuchamos el cambio para repintar el calendario con la nueva sede
+				selectorSede.onchange = () => {
+					if (typeof renderCalendar === 'function') renderCalendar();
+				};
 			}
 
 			// 2. Función que reacciona al cambio de sucursal en el selector
