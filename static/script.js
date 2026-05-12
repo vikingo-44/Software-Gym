@@ -6137,74 +6137,52 @@ if (editorForm) {
 		}
 
 		async function checkVikingBirthdays() {
-			// ⚔️ Diagnóstico de inicio
-			console.log("DEBUG - Objeto usuario:", state.user);
-			console.log("DEBUG - Nombre del perfil:", state.user?.perfil?.nombre);
+			// ⚔️ Diagnóstico Vikingo
+			console.log("DEBUG - Objeto usuario completo:", state.user);
+			
+			// En tu objeto, el rol parece estar en 'rol_nombre' o 'nombre_completo'
+			// Vamos a ser bien prácticos y buscar en ambos
+			const miRol = (state.user?.rol_nombre || state.user?.nombre_completo || "").toLowerCase().trim();
+			
+			console.log("DEBUG - Rol detectado y procesado:", miRol);
 
-			// Agregamos variantes por las dudas (mayúsculas, abreviaciones)
-			const rolesAdmin = [
-				"administrador", 
-				"supervisor", 
-				"administracion", 
-				"admin", 
-				"administración" // con acento
-			];
-			
-			// Convertimos a minúsculas y sacamos espacios para comparar limpio
-			const miRol = state.user?.perfil?.nombre?.toLowerCase().trim();
-			
-			console.log("DEBUG - Rol procesado:", miRol);
+			// Lista de permitidos ajustada a lo que salió en tu consola
+			const rolesAdmin = ["administrador", "supervisor", "administracion", "staff", "admin"];
 
 			if (!rolesAdmin.includes(miRol)) {
-				console.warn("🚫 Acceso denegado. El rol '" + miRol + "' no está en la lista permitida.");
+				console.warn(`🚫 Acceso denegado. El rol '${miRol}' no está en la lista.`);
 				return;
 			}
 
 			try {
 				const cumplen = await apiFetch('/alumnos/cumpleanios');
-				console.log("🎈 Alumnos encontrados:", cumplen);
-
 				if (Array.isArray(cumplen) && cumplen.length > 0) {
 					const listaDiv = document.getElementById('lista-cumpleanios');
-					
-					// Si el DIV no existe en el HTML, esto va a fallar
-					if (!listaDiv) {
-						console.error("❌ Error: No se encontró el elemento 'lista-cumpleanios' en el HTML.");
-						return;
-					}
+					if (!listaDiv) return;
 
 					listaDiv.innerHTML = cumplen.map(a => `
 						<div class="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5">
-							<div class="flex items-center gap-3 text-left">
-								<div class="w-8 h-8 rounded-full bg-red-600 flex items-center justify-center text-[10px] font-black text-black">
+							<div class="flex items-center gap-3">
+								<div class="w-8 h-8 rounded-full bg-red-600 flex items-center justify-center font-black text-black text-[10px]">
 									${a.nombre_completo.substring(0,1)}
 								</div>
-								<div>
+								<div class="text-left">
 									<p class="text-xs font-black text-white uppercase italic">${a.nombre_completo}</p>
-									<p class="text-[9px] text-white/40 font-bold uppercase">¡Festeja hoy!</p>
+									<p class="text-[9px] text-white/40 font-bold">¡FESTEJA HOY!</p>
 								</div>
 							</div>
 							<button onclick="openWhatsAppDesdeCumple('${a.telefono}', '${a.nombre_completo}')" 
-									class="p-2 bg-green-500/10 text-green-500 hover:bg-green-500 hover:text-white rounded-lg transition-all">
+									class="p-2 bg-green-500/10 text-green-500 rounded-lg">
 								<i data-lucide="message-circle" class="w-4 h-4"></i>
 							</button>
 						</div>
 					`).join('');
 
 					if(window.lucide) lucide.createIcons();
-					
-					// ⚔️ Abrimos el modal
-					if (typeof openModal === 'function') {
-						openModal('modal-cumpleanios');
-						console.log("✅ Pop-up de cumpleaños disparado con éxito.");
-					} else {
-						console.error("❌ Error: La función openModal no está definida.");
-					}
-				} else {
-					console.log("ℹ️ Hoy no hay cumpleañeros registrados.");
+					openModal('modal-cumpleanios');
 				}
 			} catch (err) {
-				console.error("❌ Error crítico en checkVikingBirthdays:", err);
+				console.error("Error en cumples:", err);
 			}
 		}
 
