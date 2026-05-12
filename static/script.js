@@ -4459,16 +4459,19 @@ if (editorForm) {
 
 			// Capturamos el filtro seleccionado en la interfaz
 			const filtroSede = document.getElementById('filtro-clases-sucursal')?.value || 'todas';
-			const rol = (state.user.rol_nombre || "").toLowerCase();
+			const rol = (state.user.rol_nombre || "").toLowerCase().trim();
+
+			// ⚔️ ROLES AUTORIZADOS PARA VER MULTI-SEDE
+			const rolesConPermisoVista = ["administrador", "supervisor", "staff", "administrativo", "administracion", "alumno"];
 
 			// FILTRO DE VISIBILIDAD COMBINADO
 			state.clases = todasLasClases.filter(c => {
-				// 🛡️ REGLA 1: Si NO soy administrador, estoy clavado a MI sucursal_id
-				if (rol !== 'administrador') {
+				// 🛡️ REGLA 1: Si el rol NO está en la lista blanca, queda bloqueado a su sucursal_id
+				if (!rolesConPermisoVista.includes(rol)) {
 					return c.sucursal_id === state.user.sucursal_id;
 				}
 				
-				// 👑 REGLA 2: Si soy administrador, respondo al selector de filtro
+				// 👑 REGLA 2: Si el rol está autorizado, responde dinámicamente al selector
 				if (filtroSede === 'todas') return true;
 				return c.sucursal_id == filtroSede;
 			});
@@ -4478,7 +4481,7 @@ if (editorForm) {
 
 			if (state.clases.length === 0) {
 				container.innerHTML = `
-					<div class="col-span-3 p-16 border border-dashed border-white/10 rounded-[3rem] text-center bg-white/2">
+					<div class="col-span-full p-16 border border-dashed border-white/10 rounded-[3rem] text-center bg-white/2">
 						<i data-lucide="calendar-x-2" class="w-12 h-12 mx-auto mb-4 text-white/10"></i>
 						<p class="text-[12px] text-gray-600 font-black uppercase italic tracking-[0.2em]">No hay clases en esta sede</p>
 						<p class="text-[10px] text-gray-700 mt-2 font-bold">Cambia el filtro o usa "Alta de Clase".</p>
@@ -4487,7 +4490,7 @@ if (editorForm) {
 				const canEdit = (rol === "administrador" || rol === "supervisor");
 				
 				container.innerHTML = state.clases.map(c => `
-					<div class="glass-card p-6 rounded-[2.5rem] border-white/5 flex flex-col justify-between hover:border-red-600/20 transition-all group">
+					<div class="glass-card p-6 rounded-[2.5rem] border border-white/5 flex flex-col justify-between hover:border-red-600/20 transition-all group">
 						<div>
 							<div class="flex items-center gap-4 mb-6">
 								<div class="w-12 h-12 rounded-2xl flex items-center justify-center font-black text-black text-sm italic shadow-lg" style="background-color: ${c.color || '#FF0000'}">
@@ -4512,10 +4515,18 @@ if (editorForm) {
 				`).join('');
 			}
 
-			lucide.createIcons();
-			if(document.getElementById('view-calendario')?.classList.contains('active')) renderCalendar();
-			applyPermissions();
+			// Refrescar iconos
+			if (window.lucide) lucide.createIcons();
+			
+			// Si estamos viendo el calendario, lo sincronizamos
+			if(document.getElementById('view-calendario')?.classList.contains('active')) {
+				renderCalendar();
+			}
+			
+			// Aplicamos permisos de UI adicionales
+			if (typeof applyPermissions === 'function') applyPermissions();
 		}
+		
 		async function loadProfesores() {
 			// Esta función llena la memoria con los profesores para usarlos en el select de turnos
 			const res = await apiFetch('/profesores');
