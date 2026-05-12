@@ -26,7 +26,6 @@
 			
 			navItems.forEach(item => {
 				item.addEventListener('click', () => {
-					// Solo si estamos en resolución móvil/tablet
 					if (window.innerWidth <= 1024) {
 						const sidebar = document.getElementById('sidebar');
 						const overlay = document.getElementById('mobile-overlay');
@@ -41,32 +40,40 @@
 
 			// ⚔️ 2. BLOQUEO DE ZOOM (Gesto y Doble Tap)
 			document.addEventListener('touchstart', (e) => {
-				if (e.touches.length > 1) {
-					e.preventDefault();
-				}
+				if (e.touches.length > 1) e.preventDefault();
 			}, { passive: false });
 
 			let lastTouchEnd = 0;
 			document.addEventListener('touchend', (e) => {
 				const now = (new Date()).getTime();
-				if (now - lastTouchEnd <= 300) {
-					e.preventDefault();
-				}
+				if (now - lastTouchEnd <= 300) e.preventDefault();
 				lastTouchEnd = now;
 			}, false);
 
-			// ⚔️ 3. INICIO DE PROCESOS AUTOMÁTICOS
-			// Ponemos un pequeño timeout para asegurar que el estado (state.user) ya esté presente
-			setTimeout(async () => {
-				console.log("🦾 Viking System: Chequeando eventos del día...");
-				
-				// Disparamos el chequeo de cumpleaños
-				if (typeof checkVikingBirthdays === 'function') {
-					await checkVikingBirthdays();
+			// ⚔️ 3. INICIO DE PROCESOS AUTOMÁTICOS (Con Reintento Inteligente)
+			let intentos = 0;
+			const maxIntentos = 5;
+
+			const inicializarEventosVikingos = async () => {
+				// Verificamos si el usuario y su perfil ya existen en el estado
+				if (state.user && state.user.perfil) {
+					console.log("🦾 Viking System: Usuario detectado. Chequeando eventos...");
+					
+					if (typeof checkVikingBirthdays === 'function') {
+						await checkVikingBirthdays();
+					}
+					// Aquí podés sumar otros procesos futuros
+				} else if (intentos < maxIntentos) {
+					intentos++;
+					console.log(`⏳ Esperando validación de usuario (Intento ${intentos}/${maxIntentos})...`);
+					setTimeout(inicializarEventosVikingos, 1500); // Reintenta cada 1.5 segundos
+				} else {
+					console.warn("⚠️ No se pudo inicializar el chequeo de eventos: Tiempo de espera agotado.");
 				}
-				
-				// Podés agregar acá otros chequeos de inicio (vencimientos, etc.)
-			}, 1000); 
+			};
+
+			// Arrancamos el primer chequeo
+			inicializarEventosVikingos();
 		});
 
         let state = { 
@@ -6152,16 +6159,25 @@ if (editorForm) {
 
 		async function checkVikingBirthdays() {
 			// ⚔️ Diagnóstico de inicio
-			console.log("🎂 Chequeando cumpleaños...");
-			
-			const rolesAdmin = ["administrador", "supervisor", "administracion"];
-			const miRol = state.user?.perfil?.nombre?.toLowerCase();
-			
-			console.log("👤 Rol detectado:", miRol);
+			console.log("DEBUG - Objeto usuario:", state.user);
+			console.log("DEBUG - Nombre del perfil:", state.user?.perfil?.nombre);
 
-			// 🛡️ Si el rol no coincide, salimos pero avisamos por consola
+			// Agregamos variantes por las dudas (mayúsculas, abreviaciones)
+			const rolesAdmin = [
+				"administrador", 
+				"supervisor", 
+				"administracion", 
+				"admin", 
+				"administración" // con acento
+			];
+			
+			// Convertimos a minúsculas y sacamos espacios para comparar limpio
+			const miRol = state.user?.perfil?.nombre?.toLowerCase().trim();
+			
+			console.log("DEBUG - Rol procesado:", miRol);
+
 			if (!rolesAdmin.includes(miRol)) {
-				console.warn("🚫 Acceso denegado al pop-up de cumples por rol insuficiente.");
+				console.warn("🚫 Acceso denegado. El rol '" + miRol + "' no está en la lista permitida.");
 				return;
 			}
 
