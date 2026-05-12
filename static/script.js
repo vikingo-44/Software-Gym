@@ -3082,7 +3082,9 @@ if (editorForm) {
 
 					// ⚔️ EVENTOS VIKINGOS: Chequeamos cumples al iniciar sesión
 					if (typeof checkVikingBirthdays === 'function') {
-						checkVikingBirthdays();
+						setTimeout(() => {
+							checkVikingBirthdays();
+						}, 500); 
 					}
 
 					// 5. NAVEGACIÓN
@@ -3118,6 +3120,8 @@ if (editorForm) {
 				}
 			}
 		}
+
+
 
 		window.toggleCamposGasto = function(tipo) {
 			const groupCompra = document.getElementById('campos-compra-mercaderia');
