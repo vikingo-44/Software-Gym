@@ -1350,10 +1350,10 @@ def get_tipos(db: Session = Depends(database.get_db)):
 # --- CONFIGURACIONES ---
 @app.get("/api/tipo_box", tags=["Configuracion"])
 def get_tipo_box(db: Session = Depends(database.get_db), current_user = Depends(get_current_user)):
-    """Retorna la lista de boxes disponibles para la sucursal del usuario actual."""
-    return db.query(models.TipoBox).filter(
-        models.TipoBox.sucursal_id == current_user.sucursal_id
-    ).all()
+    """Retorna la lista de TODOS los boxes (Global para todas las sucursales)."""
+    # ⚔️ ELIMINAMOS EL FILTRO: Ahora trae todos los registros de la tabla TipoBox
+    # sin importar a qué sucursal pertenezca el usuario logueado.
+    return db.query(models.TipoBox).all()
 
 @app.get("/api/sucursales", tags=["Configuracion"])
 def get_todas_sucursales(db: Session = Depends(database.get_db), current_user = Depends(get_current_user)):

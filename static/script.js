@@ -5301,29 +5301,36 @@ if (editorForm) {
 		 */
 
 		// --- CARGAR LISTA DE BOXES ---
-		async function loadBoxes(forcedSucursalId = null) {
+		async function loadBoxes() {
 			const select = document.getElementById('cl-box');
 			if (!select) return;
 
-			// Prioridad: 1. ID forzado, 2. Selector del modal, 3. Sede del usuario
-			const sucursalSelect = document.getElementById('clase-sucursal-select');
-			const sucursalId = forcedSucursalId || (sucursalSelect ? sucursalSelect.value : state.user.sucursal_id);
+			try {
+				// ⚔️ LLAMADA GLOBAL: Ya no enviamos sucursal_id porque el backend devuelve todo
+				const boxes = await apiFetch('/tipo_box');
 
-			if (!sucursalId) {
-				select.innerHTML = '<option value="">Seleccione primero una sede</option>';
-				return;
-			}
+				if (!boxes.error && Array.isArray(boxes)) {
+					if (boxes.length > 0) {
+						// Guardamos el valor actual por si estamos editando, para no perder la selección
+						const currentVal = select.value;
 
-			const boxes = await apiFetch(`/tipo_box?sucursal_id=${sucursalId}`);
+						select.innerHTML = boxes.map(b => 
+							`<option value="${b.id}">${b.nombre.toUpperCase()}</option>`
+						).join('');
 
-			if (!boxes.error && Array.isArray(boxes)) {
-				if (boxes.length > 0) {
-					select.innerHTML = boxes.map(b => `<option value="${b.id}">${b.nombre.toUpperCase()}</option>`).join('');
+						// Si había un valor seleccionado (en edición), intentamos restaurarlo
+						if (currentVal) select.value = currentVal;
+					} else {
+						// Si por alguna razón la tabla está vacía, ponemos la opción por defecto
+						select.innerHTML = '<option value="1">PRINCIPAL</option>';
+					}
 				} else {
-					select.innerHTML = '<option value="">Sin boxes en esta sede</option>';
+					// Salvavidas técnico
+					select.innerHTML = '<option value="1">PRINCIPAL</option>';
 				}
-			} else {
-				select.innerHTML = '<option value="1">Principal</option>';
+			} catch (err) {
+				console.error("❌ Error en loadBoxes:", err);
+				select.innerHTML = '<option value="1">PRINCIPAL</option>';
 			}
 		}
 
