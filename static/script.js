@@ -6075,6 +6075,68 @@ if (editorForm) {
 			if (window.lucide) lucide.createIcons();
 		}
 
+		// ⚔️ 1. ABRIR CENTRAL DE WHATSAPP
+		function openWhatsAppCentral() {
+			const select = document.getElementById('wa-alumno-select');
+			const alumnosConTel = state.alumnos.filter(a => a.telefono && a.telefono.trim() !== "");
+
+			if (alumnosConTel.length === 0) {
+				return showVikingToast("No hay alumnos con teléfono cargado", true);
+			}
+
+			// Llenamos el select de alumnos
+			select.innerHTML = alumnosConTel.map(a => 
+				`<option value="${a.telefono}" data-nombre="${a.nombre_completo}">${a.nombre_completo.toUpperCase()} (${a.telefono})</option>`
+			).join('');
+
+			// Limpiamos el textarea
+			document.getElementById('wa-mensaje-texto').value = "";
+			document.getElementById('wa-mensaje-pre-select').value = "";
+
+			openModal('modal-whatsapp');
+			if(window.lucide) lucide.createIcons();
+		}
+
+		// ⚔️ 2. ACTUALIZAR TEXTO AL ELEGIR PREDEFINIDO
+		function updateWAMessage(val) {
+			const textarea = document.getElementById('wa-mensaje-texto');
+			const selectAlumno = document.getElementById('wa-alumno-select');
+			const nombreAlumno = selectAlumno.options[selectAlumno.selectedIndex]?.getAttribute('data-nombre') || "Vikingo";
+
+			if (!val) {
+				textarea.value = "";
+				return;
+			}
+
+			// Reemplazamos el placeholder por el nombre real del alumno
+			let mensajeFinal = val.replace("HOLA_ALUMNO!", `¡Hola ${nombreAlumno.split(' ')[0]}! 👋`);
+			textarea.value = mensajeFinal;
+		}
+
+		// ⚔️ 3. EL DISPARO FINAL
+		function sendVikingWhatsApp() {
+			const telefono = document.getElementById('wa-alumno-select').value;
+			const mensaje = document.getElementById('wa-mensaje-texto').value;
+			const trigger = document.getElementById('whatsapp-trigger');
+
+			if (!telefono || !mensaje) {
+				return showVikingToast("Falta elegir alumno o escribir mensaje", true);
+			}
+
+			// Limpiamos el teléfono (por si tiene espacios o guiones ruidosos)
+			const telLimpio = telefono.replace(/\D/g, '');
+			
+			// Generamos la URL de WhatsApp
+			const url = `https://wa.me/${telLimpio}?text=${encodeURIComponent(mensaje)}`;
+			
+			// Ejecutamos el disparo
+			trigger.href = url;
+			trigger.click();
+
+			showVikingToast("¡WhatsApp abierto!");
+			closeModal('modal-whatsapp');
+		}
+
 		/**
 		 * 6. LIMPIEZA Y CIERRE
 		 */

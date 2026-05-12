@@ -2137,11 +2137,57 @@
 		};
 	</script>
 
-	<a id="whatsapp-trigger" target="_blank" style="display:none;"></a>
-	
-	<a href="https://wa.me/TUNUMERODEWHATSAPP" class="whatsapp-float" target="_blank">
+	<button onclick="openWhatsAppCentral()" class="whatsapp-float fixed bottom-6 right-6 w-14 h-14 bg-green-500 text-white rounded-full shadow-2xl flex items-center justify-center hover:bg-green-600 transition-all z-50">
     	<i data-lucide="message-circle"></i>
-	</a>
+	</button>
+
+	<!-- CENTRAL DE MENSAJES WHATSAPP -->
+	<div id="modal-whatsapp" class="viking-modal fixed inset-0 z-[100] hidden flex items-center justify-center bg-black/80 backdrop-blur-sm">
+		<div class="bg-zinc-900 border border-white/10 p-8 rounded-[2.5rem] w-full max-w-lg shadow-2xl relative">
+			<div class="flex items-center gap-3 mb-8">
+				<div class="w-2 h-8 bg-green-500 rounded-full"></div>
+				<h3 class="text-2xl font-black uppercase italic text-white tracking-tighter">Central WhatsApp</h3>
+			</div>
+
+			<div class="space-y-4">
+				<!-- Selección de Alumno -->
+				<div class="flex flex-col gap-2">
+					<label class="text-[10px] font-black text-white/40 uppercase ml-2">Seleccionar Alumno</label>
+					<select id="wa-alumno-select" class="bg-zinc-800 border border-white/10 rounded-xl p-4 text-white text-sm outline-none focus:border-green-500 transition-all">
+						<!-- Se llena con JS -->
+					</select>
+				</div>
+
+				<!-- Selección de Mensaje Predefinido -->
+				<div class="flex flex-col gap-2">
+					<label class="text-[10px] font-black text-white/40 uppercase ml-2">Mensaje Rápido</label>
+					<select id="wa-mensaje-pre-select" onchange="updateWAMessage(this.value)" class="bg-zinc-800 border border-white/10 rounded-xl p-4 text-white text-sm outline-none focus:border-green-500 transition-all">
+						<option value="">-- Escribir mensaje libre --</option>
+						<option value="HOLA_ALUMNO! Te recordamos que tu cuota de ND TRAINING vence pronto. ¡Te esperamos!">Aviso de Vencimiento</option>
+						<option value="HOLA_ALUMNO! ¿Cómo estás? Hace unos días que no te vemos por el box. ¡No aflojes!">Motivación (Ausencia)</option>
+						<option value="HOLA_ALUMNO! Te confirmamos que la clase de hoy ha sido reprogramada. Revisá el calendario.">Aviso de Clase</option>
+						<option value="HOLA_ALUMNO! ¡Feliz cumpleaños te desea todo el equipo de ND TRAINING! Pasá a retirar tu regalo.">Cumpleaños</option>
+					</select>
+				</div>
+
+				<!-- Área de Texto Libre -->
+				<div class="flex flex-col gap-2">
+					<label class="text-[10px] font-black text-white/40 uppercase ml-2">Mensaje Final</label>
+					<textarea id="wa-mensaje-texto" rows="4" class="bg-zinc-800 border border-white/10 rounded-xl p-4 text-white text-sm outline-none focus:border-green-500 transition-all resize-none" placeholder="Escribí acá tu mensaje personalizado..."></textarea>
+				</div>
+			</div>
+
+			<div class="grid grid-cols-2 gap-3 mt-8">
+				<button onclick="closeModal('modal-whatsapp')" class="py-4 bg-white/5 hover:bg-white/10 text-white rounded-2xl font-black uppercase italic text-[11px] transition-all">Cancelar</button>
+				<button onclick="sendVikingWhatsApp()" class="py-4 bg-green-600 hover:bg-green-700 text-white rounded-2xl font-black uppercase italic text-[11px] transition-all flex items-center justify-center gap-2">
+					<i data-lucide="send" class="w-4 h-4"></i> Enviar Ahora
+				</button>
+			</div>
+		</div>
+	</div>
+
+	<!-- Trigger Invisible que ya tenías (lo usamos para el disparo final) -->
+	<a id="whatsapp-trigger" target="_blank" style="display:none;"></a>
 
 </body>
 </html>
