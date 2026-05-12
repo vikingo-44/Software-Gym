@@ -4873,7 +4873,7 @@ if (editorForm) {
 			
 			if (!res.error) { 
 				closeModal('modal-alumno'); 
-				fetchAlumnos(); 
+				await fetchAlumnos(); 
 				
 				// Notificación Vikinga
 				const msg = id ? "Guerrero Actualizado" : "Nuevo Guerrero Reclutado";
