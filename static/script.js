@@ -142,6 +142,7 @@
 				// 1. Ocultamos las secciones de título completas para limpiar el Sidebar
 				if (contenedoresSeccion.staff) contenedoresSeccion.staff.style.setProperty('display', 'none', 'important');
 				if (contenedoresSeccion.facturacion) contenedoresSeccion.facturacion.style.setProperty('display', 'none', 'important');
+				if (contenedoresSeccion.virtual) contenedoresSeccion.virtual.style.setProperty('display', 'none', 'important');
 				
 				// Ocultamos 'Operativa' para que no quede el texto suelto de la imagen
 				if (contenedoresSeccion.operativa) contenedoresSeccion.operativa.style.setProperty('display', 'none', 'important');
