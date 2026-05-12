@@ -1010,6 +1010,23 @@ def get_alumno_pagos(id: int, db: Session = Depends(database.get_db)):
         logger.error(f"Error al obtener historial del alumno {id}: {e}")
         # En lugar de 500, devolvemos lista vacía para que la app siga funcionando
         return []
+    
+@app.get("/api/alumnos/cumpleanios", tags=["Alumnos"])
+def get_cumpleanios_hoy(db: Session = Depends(database.get_db), current_user = Depends(get_current_user)):
+    """Retorna los alumnos que cumplen años el día de hoy."""
+    # ⚔️ Solo permitimos el acceso a roles administrativos
+    if current_user.perfil.nombre.lower() not in ["administrador", "supervisor", "administracion"]:
+        return []
+
+    hoy = date.today()
+    
+    # Filtramos por mes y día (ignorando el año de nacimiento)
+    cumpleanieros = db.query(models.Alumno).filter(
+        extract('month', models.Alumno.fecha_nacimiento) == hoy.month,
+        extract('day', models.Alumno.fecha_nacimiento) == hoy.day
+    ).all()
+    
+    return cumpleanieros
 
 # --- RESERVAS ---
 @app.get("/api/reservas", tags=["Reservas"])

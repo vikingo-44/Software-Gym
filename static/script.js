@@ -20,7 +20,8 @@
 		// 2. CORRECCIÓN DE SEGURIDAD (LOGIN)
 		// ==========================================
 		// Si tu login está en un formulario, esto evita que la página se refresque si hay error
-		document.addEventListener('DOMContentLoaded', () => {
+		document.addEventListener('DOMContentLoaded', async () => {
+			// ⚔️ 1. LÓGICA DE NAVEGACIÓN Y SIDEBAR
 			const navItems = document.querySelectorAll('.nav-item');
 			
 			navItems.forEach(item => {
@@ -38,14 +39,13 @@
 				});
 			});
 
-			// Bloqueo de zoom por gestos de dedos (Multi-touch)
+			// ⚔️ 2. BLOQUEO DE ZOOM (Gesto y Doble Tap)
 			document.addEventListener('touchstart', (e) => {
 				if (e.touches.length > 1) {
 					e.preventDefault();
 				}
 			}, { passive: false });
 
-			// Bloqueo de zoom por doble tap
 			let lastTouchEnd = 0;
 			document.addEventListener('touchend', (e) => {
 				const now = (new Date()).getTime();
@@ -54,6 +54,19 @@
 				}
 				lastTouchEnd = now;
 			}, false);
+
+			// ⚔️ 3. INICIO DE PROCESOS AUTOMÁTICOS
+			// Ponemos un pequeño timeout para asegurar que el estado (state.user) ya esté presente
+			setTimeout(async () => {
+				console.log("🦾 Viking System: Chequeando eventos del día...");
+				
+				// Disparamos el chequeo de cumpleaños
+				if (typeof checkVikingBirthdays === 'function') {
+					await checkVikingBirthdays();
+				}
+				
+				// Podés agregar acá otros chequeos de inicio (vencimientos, etc.)
+			}, 1000); 
 		});
 
         let state = { 
@@ -6136,6 +6149,51 @@ if (editorForm) {
 			showVikingToast("¡WhatsApp abierto!");
 			closeModal('modal-whatsapp');
 		}
+
+		async function checkVikingBirthdays() {
+		// 🛡️ Solo ejecutamos si el usuario tiene rol administrativo
+		const rolesAdmin = ["administrador", "supervisor", "administracion"];
+		if (!rolesAdmin.includes(state.user?.perfil?.nombre?.toLowerCase())) return;
+
+		try {
+			const cumplen = await apiFetch('/alumnos/cumpleanios');
+
+			if (Array.isArray(cumplen) && cumplen.length > 0) {
+				const listaDiv = document.getElementById('lista-cumpleanios');
+				
+				listaDiv.innerHTML = cumplen.map(a => `
+					<div class="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5">
+						<div class="flex items-center gap-3 text-left">
+							<div class="w-8 h-8 rounded-full bg-red-600 flex items-center justify-center text-[10px] font-black text-black">
+								${a.nombre_completo.substring(0,1)}
+							</div>
+							<div>
+								<p class="text-xs font-black text-white uppercase italic">${a.nombre_completo}</p>
+								<p class="text-[9px] text-white/40 font-bold uppercase">¡Festeja hoy!</p>
+							</div>
+						</div>
+						<button onclick="openWhatsAppDesdeCumple('${a.telefono}', '${a.nombre_completo}')" 
+								class="p-2 bg-green-500/10 text-green-500 hover:bg-green-500 hover:text-white rounded-lg transition-all">
+							<i data-lucide="message-circle" class="w-4 h-4"></i>
+						</button>
+					</div>
+				`).join('');
+
+				if(window.lucide) lucide.createIcons();
+				openModal('modal-cumpleanios');
+			}
+		} catch (err) {
+			console.error("Error chequeando cumpleañeros:", err);
+		}
+	}
+
+	// Función auxiliar para saludar rápido
+	function openWhatsAppDesdeCumple(tel, nombre) {
+		if (!tel) return showVikingToast("El alumno no tiene teléfono", true);
+		const mensaje = `¡Hola ${nombre.split(' ')[0]}! 👋 ¡Feliz cumpleaños te desea todo el equipo de ND TRAINING! Pasá por el box a retirar tu regalo. 🎂⚔️`;
+		const url = `https://wa.me/${tel.replace(/\D/g, '')}?text=${encodeURIComponent(mensaje)}`;
+		window.open(url, '_blank');
+	}
 
 		/**
 		 * 6. LIMPIEZA Y CIERRE
