@@ -4570,7 +4570,7 @@ if (editorForm) {
 			if (typeof openModal === 'function') openModal('modal-alumno'); 
 		}
 
-        function openEditAlumno(id) {
+        	function openEditAlumno(id) {
 				const al = state.alumnos.find(x => x.id == id); 
 				if(!al) return;
 				
@@ -4589,23 +4589,17 @@ if (editorForm) {
 				document.getElementById('al-altura').value = al.altura || ""; 
 				document.getElementById('al-imc').value = al.imc || ""; 
 
-				// ⚔️ FIX DEFINITIVO DE FECHAS:
-				// El input type="date" solo acepta YYYY-MM-DD. 
-				// Si viene con hora (ej: 1990-05-12T00:00:00), el split('T')[0] lo limpia.
-				
-				const inputNacimiento = document.getElementById('al-fecha-nacimiento');
-				if (al.fecha_nacimiento) {
-					inputNacimiento.value = al.fecha_nacimiento.split('T')[0];
-				} else {
-					inputNacimiento.value = "";
-				}
+				// ⚔️ FUNCIÓN DE LIMPIEZA VIKINGA
+				// Toma cualquier fecha (con hora, con T, con espacio) y devuelve YYYY-MM-DD
+				const limpiarFecha = (fecha) => {
+					if (!fecha) return "";
+					// Extraemos solo los primeros 10 caracteres (YYYY-MM-DD)
+					return fecha.toString().substring(0, 10);
+				};
 
-				const inputCertificado = document.getElementById('al-fecha-certificado');
-				if (al.fecha_certificado) {
-					inputCertificado.value = al.fecha_certificado.split('T')[0];
-				} else {
-					inputCertificado.value = "";
-				}
+				// Aplicamos la limpieza a ambos campos por igual
+				document.getElementById('al-fecha-nacimiento').value = limpiarFecha(al.fecha_nacimiento);
+				document.getElementById('al-fecha-certificado').value = limpiarFecha(al.fecha_certificado);
 
 				document.getElementById('al-certificado-entregado').checked = al.certificado_entregado || false;
 				
