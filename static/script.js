@@ -4571,49 +4571,57 @@ if (editorForm) {
 		}
 
         function openEditAlumno(id) {
-			const al = state.alumnos.find(x => x.id == id); 
-			if(!al) return;
-			
-			document.getElementById('modal-alumno-title').innerText = al.nombre_completo;
-			document.getElementById('al-id').value = al.id; 
-			document.getElementById('al-nombre').value = al.nombre_completo; 
-			document.getElementById('al-dni').value = al.dni;
-			document.getElementById('al-email').value = al.email || ""; 
-			document.getElementById('al-telefono').value = al.telefono || "";
-			document.getElementById('al-genero').value = al.genero || "Masculino";
+				const al = state.alumnos.find(x => x.id == id); 
+				if(!al) return;
+				
+				document.getElementById('modal-alumno-title').innerText = al.nombre_completo;
+				document.getElementById('al-id').value = al.id; 
+				document.getElementById('al-nombre').value = al.nombre_completo; 
+				document.getElementById('al-dni').value = al.dni;
+				document.getElementById('al-email').value = al.email || ""; 
+				document.getElementById('al-telefono').value = al.telefono || "";
+				document.getElementById('al-genero').value = al.genero || "Masculino";
 
-			const selSuc = document.getElementById('al-sucursal');
-			if(selSuc) selSuc.value = al.sucursal_id || "";
-			
-			document.getElementById('al-peso').value = al.peso || "";
-			document.getElementById('al-altura').value = al.altura || ""; 
-			document.getElementById('al-imc').value = al.imc || ""; 
-			if (al.fecha_nacimiento) {
-				document.getElementById('al-fecha-nacimiento').value = al.fecha_nacimiento.split('T')[0];
-			} else {
-				document.getElementById('al-fecha-nacimiento').value = "";
-			}
+				const selSuc = document.getElementById('al-sucursal');
+				if(selSuc) selSuc.value = al.sucursal_id || "";
+				
+				document.getElementById('al-peso').value = al.peso || "";
+				document.getElementById('al-altura').value = al.altura || ""; 
+				document.getElementById('al-imc').value = al.imc || ""; 
 
-			if (al.fecha_certificado) {
-				document.getElementById('al-fecha-certificado').value = al.fecha_certificado.split('T')[0];
-			} else {
-				document.getElementById('al-fecha-certificado').value = "";
+				// ⚔️ FIX DEFINITIVO DE FECHAS:
+				// El input type="date" solo acepta YYYY-MM-DD. 
+				// Si viene con hora (ej: 1990-05-12T00:00:00), el split('T')[0] lo limpia.
+				
+				const inputNacimiento = document.getElementById('al-fecha-nacimiento');
+				if (al.fecha_nacimiento) {
+					inputNacimiento.value = al.fecha_nacimiento.split('T')[0];
+				} else {
+					inputNacimiento.value = "";
+				}
+
+				const inputCertificado = document.getElementById('al-fecha-certificado');
+				if (al.fecha_certificado) {
+					inputCertificado.value = al.fecha_certificado.split('T')[0];
+				} else {
+					inputCertificado.value = "";
+				}
+
+				document.getElementById('al-certificado-entregado').checked = al.certificado_entregado || false;
+				
+				// Control de botón eliminar
+				const delBtn = document.getElementById('btn-delete-alumno'); 
+				if(state.user && (state.user.rol_nombre === "Administrador" || state.user.rol_nombre === "Supervisor")) {
+					delBtn.classList.remove('hidden');
+				} else {
+					delBtn.classList.add('hidden');
+				}
+				delBtn.onclick = () => deleteRecord('alumnos', id, 'modal-alumno', fetchAlumnos);
+				
+				loadSucursales();
+				setAlumnoTab('personal');
+				if (typeof openModal === 'function') openModal('modal-alumno');
 			}
-			document.getElementById('al-certificado-entregado').checked = al.certificado_entregado || false;
-			
-			// Control de botón eliminar
-			const delBtn = document.getElementById('btn-delete-alumno'); 
-			if(state.user && (state.user.rol_nombre === "Administrador" || state.user.rol_nombre === "Supervisor")) {
-				delBtn.classList.remove('hidden');
-			} else {
-				delBtn.classList.add('hidden');
-			}
-			delBtn.onclick = () => deleteRecord('alumnos', id, 'modal-alumno', fetchAlumnos);
-			
-			loadSucursales();
-			setAlumnoTab('personal'); // Resetear a la primera pestaña siempre
-			if (typeof openModal === 'function') openModal('modal-alumno');
-		}
 
 		window.setAlumnoTab = function(tab) {
 			// 1. Ocultar todos los contenidos de las solapas
