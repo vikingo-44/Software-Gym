@@ -1371,7 +1371,7 @@ def get_clases(db: Session = Depends(database.get_db), current_user = Depends(ge
     # ⚔️ FILTRO ACTUALIZADO: Admin, Alumno y Staff (Administrativo) ven todo.
     # Los Profesores (Coach) siguen viendo solo su sede para no marearse.
     rol = current_user.perfil.nombre.lower()
-    roles_que_ven_todo = ["administrador", "alumno", "staff", "administrativo"]
+    roles_que_ven_todo = ["administrador", "alumno", "staff", "administracion"]
     
     if rol not in roles_que_ven_todo:
         query = query.filter(models.Clase.sucursal_id == current_user.sucursal_id)
