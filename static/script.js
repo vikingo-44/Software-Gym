@@ -4588,8 +4588,17 @@ if (editorForm) {
 			document.getElementById('al-peso').value = al.peso || "";
 			document.getElementById('al-altura').value = al.altura || ""; 
 			document.getElementById('al-imc').value = al.imc || ""; 
-			document.getElementById('al-fecha-nacimiento').value = al.fecha_nacimiento || "";
-			document.getElementById('al-fecha-certificado').value = al.fecha_certificado || "";
+			if (al.fecha_nacimiento) {
+				document.getElementById('al-fecha-nacimiento').value = al.fecha_nacimiento.split('T')[0];
+			} else {
+				document.getElementById('al-fecha-nacimiento').value = "";
+			}
+
+			if (al.fecha_certificado) {
+				document.getElementById('al-fecha-certificado').value = al.fecha_certificado.split('T')[0];
+			} else {
+				document.getElementById('al-fecha-certificado').value = "";
+			}
 			document.getElementById('al-certificado-entregado').checked = al.certificado_entregado || false;
 			
 			// Control de botón eliminar

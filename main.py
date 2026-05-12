@@ -1013,32 +1013,27 @@ def get_alumno_pagos(id: int, db: Session = Depends(database.get_db)):
     
 @app.get("/api/alumnos/cumpleanios", tags=["Alumnos"])
 def get_cumpleanios_hoy(db: Session = Depends(database.get_db), current_user = Depends(get_current_user)):
-    """Retorna los alumnos que cumplen años el día de hoy."""
     try:
-        # ⚔️ FIX DE SEGURIDAD: 
-        # Según tus logs, el rol está en 'rol_nombre'. 
-        # Si no existe, usamos un string vacío para que no rompa.
         rol = getattr(current_user, 'rol_nombre', "").lower()
-        
-        # Si el rol no es administrativo, devolvemos lista vacía sin error
         roles_permitidos = ["administrador", "supervisor", "administracion", "staff", "admin"]
+        
         if rol not in roles_permitidos:
             return []
 
         hoy = date.today()
         
-        # Filtramos por mes y día
-        cumpleanieros = db.query(models.Alumno).filter(
-            extract('month', models.Alumno.fecha_nacimiento) == hoy.month,
-            extract('day', models.Alumno.fecha_nacimiento) == hoy.day
+        # ⚔️ Cambiamos models.Alumno por models.Usuario y filtramos por perfil
+        cumpleanieros = db.query(models.Usuario).join(models.Perfil).filter(
+            func.lower(models.Perfil.nombre) == "alumno",
+            extract('month', models.Usuario.fecha_nacimiento) == hoy.month,
+            extract('day', models.Usuario.fecha_nacimiento) == hoy.day
         ).all()
         
         return cumpleanieros
 
     except Exception as e:
-        # Esto te dirá el error exacto en los logs de Render (Server side)
         print(f"Error en cumpleanios: {str(e)}")
-        raise HTTPException(status_code=500, detail="Error interno al buscar cumpleañeros")
+        return [] # Devolvemos vacío para que el front no rompa con un 500
 
 # --- RESERVAS ---
 @app.get("/api/reservas", tags=["Reservas"])
