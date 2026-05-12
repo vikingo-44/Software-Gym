@@ -832,7 +832,7 @@
 				const rol = (state.user?.rol_nombre || "").toLowerCase();
 				
 				// Agregamos 'staff' y 'administrativo' para que no les aparezca grisado
-				const puedeVerOtrasSedes = ["administrador", "supervisor", "staff", "administrativo", "alumno"].includes(rol);
+				const puedeVerOtrasSedes = ["administrador", "supervisor", "staff", "administracion", "alumno"].includes(rol);
 
 				if (puedeVerOtrasSedes) {
 					selector.disabled = false;
