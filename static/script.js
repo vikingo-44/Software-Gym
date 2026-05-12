@@ -20,7 +20,7 @@
 		// 2. CORRECCIÓN DE SEGURIDAD (LOGIN)
 		// ==========================================
 		// Si tu login está en un formulario, esto evita que la página se refresque si hay error
-		document.addEventListener('DOMContentLoaded', async () => {
+		document.addEventListener('DOMContentLoaded', () => {
 			// ⚔️ 1. LÓGICA DE NAVEGACIÓN Y SIDEBAR
 			const navItems = document.querySelectorAll('.nav-item');
 			
@@ -38,7 +38,7 @@
 				});
 			});
 
-			// ⚔️ 2. BLOQUEO DE ZOOM (Gesto y Doble Tap)
+			// ⚔️ 2. BLOQUEO DE ZOOM
 			document.addEventListener('touchstart', (e) => {
 				if (e.touches.length > 1) e.preventDefault();
 			}, { passive: false });
@@ -50,30 +50,8 @@
 				lastTouchEnd = now;
 			}, false);
 
-			// ⚔️ 3. INICIO DE PROCESOS AUTOMÁTICOS (Con Reintento Inteligente)
-			let intentos = 0;
-			const maxIntentos = 5;
-
-			const inicializarEventosVikingos = async () => {
-				// Verificamos si el usuario y su perfil ya existen en el estado
-				if (state.user && state.user.perfil) {
-					console.log("🦾 Viking System: Usuario detectado. Chequeando eventos...");
-					
-					if (typeof checkVikingBirthdays === 'function') {
-						await checkVikingBirthdays();
-					}
-					// Aquí podés sumar otros procesos futuros
-				} else if (intentos < maxIntentos) {
-					intentos++;
-					console.log(`⏳ Esperando validación de usuario (Intento ${intentos}/${maxIntentos})...`);
-					setTimeout(inicializarEventosVikingos, 1500); // Reintenta cada 1.5 segundos
-				} else {
-					console.warn("⚠️ No se pudo inicializar el chequeo de eventos: Tiempo de espera agotado.");
-				}
-			};
-
-			// Arrancamos el primer chequeo
-			inicializarEventosVikingos();
+			// Nota: Ya no llamamos a inicializarEventosVikingos aquí. 
+			// Los eventos ahora se disparan desde initApp() y handleLogin().
 		});
 
         let state = { 
@@ -3068,7 +3046,6 @@ if (editorForm) {
 
 				if (res && !res.error) {
 					// 1. SETEAR EL ESTADO GLOBAL DE INMEDIATO
-					// Esto garantiza que el sucursal_id esté presente antes de cualquier carga
 					state.user = res; 
 
 					// 2. GUARDAR EN STORAGE
@@ -3077,7 +3054,7 @@ if (editorForm) {
 					}
 					localStorage.setItem('viking_user', JSON.stringify(res));
 
-					// 3. UI Y SIDEBAR (Usamos state.user directamente)
+					// 3. UI Y SIDEBAR
 					document.getElementById('login-overlay').style.display = 'none';
 					document.getElementById('sidebar').classList.remove('hidden');
 					document.getElementById('main-content').classList.remove('hidden');
@@ -3088,14 +3065,12 @@ if (editorForm) {
 					const elRole = document.getElementById('side-user-role');
 					if (elRole) elRole.innerText = state.user.rol_nombre || 'Staff';
 
-					// Iniciales
 					const name = state.user.nombre_completo || "Usuario Vikingo";
 					const initials = name.split(' ').filter(n => n).map(n => n[0]).join('').toUpperCase().substring(0, 2);
 					const elInitials = document.getElementById('user-initials');
 					if (elInitials) elInitials.innerText = initials;
 
 					// 4. CARGA SECUENCIAL
-					// Forzamos el await para que no renderice el calendario sin datos
 					await loadProfesores();
 
 					if (typeof initApp === 'function') {
@@ -3103,6 +3078,11 @@ if (editorForm) {
 					} else {
 						if (typeof loadClases === 'function') await loadClases();
 						if (typeof loadStock === 'function') await loadStock();
+					}
+
+					// ⚔️ EVENTOS VIKINGOS: Chequeamos cumples al iniciar sesión
+					if (typeof checkVikingBirthdays === 'function') {
+						checkVikingBirthdays();
 					}
 
 					// 5. NAVEGACIÓN
@@ -3543,18 +3523,22 @@ if (editorForm) {
 					loadCaja()
 				]);
 				
-				// ⚔️ 1b. Inicializamos el selector de sucursales una vez cargado state.sucursales
+				// ⚔️ 1b. Inicializamos selectores
 				if (typeof renderSucursalSelector === 'function') {
 					renderSucursalSelector();
 				}
 
-				// ⚔️ 1c. ESCUCHADOR DE CAMBIO DE SEDE EN EL MODAL (Agregado para refrescar boxes)
-				// Esto soluciona que al cambiar la sede en el Alta/Edición, se carguen los boxes correctos
+				// ⚔️ 1c. Escuchador de cambios de sede
 				document.getElementById('clase-sucursal-select')?.addEventListener('change', (e) => {
 					if (typeof loadBoxes === 'function') {
 						loadBoxes(e.target.value);
 					}
 				});
+
+				// ⚔️ EVENTOS VIKINGOS: Chequeamos cumples una vez cargados los alumnos
+				if (typeof checkVikingBirthdays === 'function') {
+					checkVikingBirthdays();
+				}
 
 				// 2. Configuración de UI del calendario
 				if (typeof setupCalendarFilters === 'function') {
@@ -3566,16 +3550,11 @@ if (editorForm) {
 
 			} catch (error) {
 				console.error("Error crítico en initApp:", error);
-				// Fallback para no romper la UI
 				renderCalendar();
 				if (typeof renderSucursalSelector === 'function') renderSucursalSelector();
-				
-				// Reintentamos el listener en el catch por seguridad
-				document.getElementById('clase-sucursal-select')?.addEventListener('change', (e) => {
-					if (typeof loadBoxes === 'function') loadBoxes(e.target.value);
-				});
 			}
 		}
+
 		async function loadDashboard() {
             console.log("⚔️ Sincronizando Central de Mando...");
 
