@@ -3514,6 +3514,14 @@ if (editorForm) {
 					renderSucursalSelector();
 				}
 
+				// ⚔️ 1c. ESCUCHADOR DE CAMBIO DE SEDE EN EL MODAL (Agregado para refrescar boxes)
+				// Esto soluciona que al cambiar la sede en el Alta/Edición, se carguen los boxes correctos
+				document.getElementById('clase-sucursal-select')?.addEventListener('change', (e) => {
+					if (typeof loadBoxes === 'function') {
+						loadBoxes(e.target.value);
+					}
+				});
+
 				// 2. Configuración de UI del calendario
 				if (typeof setupCalendarFilters === 'function') {
 					setupCalendarFilters();
@@ -3527,9 +3535,13 @@ if (editorForm) {
 				// Fallback para no romper la UI
 				renderCalendar();
 				if (typeof renderSucursalSelector === 'function') renderSucursalSelector();
+				
+				// Reintentamos el listener en el catch por seguridad
+				document.getElementById('clase-sucursal-select')?.addEventListener('change', (e) => {
+					if (typeof loadBoxes === 'function') loadBoxes(e.target.value);
+				});
 			}
 		}
-
 		async function loadDashboard() {
             console.log("⚔️ Sincronizando Central de Mando...");
 
@@ -5289,15 +5301,19 @@ if (editorForm) {
 		 */
 
 		// --- CARGAR LISTA DE BOXES ---
-		async function loadBoxes() {
+		async function loadBoxes(forcedSucursalId = null) {
 			const select = document.getElementById('cl-box');
 			if (!select) return;
 
-			// Obtenemos la sucursal seleccionada actualmente en el modal
+			// Prioridad: 1. ID forzado, 2. Selector del modal, 3. Sede del usuario
 			const sucursalSelect = document.getElementById('clase-sucursal-select');
-			const sucursalId = sucursalSelect ? sucursalSelect.value : state.user.sucursal_id;
+			const sucursalId = forcedSucursalId || (sucursalSelect ? sucursalSelect.value : state.user.sucursal_id);
 
-			// Llamamos al endpoint de boxes filtrando por la sucursal del modal
+			if (!sucursalId) {
+				select.innerHTML = '<option value="">Seleccione primero una sede</option>';
+				return;
+			}
+
 			const boxes = await apiFetch(`/tipo_box?sucursal_id=${sucursalId}`);
 
 			if (!boxes.error && Array.isArray(boxes)) {
@@ -5307,7 +5323,6 @@ if (editorForm) {
 					select.innerHTML = '<option value="">Sin boxes en esta sede</option>';
 				}
 			} else {
-				// Salvavidas por si falla la API
 				select.innerHTML = '<option value="1">Principal</option>';
 			}
 		}
@@ -5386,15 +5401,28 @@ if (editorForm) {
 			const c = state.clases.find(x => x.id == id); 
 			if(!c) return;
 
-			await loadBoxes(); 
+			// ⚔️ 1. Sincronizamos la sede del modal con la sede de la clase antes de cargar boxes
+			const sucursalSelect = document.getElementById('clase-sucursal-select');
+			if (sucursalSelect) {
+				sucursalSelect.value = c.sucursal_id;
+			}
 
+			// ⚔️ 2. Cargamos los boxes específicamente de la sede de esta clase
+			// Usamos el ID de la clase directamente para evitar errores de "timing"
+			await loadBoxes(c.sucursal_id); 
+
+			// 3. Llenamos los campos básicos del modal
 			document.getElementById('cl-id').value = c.id; 
 			document.getElementById('modal-clase-title').innerText = "Editar: " + c.nombre;
 			document.getElementById('cl-nombre').value = c.nombre; 
-			document.getElementById('cl-box').value = c.box_id || 1; 
+			
+			// ⚔️ 4. Seteamos el Box (ahora que el select ya tiene las opciones de la sede correcta)
+			document.getElementById('cl-box').value = c.box_id || ""; 
+			
 			document.getElementById('cl-cupo').value = c.capacidad_max;
 			document.getElementById('cl-color').value = c.color || "#FF0000";
 			
+			// 5. Limpiamos y cargamos los horarios
 			const slotsContainer = document.getElementById('cl-schedule-slots');
 			slotsContainer.innerHTML = "";
 
@@ -5402,16 +5430,22 @@ if (editorForm) {
 			if (horarios.length > 0) {
 				horarios.forEach(h => addNewScheduleSlot(h));
 			} else {
+				// Si no tiene horarios (raro), creamos uno por defecto
 				addNewScheduleSlot({ dia: 1, horario: 7, coach: c.coach || "" });
 			}
 
-			const isAdmin = (state.user?.rol_nombre === "Administrador" || state.user?.rol_nombre === "Supervisor");
+			// 6. Lógica de permisos para eliminar
+			// Consideramos Administrador, Supervisor y agregamos el chequeo del rol "administracion" si fuera necesario
+			const rol = (state.user?.rol_nombre || "").toLowerCase();
+			const isAdmin = (rol === "administrador" || rol === "supervisor");
+			
 			const delBtn = document.getElementById('btn-delete-clase'); 
 			if(delBtn) {
 				delBtn.classList.toggle('hidden', !isAdmin);
 				delBtn.onclick = () => deleteRecord('clases', c.id, 'modal-clase', loadClases);
 			}
 
+			// 7. Abrimos el modal
 			openModal('modal-clase');
 		}
 
