@@ -156,7 +156,8 @@
 					'stock', 
 					'rentabilidad', 
 					'planes', 
-					'sucursales'
+					'sucursales',
+					'acceso-virtual'
 				];
 				
 				prohibidos.forEach(key => {
