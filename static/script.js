@@ -6151,41 +6151,67 @@ if (editorForm) {
 		}
 
 		async function checkVikingBirthdays() {
-		// 🛡️ Solo ejecutamos si el usuario tiene rol administrativo
-		const rolesAdmin = ["administrador", "supervisor", "administracion"];
-		if (!rolesAdmin.includes(state.user?.perfil?.nombre?.toLowerCase())) return;
+			// ⚔️ Diagnóstico de inicio
+			console.log("🎂 Chequeando cumpleaños...");
+			
+			const rolesAdmin = ["administrador", "supervisor", "administracion"];
+			const miRol = state.user?.perfil?.nombre?.toLowerCase();
+			
+			console.log("👤 Rol detectado:", miRol);
 
-		try {
-			const cumplen = await apiFetch('/alumnos/cumpleanios');
-
-			if (Array.isArray(cumplen) && cumplen.length > 0) {
-				const listaDiv = document.getElementById('lista-cumpleanios');
-				
-				listaDiv.innerHTML = cumplen.map(a => `
-					<div class="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5">
-						<div class="flex items-center gap-3 text-left">
-							<div class="w-8 h-8 rounded-full bg-red-600 flex items-center justify-center text-[10px] font-black text-black">
-								${a.nombre_completo.substring(0,1)}
-							</div>
-							<div>
-								<p class="text-xs font-black text-white uppercase italic">${a.nombre_completo}</p>
-								<p class="text-[9px] text-white/40 font-bold uppercase">¡Festeja hoy!</p>
-							</div>
-						</div>
-						<button onclick="openWhatsAppDesdeCumple('${a.telefono}', '${a.nombre_completo}')" 
-								class="p-2 bg-green-500/10 text-green-500 hover:bg-green-500 hover:text-white rounded-lg transition-all">
-							<i data-lucide="message-circle" class="w-4 h-4"></i>
-						</button>
-					</div>
-				`).join('');
-
-				if(window.lucide) lucide.createIcons();
-				openModal('modal-cumpleanios');
+			// 🛡️ Si el rol no coincide, salimos pero avisamos por consola
+			if (!rolesAdmin.includes(miRol)) {
+				console.warn("🚫 Acceso denegado al pop-up de cumples por rol insuficiente.");
+				return;
 			}
-		} catch (err) {
-			console.error("Error chequeando cumpleañeros:", err);
+
+			try {
+				const cumplen = await apiFetch('/alumnos/cumpleanios');
+				console.log("🎈 Alumnos encontrados:", cumplen);
+
+				if (Array.isArray(cumplen) && cumplen.length > 0) {
+					const listaDiv = document.getElementById('lista-cumpleanios');
+					
+					// Si el DIV no existe en el HTML, esto va a fallar
+					if (!listaDiv) {
+						console.error("❌ Error: No se encontró el elemento 'lista-cumpleanios' en el HTML.");
+						return;
+					}
+
+					listaDiv.innerHTML = cumplen.map(a => `
+						<div class="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5">
+							<div class="flex items-center gap-3 text-left">
+								<div class="w-8 h-8 rounded-full bg-red-600 flex items-center justify-center text-[10px] font-black text-black">
+									${a.nombre_completo.substring(0,1)}
+								</div>
+								<div>
+									<p class="text-xs font-black text-white uppercase italic">${a.nombre_completo}</p>
+									<p class="text-[9px] text-white/40 font-bold uppercase">¡Festeja hoy!</p>
+								</div>
+							</div>
+							<button onclick="openWhatsAppDesdeCumple('${a.telefono}', '${a.nombre_completo}')" 
+									class="p-2 bg-green-500/10 text-green-500 hover:bg-green-500 hover:text-white rounded-lg transition-all">
+								<i data-lucide="message-circle" class="w-4 h-4"></i>
+							</button>
+						</div>
+					`).join('');
+
+					if(window.lucide) lucide.createIcons();
+					
+					// ⚔️ Abrimos el modal
+					if (typeof openModal === 'function') {
+						openModal('modal-cumpleanios');
+						console.log("✅ Pop-up de cumpleaños disparado con éxito.");
+					} else {
+						console.error("❌ Error: La función openModal no está definida.");
+					}
+				} else {
+					console.log("ℹ️ Hoy no hay cumpleañeros registrados.");
+				}
+			} catch (err) {
+				console.error("❌ Error crítico en checkVikingBirthdays:", err);
+			}
 		}
-	}
 
 	// Función auxiliar para saludar rápido
 	function openWhatsAppDesdeCumple(tel, nombre) {
