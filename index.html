@@ -1964,13 +1964,28 @@
 		</div>
 	</div>
 
-    <div id="modal-inscriptos" class="viking-modal">
-        <div class="glass-card p-10 rounded-[3rem] w-full max-w-lg text-left">
-            <h3 class="text-2xl font-black uppercase italic mb-6">Alumnos Inscriptos</h3>
-            <div id="inscriptos-lista" class="space-y-3 max-h-96 overflow-y-auto custom-scrollbar mb-8"></div>
-            <button onclick="closeModal('modal-inscriptos')" class="w-full py-4 viking-bg-red text-black rounded-2xl font-black uppercase italic text-[11px]">Cerrar</button>
-        </div>
-    </div>
+    <div id="modal-inscriptos" class="viking-modal fixed inset-0 z-[100] hidden flex items-center justify-center bg-black/80 backdrop-blur-sm">
+		<div class="bg-zinc-900 border border-white/10 p-8 rounded-[2.5rem] w-full max-w-md shadow-2xl relative overflow-hidden">
+			<!-- Decoración de fondo -->
+			<div class="absolute -top-24 -right-24 w-48 h-48 bg-red-600/10 rounded-full blur-3xl"></div>
+			
+			<div class="relative z-10">
+				<div class="flex items-center gap-3 mb-8">
+					<div class="w-2 h-8 bg-red-600 rounded-full"></div>
+					<h3 class="text-2xl font-black uppercase italic text-white tracking-tighter">Inscriptos</h3>
+				</div>
+
+				<div id="inscriptos-lista" class="space-y-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar mb-8">
+					<!-- La lista se genera dinámicamente -->
+				</div>
+
+				<button onclick="closeModal('modal-inscriptos')" 
+						class="w-full py-4 bg-white hover:bg-red-600 text-black hover:text-white rounded-2xl font-black uppercase italic text-[12px] transition-all duration-300 shadow-lg">
+					Volver al Calendario
+				</button>
+			</div>
+		</div>
+	</div>
 
 	<!-- MODAL SUCURSAL -->
 	<div id="modal-sucursal" class="viking-modal hidden">

@@ -497,37 +497,49 @@
                 }
 
                 function openInscriptos(claseId, dia, horario) {
-                    // CORRECCIÓN: Ahora filtramos por Clase ID, Día y Horario exacto.
-                    const inscriptos = state.reservas.filter(r => 
-                        String(r.clase_id) === String(claseId) &&
-                        Number(r.dia_semana) === Number(dia) &&
-                        Number(r.horario) === Number(horario)
-                    );
+					// ⚔️ 1. Filtrado de reservas
+					const inscriptos = state.reservas.filter(r => 
+						String(r.clase_id) === String(claseId) &&
+						Number(r.dia_semana) === Number(dia) &&
+						Number(r.horario) === Number(horario)
+					);
 
-                    const listaDiv = document.getElementById('inscriptos-lista');
-                    
-                    // Agregamos un título informativo (opcional, pero útil)
-                    const diasMap = {1: 'Lunes', 2: 'Martes', 3: 'Miércoles', 4: 'Jueves', 5: 'Viernes', 6: 'Sábado'};
-                    const labelHora = horario % 1 === 0 ? `${horario}:00` : `${Math.floor(horario)}:30`;
-                    // Si tienes un elemento para título en el modal, podrías actualizarlo aquí, si no, solo mostramos la lista.
+					const listaDiv = document.getElementById('inscriptos-lista');
+					const diasMap = {1: 'Lunes', 2: 'Martes', 3: 'Miércoles', 4: 'Jueves', 5: 'Viernes', 6: 'Sábado'};
+					const labelHora = horario % 1 === 0 ? `${horario}:00` : `${Math.floor(horario)}:30`;
 
-                    listaDiv.innerHTML = inscriptos.length ? inscriptos.map(r => {
-                        return `
-                        <div class="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5">
-                            <div>
-                                <p class="text-[12px] font-black uppercase italic text-left text-white">${r.alumno_nombre || r.alumno_dni}</p>
-                                <p class="text-[9px] text-gray-500 font-bold">DNI: ${r.alumno_dni}</p>
-                            </div>
-                            <!-- CORRECCIÓN: Pasamos dia y horario al borrar para refrescar la misma vista -->
-                            <button onclick="deleteBookingAdmin(${r.id}, ${claseId}, ${dia}, ${horario})" class="text-red-600 hover:text-white transition-colors">
-                                <i data-lucide="user-minus" class="w-4 h-4"></i>
-                            </button>
-                        </div>`;
-                    }).join('') : `<p class="text-center text-gray-500 italic py-10">No hay alumnos en el turno del ${diasMap[dia]} ${labelHora}hs.</p>`;
-                    
-                    if(window.lucide) lucide.createIcons();
-                    openModal('modal-inscriptos');
-                }
+					// ⚔️ 2. Renderizado con Cruce de Datos
+					listaDiv.innerHTML = inscriptos.length ? inscriptos.map(r => {
+						// Buscamos el alumno en el estado global para obtener el nombre real
+						const alumnoInfo = state.alumnos.find(a => String(a.dni) === String(r.alumno_dni));
+						const nombreMostrar = alumnoInfo ? alumnoInfo.nombre_completo : (r.alumno_nombre || "Alumno Desconocido");
+
+						return `
+						<div class="group flex items-center justify-between p-4 bg-white/5 hover:bg-white/10 rounded-2xl border border-white/5 transition-all duration-300">
+							<div class="flex items-center gap-4">
+								<div class="w-10 h-10 rounded-full bg-red-600/20 flex items-center justify-center border border-red-600/30">
+									<span class="text-red-500 font-black text-xs">${nombreMostrar.substring(0, 1).toUpperCase()}</span>
+								</div>
+								<div>
+									<p class="text-[13px] font-black uppercase italic text-white tracking-tighter">${nombreMostrar}</p>
+									<p class="text-[10px] text-white/40 font-bold tracking-widest">DNI: ${r.alumno_dni}</p>
+								</div>
+							</div>
+							<button onclick="deleteBookingAdmin(${r.id}, ${claseId}, ${dia}, ${horario})" 
+									class="w-8 h-8 flex items-center justify-center rounded-lg bg-red-600/10 text-red-500 hover:bg-red-600 hover:text-white transition-all shadow-lg"
+									title="Dar de baja">
+								<i data-lucide="user-minus" class="w-4 h-4"></i>
+							</button>
+						</div>`;
+					}).join('') : `
+						<div class="flex flex-col items-center justify-center py-12 opacity-20">
+							<i data-lucide="users" class="w-12 h-12 mb-4"></i>
+							<p class="text-sm font-bold uppercase italic">Sin alumnos para el ${diasMap[dia]} ${labelHora}hs</p>
+						</div>`;
+					
+					if(window.lucide) lucide.createIcons();
+					openModal('modal-inscriptos');
+				}
 
                 async function deleteBookingAdmin(reservaId, claseId, dia, horario) {
                     if(!confirm("¿Quitar alumno de la clase?")) return;
@@ -6721,7 +6733,7 @@ if (editorForm) {
 			
 			if (window.lucide) lucide.createIcons();
 		};
-		
+
 		// 3. GUARDADO MASIVO (Manda todas las filas al servidor)
 		window.guardarClasesFeriadoBulk = async function() {
 			const fecha = document.getElementById('feriado-fecha').value;
