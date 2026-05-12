@@ -4571,10 +4571,11 @@ if (editorForm) {
 		}
 
         	function openEditAlumno(id) {
+				// 1. Buscamos al guerrero en el estado global
 				const al = state.alumnos.find(x => x.id == id); 
 				if(!al) return;
 				
-				// 1. Datos básicos
+				// 2. Carga de datos básicos en el modal
 				document.getElementById('modal-alumno-title').innerText = al.nombre_completo;
 				document.getElementById('al-id').value = al.id; 
 				document.getElementById('al-nombre').value = al.nombre_completo; 
@@ -4590,15 +4591,17 @@ if (editorForm) {
 				document.getElementById('al-altura').value = al.altura || ""; 
 				document.getElementById('al-imc').value = al.imc || ""; 
 
-				// 2. ⚔️ FUNCIÓN DE LIMPIEZA VIKINGA (Formato ISO para el input)
+				// 3. ⚔️ FUNCIÓN DE LIMPIEZA VIKINGA
+				// Asegura que el formato sea exactamente YYYY-MM-DD para el input date
 				const limpiarFecha = (fecha) => {
 					if (!fecha) return "";
-					// Extraemos YYYY-MM-DD sin importar si trae hora o T
+					// Extraemos solo los primeros 10 caracteres (YYYY-MM-DD)
+					// Esto previene errores si la fecha viene con hora o formato ISO completo
 					return fecha.toString().substring(0, 10);
 				};
 
-				// 3. ⚔️ CARGA FORZADA DE FECHAS
-				// Usamos un pequeño delay para que el modal ya esté abierto y el input reciba el valor sin errores
+				// 4. ⚔️ CARGA FORZADA DE FECHAS
+				// Usamos un timeout para asegurar que el modal esté listo para recibir los valores
 				setTimeout(() => {
 					const valNac = limpiarFecha(al.fecha_nacimiento);
 					const valCert = limpiarFecha(al.fecha_certificado);
@@ -4606,15 +4609,20 @@ if (editorForm) {
 					const inputNac = document.getElementById('al-fecha-nacimiento');
 					const inputCert = document.getElementById('al-fecha-certificado');
 
-					if (inputNac) inputNac.value = valNac;
-					if (inputCert) inputCert.value = valCert;
+					if (inputNac) {
+						inputNac.value = valNac;
+					}
+					if (inputCert) {
+						inputCert.value = valCert;
+					}
 					
+					// Log de control para verificar que el dato llegó al modal
 					console.log("Fechas cargadas en modal:", { nacimiento: valNac, certificado: valCert });
 				}, 100);
 
 				document.getElementById('al-certificado-entregado').checked = al.certificado_entregado || false;
 				
-				// 4. Control de permisos para eliminar
+				// 5. Control de permisos para eliminar (Solo Admin o Supervisor)
 				const delBtn = document.getElementById('btn-delete-alumno'); 
 				if(state.user && (state.user.rol_nombre === "Administrador" || state.user.rol_nombre === "Supervisor")) {
 					delBtn.classList.remove('hidden');
@@ -4623,8 +4631,9 @@ if (editorForm) {
 				}
 				delBtn.onclick = () => deleteRecord('alumnos', id, 'modal-alumno', fetchAlumnos);
 				
-				loadSucursales();
-				setAlumnoTab('personal');
+				// 6. Preparación final del modal
+				if (typeof loadSucursales === 'function') loadSucursales();
+				if (typeof setAlumnoTab === 'function') setAlumnoTab('personal');
 				if (typeof openModal === 'function') openModal('modal-alumno');
 			}
 

@@ -876,31 +876,48 @@ def get_historial_accesos(db: Session = Depends(database.get_db), current_user =
         return []
 
 # --- ALUMNOS ---
-@app.get("/api/alumnos", response_model=List[UsuarioResponse], tags=["Alumnos"])
+@app.get("/api/alumnos", tags=["Alumnos"]) # ⚔️ Quitamos el response_model para que no filtre
 def get_alumnos(db: Session = Depends(database.get_db)):
     try:
-        # Cargamos alumnos con sus relaciones de forma segura
-        alumnos = db.query(models.Usuario).options(
+        alumnos_db = db.query(models.Usuario).options(
             joinedload(models.Usuario.perfil),
             joinedload(models.Usuario.plan).joinedload(models.Plan.tipo)
         ).join(models.Perfil).filter(func.lower(models.Perfil.nombre) == "alumno").order_by(models.Usuario.nombre_completo.asc()).all()
         
         hoy = date.today()
-        
-        for al in alumnos:
-            # Forzar valores por defecto si las relaciones fallan
-            al.rol_nombre = al.perfil.nombre if al.perfil else "Alumno"
-            
-            # Recálculo de estado sin depender de lógica externa
-            if al.fecha_vencimiento:
-                al.estado_cuenta = "Activo" if al.fecha_vencimiento >= hoy else "Caducado"
-            else:
-                al.estado_cuenta = "Inactivo"
+        resultado = []
 
-        return alumnos
+        for al in alumnos_db:
+            # Construimos el objeto a mano para asegurar que NADA falte
+            alumno_dict = {
+                "id": al.id,
+                "dni": al.dni,
+                "nombre_completo": al.nombre_completo,
+                "email": al.email,
+                "telefono": al.telefono,
+                "genero": al.genero,
+                "sucursal_id": al.sucursal_id,
+                "peso": al.peso,
+                "altura": al.altura,
+                "imc": al.imc,
+                "fecha_nacimiento": al.fecha_nacimiento.isoformat() if al.fecha_nacimiento else None, # ⚔️ FORZAMOS EL DATO
+                "fecha_certificado": al.fecha_certificado.isoformat() if al.fecha_certificado else None,
+                "certificado_entregado": al.certificado_entregado,
+                "rol_nombre": al.perfil.nombre if al.perfil else "Alumno",
+                "fecha_vencimiento": al.fecha_vencimiento.isoformat() if al.fecha_vencimiento else None
+            }
+
+            # Recálculo de estado
+            if al.fecha_vencimiento:
+                alumno_dict["estado_cuenta"] = "Activo" if al.fecha_vencimiento >= hoy else "Caducado"
+            else:
+                alumno_dict["estado_cuenta"] = "Inactivo"
+            
+            resultado.append(alumno_dict)
+
+        return resultado
     except Exception as e:
         logger.error(f"Error Crítico Alumnos: {str(e)}")
-        # No devolvemos 500, devolvemos una lista vacía para que la app no muera
         return []
 
 
