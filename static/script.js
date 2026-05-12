@@ -6710,14 +6710,18 @@ if (editorForm) {
 
 			const nuevaFila = ultimaFila.cloneNode(true);
 			
-			// Agregamos la fila al DOM
+			// Limpiamos los valores de la nueva fila para que no herede lo de la anterior
+			nuevaFila.querySelector('.clase-feriado-nombre').value = "";
+			nuevaFila.querySelector('.clase-feriado-cupo').value = "20";
+
 			contenedor.appendChild(nuevaFila);
 			
-			// La poblamos específicamente para que traiga los selects llenos
+			// Llenamos los selects de la nueva fila ( Actividades, Staff, etc)
 			popularSelectsFeriado(nuevaFila);
 			
 			if (window.lucide) lucide.createIcons();
 		};
+		
 		// 3. GUARDADO MASIVO (Manda todas las filas al servidor)
 		window.guardarClasesFeriadoBulk = async function() {
 			const fecha = document.getElementById('feriado-fecha').value;
