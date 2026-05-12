@@ -1030,29 +1030,37 @@ def get_alumno_pagos(id: int, db: Session = Depends(database.get_db)):
     
 @app.get("/api/alumnos/cumpleanios", tags=["Alumnos"])
 def get_cumpleanios_hoy(db: Session = Depends(database.get_db), current_user = Depends(get_current_user)):
-    """Retorna los alumnos que cumplen años el día de hoy."""
     try:
-        # ⚔️ Verificamos el rol desde el campo correcto 'rol_nombre'
-        rol = getattr(current_user, 'rol_nombre', "").lower()
-        roles_permitidos = ["administrador", "supervisor", "administracion", "staff", "admin"]
-        
-        if rol not in roles_permitidos:
-            return []
-
+        # 1. Obtenemos el día y mes actual
         hoy = date.today()
+        mes_hoy = hoy.month
+        dia_hoy = hoy.day
         
-        # ⚔️ Usamos models.Usuario y filtramos por perfil 'alumno'
-        cumpleanieros = db.query(models.Usuario).join(models.Perfil).filter(
-            func.lower(models.Perfil.nombre) == "alumno",
-            extract('month', models.Usuario.fecha_nacimiento) == hoy.month,
-            extract('day', models.Usuario.fecha_nacimiento) == hoy.day
+        # 2. Traemos a los alumnos (usando el modelo Usuario que ya confirmamos que funciona)
+        # Filtramos por perfil 'alumno' para no traer a todo el mundo
+        alumnos = db.query(models.Usuario).join(models.Perfil).filter(
+            func.lower(models.Perfil.nombre) == "alumno"
         ).all()
+        
+        cumpleanieros = []
+        
+        for al in alumnos:
+            if al.fecha_nacimiento:
+                # 3. Comparación manual de mes y día
+                if al.fecha_nacimiento.month == mes_hoy and al.fecha_nacimiento.day == dia_hoy:
+                    cumpleanieros.append({
+                        "id": al.id,
+                        "nombre_completo": al.nombre_completo,
+                        "telefono": al.telefono or ""
+                    })
+        
+        # 4. Log para que veas en Render qué está pasando
+        print(f"DEBUG VIKINGO: Hoy es {dia_hoy}/{mes_hoy}. Se encontraron {len(cumpleanieros)} cumpleañeros.")
         
         return cumpleanieros
 
     except Exception as e:
-        # Logueamos el error para Render pero no rompemos el front
-        print(f"Error en cumpleanios: {str(e)}")
+        print(f"ERROR CRÍTICO CUMPLEANIOS: {str(e)}")
         return []
 
 # --- RESERVAS ---
