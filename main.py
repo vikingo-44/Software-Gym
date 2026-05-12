@@ -1509,7 +1509,14 @@ def create_feriado(data: dict, db: Session = Depends(database.get_db), current_u
         # Fix Zona Horaria: Tomamos solo la fecha pura
         fecha_dt = datetime.strptime(fecha_str, "%Y-%m-%d").date()
         
-        # ⚔️ FILTRO VIKINGO: Buscamos si ya existe feriado para ESTA FECHA en ESTA SEDE
+        # ⚔️ PASO 1: LIMPIEZA TOTAL (Lo que me pediste)
+        # Borramos las clases especiales previas para esta fecha y sede antes de marcar el nuevo feriado
+        db.query(models.ClaseFeriado).filter(
+            models.ClaseFeriado.fecha == fecha_dt,
+            models.ClaseFeriado.sucursal_id == sede_id
+        ).delete()
+        
+        # ⚔️ PASO 2: FILTRO VIKINGO (Buscamos si ya existe el registro de día especial)
         existente = db.query(models.DiaEspecial).filter(
             models.DiaEspecial.fecha == fecha_dt,
             models.DiaEspecial.sucursal_id == sede_id
@@ -1519,7 +1526,7 @@ def create_feriado(data: dict, db: Session = Depends(database.get_db), current_u
             existente.motivo = motivo
             existente.abierto = abierto
             db.commit()
-            return {"status": "success", "message": "Feriado de sede actualizado"}
+            return {"status": "success", "message": "Día limpiado y feriado de sede actualizado"}
 
         # Si no existe para esa sede, lo creamos nuevo con su sucursal_id
         nuevo = models.DiaEspecial(
@@ -1530,7 +1537,7 @@ def create_feriado(data: dict, db: Session = Depends(database.get_db), current_u
         )
         db.add(nuevo)
         db.commit()
-        return {"status": "success", "message": "Feriado de sede creado"}
+        return {"status": "success", "message": "Día limpiado y feriado de sede creado"}
 
     except Exception as e:
         db.rollback()

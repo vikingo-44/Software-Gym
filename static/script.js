@@ -6561,7 +6561,14 @@ if (editorForm) {
 				if (!res.error) {
 					if (typeof showVikingToast === 'function') showVikingToast("¡Día especial marcado en esta sede!");
 					
-					fechaEl.value = "";
+					// ⚔️ CAMBIO VIKINGO: Habilitamos visualmente la sección de cargar clases especiales
+					const seccionClases = document.getElementById('seccion-programacion-clases');
+					if (seccionClases) {
+						seccionClases.classList.remove('opacity-50', 'pointer-events-none');
+					}
+
+					// No limpiamos la fecha acá para que te sirva de referencia al cargar las clases abajo
+					// Pero sí el motivo si querés
 					motivoEl.value = "";
 					
 					// Recargamos los datos del estado
@@ -6636,18 +6643,33 @@ if (editorForm) {
 			const selectNombre = fila.querySelector('.clase-feriado-nombre');
 			const selectHora = fila.querySelector('.clase-feriado-hora');
 			const selectProf = fila.querySelector('.clase-feriado-profesor');
+			const inputCupo = fila.querySelector('.clase-feriado-cupo'); // Referencia al nuevo campo de cupo
 
 			if (!selectNombre || !selectHora || !selectProf) return;
 
 			// 1. Llenar Actividades (Filtramos nombres únicos de state.clases)
 			if (state.clases && state.clases.length > 0) {
 				const actividades = [...new Set(state.clases.map(c => c.nombre))];
-				selectNombre.innerHTML = actividades.map(a => `<option value="${a}">${a}</option>`).join('');
+				// Agregamos un option vacío inicial para forzar el cambio
+				selectNombre.innerHTML = '<option value="" selected disabled>Seleccionar...</option>' + 
+										actividades.map(a => `<option value="${a}">${a}</option>`).join('');
+				
+				// ⚔️ EVENTO DE CUPO AUTOMÁTICO:
+				// Cuando cambia la actividad, buscamos su cupo original en el estado global
+				selectNombre.onchange = (e) => {
+					const nombreElegido = e.target.value;
+					const claseReferencia = state.clases.find(c => c.nombre === nombreElegido);
+					
+					if (claseReferencia && inputCupo) {
+						// Seteamos el cupo original de la clase (o 20 si no tiene)
+						inputCupo.value = claseReferencia.capacidad_max || 20;
+					}
+				};
 			} else {
 				selectNombre.innerHTML = '<option value="">Sin clases cargadas</option>';
 			}
 
-			// 2. Llenar Horarios (Este ya te funcionaba, lo mantenemos)
+			// 2. Llenar Horarios
 			let opcionesHora = "";
 			for(let h=7; h<=21.5; h+=0.5) {
 				const label = h % 1 === 0 ? `${h}:00` : `${Math.floor(h)}:30`;
@@ -6655,7 +6677,7 @@ if (editorForm) {
 			}
 			selectHora.innerHTML = opcionesHora;
 
-			// 3. Llenar Profesores (Combinamos profesores y administrativos si hace falta)
+			// 3. Llenar Profesores (Combinamos profesores y administrativos)
 			const staff = [...(state.profesores || []), ...(state.administrativos || [])];
 			if (staff.length > 0) {
 				selectProf.innerHTML = staff.map(p => `<option value="${p.nombre_completo}">${p.nombre_completo}</option>`).join('');
@@ -6707,41 +6729,67 @@ if (editorForm) {
 
 			const filas = document.querySelectorAll('.fila-clase-feriado');
 			let errores = 0;
+			let cargados = 0;
 
 			// Marcamos primero el día como feriado/especial para esa sucursal
 			const motivo = document.getElementById('feriado-motivo').value || "Día Especial";
-			await apiFetch('/feriados', 'POST', {
-				fecha: fecha,
-				motivo: motivo,
-				abierto: false,
-				sucursal_id: currentSucursalId
-			});
-
-			for (let fila of filas) {
-				const nombre = fila.querySelector('.clase-feriado-nombre').value;
-				if (!nombre) continue; // Saltamos filas vacías
-
-				const payload = {
+			
+			try {
+				await apiFetch('/feriados', 'POST', {
 					fecha: fecha,
-					nombre: nombre,
-					horario: parseFloat(fila.querySelector('.clase-feriado-hora').value),
-					profesor: fila.querySelector('.clase-feriado-profesor').value,
-					capacidad_max: 40,
-					color: "#FF0000",
-					sucursal_id: currentSucursalId // Hermetismo por sucursal
-				};
+					motivo: motivo,
+					abierto: false,
+					sucursal_id: currentSucursalId
+				});
 
-				const res = await apiFetch('/clases-feriado', 'POST', payload);
-				if (res.error) errores++;
-			}
+				for (let fila of filas) {
+					const nombre = fila.querySelector('.clase-feriado-nombre').value;
+					if (!nombre) continue; // Saltamos filas vacías
 
-			if (errores === 0) {
-				if (typeof showVikingToast === 'function') showVikingToast("¡Todas las clases cargadas!");
-				await loadFeriados();
-				await loadClasesFeriado();
-				renderCalendar();
-			} else {
-				showVikingToast(`Hubo ${errores} errores al cargar`, true);
+					// ⚔️ CAPTURA DINÁMICA DE CUPO:
+					// Tomamos el valor del input que se llenó automáticamente al elegir la actividad
+					const cupoInput = fila.querySelector('.clase-feriado-cupo');
+					const capacidad = cupoInput ? parseInt(cupoInput.value) : 20;
+
+					const payload = {
+						fecha: fecha,
+						nombre: nombre,
+						horario: parseFloat(fila.querySelector('.clase-feriado-hora').value),
+						profesor: fila.querySelector('.clase-feriado-profesor').value,
+						capacidad_max: capacidad, // <--- Ahora usa el cupo corregido
+						color: "#FF0000",
+						sucursal_id: currentSucursalId 
+					};
+
+					const res = await apiFetch('/clases-feriado', 'POST', payload);
+					if (res.error) {
+						errores++;
+					} else {
+						cargados++;
+					}
+				}
+
+				if (errores === 0 && cargados > 0) {
+					if (typeof showVikingToast === 'function') showVikingToast("¡Todas las clases cargadas!");
+					
+					// ⚔️ UI: Si todo salió bien, ocultamos el panel y reseteamos
+					toggleMenuFeriados();
+					
+					await loadFeriados();
+					await loadClasesFeriado();
+					renderCalendar();
+				} else if (cargados > 0) {
+					showVikingToast(`Se cargaron ${cargados} clases, pero hubo ${errores} errores`, true);
+					await loadFeriados();
+					await loadClasesFeriado();
+					renderCalendar();
+				} else if (errores > 0) {
+					showVikingToast(`Error crítico: No se pudo cargar ninguna clase`, true);
+				}
+
+			} catch (err) {
+				console.error("Error en el guardado masivo:", err);
+				showVikingToast("Fallo en la comunicación con el servidor", true);
 			}
 		};
 
