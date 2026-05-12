@@ -4574,6 +4574,7 @@ if (editorForm) {
 				const al = state.alumnos.find(x => x.id == id); 
 				if(!al) return;
 				
+				// 1. Datos básicos
 				document.getElementById('modal-alumno-title').innerText = al.nombre_completo;
 				document.getElementById('al-id').value = al.id; 
 				document.getElementById('al-nombre').value = al.nombre_completo; 
@@ -4589,21 +4590,31 @@ if (editorForm) {
 				document.getElementById('al-altura').value = al.altura || ""; 
 				document.getElementById('al-imc').value = al.imc || ""; 
 
-				// ⚔️ FUNCIÓN DE LIMPIEZA VIKINGA
-				// Toma cualquier fecha (con hora, con T, con espacio) y devuelve YYYY-MM-DD
+				// 2. ⚔️ FUNCIÓN DE LIMPIEZA VIKINGA (Formato ISO para el input)
 				const limpiarFecha = (fecha) => {
 					if (!fecha) return "";
-					// Extraemos solo los primeros 10 caracteres (YYYY-MM-DD)
+					// Extraemos YYYY-MM-DD sin importar si trae hora o T
 					return fecha.toString().substring(0, 10);
 				};
 
-				// Aplicamos la limpieza a ambos campos por igual
-				document.getElementById('al-fecha-nacimiento').value = limpiarFecha(al.fecha_nacimiento);
-				document.getElementById('al-fecha-certificado').value = limpiarFecha(al.fecha_certificado);
+				// 3. ⚔️ CARGA FORZADA DE FECHAS
+				// Usamos un pequeño delay para que el modal ya esté abierto y el input reciba el valor sin errores
+				setTimeout(() => {
+					const valNac = limpiarFecha(al.fecha_nacimiento);
+					const valCert = limpiarFecha(al.fecha_certificado);
+
+					const inputNac = document.getElementById('al-fecha-nacimiento');
+					const inputCert = document.getElementById('al-fecha-certificado');
+
+					if (inputNac) inputNac.value = valNac;
+					if (inputCert) inputCert.value = valCert;
+					
+					console.log("Fechas cargadas en modal:", { nacimiento: valNac, certificado: valCert });
+				}, 100);
 
 				document.getElementById('al-certificado-entregado').checked = al.certificado_entregado || false;
 				
-				// Control de botón eliminar
+				// 4. Control de permisos para eliminar
 				const delBtn = document.getElementById('btn-delete-alumno'); 
 				if(state.user && (state.user.rol_nombre === "Administrador" || state.user.rol_nombre === "Supervisor")) {
 					delBtn.classList.remove('hidden');
@@ -4873,6 +4884,8 @@ if (editorForm) {
 			
 			if (!res.error) { 
 				closeModal('modal-alumno'); 
+				
+				// ⚔️ CRUCIAL: Esperamos a que los datos nuevos bajen del servidor
 				await fetchAlumnos(); 
 				
 				// Notificación Vikinga

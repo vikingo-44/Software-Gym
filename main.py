@@ -1013,7 +1013,9 @@ def get_alumno_pagos(id: int, db: Session = Depends(database.get_db)):
     
 @app.get("/api/alumnos/cumpleanios", tags=["Alumnos"])
 def get_cumpleanios_hoy(db: Session = Depends(database.get_db), current_user = Depends(get_current_user)):
+    """Retorna los alumnos que cumplen años el día de hoy."""
     try:
+        # ⚔️ Verificamos el rol desde el campo correcto 'rol_nombre'
         rol = getattr(current_user, 'rol_nombre', "").lower()
         roles_permitidos = ["administrador", "supervisor", "administracion", "staff", "admin"]
         
@@ -1022,7 +1024,7 @@ def get_cumpleanios_hoy(db: Session = Depends(database.get_db), current_user = D
 
         hoy = date.today()
         
-        # ⚔️ Cambiamos models.Alumno por models.Usuario y filtramos por perfil
+        # ⚔️ Usamos models.Usuario y filtramos por perfil 'alumno'
         cumpleanieros = db.query(models.Usuario).join(models.Perfil).filter(
             func.lower(models.Perfil.nombre) == "alumno",
             extract('month', models.Usuario.fecha_nacimiento) == hoy.month,
@@ -1032,8 +1034,9 @@ def get_cumpleanios_hoy(db: Session = Depends(database.get_db), current_user = D
         return cumpleanieros
 
     except Exception as e:
+        # Logueamos el error para Render pero no rompemos el front
         print(f"Error en cumpleanios: {str(e)}")
-        return [] # Devolvemos vacío para que el front no rompa con un 500
+        return []
 
 # --- RESERVAS ---
 @app.get("/api/reservas", tags=["Reservas"])
