@@ -3148,188 +3148,179 @@ if (editorForm) {
 		};
 
 		window.loadCaja = async function() {
-            const inputDesde = document.getElementById('caja-filtro-desde');
-            const inputHasta = document.getElementById('caja-filtro-hasta');
-            const inputDescFiltro = document.getElementById('caja-filtro-desc');
-            const inputDetalleFiltro = document.getElementById('caja-filtro-detalle');
-            const selectSucursal = document.getElementById('caja-filtro-sucursal');
+			const inputDesde = document.getElementById('caja-filtro-desde');
+			const inputHasta = document.getElementById('caja-filtro-hasta');
+			const inputDescFiltro = document.getElementById('caja-filtro-desc');
+			const inputDetalleFiltro = document.getElementById('caja-filtro-detalle');
 
-            // 1. Seteo de HOY en formato LOCAL YYYY-MM-DD
-            const timezoneOffset = new Date().getTimezoneOffset() * 60000;
-            const hoyLocal = new Date(Date.now() - timezoneOffset).toISOString().split('T')[0];
-            
-            if (inputDesde && !inputDesde.value) inputDesde.value = hoyLocal;
-            if (inputHasta && !inputHasta.value) inputHasta.value = hoyLocal;
+			// 1. Seteo de HOY en formato LOCAL YYYY-MM-DD
+			const timezoneOffset = new Date().getTimezoneOffset() * 60000;
+			const hoyLocal = new Date(Date.now() - timezoneOffset).toISOString().split('T')[0];
+			
+			if (inputDesde && !inputDesde.value) inputDesde.value = hoyLocal;
+			if (inputHasta && !inputHasta.value) inputHasta.value = hoyLocal;
 
-            // --- LÓGICA DE FILTRO POR SUCURSAL (SOLO ADMINISTRADOR) ---
-            const datosUsuario = JSON.parse(localStorage.getItem('viking_user') || '{}');
-            const nombreRol = (datosUsuario.rol_nombre || "").trim();
-            const contSuc = document.getElementById('contenedor-filtro-sucursal-caja');
+			// 2. Traer los movimientos de la API
+			const movs = await apiFetch('/caja/movimientos');
+			
+			let calcIngresos = 0;
+			let calcGastos = 0;
+			const table = document.getElementById('table-caja');
 
-            // Solo el Administrador ve y usa el filtro de sedes
-            if (nombreRol === "Administrador") {
-                if (contSuc) contSuc.classList.remove('hidden');
-            } else {
-                if (contSuc) contSuc.classList.add('hidden');
-            }
+			if (!Array.isArray(movs)) return;
 
-            // 2. Traer los movimientos de la API (Con soporte para sucursal_id opcional)
-            const sucId = (nombreRol === "Administrador" && selectSucursal) ? selectSucursal.value : "";
-            const url = sucId ? `/caja/movimientos?sucursal_id=${sucId}` : '/caja/movimientos';
-            const movs = await apiFetch(url);
-            
-            let calcIngresos = 0;
-            let calcGastos = 0;
-            const table = document.getElementById('table-caja');
+			// Valores de filtros de búsqueda avanzados (normalizados a minúsculas)
+			const valDesc = (inputDescFiltro?.value || "").toLowerCase().trim();
+			const valDetalle = (inputDetalleFiltro?.value || "").toLowerCase().trim();
 
-            if (!Array.isArray(movs)) return;
+			// 3. FILTRADO CORREGIDO E INTELIGENTE (Basado en Local Time + Filtros avanzados)
+			const filtrados = movs.filter(m => {
+				if (!m.fecha) return false;
 
-            // Valores de filtros de búsqueda avanzados (normalizados a minúsculas)
-            const valDesc = (inputDescFiltro?.value || "").toLowerCase().trim();
-            const valDetalle = (inputDetalleFiltro?.value || "").toLowerCase().trim();
+				let fechaZ = m.fecha;
+				if (!fechaZ.endsWith('Z') && !fechaZ.includes('+')) {
+					fechaZ += 'Z';
+				}
 
-            // 3. FILTRADO CORREGIDO E INTELIGENTE (Basado en Local Time + Filtros avanzados)
-            const filtrados = movs.filter(m => {
-                if (!m.fecha) return false;
+				const d = new Date(fechaZ);
+				const yyyy = d.getFullYear();
+				const mm = String(d.getMonth() + 1).padStart(2, '0');
+				const dd = String(d.getDate()).padStart(2, '0');
+				const fechaMovLocal = `${yyyy}-${mm}-${dd}`;
+									
+				// Filtro de rango de fechas
+				if (fechaMovLocal < inputDesde.value || fechaMovLocal > inputHasta.value) return false;
 
-                let fechaZ = m.fecha;
-                if (!fechaZ.endsWith('Z') && !fechaZ.includes('+')) {
-                    fechaZ += 'Z';
-                }
+				// Filtro Búsqueda en Descripción (Columna 3) - Verificación robusta de nulos
+				const descMov = (m.descripcion || "").toLowerCase();
+				if (valDesc && !descMov.includes(valDesc)) return false;
 
-                const d = new Date(fechaZ);
-                const yyyy = d.getFullYear();
-                const mm = String(d.getMonth() + 1).padStart(2, '0');
-                const dd = String(d.getDate()).padStart(2, '0');
-                const fechaMovLocal = `${yyyy}-${mm}-${dd}`;
-                                    
-                // Filtro de rango de fechas
-                if (fechaMovLocal < inputDesde.value || fechaMovLocal > inputHasta.value) return false;
+				// Filtro Búsqueda en Detalle (Columna 4 - descripcion2) - Verificación robusta de nulos
+				const detMov = (m.descripcion2 || "").toLowerCase();
+				if (valDetalle && !detMov.includes(valDetalle)) return false;
 
-                // Filtro Búsqueda en Descripción (Columna 3) - Verificación robusta de nulos
-                const descMov = (m.descripcion || "").toLowerCase();
-                if (valDesc && !descMov.includes(valDesc)) return false;
+				// Filtro Método de Pago (Chips múltiples)
+				if (window.filtrosCaja.metodos.length > 0) {
+					const metodoActual = m.metodo_pago || 'Efectivo';
+					if (!window.filtrosCaja.metodos.includes(metodoActual)) return false;
+				}
 
-                // Filtro Búsqueda en Detalle (Columna 4 - descripcion2) - Verificación robusta de nulos
-                const detMov = (m.descripcion2 || "").toLowerCase();
-                if (valDetalle && !detMov.includes(valDetalle)) return false;
+				return true;
+			});
 
-                // Filtro Método de Pago (Chips múltiples)
-                if (window.filtrosCaja.metodos.length > 0) {
-                    const metodoActual = m.metodo_pago || 'Efectivo';
-                    if (!window.filtrosCaja.metodos.includes(metodoActual)) return false;
-                }
+			// 4. Renderizado de Tabla (7 Columnas: Fecha | Tipo | Desc | Detalle | Metodo | Cuotas | Monto)
+			if (table) {
+				if (filtrados.length > 0) {
+					// Ordenamos por fecha descendente (más nuevos primero)
+					filtrados.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
 
-                return true;
-            });
+					table.innerHTML = filtrados.map(m => {
+						const tipoRaw = (m.tipo || '').toLowerCase();
+						const monto = Math.abs(parseFloat(m.monto));
+						const metodo = m.metodo_pago || 'Efectivo';
+						const cuotas = parseInt(m.cuotas) || 1;
+						
+						// Lógica de Clasificación (Ingreso vs Egreso) para totales y colores
+						const esEgresoManual = tipoRaw === 'egreso' || tipoRaw === 'gasto' || tipoRaw === 'compra' || tipoRaw === 'salida';
+						const esIngresoManual = tipoRaw === 'ingreso' || tipoRaw === 'entrada';
+						const esPositivo = esIngresoManual || ((tipoRaw.includes('mercaderia') || tipoRaw.includes('plan') || tipoRaw.includes('venta') || tipoRaw.includes('cobro')) && !tipoRaw.includes('compra'));
+						const esEgreso = !esPositivo && (esEgresoManual || tipoRaw.includes('compra') || tipoRaw.includes('pago'));
 
-            // 4. Renderizado de Tabla (7 Columnas: Fecha | Tipo | Desc | Detalle | Metodo | Cuotas | Monto)
-            if (table) {
-                if (filtrados.length > 0) {
-                    // Ordenamos por fecha descendente (más nuevos primero)
-                    filtrados.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+						if (esEgreso) calcGastos += monto;
+						else calcIngresos += monto;
 
-                    table.innerHTML = filtrados.map(m => {
-                        const tipoRaw = (m.tipo || '').toLowerCase();
-                        const monto = Math.abs(parseFloat(m.monto));
-                        const metodo = m.metodo_pago || 'Efectivo';
-                        const cuotas = parseInt(m.cuotas) || 1;
-                        
-                        // Lógica de Clasificación (Ingreso vs Egreso) para totales y colores
-                        const esEgresoManual = tipoRaw === 'egreso' || tipoRaw === 'gasto' || tipoRaw === 'compra' || tipoRaw === 'salida';
-                        const esIngresoManual = tipoRaw === 'ingreso' || tipoRaw === 'entrada';
-                        const esPositivo = esIngresoManual || ((tipoRaw.includes('mercaderia') || tipoRaw.includes('plan') || tipoRaw.includes('venta') || tipoRaw.includes('cobro')) && !tipoRaw.includes('compra'));
-                        const esEgreso = !esPositivo && (esEgresoManual || tipoRaw.includes('compra') || tipoRaw.includes('pago'));
+						const flujoTexto = esEgreso ? 'EGRESO' : 'INGRESO';
+						const flujoColor = esEgreso ? 'bg-red-500/10 text-red-500 border-red-500/20' : 'bg-green-500/10 text-green-500 border-green-500/20';
 
-                        if (esEgreso) calcGastos += monto;
-                        else calcIngresos += monto;
+						// --- LÓGICA DE ORGANIZACIÓN DE COLUMNAS (MANTENIDA SEGUN TU BASE) ---
+						let categoriaTag = m.tipo || 'Movimiento';
+						let infoPrincipal = m.descripcion || '-';
+						let notaManual = m.descripcion2 || ''; // Recibimos la nueva columna de notas manuales
 
-                        const flujoTexto = esEgreso ? 'EGRESO' : 'INGRESO';
-                        const flujoColor = esEgreso ? 'bg-red-500/10 text-red-500 border-red-500/20' : 'bg-green-500/10 text-green-500 border-green-500/20';
+						// Si es un plan (Renovación o Nuevo)
+						if (tipoRaw.includes('plan')) {
+							categoriaTag = "Plan GymFit";
+							infoPrincipal = (m.descripcion || '').replace(/Cobro Plan\s*/i, '').replace(/Renovación\s*/i, '').trim();
+						} 
+						// Si es venta de productos (Stock)
+						else if (tipoRaw.includes('mercaderia') || tipoRaw.includes('venta')) {
+							categoriaTag = "Venta Stock";
+							infoPrincipal = (m.descripcion || '').replace(/Venta Insumo:\s*/i, '').trim();
+						}
+						// Si es compra para reponer stock
+						else if (tipoRaw.includes('compra')) {
+							categoriaTag = "Reposición";
+							infoPrincipal = (m.descripcion || '').replace(/Compra Stock:\s*/i, '').trim();
+						}
+						// Si es un movimiento manual de caja
+						else if (esIngresoManual) {
+							categoriaTag = "Ingreso Manual";
+						}
+						else if (esEgresoManual) {
+							categoriaTag = "Gasto Extra";
+						}
 
-                        // --- LÓGICA DE ORGANIZACIÓN DE COLUMNAS (MANTENIDA SEGUN TU BASE) ---
-                        let categoriaTag = m.tipo || 'Movimiento';
-                        let infoPrincipal = m.descripcion || '-';
-                        let notaManual = m.descripcion2 || ''; // Recibimos la nueva columna de notas manuales
+						// Formateo de Fecha y Hora Local
+						let fechaZ = m.fecha;
+						if (!fechaZ.endsWith('Z') && !fechaZ.includes('+')) fechaZ += 'Z';
+						const d = new Date(fechaZ);
+						const fDisplay = String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0');
+						const hDisplay = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
 
-                        // Si es un plan (Renovación o Nuevo)
-                        if (tipoRaw.includes('plan')) {
-                            categoriaTag = "Plan GymFit";
-                            infoPrincipal = (m.descripcion || '').replace(/Cobro Plan\s*/i, '').replace(/Renovación\s*/i, '').trim();
-                        } 
-                        // Si es venta de productos (Stock)
-                        else if (tipoRaw.includes('mercaderia') || tipoRaw.includes('venta')) {
-                            categoriaTag = "Venta Stock";
-                            infoPrincipal = (m.descripcion || '').replace(/Venta Insumo:\s*/i, '').trim();
-                        }
-                        // Si es compra para reponer stock
-                        else if (tipoRaw.includes('compra')) {
-                            categoriaTag = "Reposición";
-                            infoPrincipal = (m.descripcion || '').replace(/Compra Stock:\s*/i, '').trim();
-                        }
-                        // Si es un movimiento manual de caja
-                        else if (esIngresoManual) {
-                            categoriaTag = "Ingreso Manual";
-                        }
-                        else if (esEgresoManual) {
-                            categoriaTag = "Gasto Extra";
-                        }
+						let infoCuotasMonto = '';
+						if (metodo === 'T. Credito' && cuotas > 1) {
+							const valorCuota = monto / cuotas;
+							infoCuotasMonto = `<span class="block text-[7px] text-red-500 font-black mt-0.5 tracking-tighter uppercase">
+													$ ${valorCuota.toLocaleString()} x ${cuotas}
+												</span>`;
+						}
 
-                        // Formateo de Fecha y Hora Local
-                        let fechaZ = m.fecha;
-                        if (!fechaZ.endsWith('Z') && !fechaZ.includes('+')) fechaZ += 'Z';
-                        const d = new Date(fechaZ);
-                        const fDisplay = String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0');
-                        const hDisplay = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+						return `
+						<tr class="viking-table-row border-b border-white/5 hover:bg-white/5 transition-colors">
+							<td class="py-4 pl-6">
+								<span class="text-white text-[10px] font-black">${fDisplay}</span>
+								<span class="block text-red text-[8px] font-bold">${hDisplay} HS</span>
+							</td>
+							<td class="py-4">
+								<span class="px-2 py-0.5 rounded border text-[8px] font-black uppercase tracking-wider ${flujoColor}">${flujoTexto}</span>
+							</td>
+							<!-- DESCRIPCIÓN: Muestra el Alumno, Producto o Motivo -->
+							<td class="py-4 text-white text-[10px] font-black uppercase tracking-tight">
+								${infoPrincipal}
+							</td>
+							<!-- DETALLE: Muestra la Categoría y la Nota Manual (descripcion2) -->
+							<td class="py-4 text-white/40 text-[9px] font-bold uppercase italic">
+								<span class="text-white/60 block mb-0.5">${categoriaTag}</span>
+								<span class="text-red-600/60">${notaManual}</span>
+							</td>
+							<td class="py-4 text-white/60 text-[10px] font-bold uppercase">
+								${metodo}
+							</td>
+							<td class="py-4 text-white/30 text-[10px] font-bold">
+								${cuotas} ${cuotas > 1 ? 'CUOTAS' : 'CUOTA'}
+							</td>
+							<td class="py-4 text-right pr-6 font-black italic text-white text-[12px]">
+								$ ${monto.toLocaleString()}
+								${infoCuotasMonto}
+							</td>
+						</tr>`;
+					}).join('');
+					
+					if (window.lucide) lucide.createIcons();
+				} else {
+					table.innerHTML = '<tr><td colspan="7" class="text-center py-20 text-white/10 italic text-[10px] font-black uppercase tracking-[0.4em]">Sin movimientos que coincidan</td></tr>';
+				}
+			}
 
-                        let infoCuotasMonto = '';
-                        if (metodo === 'T. Credito' && cuotas > 1) {
-                            const valorCuota = monto / cuotas;
-                            infoCuotasMonto = `<span class="block text-[7px] text-red-500 font-black mt-0.5 tracking-tighter uppercase">
-                                                    $ ${valorCuota.toLocaleString()} x ${cuotas}
-                                                </span>`;
-                        }
-
-                        return `
-                        <tr class="viking-table-row border-b border-white/5 hover:bg-white/5 transition-colors">
-                            <td class="py-4 pl-6">
-                                <span class="text-white text-[10px] font-black">${fDisplay}</span>
-                                <span class="block text-red text-[8px] font-bold">${hDisplay} HS</span>
-                            </td>
-                            <td class="py-4">
-                                <span class="px-2 py-0.5 rounded border text-[8px] font-black uppercase tracking-wider ${flujoColor}">${flujoTexto}</span>
-                            </td>
-                            <td class="py-4 text-white text-[10px] font-black uppercase tracking-tight">
-                                ${infoPrincipal}
-                            </td>
-                            <td class="py-4 text-white/40 text-[9px] font-bold uppercase italic">
-                                <span class="text-white/60 block mb-0.5">${categoriaTag}</span>
-                                <span class="text-red-600/60">${notaManual}</span>
-                            </td>
-                            <td class="py-4 text-white/60 text-[10px] font-bold uppercase">
-                                ${metodo}
-                            </td>
-                            <td class="py-4 text-white/30 text-[10px] font-bold">
-                                ${cuotas} ${cuotas > 1 ? 'CUOTAS' : 'CUOTA'}
-                            </td>
-                            <td class="py-4 text-right pr-6 font-black italic text-white text-[12px]">
-                                $ ${monto.toLocaleString()}
-                                ${infoCuotasMonto}
-                            </td>
-                        </tr>`;
-                    }).join('');
-                    
-                    if (window.lucide) lucide.createIcons();
-                } else {
-                    table.innerHTML = '<tr><td colspan="7" class="text-center py-20 text-white/10 italic text-[10px] font-black uppercase tracking-[0.4em]">Sin movimientos que coincidan</td></tr>';
-                }
-            }
-
-            // 5. Totales (Con restricción para Perfil Administracion)
+			// 5. Totales (Con restricción para Perfil Administracion)
             const calcBalance = calcIngresos - calcGastos;
+            
+            // Leemos el usuario de la sesión (clave 'viking_user' según tu handleLogin)
+            const datosUsuario = JSON.parse(localStorage.getItem('viking_user') || '{}');
+            const nombreRol = (datosUsuario.rol_nombre || "").toLowerCase().trim();
             const divTotales = document.getElementById('contenedor-totales-caja');
 
-            if (nombreRol.toLowerCase() === "administracion") {
+            if (nombreRol === "administracion") {
                 // Si es el staff de recepción, ocultamos el bloque de saldos por completo
                 if (divTotales) divTotales.style.setProperty('display', 'none', 'important');
             } else {
@@ -3344,7 +3335,7 @@ if (editorForm) {
                     eb.className = `text-4xl font-black italic ${calcBalance >= 0 ? 'text-green-500' : 'text-red-500'}`;
                 }
             }
-        };
+		};
 
 		/**
 		* SISTEMA DE CAJA VIKINGA - FILTROS PRO
@@ -5618,98 +5609,88 @@ if (editorForm) {
 		
 		// --- GESTIÓN DE SUCURSALES ---
 		async function loadSucursales() {
-            try {
-                const response = await fetch(`${API_BASE}/sucursales`, {
-                    headers: { 'Authorization': `Bearer ${localStorage.getItem('viking_token')}` }
-                });
-                
-                if (!response.ok) throw new Error("Error en API");
-                const sucursales = await response.json();
+			try {
+				const response = await fetch(`${API_BASE}/sucursales`, {
+					headers: { 'Authorization': `Bearer ${localStorage.getItem('viking_token')}` }
+				});
+				
+				if (!response.ok) throw new Error("Error en API");
+				const sucursales = await response.json();
 
-                // Guardar en el estado global
-                state.sucursales = sucursales; 
-                
-                // 1. Renderizar Tarjetas en la vista de Sucursales
-                const container = document.getElementById('sucursales-container');
-                if (container) {
-                    container.innerHTML = sucursales.length === 0 
-                        ? '<div class="col-span-full py-20 text-center opacity-30 italic font-black uppercase"><i data-lucide="map-pin-off" class="w-12 h-12 mx-auto mb-4"></i><p>No hay sedes registradas</p></div>'
-                        : sucursales.map(s => `
-                            <div class="glass-card p-8 rounded-[2.5rem] border border-white/5 hover:border-red-600/30 transition-all group relative overflow-hidden">
-                                <div class="flex justify-between items-start mb-6">
-                                    <div class="p-4 bg-red-600/10 rounded-2xl text-red-500 group-hover:bg-red-600 group-hover:text-black transition-all">
-                                        <i data-lucide="map-pin" class="w-6 h-6"></i>
-                                    </div>
-                                    <button onclick="window.deleteSucursal(${s.id})" class="text-white/10 hover:text-red-600 transition-colors z-10">
-                                        <i data-lucide="trash-2" class="w-5 h-5"></i>
-                                    </button>
-                                </div>
-                                <h4 class="text-2xl font-black italic uppercase text-white mb-2 tracking-tighter">${s.sucursal}</h4>
-                                <p class="text-[10px] text-white-500 font-bold uppercase tracking-[0.2em] italic">${s.direccion}</p>
-                            </div>`).join('');
-                }
+				// Guardar en el estado global
+				state.sucursales = sucursales; 
+				
+				// 1. Renderizar Tarjetas en la vista de Sucursales
+				const container = document.getElementById('sucursales-container');
+				if (container) {
+					container.innerHTML = sucursales.length === 0 
+						? '<div class="col-span-full py-20 text-center opacity-30 italic font-black uppercase"><i data-lucide="map-pin-off" class="w-12 h-12 mx-auto mb-4"></i><p>No hay sedes registradas</p></div>'
+						: sucursales.map(s => `
+							<div class="glass-card p-8 rounded-[2.5rem] border border-white/5 hover:border-red-600/30 transition-all group relative overflow-hidden">
+								<div class="flex justify-between items-start mb-6">
+									<div class="p-4 bg-red-600/10 rounded-2xl text-red-500 group-hover:bg-red-600 group-hover:text-black transition-all">
+										<i data-lucide="map-pin" class="w-6 h-6"></i>
+									</div>
+									<button onclick="window.deleteSucursal(${s.id})" class="text-white/10 hover:text-red-600 transition-colors z-10">
+										<i data-lucide="trash-2" class="w-5 h-5"></i>
+									</button>
+								</div>
+								<h4 class="text-2xl font-black italic uppercase text-white mb-2 tracking-tighter">${s.sucursal}</h4>
+								<p class="text-[10px] text-white-500 font-bold uppercase tracking-[0.2em] italic">${s.direccion}</p>
+							</div>`).join('');
+				}
 
-                // 2. Selectores de Filtro (Profesores, Administrativos, ALUMNOS, COBRO y CAJA)
-                const selectProf = document.getElementById('filter-sucursal-profesores');
-                const selectAdm = document.getElementById('filter-sucursal-administrativos');
-                const selectAlu = document.getElementById('filter-sucursal-alumnos');
-                const selectCob = document.getElementById('cobrar-sucursal-filter');
-                const selectCaja = document.getElementById('caja-filtro-sucursal'); // <--- VINCULADO
+				// 2. Selectores de Filtro (Profesores, Administrativos, ALUMNOS y COBRO)
+				const selectProf = document.getElementById('filter-sucursal-profesores');
+				const selectAdm = document.getElementById('filter-sucursal-administrativos');
+				const selectAlu = document.getElementById('filter-sucursal-alumnos');
+				const selectCob = document.getElementById('cobrar-sucursal-filter'); // <--- AGREGADO PARA COBRO
 
-                // Agregamos selectCaja al array para que se procese igual que los demás
-                [selectProf, selectAdm, selectAlu, selectCob, selectCaja].forEach(sel => {
-                    if (sel) {
-                        // Lógica de valor inicial: Cobro y Caja usan "" (Todas), el resto usa "all"
-                        const esFiltroVacio = (sel.id === 'cobrar-sucursal-filter' || sel.id === 'caja-filtro-sucursal');
-                        
-                        const current = sel.value || (esFiltroVacio ? "" : "all");
-                        const firstOptionText = "TODAS LAS SEDES";
-                        const firstOptionValue = esFiltroVacio ? "" : "all";
+				[selectProf, selectAdm, selectAlu, selectCob].forEach(sel => {
+					if (sel) {
+						const current = sel.value || (sel.id === 'cobrar-sucursal-filter' ? "" : "all");
+						const firstOptionText = sel.id === 'cobrar-sucursal-filter' ? "TODAS LAS SEDES" : "TODAS LAS SEDES";
+						const firstOptionValue = sel.id === 'cobrar-sucursal-filter' ? "" : "all";
 
-                        sel.innerHTML = `<option value="${firstOptionValue}" class="bg-zinc-900 text-white font-black italic uppercase">${firstOptionText}</option>` + 
-                            sucursales.map(s => `<option value="${s.id}" class="bg-zinc-900 text-white font-black italic uppercase">${s.sucursal.toUpperCase()}</option>`).join('');
-                        
-                        sel.value = current;
-                        
-                        // Asignación de eventos según el ID
-                        if (sel.id === 'cobrar-sucursal-filter') {
-                            sel.onchange = () => renderCobrar();
-                        } 
-                        // ⚔️ EVENTO PARA LA CAJA: Al cambiar de sede, recarga los movimientos
-                        else if (sel.id === 'caja-filtro-sucursal') {
-                            sel.onchange = () => window.loadCaja();
-                        }
-                    }
-                });
+						sel.innerHTML = `<option value="${firstOptionValue}" class="bg-zinc-900 text-white font-black italic uppercase">${firstOptionText}</option>` + 
+							sucursales.map(s => `<option value="${s.id}" class="bg-zinc-900 text-white font-black italic uppercase">${s.sucursal.toUpperCase()}</option>`).join('');
+						sel.value = current;
+						
+						// Si es el selector de cobro, le asignamos el evento de render
+						if (sel.id === 'cobrar-sucursal-filter') {
+							sel.onchange = () => renderCobrar();
+						}
+					}
+				});
 
-                // 3. Selector en modal de Alumnos
-                const selectAl = document.getElementById('al-sucursal');
-                if (selectAl) {
-                    const currentVal = selectAl.value;
-                    selectAl.innerHTML = '<option value="" class="bg-zinc-900 text-white">Seleccionar Sucursal...</option>' + 
-                        sucursales.map(s => `<option value="${s.id}">${s.sucursal.toUpperCase()}</option>`).join('');
-                    if(currentVal) selectAl.value = currentVal;
-                }
+				// 3. Selector en modal de Alumnos
+				const selectAl = document.getElementById('al-sucursal');
+				if (selectAl) {
+					const currentVal = selectAl.value;
+					selectAl.innerHTML = '<option value="" class="bg-zinc-900 text-white">Seleccionar Sucursal...</option>' + 
+						sucursales.map(s => `<option value="${s.id}">${s.sucursal.toUpperCase()}</option>`).join('');
+					if(currentVal) selectAl.value = currentVal;
+				}
 
-                // 4. Selector en modal de CLASES y Filtro de CLASES
-                const selectCl = document.getElementById('clase-sucursal-select');
-                const selectFiltroCl = document.getElementById('filtro-clases-sucursal');
+				// 4. Selector en modal de CLASES y Filtro de CLASES
+				const selectCl = document.getElementById('clase-sucursal-select');
+				const selectFiltroCl = document.getElementById('filtro-clases-sucursal');
 
-                if (selectCl) {
-                    selectCl.innerHTML = sucursales.map(s => `<option value="${s.id}" class="bg-zinc-900 text-white font-bold italic uppercase">${s.sucursal.toUpperCase()}</option>`).join('');
-                }
-                if (selectFiltroCl) {
-                    const current = selectFiltroCl.value || 'todas';
-                    selectFiltroCl.innerHTML = '<option value="todas" class="bg-zinc-900 text-white font-bold italic uppercase">TODAS LAS SEDES</option>' + 
-                        sucursales.map(s => `<option value="${s.id}" class="bg-zinc-900 text-white font-bold italic uppercase">${s.sucursal.toUpperCase()}</option>`).join('');
-                    selectFiltroCl.value = current;
-                }
+				if (selectCl) {
+					selectCl.innerHTML = sucursales.map(s => `<option value="${s.id}" class="bg-zinc-900 text-white font-bold italic uppercase">${s.sucursal.toUpperCase()}</option>`).join('');
+				}
+				if (selectFiltroCl) {
+					const current = selectFiltroCl.value || 'todas';
+					selectFiltroCl.innerHTML = '<option value="todas" class="bg-zinc-900 text-white font-bold italic uppercase">TODAS LAS SEDES</option>' + 
+						sucursales.map(s => `<option value="${s.id}" class="bg-zinc-900 text-white font-bold italic uppercase">${s.sucursal.toUpperCase()}</option>`).join('');
+					selectFiltroCl.value = current;
+				}
 
-                if(window.lucide) lucide.createIcons();
-            } catch (error) {
-                console.error("❌ Error cargando sucursales:", error);
-            }
-        }
+				if(window.lucide) lucide.createIcons();
+			} catch (error) {
+				console.error("❌ Error cargando sucursales:", error);
+			}
+		}
 
         async function handleDrop(e, dia, horario) { e.preventDefault(); const id = e.dataTransfer.getData("clase_id"); if (!id) return; const res = await apiFetch(`/clases/${id}/move`, 'PUT', { dia, horario }); if (!res.error) { loadClases(); showVikingToast("Clase Reubicada"); } }
         
