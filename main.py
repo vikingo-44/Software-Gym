@@ -1779,27 +1779,41 @@ async def ver_comprobante_alumno(comprobante_id: int, db: Session = Depends(data
 
 # --- CAJA ---
 @app.get("/api/caja/resumen", tags=["Finanzas"])
-def get_caja_resumen(db: Session = Depends(database.get_db), current_user = Depends(get_current_user)):
-    """Calcula el resumen financiero SOLO para la sucursal del usuario actual."""
+def get_caja_resumen(sucursal_id: Optional[int] = None, db: Session = Depends(database.get_db), current_user = Depends(get_current_user)):
+    # ⚔️ Aplicamos la misma lógica para que la Rentabilidad no se rompa
+    rol = str(getattr(current_user, 'rol_nombre', "")).strip()
+    target_sucursal = current_user.sucursal_id
+    
+    if rol == "Administrador" and sucursal_id:
+        target_sucursal = sucursal_id
+
     ing = db.query(func.sum(models.MovimientoCaja.monto)).filter(
         models.MovimientoCaja.tipo == "Ingreso",
-        models.MovimientoCaja.sucursal_id == current_user.sucursal_id
+        models.MovimientoCaja.sucursal_id == target_sucursal
     ).scalar() or 0
     
     egr = db.query(func.sum(models.MovimientoCaja.monto)).filter(
         models.MovimientoCaja.tipo == "Egreso",
-        models.MovimientoCaja.sucursal_id == current_user.sucursal_id
+        models.MovimientoCaja.sucursal_id == target_sucursal
     ).scalar() or 0
     
     return {"ingresos": float(ing), "gastos": float(egr), "balance": float(ing - egr)}
 
 @app.get("/api/caja/movimientos", tags=["Caja"])
-def get_movimientos(db: Session = Depends(database.get_db), current_user = Depends(get_current_user)):
-    """Lista los últimos 150 movimientos de la sucursal logueada."""
+def get_movimientos(sucursal_id: Optional[int] = None, db: Session = Depends(database.get_db), current_user = Depends(get_current_user)):
     try:
-        movs = db.query(models.MovimientoCaja).filter(
-            models.MovimientoCaja.sucursal_id == current_user.sucursal_id
-        ).order_by(models.MovimientoCaja.fecha.desc()).limit(150).all()
+        # ⚔️ LÓGICA DE PODER: Solo el rol exacto "Administrador" puede ver otras sedes
+        rol = str(getattr(current_user, 'rol_nombre', "")).strip()
+        
+        query = db.query(models.MovimientoCaja)
+
+        if rol == "Administrador" and sucursal_id:
+            query = query.filter(models.MovimientoCaja.sucursal_id == sucursal_id)
+        else:
+            # Supervisores y el resto mueren en su propia sucursal
+            query = query.filter(models.MovimientoCaja.sucursal_id == current_user.sucursal_id)
+
+        movs = query.order_by(models.MovimientoCaja.fecha.desc()).limit(150).all()
         return movs
     except Exception as e:
         logger.error(f"Error Crítico Caja: {str(e)}")
