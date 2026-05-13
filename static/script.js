@@ -3172,9 +3172,10 @@ if (editorForm) {
 			if (inputDesde && !inputDesde.value) inputDesde.value = hoyLocal;
 			if (inputHasta && !inputHasta.value) inputHasta.value = hoyLocal;
 
-			// 3. Traer los movimientos de la API (Con filtro de sucursal dinámico)
+			// 3. ⚔️ Traer los movimientos de la API (RUTA CORREGIDA)
+			// Se quita el prefijo '/api' inicial porque apiFetch ya lo añade internamente
 			const sucId = selectSucursal ? selectSucursal.value : "";
-			const url = sucId ? `/api/caja/movimientos?sucursal_id=${sucId}` : '/api/caja/movimientos';
+			const url = sucId ? `/caja/movimientos?sucursal_id=${sucId}` : '/caja/movimientos';
 			const movs = await apiFetch(url);
 			
 			let calcIngresos = 0;
@@ -3201,19 +3202,19 @@ if (editorForm) {
 				const mm = String(d.getMonth() + 1).padStart(2, '0');
 				const dd = String(d.getDate()).padStart(2, '0');
 				const fechaMovLocal = `${yyyy}-${mm}-${dd}`;
-											
+													
 				// Filtro de rango de fechas
 				if (fechaMovLocal < inputDesde.value || fechaMovLocal > inputHasta.value) return false;
 
-				// Filtro Búsqueda en Descripción (Columna 3)
+				// Filtro Búsqueda en Descripción
 				const descMov = (m.descripcion || "").toLowerCase();
 				if (valDesc && !descMov.includes(valDesc)) return false;
 
-				// Filtro Búsqueda en Detalle (Columna 4 - descripcion2)
+				// Filtro Búsqueda en Detalle
 				const detMov = (m.descripcion2 || "").toLowerCase();
 				if (valDetalle && !detMov.includes(valDetalle)) return false;
 
-				// Filtro Método de Pago (Chips múltiples)
+				// Filtro Método de Pago
 				if (window.filtrosCaja && window.filtrosCaja.metodos && window.filtrosCaja.metodos.length > 0) {
 					const metodoActual = m.metodo_pago || 'Efectivo';
 					if (!window.filtrosCaja.metodos.includes(metodoActual)) return false;
@@ -3222,10 +3223,10 @@ if (editorForm) {
 				return true;
 			});
 
-			// 5. Renderizado de Tabla (7 Columnas: Fecha | Tipo | Desc | Detalle | Metodo | Cuotas | Monto)
+			// 5. Renderizado de Tabla
 			if (table) {
 				if (filtrados.length > 0) {
-					// Ordenamos por fecha descendente (más nuevos primero)
+					// Ordenamos por fecha descendente
 					filtrados.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
 
 					table.innerHTML = filtrados.map(m => {
@@ -3234,7 +3235,7 @@ if (editorForm) {
 						const metodo = m.metodo_pago || 'Efectivo';
 						const cuotas = parseInt(m.cuotas) || 1;
 						
-						// Lógica de Clasificación (Ingreso vs Egreso) para totales y colores
+						// Lógica de Clasificación (Ingreso vs Egreso)
 						const esEgresoManual = tipoRaw === 'egreso' || tipoRaw === 'gasto' || tipoRaw === 'compra' || tipoRaw === 'salida';
 						const esIngresoManual = tipoRaw === 'ingreso' || tipoRaw === 'entrada';
 						const esPositivo = esIngresoManual || ((tipoRaw.includes('mercaderia') || tipoRaw.includes('plan') || tipoRaw.includes('venta') || tipoRaw.includes('cobro')) && !tipoRaw.includes('compra'));
@@ -3246,7 +3247,6 @@ if (editorForm) {
 						const flujoTexto = esEgreso ? 'EGRESO' : 'INGRESO';
 						const flujoColor = esEgreso ? 'bg-red-500/10 text-red-500 border-red-500/20' : 'bg-green-500/10 text-green-500 border-green-500/20';
 
-						// --- LÓGICA DE ORGANIZACIÓN DE COLUMNAS (MANTENIDA) ---
 						let categoriaTag = m.tipo || 'Movimiento';
 						let infoPrincipal = m.descripcion || '-';
 						let notaManual = m.descripcion2 || ''; 
@@ -3266,7 +3266,6 @@ if (editorForm) {
 							categoriaTag = "Gasto Extra";
 						}
 
-						// Formateo de Fecha y Hora Local para la fila
 						let fechaZ_row = m.fecha;
 						if (!fechaZ_row.endsWith('Z') && !fechaZ_row.includes('+')) fechaZ_row += 'Z';
 						const d_row = new Date(fechaZ_row);
@@ -3316,7 +3315,7 @@ if (editorForm) {
 				}
 			}
 
-			// 6. Totales (Restricción para Perfil Administracion mantenida)
+			// 6. Totales
 			const calcBalance = calcIngresos - calcGastos;
 			const divTotales = document.getElementById('contenedor-totales-caja');
 
