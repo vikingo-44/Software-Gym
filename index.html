@@ -899,6 +899,16 @@
 								class="bg-black/40 text-white text-[10px] font-black p-3 rounded-xl border border-white/10 w-full outline-none focus:border-red-600">
 						</div>
 
+						<div id="contenedor-filtro-sucursal-caja" class="space-y-4 hidden">
+							<p class="text-[10px] font-black text-white/40 uppercase tracking-widest ml-1 flex items-center gap-2">
+								<i data-lucide="map-pin" class="w-3 h-3 text-red-600"></i> Sucursal
+							</p>
+							<select id="caja-filtro-sucursal" onchange="window.loadCaja()"
+									class="bg-black/40 text-white text-[10px] font-black p-3 rounded-xl border border-white/10 w-full outline-none focus:border-red-600 appearance-none">
+								<option value="">Cargando sedes...</option>
+							</select>
+						</div>
+
 						<div class="space-y-4">
 							<p class="text-[10px] font-black text-white/40 uppercase tracking-widest ml-1 flex items-center gap-2">
 								<i data-lucide="credit-card" class="w-3 h-3 text-red-600"></i> Métodos de Pago
