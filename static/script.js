@@ -3152,31 +3152,16 @@ if (editorForm) {
 			const inputHasta = document.getElementById('caja-filtro-hasta');
 			const inputDescFiltro = document.getElementById('caja-filtro-desc');
 			const inputDetalleFiltro = document.getElementById('caja-filtro-detalle');
-			const selectSucursal = document.getElementById('caja-filtro-sucursal');
 
-			// 1. Permisos y UI de Sucursal (Solo Admin o Supervisor ven el filtro)
-			const datosUsuario = JSON.parse(localStorage.getItem('viking_user') || '{}');
-			const nombreRol = (datosUsuario.rol_nombre || "").toLowerCase().trim();
-			const contSuc = document.getElementById('contenedor-filtro-sucursal-caja');
-
-			if (nombreRol === "administrador" || nombreRol === "supervisor") {
-				if (contSuc) contSuc.classList.remove('hidden');
-			} else {
-				if (contSuc) contSuc.classList.add('hidden');
-			}
-
-			// 2. Seteo de HOY en formato LOCAL YYYY-MM-DD
+			// 1. Seteo de HOY en formato LOCAL YYYY-MM-DD
 			const timezoneOffset = new Date().getTimezoneOffset() * 60000;
 			const hoyLocal = new Date(Date.now() - timezoneOffset).toISOString().split('T')[0];
 			
 			if (inputDesde && !inputDesde.value) inputDesde.value = hoyLocal;
 			if (inputHasta && !inputHasta.value) inputHasta.value = hoyLocal;
 
-			// 3. ⚔️ Traer los movimientos de la API (RUTA CORREGIDA)
-			// Se quita el prefijo '/api' inicial porque apiFetch ya lo añade internamente
-			const sucId = selectSucursal ? selectSucursal.value : "";
-			const url = sucId ? `/caja/movimientos?sucursal_id=${sucId}` : '/caja/movimientos';
-			const movs = await apiFetch(url);
+			// 2. Traer los movimientos de la API
+			const movs = await apiFetch('/caja/movimientos');
 			
 			let calcIngresos = 0;
 			let calcGastos = 0;
@@ -3188,7 +3173,7 @@ if (editorForm) {
 			const valDesc = (inputDescFiltro?.value || "").toLowerCase().trim();
 			const valDetalle = (inputDetalleFiltro?.value || "").toLowerCase().trim();
 
-			// 4. FILTRADO CORREGIDO E INTELIGENTE (Basado en Local Time + Filtros avanzados)
+			// 3. FILTRADO CORREGIDO E INTELIGENTE (Basado en Local Time + Filtros avanzados)
 			const filtrados = movs.filter(m => {
 				if (!m.fecha) return false;
 
@@ -3202,20 +3187,20 @@ if (editorForm) {
 				const mm = String(d.getMonth() + 1).padStart(2, '0');
 				const dd = String(d.getDate()).padStart(2, '0');
 				const fechaMovLocal = `${yyyy}-${mm}-${dd}`;
-													
+									
 				// Filtro de rango de fechas
 				if (fechaMovLocal < inputDesde.value || fechaMovLocal > inputHasta.value) return false;
 
-				// Filtro Búsqueda en Descripción
+				// Filtro Búsqueda en Descripción (Columna 3) - Verificación robusta de nulos
 				const descMov = (m.descripcion || "").toLowerCase();
 				if (valDesc && !descMov.includes(valDesc)) return false;
 
-				// Filtro Búsqueda en Detalle
+				// Filtro Búsqueda en Detalle (Columna 4 - descripcion2) - Verificación robusta de nulos
 				const detMov = (m.descripcion2 || "").toLowerCase();
 				if (valDetalle && !detMov.includes(valDetalle)) return false;
 
-				// Filtro Método de Pago
-				if (window.filtrosCaja && window.filtrosCaja.metodos && window.filtrosCaja.metodos.length > 0) {
+				// Filtro Método de Pago (Chips múltiples)
+				if (window.filtrosCaja.metodos.length > 0) {
 					const metodoActual = m.metodo_pago || 'Efectivo';
 					if (!window.filtrosCaja.metodos.includes(metodoActual)) return false;
 				}
@@ -3223,10 +3208,10 @@ if (editorForm) {
 				return true;
 			});
 
-			// 5. Renderizado de Tabla
+			// 4. Renderizado de Tabla (7 Columnas: Fecha | Tipo | Desc | Detalle | Metodo | Cuotas | Monto)
 			if (table) {
 				if (filtrados.length > 0) {
-					// Ordenamos por fecha descendente
+					// Ordenamos por fecha descendente (más nuevos primero)
 					filtrados.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
 
 					table.innerHTML = filtrados.map(m => {
@@ -3235,7 +3220,7 @@ if (editorForm) {
 						const metodo = m.metodo_pago || 'Efectivo';
 						const cuotas = parseInt(m.cuotas) || 1;
 						
-						// Lógica de Clasificación (Ingreso vs Egreso)
+						// Lógica de Clasificación (Ingreso vs Egreso) para totales y colores
 						const esEgresoManual = tipoRaw === 'egreso' || tipoRaw === 'gasto' || tipoRaw === 'compra' || tipoRaw === 'salida';
 						const esIngresoManual = tipoRaw === 'ingreso' || tipoRaw === 'entrada';
 						const esPositivo = esIngresoManual || ((tipoRaw.includes('mercaderia') || tipoRaw.includes('plan') || tipoRaw.includes('venta') || tipoRaw.includes('cobro')) && !tipoRaw.includes('compra'));
@@ -3247,30 +3232,40 @@ if (editorForm) {
 						const flujoTexto = esEgreso ? 'EGRESO' : 'INGRESO';
 						const flujoColor = esEgreso ? 'bg-red-500/10 text-red-500 border-red-500/20' : 'bg-green-500/10 text-green-500 border-green-500/20';
 
+						// --- LÓGICA DE ORGANIZACIÓN DE COLUMNAS (MANTENIDA SEGUN TU BASE) ---
 						let categoriaTag = m.tipo || 'Movimiento';
 						let infoPrincipal = m.descripcion || '-';
-						let notaManual = m.descripcion2 || ''; 
+						let notaManual = m.descripcion2 || ''; // Recibimos la nueva columna de notas manuales
 
+						// Si es un plan (Renovación o Nuevo)
 						if (tipoRaw.includes('plan')) {
 							categoriaTag = "Plan GymFit";
 							infoPrincipal = (m.descripcion || '').replace(/Cobro Plan\s*/i, '').replace(/Renovación\s*/i, '').trim();
-						} else if (tipoRaw.includes('mercaderia') || tipoRaw.includes('venta')) {
+						} 
+						// Si es venta de productos (Stock)
+						else if (tipoRaw.includes('mercaderia') || tipoRaw.includes('venta')) {
 							categoriaTag = "Venta Stock";
 							infoPrincipal = (m.descripcion || '').replace(/Venta Insumo:\s*/i, '').trim();
-						} else if (tipoRaw.includes('compra')) {
+						}
+						// Si es compra para reponer stock
+						else if (tipoRaw.includes('compra')) {
 							categoriaTag = "Reposición";
 							infoPrincipal = (m.descripcion || '').replace(/Compra Stock:\s*/i, '').trim();
-						} else if (esIngresoManual) {
+						}
+						// Si es un movimiento manual de caja
+						else if (esIngresoManual) {
 							categoriaTag = "Ingreso Manual";
-						} else if (esEgresoManual) {
+						}
+						else if (esEgresoManual) {
 							categoriaTag = "Gasto Extra";
 						}
 
-						let fechaZ_row = m.fecha;
-						if (!fechaZ_row.endsWith('Z') && !fechaZ_row.includes('+')) fechaZ_row += 'Z';
-						const d_row = new Date(fechaZ_row);
-						const fDisplay = String(d_row.getDate()).padStart(2, '0') + '/' + String(d_row.getMonth() + 1).padStart(2, '0');
-						const hDisplay = String(d_row.getHours()).padStart(2, '0') + ':' + String(d_row.getMinutes()).padStart(2, '0');
+						// Formateo de Fecha y Hora Local
+						let fechaZ = m.fecha;
+						if (!fechaZ.endsWith('Z') && !fechaZ.includes('+')) fechaZ += 'Z';
+						const d = new Date(fechaZ);
+						const fDisplay = String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0');
+						const hDisplay = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
 
 						let infoCuotasMonto = '';
 						if (metodo === 'T. Credito' && cuotas > 1) {
@@ -3289,9 +3284,11 @@ if (editorForm) {
 							<td class="py-4">
 								<span class="px-2 py-0.5 rounded border text-[8px] font-black uppercase tracking-wider ${flujoColor}">${flujoTexto}</span>
 							</td>
+							<!-- DESCRIPCIÓN: Muestra el Alumno, Producto o Motivo -->
 							<td class="py-4 text-white text-[10px] font-black uppercase tracking-tight">
 								${infoPrincipal}
 							</td>
+							<!-- DETALLE: Muestra la Categoría y la Nota Manual (descripcion2) -->
 							<td class="py-4 text-white/40 text-[9px] font-bold uppercase italic">
 								<span class="text-white/60 block mb-0.5">${categoriaTag}</span>
 								<span class="text-red-600/60">${notaManual}</span>
@@ -3315,23 +3312,29 @@ if (editorForm) {
 				}
 			}
 
-			// 6. Totales
-			const calcBalance = calcIngresos - calcGastos;
-			const divTotales = document.getElementById('contenedor-totales-caja');
+			// 5. Totales (Con restricción para Perfil Administracion)
+            const calcBalance = calcIngresos - calcGastos;
+            
+            // Leemos el usuario de la sesión (clave 'viking_user' según tu handleLogin)
+            const datosUsuario = JSON.parse(localStorage.getItem('viking_user') || '{}');
+            const nombreRol = (datosUsuario.rol_nombre || "").toLowerCase().trim();
+            const divTotales = document.getElementById('contenedor-totales-caja');
 
-			if (nombreRol === "administracion") {
-				if (divTotales) divTotales.style.setProperty('display', 'none', 'important');
-			} else {
-				if (divTotales) divTotales.style.setProperty('display', 'grid', 'important');
-				
-				if(document.getElementById('caja-ingresos')) document.getElementById('caja-ingresos').innerText = `$ ${calcIngresos.toLocaleString()}`;
-				if(document.getElementById('caja-gastos')) document.getElementById('caja-gastos').innerText = `$ ${calcGastos.toLocaleString()}`;
-				if(document.getElementById('caja-balance')) {
-					const eb = document.getElementById('caja-balance');
-					eb.innerText = `$ ${calcBalance.toLocaleString()}`;
-					eb.className = `text-4xl font-black italic ${calcBalance >= 0 ? 'text-green-500' : 'text-red-500'}`;
-				}
-			}
+            if (nombreRol === "administracion") {
+                // Si es el staff de recepción, ocultamos el bloque de saldos por completo
+                if (divTotales) divTotales.style.setProperty('display', 'none', 'important');
+            } else {
+                // Si es Administrador o Supervisor, mostramos los saldos normalmente
+                if (divTotales) divTotales.style.setProperty('display', 'grid', 'important');
+                
+                if(document.getElementById('caja-ingresos')) document.getElementById('caja-ingresos').innerText = `$ ${calcIngresos.toLocaleString()}`;
+                if(document.getElementById('caja-gastos')) document.getElementById('caja-gastos').innerText = `$ ${calcGastos.toLocaleString()}`;
+                if(document.getElementById('caja-balance')) {
+                    const eb = document.getElementById('caja-balance');
+                    eb.innerText = `$ ${calcBalance.toLocaleString()}`;
+                    eb.className = `text-4xl font-black italic ${calcBalance >= 0 ? 'text-green-500' : 'text-red-500'}`;
+                }
+            }
 		};
 
 		/**
@@ -5637,39 +5640,30 @@ if (editorForm) {
 							</div>`).join('');
 				}
 
-				// 2. Selectores de Filtro (Profesores, Administrativos, Alumnos, Cobro y CAJA)
+				// 2. Selectores de Filtro (Profesores, Administrativos, ALUMNOS y COBRO)
 				const selectProf = document.getElementById('filter-sucursal-profesores');
 				const selectAdm = document.getElementById('filter-sucursal-administrativos');
 				const selectAlu = document.getElementById('filter-sucursal-alumnos');
-				const selectCob = document.getElementById('cobrar-sucursal-filter');
-				const selectCaja = document.getElementById('caja-filtro-sucursal'); // <--- NUEVO FILTRO DE CAJA
+				const selectCob = document.getElementById('cobrar-sucursal-filter'); // <--- AGREGADO PARA COBRO
 
-				// Agregamos el select de Caja al array para procesarlo uniformemente
-				[selectProf, selectAdm, selectAlu, selectCob, selectCaja].forEach(sel => {
+				[selectProf, selectAdm, selectAlu, selectCob].forEach(sel => {
 					if (sel) {
-						// Para Cobro y Caja usamos "" como valor inicial (Todas), para los demás "all"
-						const esFiltroEspecial = (sel.id === 'cobrar-sucursal-filter' || sel.id === 'caja-filtro-sucursal');
-						
-						const current = sel.value || (esFiltroEspecial ? "" : "all");
-						const firstOptionText = "TODAS LAS SEDES";
-						const firstOptionValue = esFiltroEspecial ? "" : "all";
+						const current = sel.value || (sel.id === 'cobrar-sucursal-filter' ? "" : "all");
+						const firstOptionText = sel.id === 'cobrar-sucursal-filter' ? "TODAS LAS SEDES" : "TODAS LAS SEDES";
+						const firstOptionValue = sel.id === 'cobrar-sucursal-filter' ? "" : "all";
 
 						sel.innerHTML = `<option value="${firstOptionValue}" class="bg-zinc-900 text-white font-black italic uppercase">${firstOptionText}</option>` + 
 							sucursales.map(s => `<option value="${s.id}" class="bg-zinc-900 text-white font-black italic uppercase">${s.sucursal.toUpperCase()}</option>`).join('');
-						
 						sel.value = current;
 						
-						// Asignación de eventos onchange según el ID
+						// Si es el selector de cobro, le asignamos el evento de render
 						if (sel.id === 'cobrar-sucursal-filter') {
 							sel.onchange = () => renderCobrar();
-						} else if (sel.id === 'caja-filtro-sucursal') {
-							// Al cambiar la sucursal en caja, disparamos el loadCaja corregido
-							sel.onchange = () => window.loadCaja();
 						}
 					}
 				});
 
-				// 3. Selector en modal de Alumnos (Creación/Edición)
+				// 3. Selector en modal de Alumnos
 				const selectAl = document.getElementById('al-sucursal');
 				if (selectAl) {
 					const currentVal = selectAl.value;

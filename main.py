@@ -1794,20 +1794,12 @@ def get_caja_resumen(db: Session = Depends(database.get_db), current_user = Depe
     return {"ingresos": float(ing), "gastos": float(egr), "balance": float(ing - egr)}
 
 @app.get("/api/caja/movimientos", tags=["Caja"])
-def get_movimientos(sucursal_id: Optional[int] = None, db: Session = Depends(database.get_db), current_user = Depends(get_current_user)):
-    """Lista los últimos 150 movimientos con filtro de sucursal para Administradores."""
+def get_movimientos(db: Session = Depends(database.get_db), current_user = Depends(get_current_user)):
+    """Lista los últimos 150 movimientos de la sucursal logueada."""
     try:
-        rol = str(getattr(current_user, 'rol_nombre', "")).lower().trim()
-        query = db.query(models.MovimientoCaja)
-
-        # Si es Admin/Supervisor y eligió una sucursal, filtramos por esa
-        if (rol == "administrador" or rol == "supervisor") and sucursal_id:
-            query = query.filter(models.MovimientoCaja.sucursal_id == sucursal_id)
-        else:
-            # Por defecto, siempre filtramos por la sucursal del usuario logueado
-            query = query.filter(models.MovimientoCaja.sucursal_id == current_user.sucursal_id)
-
-        movs = query.order_by(models.MovimientoCaja.fecha.desc()).limit(150).all()
+        movs = db.query(models.MovimientoCaja).filter(
+            models.MovimientoCaja.sucursal_id == current_user.sucursal_id
+        ).order_by(models.MovimientoCaja.fecha.desc()).limit(150).all()
         return movs
     except Exception as e:
         logger.error(f"Error Crítico Caja: {str(e)}")
