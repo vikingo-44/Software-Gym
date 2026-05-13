@@ -5638,30 +5638,39 @@ if (editorForm) {
 							</div>`).join('');
 				}
 
-				// 2. Selectores de Filtro (Profesores, Administrativos, ALUMNOS y COBRO)
+				// 2. Selectores de Filtro (Profesores, Administrativos, Alumnos, Cobro y CAJA)
 				const selectProf = document.getElementById('filter-sucursal-profesores');
 				const selectAdm = document.getElementById('filter-sucursal-administrativos');
 				const selectAlu = document.getElementById('filter-sucursal-alumnos');
-				const selectCob = document.getElementById('cobrar-sucursal-filter'); // <--- AGREGADO PARA COBRO
+				const selectCob = document.getElementById('cobrar-sucursal-filter');
+				const selectCaja = document.getElementById('caja-filtro-sucursal'); // <--- NUEVO FILTRO DE CAJA
 
-				[selectProf, selectAdm, selectAlu, selectCob].forEach(sel => {
+				// Agregamos el select de Caja al array para procesarlo uniformemente
+				[selectProf, selectAdm, selectAlu, selectCob, selectCaja].forEach(sel => {
 					if (sel) {
-						const current = sel.value || (sel.id === 'cobrar-sucursal-filter' ? "" : "all");
-						const firstOptionText = sel.id === 'cobrar-sucursal-filter' ? "TODAS LAS SEDES" : "TODAS LAS SEDES";
-						const firstOptionValue = sel.id === 'cobrar-sucursal-filter' ? "" : "all";
+						// Para Cobro y Caja usamos "" como valor inicial (Todas), para los demás "all"
+						const esFiltroEspecial = (sel.id === 'cobrar-sucursal-filter' || sel.id === 'caja-filtro-sucursal');
+						
+						const current = sel.value || (esFiltroEspecial ? "" : "all");
+						const firstOptionText = "TODAS LAS SEDES";
+						const firstOptionValue = esFiltroEspecial ? "" : "all";
 
 						sel.innerHTML = `<option value="${firstOptionValue}" class="bg-zinc-900 text-white font-black italic uppercase">${firstOptionText}</option>` + 
 							sucursales.map(s => `<option value="${s.id}" class="bg-zinc-900 text-white font-black italic uppercase">${s.sucursal.toUpperCase()}</option>`).join('');
+						
 						sel.value = current;
 						
-						// Si es el selector de cobro, le asignamos el evento de render
+						// Asignación de eventos onchange según el ID
 						if (sel.id === 'cobrar-sucursal-filter') {
 							sel.onchange = () => renderCobrar();
+						} else if (sel.id === 'caja-filtro-sucursal') {
+							// Al cambiar la sucursal en caja, disparamos el loadCaja corregido
+							sel.onchange = () => window.loadCaja();
 						}
 					}
 				});
 
-				// 3. Selector en modal de Alumnos
+				// 3. Selector en modal de Alumnos (Creación/Edición)
 				const selectAl = document.getElementById('al-sucursal');
 				if (selectAl) {
 					const currentVal = selectAl.value;
