@@ -3175,15 +3175,11 @@ if (editorForm) {
 				if (contSuc) contSuc.classList.add('hidden');
 			}
 
-			// 2. ⚔️ CONSTRUCCIÓN DE URL LIMPIA (Evita el error 422)
-			// Solo agregamos el query param si sucursalId tiene un valor real
+			// 2. CONSTRUCCIÓN DE URL LIMPIA (Evita el error 422)
 			const queryParams = sucursalId ? `?sucursal_id=${sucursalId}` : "";
 			
-			// Traer los movimientos y el resumen de la API en paralelo
-			const [movs, resumen] = await Promise.all([
-				apiFetch(`/caja/movimientos${queryParams}`),
-				apiFetch(`/caja/resumen${queryParams}`)
-			]);
+			// Traemos solo los movimientos (Los totales los calcularemos nosotros dinámicamente)
+			const movs = await apiFetch(`/caja/movimientos${queryParams}`);
 			
 			let calcIngresos = 0;
 			let calcGastos = 0;
@@ -3230,9 +3226,10 @@ if (editorForm) {
 				return true;
 			});
 
-			// 4. Renderizado de Tabla
+			// 4. RENDERIZADO DE TABLA Y CÁLCULO DINÁMICO DE TOTALES
 			if (table) {
 				if (filtrados.length > 0) {
+					// Ordenamos por fecha descendente
 					filtrados.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
 
 					table.innerHTML = filtrados.map(m => {
@@ -3241,12 +3238,13 @@ if (editorForm) {
 						const metodo = m.metodo_pago || 'Efectivo';
 						const cuotas = parseInt(m.cuotas) || 1;
 						
-						// Lógica de Clasificación
+						// Lógica de Clasificación para el acumulador dinámico
 						const esEgresoManual = tipoRaw === 'egreso' || tipoRaw === 'gasto' || tipoRaw === 'compra' || tipoRaw === 'salida';
 						const esIngresoManual = tipoRaw === 'ingreso' || tipoRaw === 'entrada';
 						const esPositivo = esIngresoManual || ((tipoRaw.includes('mercaderia') || tipoRaw.includes('plan') || tipoRaw.includes('venta') || tipoRaw.includes('cobro')) && !tipoRaw.includes('compra'));
 						const esEgreso = !esPositivo && (esEgresoManual || tipoRaw.includes('compra') || tipoRaw.includes('pago'));
 
+						// ⚔️ ACUMULAMOS LOS TOTALES SEGÚN LO QUE SE FILTRÓ EN PANTALLA
 						if (esEgreso) calcGastos += monto;
 						else calcIngresos += monto;
 
@@ -3276,7 +3274,6 @@ if (editorForm) {
 							categoriaTag = "Gasto Extra";
 						}
 
-						// Formateo de Fecha y Hora Local
 						let fZ = m.fecha;
 						if (!fZ.endsWith('Z') && !fZ.includes('+')) fZ += 'Z';
 						const dObj = new Date(fZ);
@@ -3326,7 +3323,7 @@ if (editorForm) {
 				}
 			}
 
-			// 5. Totales y Resumen Financiero
+			// 5. ACTUALIZACIÓN DE TARJETAS (Ahora son 100% dinámicas según el filtrado)
 			const divTotales = document.getElementById('contenedor-totales-caja');
 
 			if (nombreRol.toLowerCase() === "administracion") {
@@ -3334,13 +3331,10 @@ if (editorForm) {
 			} else {
 				if (divTotales) divTotales.style.setProperty('display', 'grid', 'important');
 				
-				// Sincronización con el resumen del backend
-				const finalIngresos = resumen ? resumen.ingresos : calcIngresos;
-				const finalGastos = resumen ? resumen.gastos : calcGastos;
-				const finalBalance = resumen ? resumen.balance : (calcIngresos - calcGastos);
+				const finalBalance = calcIngresos - calcGastos;
 
-				if(document.getElementById('caja-ingresos')) document.getElementById('caja-ingresos').innerText = `$ ${finalIngresos.toLocaleString()}`;
-				if(document.getElementById('caja-gastos')) document.getElementById('caja-gastos').innerText = `$ ${finalGastos.toLocaleString()}`;
+				if(document.getElementById('caja-ingresos')) document.getElementById('caja-ingresos').innerText = `$ ${calcIngresos.toLocaleString()}`;
+				if(document.getElementById('caja-gastos')) document.getElementById('caja-gastos').innerText = `$ ${calcGastos.toLocaleString()}`;
 				if(document.getElementById('caja-balance')) {
 					const eb = document.getElementById('caja-balance');
 					eb.innerText = `$ ${finalBalance.toLocaleString()}`;
