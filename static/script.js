@@ -3153,7 +3153,7 @@ if (editorForm) {
 			const inputDescFiltro = document.getElementById('caja-filtro-desc');
 			const inputDetalleFiltro = document.getElementById('caja-filtro-detalle');
 			
-			// ⚔️ NUEVO: Capturamos el selector de sucursal
+			// ⚔️ Capturamos el selector de sucursal
 			const sucursalSelect = document.getElementById('caja-filtro-sucursal');
 			const sucursalId = sucursalSelect ? sucursalSelect.value : "";
 
@@ -3164,11 +3164,25 @@ if (editorForm) {
 			if (inputDesde && !inputDesde.value) inputDesde.value = hoyLocal;
 			if (inputHasta && !inputHasta.value) inputHasta.value = hoyLocal;
 
-			// 2. Traer los movimientos y el resumen de la API (enviando la sucursal)
-			// Usamos Promise.all para cargar ambas cosas al mismo tiempo
+			// --- LÓGICA DE FILTRO POR ROL (Administrador ve el selector) ---
+			const datosUsuario = JSON.parse(localStorage.getItem('viking_user') || '{}');
+			const nombreRol = (datosUsuario.rol_nombre || "").trim();
+			const contSuc = document.getElementById('contenedor-filtro-sucursal-caja');
+
+			if (nombreRol === "Administrador") {
+				if (contSuc) contSuc.classList.remove('hidden');
+			} else {
+				if (contSuc) contSuc.classList.add('hidden');
+			}
+
+			// 2. ⚔️ CONSTRUCCIÓN DE URL LIMPIA (Evita el error 422)
+			// Solo agregamos el query param si sucursalId tiene un valor real
+			const queryParams = sucursalId ? `?sucursal_id=${sucursalId}` : "";
+			
+			// Traer los movimientos y el resumen de la API en paralelo
 			const [movs, resumen] = await Promise.all([
-				apiFetch(`/caja/movimientos?sucursal_id=${sucursalId}`),
-				apiFetch(`/caja/resumen?sucursal_id=${sucursalId}`)
+				apiFetch(`/caja/movimientos${queryParams}`),
+				apiFetch(`/caja/resumen${queryParams}`)
 			]);
 			
 			let calcIngresos = 0;
@@ -3181,7 +3195,7 @@ if (editorForm) {
 			const valDesc = (inputDescFiltro?.value || "").toLowerCase().trim();
 			const valDetalle = (inputDetalleFiltro?.value || "").toLowerCase().trim();
 
-			// 3. FILTRADO (Basado en Local Time + Filtros avanzados + Métodos de Pago)
+			// 3. FILTRADO CORREGIDO E INTELIGENTE
 			const filtrados = movs.filter(m => {
 				if (!m.fecha) return false;
 
@@ -3195,7 +3209,7 @@ if (editorForm) {
 				const mm = String(d.getMonth() + 1).padStart(2, '0');
 				const dd = String(d.getDate()).padStart(2, '0');
 				const fechaMovLocal = `${yyyy}-${mm}-${dd}`;
-											
+													
 				// Filtro de rango de fechas
 				if (fechaMovLocal < inputDesde.value || fechaMovLocal > inputHasta.value) return false;
 
@@ -3227,7 +3241,7 @@ if (editorForm) {
 						const metodo = m.metodo_pago || 'Efectivo';
 						const cuotas = parseInt(m.cuotas) || 1;
 						
-						// Clasificación para totales de la tabla (Sincronizados con el filtrado visual)
+						// Lógica de Clasificación
 						const esEgresoManual = tipoRaw === 'egreso' || tipoRaw === 'gasto' || tipoRaw === 'compra' || tipoRaw === 'salida';
 						const esIngresoManual = tipoRaw === 'ingreso' || tipoRaw === 'entrada';
 						const esPositivo = esIngresoManual || ((tipoRaw.includes('mercaderia') || tipoRaw.includes('plan') || tipoRaw.includes('venta') || tipoRaw.includes('cobro')) && !tipoRaw.includes('compra'));
@@ -3313,16 +3327,14 @@ if (editorForm) {
 			}
 
 			// 5. Totales y Resumen Financiero
-			const datosUsuario = JSON.parse(localStorage.getItem('viking_user') || '{}');
-			const nombreRol = (datosUsuario.rol_nombre || "").toLowerCase().trim();
 			const divTotales = document.getElementById('contenedor-totales-caja');
 
-			if (nombreRol === "administracion") {
+			if (nombreRol.toLowerCase() === "administracion") {
 				if (divTotales) divTotales.style.setProperty('display', 'none', 'important');
 			} else {
 				if (divTotales) divTotales.style.setProperty('display', 'grid', 'important');
 				
-				// Usamos los datos del resumen de la API (que ya vienen filtrados por sucursal desde el backend)
+				// Sincronización con el resumen del backend
 				const finalIngresos = resumen ? resumen.ingresos : calcIngresos;
 				const finalGastos = resumen ? resumen.gastos : calcGastos;
 				const finalBalance = resumen ? resumen.balance : (calcIngresos - calcGastos);
