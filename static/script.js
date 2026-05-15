@@ -4669,31 +4669,36 @@ if (editorForm) {
 			if (!alId) return; // Si es un alumno nuevo, no cargamos historiales
 
 			// 5. Lógica específica para la pestaña de Suscripción/Pagos
-			if (tab === 'suscripcion') {
-				const al = state.alumnos.find(x => x.id == alId);
-				
-				if (al) {
-					// Buscamos el plan y el TIPO de membresía (Mensual, Trimestral, etc.)
-					const planActual = state.planes.find(p => p.id == al.plan_id);
-					
-					// Si el plan existe y tiene la propiedad 'tipo', extraemos el nombre (Mensual, etc.)
-					const nombreMembresia = (planActual && planActual.tipo) ? planActual.tipo.nombre : "MEMBRESÍA";
-					
-					// Actualizamos los textos en el modal
-					const elTipo = document.getElementById('info-plan-tipo');
-					const elNombre = document.getElementById('info-plan-nombre');
-					const elVence = document.getElementById('info-plan-vence');
+			// 5. Lógica específica para la pestaña de Suscripción/Pagos
+            if (tab === 'suscripcion') {
+                const al = state.alumnos.find(x => x.id == alId);
+                
+                if (al) {
+                    // ⚔️ CONTROL DE EXTRACTO VIKINGO: Buscamos el plan por el nuevo objeto anidado o por plan_id si existiera
+                    const idDelPlan = al.plan_id || (al.plan ? al.plan.id : null);
+                    const planActual = state.planes.find(p => p.id == idDelPlan);
+                    
+                    // Si el plan existe en state.planes tiene la propiedad 'tipo', sino intentamos leer de la data viva del alumno
+                    const nombreMembresia = (planActual && planActual.tipo) ? planActual.tipo.nombre : "MEMBRESÍA";
+                    
+                    // Si no encuentra el plan en la lista global, usamos el objeto directo inyectado en el alumno
+                    const textoNombrePlan = planActual ? planActual.nombre : (al.plan ? al.plan.nombre : "SIN PLAN ASIGNADO");
+                    
+                    // Actualizamos los textos en el modal
+                    const elTipo = document.getElementById('info-plan-tipo');
+                    const elNombre = document.getElementById('info-plan-nombre');
+                    const elVence = document.getElementById('info-plan-vence');
 
-					if(elTipo) elTipo.innerText = nombreMembresia.toUpperCase();
-					if(elNombre) elNombre.innerText = planActual ? planActual.nombre : "SIN PLAN ASIGNADO";
-					if(elVence) elVence.innerText = al.fecha_vencimiento || "---";
-					
-					// Cargamos el historial de pagos de caja desde la API
-					if (typeof loadAlumnoHistorial === 'function') {
-						loadAlumnoHistorial(alId);
-					}
-				}
-			}
+                    if(elTipo) elTipo.innerText = nombreMembresia.toUpperCase();
+                    if(elNombre) elNombre.innerText = textoNombrePlan.toUpperCase();
+                    if(elVence) elVence.innerText = al.fecha_vencimiento || "---";
+                    
+                    // Cargamos el historial de pagos de caja desde la API
+                    if (typeof loadAlumnoHistorial === 'function') {
+                        loadAlumnoHistorial(alId);
+                    }
+                }
+            }
 
 			// ⚔️ 6. Lógica específica para la pestaña de COMPROBANTES (NUEVA)
 			if (tab === 'comprobantes') {
