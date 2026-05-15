@@ -1085,7 +1085,6 @@ def get_reservas(fecha: Optional[str] = None, db: Session = Depends(database.get
         "id": r.id,
         "usuario_id": r.usuario_id,
         "clase_id": r.clase_id,
-        # Importante: devolvemos la fecha para que el filter del JS funcione
         "fecha_clase": r.fecha_reserva.isoformat() if r.fecha_reserva else None,
         "horario": r.horario,       
         "dia_semana": r.dia_semana, 
@@ -1110,7 +1109,6 @@ def book_clase(data: ReservaCreate, db: Session = Depends(database.get_db)):
         raise HTTPException(status_code=400, detail="Tu membresía ha vencido.")
 
     # 2. LÓGICA DE DOBLE BÚSQUEDA (NORMAL O FERIADO)
-    # Buscamos la clase para saber de qué sucursal es
     clase = db.query(models.Clase).filter(models.Clase.id == data.clase_id).first()
     if not clase:
         clase = db.query(models.ClaseFeriado).filter(models.ClaseFeriado.id == data.clase_id).first()
@@ -1118,26 +1116,25 @@ def book_clase(data: ReservaCreate, db: Session = Depends(database.get_db)):
     if not clase:
         raise HTTPException(status_code=404, detail="La clase no existe.")
 
-    # 3. VALIDACIÓN DE CUPO MENSUAL (GLOBAL - No importa la sede)
+    # 3. VALIDACIÓN DE CUPO POR BOLSA TOTAL (Ciclo completo: desde renovación hasta vencimiento)
     if user.plan:
-        limite_mensual = user.plan.clases_mensuales
-        if limite_mensual < 999:
-            fecha_inicio_base = user.fecha_ultima_renovacion if hasattr(user, 'fecha_ultima_renovacion') and user.fecha_ultima_renovacion else date(fecha_objeto.year, fecha_objeto.month, 1)
-            delta_meses = (fecha_objeto.year - fecha_inicio_base.year) * 12 + (fecha_objeto.month - fecha_inicio_base.month)
-            inicio_ciclo = fecha_inicio_base + relativedelta(months=delta_meses)
-            fin_ciclo = inicio_ciclo + relativedelta(months=1)
+        limite_total_plan = user.plan.clases_mensuales
+        if limite_total_plan < 999:
+            # Ventana de fechas del pase contratado por el alumno
+            inicio_pase = user.fecha_ultima_renovacion if user.fecha_ultima_renovacion else date.today()
+            fin_pase = user.fecha_vencimiento if user.fecha_vencimiento else date.today()
 
-            # Contamos TODAS sus reservas del mes en CUALQUIER sede
+            # Contamos las reservas globales que ya consumió en cualquier sede durante este pase
             count_reservas = db.query(models.Reserva).filter(
                 models.Reserva.usuario_id == user.id,
-                models.Reserva.fecha_reserva >= inicio_ciclo,
-                models.Reserva.fecha_reserva < fin_ciclo
+                models.Reserva.fecha_reserva >= inicio_pase,
+                models.Reserva.fecha_reserva <= fin_pase
             ).count()
             
-            if count_reservas >= limite_mensual:
+            if count_reservas >= limite_total_plan:
                 raise HTTPException(
                     status_code=400, 
-                    detail=f"Límite alcanzado ({limite_mensual} clases/mes)."
+                    detail=f"Límite alcanzado ({count_reservas}/{limite_total_plan} clases utilizadas en tu plan actual)."
                 )
 
     # 4. VALIDACIÓN DE DUPLICADOS
@@ -1150,7 +1147,7 @@ def book_clase(data: ReservaCreate, db: Session = Depends(database.get_db)):
     if exists:
         raise HTTPException(status_code=400, detail="Ya tienes este turno reservado.")
 
-    # 5. VALIDACIÓN DE CUPO DE LA CLASE (Específico de la clase/sede)
+    # 5. VALIDACIÓN DE CUPO DE LA CLASE (Sede / Cupo del Box)
     cupo_actual = db.query(models.Reserva).filter(
         models.Reserva.clase_id == data.clase_id,
         models.Reserva.horario == data.horario,
@@ -1165,9 +1162,8 @@ def book_clase(data: ReservaCreate, db: Session = Depends(database.get_db)):
         usuario_id=data.usuario_id,
         clase_id=data.clase_id,
         fecha_reserva=fecha_objeto,
-        horario=data.horario,       
+        horario=data.horario,      
         dia_semana=data.dia_semana,
-        # ⚔️ CLAVE: Guardamos el ID de la sucursal de la CLASE, no del alumno
         sucursal_id=clase.sucursal_id 
     )
     
@@ -1373,18 +1369,24 @@ def create_plan(data: PlanUpdate, db: Session = Depends(database.get_db)):
 
 @app.put("/api/planes/{id}", tags=["Planes"])
 def update_plan(id: int, data: PlanUpdate, db: Session = Depends(database.get_db)):
-    """Actualiza la configuración de un plan existente"""
+    """Actualiza la configuración de un plan existente de forma segura"""
     p = db.query(models.Plan).filter(models.Plan.id == id).first()
     if p:
         p.nombre = data.nombre
         p.efectivo = data.efectivo
         p.transferencia = data.transferencia
-        p.debito_credito = data.debito_credito
+        p.debito_credito = data.debito_credito  # Mapea directo a tu alias "Debito/Credito"
         p.tipo_plan_id = data.tipo_plan_id
         p.clases_mensuales = data.clases_mensuales
-        p.dias = data.dias
-        db.commit()
-        return {"status": "success"}
+        
+        try:
+            db.commit()
+            return {"status": "success"}
+        except Exception as e:
+            db.rollback()
+            logger.error(f"Error actualizando plan ID {id}: {str(e)}")
+            raise HTTPException(status_code=500, detail=f"Falla en Base de Datos: {str(e)}")
+            
     return {"status": "error", "message": "Plan no encontrado"}
 
 @app.delete("/api/planes/{id}", tags=["Planes"])

@@ -5047,7 +5047,10 @@ if (editorForm) {
 					nombre: document.getElementById('plan-nombre').value, 
 					efectivo: parseFloat(document.getElementById('plan-efectivo').value || 0), 
 					transferencia: parseFloat(document.getElementById('plan-transferencia').value || 0), 
-					debito_credito: parseFloat(document.getElementById('plan-debito').value || 0), 
+					
+					// ⚔️ CORRECCIÓN AQUÍ: Cambiado 'debito_credito' por 'debito' (o 'tarjeta' según uses en la BD)
+					debito: parseFloat(document.getElementById('plan-debito').value || 0), 
+					
 					tipo_plan_id: parseInt(document.getElementById('plan-tipo').value),
 					clases_mensuales: parseInt(document.getElementById('plan-clases').value || 0) 
 				};
@@ -5076,47 +5079,53 @@ if (editorForm) {
 				return { disponible: 0, total: 0, usado: 0, esFull: false, vencido: true };
 			}
 
-			// PRIORIDAD 1: El valor numérico que definiste en el modal (Viene de la DB)
-			let limiteMensual = parseInt(usuario.plan.clases_mensuales) || 0;
+			// 1. Cupo total del plan asignado en la DB
+			let limiteTotal = parseInt(usuario.plan.clases_mensuales) || 0;
 			const planNombre = (usuario.plan.nombre || "").toLowerCase();
 			let esFull = false;
 
-			// PRIORIDAD 2: Respaldo por nombre (Si el número en DB es 0)
-			if (limiteMensual === 0) {
+			// Respaldo por nombre si viene en 0
+			if (limiteTotal === 0) {
 				if (planNombre.includes('libre') || planNombre.includes('full') || planNombre.includes('ilimitado')) {
-					limiteMensual = 999;
-				} else if (planNombre.includes('12')) limiteMensual = 12;
-				else if (planNombre.includes('8')) limiteMensual = 8;
-				else if (planNombre.includes('6')) limiteMensual = 6;
+					limiteTotal = 999;
+				} else if (planNombre.includes('12')) limiteTotal = 12;
+				else if (planNombre.includes('8')) limiteTotal = 8;
+				else if (planNombre.includes('6')) limiteTotal = 6;
 			}
 
-			// Lógica de Pase Libre: si es 999 o dice libre, no descuenta cupos
-			if (limiteMensual >= 99 || planNombre.includes('libre')) esFull = true;
+			// Identificar si es Pase Libre
+			if (limiteTotal >= 99 || planNombre.includes('libre')) esFull = true;
 
-			const ahora = new Date();
-			const mesActual = ahora.getMonth();
-			const anioActual = ahora.getFullYear();
+			// 2. Límites del ciclo real del pase del alumno
+			// Usamos el inicio del día (00:00:00) para evitar desajustes de horas
+			const inicioPase = usuario.fecha_ultima_renovacion ? new Date(usuario.fecha_ultima_renovacion) : new Date();
+			inicioPase.setHours(0,0,0,0);
+			
+			const finPase = usuario.fecha_vencimiento ? new Date(usuario.fecha_vencimiento) : new Date();
+			finPase.setHours(23,59,59,999);
 
-			const reservasDelMes = todasLasReservas.filter(res => {
+			// 3. Contamos las reservas que caen dentro de la ventana de contratación viva
+			const reservasDelCiclo = todasLasReservas.filter(res => {
 				const esMismoUsuario = String(res.usuario_id) === String(usuario.id) || (res.alumno_dni && String(res.alumno_dni) === String(usuario.dni));
 				if (!esMismoUsuario) return false;
+				
 				const fechaRes = new Date(res.fecha_clase || res.fecha);
-				return fechaRes.getMonth() === mesActual && fechaRes.getFullYear() === anioActual;
+				return fechaRes >= inicioPase && fechaRes <= finPase;
 			});
 
-			const usado = reservasDelMes.length;
-			const fechaVence = new Date(usuario.fecha_vencimiento);
+			const usado = reservasDelCiclo.length;
+			
 			const hoy = new Date();
 			hoy.setHours(0,0,0,0);
-			const estaVencido = fechaVence < hoy;
+			const estaVencido = new Date(usuario.fecha_vencimiento) < hoy;
 
 			return {
-				disponible: esFull ? "∞" : Math.max(0, limiteMensual - usado),
-				total: esFull ? "LIBRE" : limiteMensual,
+				disponible: esFull ? "∞" : Math.max(0, limiteTotal - usado),
+				total: esFull ? "LIBRE" : limiteTotal,
 				usado: usado,
 				esFull: esFull,
 				vencido: estaVencido,
-				limiteAlcanzado: !esFull && usado >= limiteMensual
+				limiteAlcanzado: !esFull && usado >= limiteTotal
 			};
 		}
 
