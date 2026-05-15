@@ -88,7 +88,7 @@ def create_access_token(data: dict):
 
 # --- Dependencia para proteger Endpoints ---
 def get_current_user(db: Session = Depends(database.get_db), auth: HTTPAuthorizationCredentials = Depends(auth_scheme)):
-    """Valida el token y devuelve el usuario actual"""
+    """Valida el token y devuelve el usuario actual con su perfil cargado"""
     try:
         payload = jwt.decode(auth.credentials, SECRET_KEY, algorithms=[ALGORITHM])
         dni: str = payload.get("sub")
@@ -97,7 +97,8 @@ def get_current_user(db: Session = Depends(database.get_db), auth: HTTPAuthoriza
     except JWTError:
         raise HTTPException(status_code=401, detail="Sesión expirada o token corrupto")
     
-    user = db.query(models.Usuario).filter(models.Usuario.dni == dni).first()
+    # ⚔️ FIX CRÍTICO: Forzamos la carga del perfil asociado a perfil_id
+    user = db.query(models.Usuario).options(joinedload(models.Usuario.perfil)).filter(models.Usuario.dni == dni).first()
     if not user:
         raise HTTPException(status_code=401, detail="Usuario no encontrado")
     return user
@@ -1781,22 +1782,21 @@ async def ver_comprobante_alumno(comprobante_id: int, db: Session = Depends(data
 @app.get("/api/caja/resumen", tags=["Finanzas"])
 def get_caja_resumen(sucursal_id: Optional[int] = None, db: Session = Depends(database.get_db), current_user = Depends(get_current_user)):
     """
-    Calcula el resumen financiero.
-    Si es Administrador, puede ver el global o filtrar por sede.
-    Si es Staff, queda encerrado en su sucursal.
+    Calcula el resumen financiero leyendo correctamente la tabla perfiles.
     """
-    rol = str(getattr(current_user, 'rol_nombre', "")).strip()
+    # Buscamos el nombre en la relación 'perfil' que apunta a la tabla perfiles
+    rol = current_user.perfil.nombre if current_user.perfil else ""
+    rol = str(rol).strip()
     
     query_ing = db.query(func.sum(models.MovimientoCaja.monto)).filter(models.MovimientoCaja.tipo == "Ingreso")
     query_egr = db.query(func.sum(models.MovimientoCaja.monto)).filter(models.MovimientoCaja.tipo == "Egreso")
 
-    # ⚔️ LÓGICA DE PODER: El Admin salta el filtro automático
-    if rol.lower() in ["administrador", "admin", "dueño", "supervisor", "Administrador"]:
+    # Si es Administrador (mapeado de la DB), salta el cerrojo de sucursal
+    if rol.lower() in ["administrador", "admin", "dueño", "supervisor"]:
         if sucursal_id and sucursal_id > 0:
             query_ing = query_ing.filter(models.MovimientoCaja.sucursal_id == sucursal_id)
             query_egr = query_egr.filter(models.MovimientoCaja.sucursal_id == sucursal_id)
     else:
-        # El staff común NO puede elegir sucursal
         query_ing = query_ing.filter(models.MovimientoCaja.sucursal_id == current_user.sucursal_id)
         query_egr = query_egr.filter(models.MovimientoCaja.sucursal_id == current_user.sucursal_id)
 
@@ -1814,37 +1814,35 @@ def get_movimientos(
     current_user = Depends(get_current_user)
 ):
     """
-    Lista movimientos con filtros de sucursal y rango de fechas.
-    Admin ve todo por defecto, Staff solo su sede.
+    Lista movimientos interactuando con la tabla perfiles de models.py
     """
     try:
-        rol = str(getattr(current_user, 'rol_nombre', "")).strip()
+        # ⚔️ Mapeo real de la relación perfiles -> columna nombre
+        rol = current_user.perfil.nombre if current_user.perfil else ""
+        rol = str(rol).strip()
         
-        # ⚔️ DIAGNÓSTICO EN TERMINAL (Para ver el comportamiento exacto en consola)
         print("\n" + "="*50)
-        print("⚔️ DETECCIÓN DE CONTROL DE CAJA ⚔️")
+        print("⚔️ DETECCIÓN DE CONTROL DE CAJA COMPLETO ⚔️")
         print(f"USUARIO LOGUEADO : {getattr(current_user, 'nombre_completo', 'S/N')}")
-        print(f"ROL DB TEXTO REAL: '{rol}'")
-        print(f"ROL CONVERSION   : '{rol.lower()}'")
+        print(f"PERFIL DB REAL   : '{rol}'")
         print(f"SUCURSAL USER DB : {getattr(current_user, 'sucursal_id', 'S/S')}")
-        print(f"SUCURSAL PARÁMETRO FRONT: {sucursal_id}")
+        print(f"SUCURSAL FRONT   : {sucursal_id}")
         print("="*50)
 
         query = db.query(models.MovimientoCaja)
 
-        # ⚔️ FILTRO VIKINGO: Administrador ve todas las sedes si no elige una específica
-        if rol.lower() in ["administrador", "admin", "dueño", "supervisor", "administrador"]:
+        if rol.lower() in ["administrador", "admin", "dueño", "supervisor"]:
             if sucursal_id is not None and sucursal_id > 0:
                 query = query.filter(models.MovimientoCaja.sucursal_id == sucursal_id)
-                print("💥 ACCIÓN: Es Admin -> Filtrando por sucursal específica elegida")
+                print("💥 ACCIÓN: Es Admin -> Filtrando por la sucursal elegida")
             else:
-                print("💥 ACCIÓN: Es Admin -> Viendo TODO (Sin restricción de sucursal)")
+                print("💥 ACCIÓN: Es Admin -> Viendo TODO global sin restricciones")
         else:
             query = query.filter(models.MovimientoCaja.sucursal_id == current_user.sucursal_id)
             print(f"💥 ACCIÓN: Es Personal -> Forzando bloqueo a sucursal {current_user.sucursal_id}")
         print("="*50 + "\n")
 
-        # Filtro de fechas (Necesario para el loadCaja del frontend)
+        # Filtro de fechas
         if fecha_desde:
             query = query.filter(models.MovimientoCaja.fecha >= f"{fecha_desde} 00:00:00")
         if fecha_hasta:
