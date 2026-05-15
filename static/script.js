@@ -3199,8 +3199,8 @@ if (editorForm) {
             // 3. FILTRADO CORREGIDO E INTELIGENTE
             const filtrados = movs.filter(m => {
                 // ⚔️ FILTRO DE SUCURSAL INTEGRADO (Para el Administrador)
-                // Si el selector tiene una sede (no es ""), filtramos los que no coincidan.
-                // Si está vacío, el Administrador ve TODOS (se ignora esta condición).
+                // CORRECCIÓN: Solo filtramos si hay una sucursal seleccionada (sucursalIdVal no es "")
+                // Si el selector está vacío, el Administrador ve TODO lo que mandó el servidor.
                 if (sucursalIdVal !== "" && String(m.sucursal_id) !== String(sucursalIdVal)) return false;
 
                 if (!m.fecha) return false;
