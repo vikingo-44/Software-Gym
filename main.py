@@ -1778,7 +1778,6 @@ async def ver_comprobante_alumno(comprobante_id: int, db: Session = Depends(data
     return HTMLResponse(content=html_content)
 
 # --- CAJA ---
-# --- CAJA (CORREGIDO PARA ADMINISTRADOR) ---
 @app.get("/api/caja/resumen", tags=["Finanzas"])
 def get_caja_resumen(sucursal_id: Optional[int] = None, db: Session = Depends(database.get_db), current_user = Depends(get_current_user)):
     """
@@ -1792,7 +1791,7 @@ def get_caja_resumen(sucursal_id: Optional[int] = None, db: Session = Depends(da
     query_egr = db.query(func.sum(models.MovimientoCaja.monto)).filter(models.MovimientoCaja.tipo == "Egreso")
 
     # ⚔️ LÓGICA DE PODER: El Admin salta el filtro automático
-    if rol == "Administrador":
+    if rol.lower() in ["administrador", "admin", "dueño", "supervisor", "Administrador"]:
         if sucursal_id and sucursal_id > 0:
             query_ing = query_ing.filter(models.MovimientoCaja.sucursal_id == sucursal_id)
             query_egr = query_egr.filter(models.MovimientoCaja.sucursal_id == sucursal_id)
@@ -1820,14 +1819,30 @@ def get_movimientos(
     """
     try:
         rol = str(getattr(current_user, 'rol_nombre', "")).strip()
+        
+        # ⚔️ DIAGNÓSTICO EN TERMINAL (Para ver el comportamiento exacto en consola)
+        print("\n" + "="*50)
+        print("⚔️ DETECCIÓN DE CONTROL DE CAJA ⚔️")
+        print(f"USUARIO LOGUEADO : {getattr(current_user, 'nombre_completo', 'S/N')}")
+        print(f"ROL DB TEXTO REAL: '{rol}'")
+        print(f"ROL CONVERSION   : '{rol.lower()}'")
+        print(f"SUCURSAL USER DB : {getattr(current_user, 'sucursal_id', 'S/S')}")
+        print(f"SUCURSAL PARÁMETRO FRONT: {sucursal_id}")
+        print("="*50)
+
         query = db.query(models.MovimientoCaja)
 
         # ⚔️ FILTRO VIKINGO: Administrador ve todas las sedes si no elige una específica
-        if rol == "Administrador":
+        if rol.lower() in ["administrador", "admin", "dueño", "supervisor", "administrador"]:
             if sucursal_id is not None and sucursal_id > 0:
                 query = query.filter(models.MovimientoCaja.sucursal_id == sucursal_id)
+                print("💥 ACCIÓN: Es Admin -> Filtrando por sucursal específica elegida")
+            else:
+                print("💥 ACCIÓN: Es Admin -> Viendo TODO (Sin restricción de sucursal)")
         else:
             query = query.filter(models.MovimientoCaja.sucursal_id == current_user.sucursal_id)
+            print(f"💥 ACCIÓN: Es Personal -> Forzando bloqueo a sucursal {current_user.sucursal_id}")
+        print("="*50 + "\n")
 
         # Filtro de fechas (Necesario para el loadCaja del frontend)
         if fecha_desde:
