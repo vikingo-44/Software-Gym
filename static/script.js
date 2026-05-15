@@ -3152,6 +3152,10 @@ if (editorForm) {
 			const inputHasta = document.getElementById('caja-filtro-hasta');
 			const inputDescFiltro = document.getElementById('caja-filtro-desc');
 			const inputDetalleFiltro = document.getElementById('caja-filtro-detalle');
+			
+			// ⚔️ CAPTURA DE SUCURSAL: Clave para el perfil Administrador
+			const sucursalSelect = document.getElementById('caja-filtro-sucursal');
+			const sucursalIdVal = sucursalSelect ? sucursalSelect.value : "";
 
 			// 1. Seteo de HOY en formato LOCAL YYYY-MM-DD
 			const timezoneOffset = new Date().getTimezoneOffset() * 60000;
@@ -3160,8 +3164,15 @@ if (editorForm) {
 			if (inputDesde && !inputDesde.value) inputDesde.value = hoyLocal;
 			if (inputHasta && !inputHasta.value) inputHasta.value = hoyLocal;
 
-			// 2. Traer los movimientos de la API
-			const movs = await apiFetch('/caja/movimientos');
+			// 2. CONSTRUCCIÓN DE URL CON FILTROS DE SERVIDOR
+			// Mandamos fechas y sucursal al backend para que la DB haga el trabajo pesado
+			const fDesde = inputDesde.value;
+			const fHasta = inputHasta.value;
+			let url = `/caja/movimientos?fecha_desde=${fDesde}&fecha_hasta=${fHasta}`;
+			if (sucursalIdVal) url += `&sucursal_id=${sucursalIdVal}`;
+			
+			// Traer los movimientos de la API
+			const movs = await apiFetch(url);
 			
 			let calcIngresos = 0;
 			let calcGastos = 0;
@@ -3169,12 +3180,16 @@ if (editorForm) {
 
 			if (!Array.isArray(movs)) return;
 
-			// Valores de filtros de búsqueda avanzados (normalizados a minúsculas)
+			// Valores de filtros de búsqueda avanzados (normalizados)
 			const valDesc = (inputDescFiltro?.value || "").toLowerCase().trim();
 			const valDetalle = (inputDetalleFiltro?.value || "").toLowerCase().trim();
 
-			// 3. FILTRADO CORREGIDO E INTELIGENTE (Basado en Local Time + Filtros avanzados)
+			// 3. FILTRADO CORREGIDO E INTELIGENTE (Frontend)
 			const filtrados = movs.filter(m => {
+				// ⚔️ FILTRO DE SUCURSAL FRONTE-END: 
+				// Si el admin eligió una sede, ocultamos lo que no coincida (por si el backend mandó de más)
+				if (sucursalIdVal !== "" && String(m.sucursal_id) !== String(sucursalIdVal)) return false;
+
 				if (!m.fecha) return false;
 
 				let fechaZ = m.fecha;
@@ -3187,20 +3202,20 @@ if (editorForm) {
 				const mm = String(d.getMonth() + 1).padStart(2, '0');
 				const dd = String(d.getDate()).padStart(2, '0');
 				const fechaMovLocal = `${yyyy}-${mm}-${dd}`;
-									
-				// Filtro de rango de fechas
+													
+				// Filtro de rango de fechas (Doble validación)
 				if (fechaMovLocal < inputDesde.value || fechaMovLocal > inputHasta.value) return false;
 
-				// Filtro Búsqueda en Descripción (Columna 3) - Verificación robusta de nulos
+				// Filtro Búsqueda en Descripción
 				const descMov = (m.descripcion || "").toLowerCase();
 				if (valDesc && !descMov.includes(valDesc)) return false;
 
-				// Filtro Búsqueda en Detalle (Columna 4 - descripcion2) - Verificación robusta de nulos
+				// Filtro Búsqueda en Detalle (descripcion2)
 				const detMov = (m.descripcion2 || "").toLowerCase();
 				if (valDetalle && !detMov.includes(valDetalle)) return false;
 
-				// Filtro Método de Pago (Chips múltiples)
-				if (window.filtrosCaja.metodos.length > 0) {
+				// Filtro Método de Pago
+				if (window.filtrosCaja && window.filtrosCaja.metodos && window.filtrosCaja.metodos.length > 0) {
 					const metodoActual = m.metodo_pago || 'Efectivo';
 					if (!window.filtrosCaja.metodos.includes(metodoActual)) return false;
 				}
@@ -3208,10 +3223,10 @@ if (editorForm) {
 				return true;
 			});
 
-			// 4. Renderizado de Tabla (7 Columnas: Fecha | Tipo | Desc | Detalle | Metodo | Cuotas | Monto)
+			// 4. Renderizado de Tabla (7 Columnas)
 			if (table) {
 				if (filtrados.length > 0) {
-					// Ordenamos por fecha descendente (más nuevos primero)
+					// Ordenamos por fecha descendente
 					filtrados.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
 
 					table.innerHTML = filtrados.map(m => {
@@ -3220,7 +3235,7 @@ if (editorForm) {
 						const metodo = m.metodo_pago || 'Efectivo';
 						const cuotas = parseInt(m.cuotas) || 1;
 						
-						// Lógica de Clasificación (Ingreso vs Egreso) para totales y colores
+						// Lógica de Clasificación (Ingreso vs Egreso)
 						const esEgresoManual = tipoRaw === 'egreso' || tipoRaw === 'gasto' || tipoRaw === 'compra' || tipoRaw === 'salida';
 						const esIngresoManual = tipoRaw === 'ingreso' || tipoRaw === 'entrada';
 						const esPositivo = esIngresoManual || ((tipoRaw.includes('mercaderia') || tipoRaw.includes('plan') || tipoRaw.includes('venta') || tipoRaw.includes('cobro')) && !tipoRaw.includes('compra'));
@@ -3232,27 +3247,22 @@ if (editorForm) {
 						const flujoTexto = esEgreso ? 'EGRESO' : 'INGRESO';
 						const flujoColor = esEgreso ? 'bg-red-500/10 text-red-500 border-red-500/20' : 'bg-green-500/10 text-green-500 border-green-500/20';
 
-						// --- LÓGICA DE ORGANIZACIÓN DE COLUMNAS (MANTENIDA SEGUN TU BASE) ---
 						let categoriaTag = m.tipo || 'Movimiento';
 						let infoPrincipal = m.descripcion || '-';
-						let notaManual = m.descripcion2 || ''; // Recibimos la nueva columna de notas manuales
+						let notaManual = m.descripcion2 || '';
 
-						// Si es un plan (Renovación o Nuevo)
 						if (tipoRaw.includes('plan')) {
 							categoriaTag = "Plan GymFit";
 							infoPrincipal = (m.descripcion || '').replace(/Cobro Plan\s*/i, '').replace(/Renovación\s*/i, '').trim();
 						} 
-						// Si es venta de productos (Stock)
 						else if (tipoRaw.includes('mercaderia') || tipoRaw.includes('venta')) {
 							categoriaTag = "Venta Stock";
 							infoPrincipal = (m.descripcion || '').replace(/Venta Insumo:\s*/i, '').trim();
 						}
-						// Si es compra para reponer stock
 						else if (tipoRaw.includes('compra')) {
 							categoriaTag = "Reposición";
 							infoPrincipal = (m.descripcion || '').replace(/Compra Stock:\s*/i, '').trim();
 						}
-						// Si es un movimiento manual de caja
 						else if (esIngresoManual) {
 							categoriaTag = "Ingreso Manual";
 						}
@@ -3261,9 +3271,9 @@ if (editorForm) {
 						}
 
 						// Formateo de Fecha y Hora Local
-						let fechaZ = m.fecha;
-						if (!fechaZ.endsWith('Z') && !fechaZ.includes('+')) fechaZ += 'Z';
-						const d = new Date(fechaZ);
+						let fZ = m.fecha;
+						if (!fZ.endsWith('Z') && !fZ.includes('+')) fZ += 'Z';
+						const d = new Date(fZ);
 						const fDisplay = String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0');
 						const hDisplay = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
 
@@ -3284,11 +3294,9 @@ if (editorForm) {
 							<td class="py-4">
 								<span class="px-2 py-0.5 rounded border text-[8px] font-black uppercase tracking-wider ${flujoColor}">${flujoTexto}</span>
 							</td>
-							<!-- DESCRIPCIÓN: Muestra el Alumno, Producto o Motivo -->
 							<td class="py-4 text-white text-[10px] font-black uppercase tracking-tight">
 								${infoPrincipal}
 							</td>
-							<!-- DETALLE: Muestra la Categoría y la Nota Manual (descripcion2) -->
 							<td class="py-4 text-white/40 text-[9px] font-bold uppercase italic">
 								<span class="text-white/60 block mb-0.5">${categoriaTag}</span>
 								<span class="text-red-600/60">${notaManual}</span>
@@ -3312,29 +3320,25 @@ if (editorForm) {
 				}
 			}
 
-			// 5. Totales (Con restricción para Perfil Administracion)
-            const calcBalance = calcIngresos - calcGastos;
-            
-            // Leemos el usuario de la sesión (clave 'viking_user' según tu handleLogin)
-            const datosUsuario = JSON.parse(localStorage.getItem('viking_user') || '{}');
-            const nombreRol = (datosUsuario.rol_nombre || "").toLowerCase().trim();
-            const divTotales = document.getElementById('contenedor-totales-caja');
+			// 5. TOTALES (Con restricción para Perfil Administracion)
+			const calcBalance = calcIngresos - calcGastos;
+			const datosUsuario = JSON.parse(localStorage.getItem('viking_user') || '{}');
+			const nombreRol = (datosUsuario.rol_nombre || "").toLowerCase().trim();
+			const divTotales = document.getElementById('contenedor-totales-caja');
 
-            if (nombreRol === "administracion") {
-                // Si es el staff de recepción, ocultamos el bloque de saldos por completo
-                if (divTotales) divTotales.style.setProperty('display', 'none', 'important');
-            } else {
-                // Si es Administrador o Supervisor, mostramos los saldos normalmente
-                if (divTotales) divTotales.style.setProperty('display', 'grid', 'important');
-                
-                if(document.getElementById('caja-ingresos')) document.getElementById('caja-ingresos').innerText = `$ ${calcIngresos.toLocaleString()}`;
-                if(document.getElementById('caja-gastos')) document.getElementById('caja-gastos').innerText = `$ ${calcGastos.toLocaleString()}`;
-                if(document.getElementById('caja-balance')) {
-                    const eb = document.getElementById('caja-balance');
-                    eb.innerText = `$ ${calcBalance.toLocaleString()}`;
-                    eb.className = `text-4xl font-black italic ${calcBalance >= 0 ? 'text-green-500' : 'text-red-500'}`;
-                }
-            }
+			if (nombreRol === "administracion") {
+				if (divTotales) divTotales.style.setProperty('display', 'none', 'important');
+			} else {
+				if (divTotales) divTotales.style.setProperty('display', 'grid', 'important');
+				
+				if(document.getElementById('caja-ingresos')) document.getElementById('caja-ingresos').innerText = `$ ${calcIngresos.toLocaleString()}`;
+				if(document.getElementById('caja-gastos')) document.getElementById('caja-gastos').innerText = `$ ${calcGastos.toLocaleString()}`;
+				if(document.getElementById('caja-balance')) {
+					const eb = document.getElementById('caja-balance');
+					eb.innerText = `$ ${calcBalance.toLocaleString()}`;
+					eb.className = `text-4xl font-black italic ${calcBalance >= 0 ? 'text-green-500' : 'text-red-500'}`;
+				}
+			}
 		};
 
 		/**

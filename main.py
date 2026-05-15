@@ -1778,28 +1778,64 @@ async def ver_comprobante_alumno(comprobante_id: int, db: Session = Depends(data
     return HTMLResponse(content=html_content)
 
 # --- CAJA ---
+# --- CAJA (CORREGIDO PARA ADMINISTRADOR) ---
 @app.get("/api/caja/resumen", tags=["Finanzas"])
-def get_caja_resumen(db: Session = Depends(database.get_db), current_user = Depends(get_current_user)):
-    """Calcula el resumen financiero SOLO para la sucursal del usuario actual."""
-    ing = db.query(func.sum(models.MovimientoCaja.monto)).filter(
-        models.MovimientoCaja.tipo == "Ingreso",
-        models.MovimientoCaja.sucursal_id == current_user.sucursal_id
-    ).scalar() or 0
+def get_caja_resumen(sucursal_id: Optional[int] = None, db: Session = Depends(database.get_db), current_user = Depends(get_current_user)):
+    """
+    Calcula el resumen financiero.
+    Si es Administrador, puede ver el global o filtrar por sede.
+    Si es Staff, queda encerrado en su sucursal.
+    """
+    rol = str(getattr(current_user, 'rol_nombre', "")).strip()
     
-    egr = db.query(func.sum(models.MovimientoCaja.monto)).filter(
-        models.MovimientoCaja.tipo == "Egreso",
-        models.MovimientoCaja.sucursal_id == current_user.sucursal_id
-    ).scalar() or 0
+    query_ing = db.query(func.sum(models.MovimientoCaja.monto)).filter(models.MovimientoCaja.tipo == "Ingreso")
+    query_egr = db.query(func.sum(models.MovimientoCaja.monto)).filter(models.MovimientoCaja.tipo == "Egreso")
+
+    # ⚔️ LÓGICA DE PODER: El Admin salta el filtro automático
+    if rol == "Administrador":
+        if sucursal_id and sucursal_id > 0:
+            query_ing = query_ing.filter(models.MovimientoCaja.sucursal_id == sucursal_id)
+            query_egr = query_egr.filter(models.MovimientoCaja.sucursal_id == sucursal_id)
+    else:
+        # El staff común NO puede elegir sucursal
+        query_ing = query_ing.filter(models.MovimientoCaja.sucursal_id == current_user.sucursal_id)
+        query_egr = query_egr.filter(models.MovimientoCaja.sucursal_id == current_user.sucursal_id)
+
+    ing = query_ing.scalar() or 0
+    egr = query_egr.scalar() or 0
     
     return {"ingresos": float(ing), "gastos": float(egr), "balance": float(ing - egr)}
 
 @app.get("/api/caja/movimientos", tags=["Caja"])
-def get_movimientos(db: Session = Depends(database.get_db), current_user = Depends(get_current_user)):
-    """Lista los últimos 150 movimientos de la sucursal logueada."""
+def get_movimientos(
+    sucursal_id: Optional[int] = None, 
+    fecha_desde: Optional[str] = None, 
+    fecha_hasta: Optional[str] = None, 
+    db: Session = Depends(database.get_db), 
+    current_user = Depends(get_current_user)
+):
+    """
+    Lista movimientos con filtros de sucursal y rango de fechas.
+    Admin ve todo por defecto, Staff solo su sede.
+    """
     try:
-        movs = db.query(models.MovimientoCaja).filter(
-            models.MovimientoCaja.sucursal_id == current_user.sucursal_id
-        ).order_by(models.MovimientoCaja.fecha.desc()).limit(150).all()
+        rol = str(getattr(current_user, 'rol_nombre', "")).strip()
+        query = db.query(models.MovimientoCaja)
+
+        # ⚔️ FILTRO VIKINGO: Administrador ve todas las sedes si no elige una específica
+        if rol == "Administrador":
+            if sucursal_id is not None and sucursal_id > 0:
+                query = query.filter(models.MovimientoCaja.sucursal_id == sucursal_id)
+        else:
+            query = query.filter(models.MovimientoCaja.sucursal_id == current_user.sucursal_id)
+
+        # Filtro de fechas (Necesario para el loadCaja del frontend)
+        if fecha_desde:
+            query = query.filter(models.MovimientoCaja.fecha >= f"{fecha_desde} 00:00:00")
+        if fecha_hasta:
+            query = query.filter(models.MovimientoCaja.fecha <= f"{fecha_hasta} 23:59:59")
+
+        movs = query.order_by(models.MovimientoCaja.fecha.desc()).limit(500).all()
         return movs
     except Exception as e:
         logger.error(f"Error Crítico Caja: {str(e)}")
