@@ -5043,14 +5043,12 @@ if (editorForm) {
 				e.preventDefault(); 
 				const id = document.getElementById('plan-id').value;
 				
+				// ⚔️ CONFIGURACIÓN SINCRO: Enviamos las propiedades exactas que espera PlanUpdate en Pydantic
 				const data = { 
 					nombre: document.getElementById('plan-nombre').value, 
 					efectivo: parseFloat(document.getElementById('plan-efectivo').value || 0), 
 					transferencia: parseFloat(document.getElementById('plan-transferencia').value || 0), 
-					
-					// ⚔️ CORRECCIÓN AQUÍ: Cambiado 'debito_credito' por 'debito' (o 'tarjeta' según uses en la BD)
-					debito: parseFloat(document.getElementById('plan-debito').value || 0), 
-					
+					debito_credito: parseFloat(document.getElementById('plan-debito').value || 0), // Volvemos al nombre correcto
 					tipo_plan_id: parseInt(document.getElementById('plan-tipo').value),
 					clases_mensuales: parseInt(document.getElementById('plan-clases').value || 0) 
 				};
