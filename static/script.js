@@ -3153,9 +3153,22 @@ if (editorForm) {
 			const inputDescFiltro = document.getElementById('caja-filtro-desc');
 			const inputDetalleFiltro = document.getElementById('caja-filtro-detalle');
 			
-			// ⚔️ CAPTURA DE SUCURSAL DINÁMICA (Desde tu nuevo componente HTML)
+			// ⚔️ CAPTURA DE SUCURSAL: Clave para el perfil Administrador
 			const sucursalSelect = document.getElementById('caja-filtro-sucursal');
 			const sucursalIdVal = sucursalSelect ? sucursalSelect.value : "";
+
+			// Muestra u oculta el contenedor en base al rol guardado en localStorage
+			const datosUsuario = JSON.parse(localStorage.getItem('viking_user') || '{}');
+			const nombreRol = (datosUsuario.rol_nombre || "").toLowerCase().trim();
+			const contenedorSucursal = document.getElementById('contenedor-filtro-sucursal-caja');
+			
+			if (contenedorSucursal) {
+				if (["administrador", "admin", "dueño", "supervisor"].includes(nombreRol)) {
+					contenedorSucursal.classList.remove('hidden');
+				} else {
+					contenedorSucursal.classList.add('hidden');
+				}
+			}
 
 			// 1. Seteo de HOY en formato LOCAL YYYY-MM-DD
 			const timezoneOffset = new Date().getTimezoneOffset() * 60000;
@@ -3167,9 +3180,7 @@ if (editorForm) {
 			// 2. CONSTRUCCIÓN DE URL CON FILTROS DE SERVIDOR
 			const fDesde = inputDesde.value;
 			const fHasta = inputHasta.value;
-			
-			// Agregamos un cache_bust para asegurar que Render no devuelva data vieja en conexiones rápidas
-			let url = `/caja/movimientos?fecha_desde=${fDesde}&fecha_hasta=${fHasta}&_cb=${Date.now()}`;
+			let url = `/caja/movimientos?fecha_desde=${fDesde}&fecha_hasta=${fHasta}`;
 			if (sucursalIdVal) url += `&sucursal_id=${sucursalIdVal}`;
 			
 			// Traer los movimientos de la API
@@ -3187,8 +3198,6 @@ if (editorForm) {
 
 			// 3. FILTRADO CORREGIDO E INTELIGENTE (Frontend)
 			const filtrados = movs.filter(m => {
-				// ⚔️ CONTROL FRONTE-END DE SUCURSAL:
-				// Si elegiste una sede específica, barremos cualquier registro que no matchee
 				if (sucursalIdVal !== "" && String(m.sucursal_id) !== String(sucursalIdVal)) return false;
 
 				if (!m.fecha) return false;
@@ -3204,7 +3213,7 @@ if (editorForm) {
 				const dd = String(d.getDate()).padStart(2, '0');
 				const fechaMovLocal = `${yyyy}-${mm}-${dd}`;
 													
-				// Filtro de rango de fechas (Doble validación de seguridad)
+				// Filtro de rango de fechas (Doble validación)
 				if (fechaMovLocal < inputDesde.value || fechaMovLocal > inputHasta.value) return false;
 
 				// Filtro Búsqueda en Descripción
@@ -3215,7 +3224,7 @@ if (editorForm) {
 				const detMov = (m.descripcion2 || "").toLowerCase();
 				if (valDetalle && !detMov.includes(valDetalle)) return false;
 
-				// Filtro Método de Pago (Validación robusta contra array de chips de la app)
+				// Filtro Método de Pago
 				if (window.filtrosCaja && window.filtrosCaja.metodos && window.filtrosCaja.metodos.length > 0) {
 					const metodoActual = m.metodo_pago || 'Efectivo';
 					if (!window.filtrosCaja.metodos.includes(metodoActual)) return false;
@@ -3227,7 +3236,6 @@ if (editorForm) {
 			// 4. Renderizado de Tabla (7 Columnas)
 			if (table) {
 				if (filtrados.length > 0) {
-					// Ordenamos por fecha descendente (más nuevos arriba siempre)
 					filtrados.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
 
 					table.innerHTML = filtrados.map(m => {
@@ -3236,13 +3244,11 @@ if (editorForm) {
 						const metodo = m.metodo_pago || 'Efectivo';
 						const cuotas = parseInt(m.cuotas) || 1;
 						
-						// Lógica de Clasificación de ND TRAINING (Ingreso vs Egreso)
 						const esEgresoManual = tipoRaw === 'egreso' || tipoRaw === 'gasto' || tipoRaw === 'compra' || tipoRaw === 'salida';
 						const esIngresoManual = tipoRaw === 'ingreso' || tipoRaw === 'entrada';
 						const esPositivo = esIngresoManual || ((tipoRaw.includes('mercaderia') || tipoRaw.includes('plan') || tipoRaw.includes('venta') || tipoRaw.includes('cobro')) && !tipoRaw.includes('compra'));
 						const esEgreso = !esPositivo && (esEgresoManual || tipoRaw.includes('compra') || tipoRaw.includes('pago'));
 
-						// Acumulamos totales según la clasificación limpia
 						if (esEgreso) calcGastos += monto;
 						else calcIngresos += monto;
 
@@ -3272,7 +3278,6 @@ if (editorForm) {
 							categoriaTag = "Gasto Extra";
 						}
 
-						// Formateo de Fecha y Hora Local
 						let fZ = m.fecha;
 						if (!fZ.endsWith('Z') && !fZ.includes('+')) fZ += 'Z';
 						const d = new Date(fZ);
@@ -3322,17 +3327,13 @@ if (editorForm) {
 				}
 			}
 
-			// 5. TOTALES (Con restricción para Perfil Administracion de recepción)
+			// 5. TOTALES (Con restricción para Perfil Administracion)
 			const calcBalance = calcIngresos - calcGastos;
-			const datosUsuario = JSON.parse(localStorage.getItem('viking_user') || '{}');
-			const nombreRol = (datosUsuario.rol_nombre || "").toLowerCase().trim();
 			const divTotales = document.getElementById('contenedor-totales-caja');
 
 			if (nombreRol === "administracion") {
-				// Ocultar saldos al personal de recepción de sucursal
 				if (divTotales) divTotales.style.setProperty('display', 'none', 'important');
 			} else {
-				// Mostrar grilla de totales al Dueño / Admin Maestro
 				if (divTotales) divTotales.style.setProperty('display', 'grid', 'important');
 				
 				if(document.getElementById('caja-ingresos')) document.getElementById('caja-ingresos').innerText = `$ ${calcIngresos.toLocaleString()}`;
@@ -3345,17 +3346,10 @@ if (editorForm) {
 			}
 		};
 
-		/**
-		* SISTEMA DE CAJA VIKINGA - FILTROS PRO
-		* Gestión de estado para filtros de columna
-		*/
 		window.filtrosCaja = {
-			metodos: [] // Lista de métodos seleccionados para filtrar
+			metodos: [] 
 		};
 
-		/**
-		* Función para alternar los métodos en el filtro múltiple
-		*/
 		window.toggleMetodoFiltro = function(metodo, btn) {
 			const idx = window.filtrosCaja.metodos.indexOf(metodo);
 			if (idx > -1) {
@@ -3365,34 +3359,30 @@ if (editorForm) {
 				window.filtrosCaja.metodos.push(metodo);
 				btn.classList.add('active');
 			}
-			window.loadCaja(); // Recargar con el nuevo filtro
+			window.loadCaja(); 
 		};
 
-		/**
-		* Resetea todos los filtros a su estado inicial
-		* Se mantiene tu base original de fechas y se agrega la limpieza de buscadores/chips.
-		*/
 		window.resetFiltrosCaja = function() {
 			const timezoneOffset = new Date().getTimezoneOffset() * 60000;
 			const hoy = new Date(Date.now() - timezoneOffset).toISOString().split('T')[0];
 			
-			// Limpieza de Fechas (Tu base original)
 			const inputDesde = document.getElementById('caja-filtro-desde');
 			const inputHasta = document.getElementById('caja-filtro-hasta');
 			if (inputDesde) inputDesde.value = hoy;
 			if (inputHasta) inputHasta.value = hoy;
 			
-			// Limpieza de Buscadores de Texto
 			const inputDesc = document.getElementById('caja-filtro-desc');
 			const inputDetalle = document.getElementById('caja-filtro-detalle');
 			if (inputDesc) inputDesc.value = "";
 			if (inputDetalle) inputDetalle.value = "";
 			
-			// Limpieza de Filtros de Método
+			// ⚔️ FIX DE RESET: Devolvemos el selector de sucursal al estado global
+			const selectCaja = document.getElementById('caja-filter-sucursal');
+			if (selectCaja) selectCaja.value = "";
+			
 			window.filtrosCaja.metodos = [];
 			document.querySelectorAll('.metodo-chip').forEach(btn => btn.classList.remove('active'));
 			
-			// Recarga (Tu base original)
 			window.loadCaja();
 		};
 
@@ -5623,17 +5613,17 @@ if (editorForm) {
 				});
 				
 				if (!response.ok) throw new Error("Error en API");
-				const sucursales = await response.json();
+				const sucursalData = await response.json();
 
 				// Guardar en el estado global
-				state.sucursales = sucursales; 
+				state.sucursales = sucursalData; 
 				
 				// 1. Renderizar Tarjetas en la vista de Sucursales
 				const container = document.getElementById('sucursales-container');
 				if (container) {
-					container.innerHTML = sucursales.length === 0 
+					container.innerHTML = sucursalData.length === 0 
 						? '<div class="col-span-full py-20 text-center opacity-30 italic font-black uppercase"><i data-lucide="map-pin-off" class="w-12 h-12 mx-auto mb-4"></i><p>No hay sedes registradas</p></div>'
-						: sucursales.map(s => `
+						: sucursalData.map(s => `
 							<div class="glass-card p-8 rounded-[2.5rem] border border-white/5 hover:border-red-600/30 transition-all group relative overflow-hidden">
 								<div class="flex justify-between items-start mb-6">
 									<div class="p-4 bg-red-600/10 rounded-2xl text-red-500 group-hover:bg-red-600 group-hover:text-black transition-all">
@@ -5648,23 +5638,23 @@ if (editorForm) {
 							</div>`).join('');
 				}
 
-				// 2. Selectores de Filtro (Profesores, Administrativos, ALUMNOS y COBRO)
+				// 2. Selectores de Filtro de Personal, Alumnos, Cobros Y CAJA (Agregado acá)
 				const selectProf = document.getElementById('filter-sucursal-profesores');
 				const selectAdm = document.getElementById('filter-sucursal-administrativos');
 				const selectAlu = document.getElementById('filter-sucursal-alumnos');
-				const selectCob = document.getElementById('cobrar-sucursal-filter'); // <--- AGREGADO PARA COBRO
+				const selectCob = document.getElementById('cobrar-sucursal-filter'); 
+				const selectCaja = document.getElementById('caja-filtro-sucursal'); // <--- ⚔️ AGREGADO PARA TU FILTRO DE CAJA
 
-				[selectProf, selectAdm, selectAlu, selectCob].forEach(sel => {
+				[selectProf, selectAdm, selectAlu, selectCob, selectCaja].forEach(sel => {
 					if (sel) {
-						const current = sel.value || (sel.id === 'cobrar-sucursal-filter' ? "" : "all");
-						const firstOptionText = sel.id === 'cobrar-sucursal-filter' ? "TODAS LAS SEDES" : "TODAS LAS SEDES";
-						const firstOptionValue = sel.id === 'cobrar-sucursal-filter' ? "" : "all";
+						const current = sel.value || (sel.id === 'cobrar-sucursal-filter' || sel.id === 'caja-filtro-sucursal' ? "" : "all");
+						const firstOptionText = "TODAS LAS SEDES";
+						const firstOptionValue = (sel.id === 'cobrar-sucursal-filter' || sel.id === 'caja-filtro-sucursal') ? "" : "all";
 
 						sel.innerHTML = `<option value="${firstOptionValue}" class="bg-zinc-900 text-white font-black italic uppercase">${firstOptionText}</option>` + 
-							sucursales.map(s => `<option value="${s.id}" class="bg-zinc-900 text-white font-black italic uppercase">${s.sucursal.toUpperCase()}</option>`).join('');
+							sucursalData.map(s => `<option value="${s.id}" class="bg-zinc-900 text-white font-black italic uppercase">${s.sucursal.toUpperCase()}</option>`).join('');
 						sel.value = current;
 						
-						// Si es el selector de cobro, le asignamos el evento de render
 						if (sel.id === 'cobrar-sucursal-filter') {
 							sel.onchange = () => renderCobrar();
 						}
@@ -5676,7 +5666,7 @@ if (editorForm) {
 				if (selectAl) {
 					const currentVal = selectAl.value;
 					selectAl.innerHTML = '<option value="" class="bg-zinc-900 text-white">Seleccionar Sucursal...</option>' + 
-						sucursales.map(s => `<option value="${s.id}">${s.sucursal.toUpperCase()}</option>`).join('');
+						sucursalData.map(s => `<option value="${s.id}">${s.sucursal.toUpperCase()}</option>`).join('');
 					if(currentVal) selectAl.value = currentVal;
 				}
 
@@ -5685,12 +5675,12 @@ if (editorForm) {
 				const selectFiltroCl = document.getElementById('filtro-clases-sucursal');
 
 				if (selectCl) {
-					selectCl.innerHTML = sucursales.map(s => `<option value="${s.id}" class="bg-zinc-900 text-white font-bold italic uppercase">${s.sucursal.toUpperCase()}</option>`).join('');
+					selectCl.innerHTML = sucursalData.map(s => `<option value="${s.id}" class="bg-zinc-900 text-white font-bold italic uppercase">${s.sucursal.toUpperCase()}</option>`).join('');
 				}
 				if (selectFiltroCl) {
 					const current = selectFiltroCl.value || 'todas';
 					selectFiltroCl.innerHTML = '<option value="todas" class="bg-zinc-900 text-white font-bold italic uppercase">TODAS LAS SEDES</option>' + 
-						sucursales.map(s => `<option value="${s.id}" class="bg-zinc-900 text-white font-bold italic uppercase">${s.sucursal.toUpperCase()}</option>`).join('');
+						sucursalData.map(s => `<option value="${s.id}" class="bg-zinc-900 text-white font-bold italic uppercase">${s.sucursal.toUpperCase()}</option>`).join('');
 					selectFiltroCl.value = current;
 				}
 
