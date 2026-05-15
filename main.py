@@ -1824,31 +1824,31 @@ def get_movimientos(
     db: Session = Depends(database.get_db), 
     current_user = Depends(get_current_user)
 ):
-    """
-    Lista movimientos con filtros de sucursal y rango de fechas.
-    """
     try:
         rol = str(getattr(current_user, 'rol_nombre', "")).strip()
         query = db.query(models.MovimientoCaja)
 
-        # 1. FILTRADO POR ROL Y SUCURSAL
+        # --- 1. FILTRADO POR ROL Y SUCURSAL (Lógica Blindada) ---
         if rol == "Administrador":
-            if sucursal_id and sucursal_id > 0:
+            if sucursal_id is not None and sucursal_id > 0:
+                # Si el Admin elige una sede, filtramos por esa
                 query = query.filter(models.MovimientoCaja.sucursal_id == sucursal_id)
+            else:
+                # Si no elige (sucursal_id es None o 0), NO aplicamos filtro.
+                # Esto garantiza que traiga TODAS las sucursales.
+                pass 
         else:
+            # Si no es Admin, forzamos sucursal del usuario
             query = query.filter(models.MovimientoCaja.sucursal_id == current_user.sucursal_id)
 
-        # 2. FILTRADO POR FECHAS (Importante para que coincida con el JS)
+        # --- 2. FILTRADO POR FECHAS ---
         if fecha_desde:
-            # Asumimos formato YYYY-MM-DD del input date
-            query = query.filter(models.MovimientoCaja.fecha >= fecha_desde)
+            query = query.filter(models.MovimientoCaja.fecha >= f"{fecha_desde} 00:00:00")
         if fecha_hasta:
-            # Agregamos 23:59:59 para incluir todo el día final
             query = query.filter(models.MovimientoCaja.fecha <= f"{fecha_hasta} 23:59:59")
 
-        # 3. ORDEN Y LÍMITE (Aumentamos a 300 por si hay muchos movimientos en el rango)
-        movs = query.order_by(models.MovimientoCaja.fecha.desc()).limit(300).all()
-        
+        # --- 3. EJECUCIÓN ---
+        movs = query.order_by(models.MovimientoCaja.fecha.desc()).limit(500).all()
         return movs
         
     except Exception as e:

@@ -3179,7 +3179,8 @@ if (editorForm) {
 			const fDesde = inputDesde.value;
 			const fHasta = inputHasta.value;
 			
-			// Armamos la query con fechas y sucursal para que el backend busque bien en la DB
+			// Armamos la query enviando fechas y sucursal al servidor
+			// Si sucursalIdVal es vacío, el backend (siendo Admin) traerá todo de todas las sedes
 			let url = `/caja/movimientos?fecha_desde=${fDesde}&fecha_hasta=${fHasta}`;
 			if (sucursalIdVal) url += `&sucursal_id=${sucursalIdVal}`;
 			
@@ -3198,7 +3199,8 @@ if (editorForm) {
 
 			// 3. FILTRADO CORREGIDO E INTELIGENTE
 			const filtrados = movs.filter(m => {
-				// ⚔️ FILTRO DE SUCURSAL INTEGRADO (Para el Administrador)
+				// ⚔️ FILTRO DE SUCURSAL INTEGRADO (Doble check en JS)
+				// Usamos comparación flexible (==) porque el ID de la DB puede ser número y sucursalIdVal es string
 				if (sucursalIdVal !== "" && m.sucursal_id != sucursalIdVal) return false;
 
 				if (!m.fecha) return false;
