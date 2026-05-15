@@ -911,6 +911,22 @@
 								<button onclick="window.toggleMetodoFiltro('T. Credito', this)" class="metodo-chip px-3 py-1.5 rounded-lg border border-white/10 bg-white/5 text-[9px] font-black uppercase text-white/40 hover:border-red-600 transition-all">Crédito</button>
 							</div>
 						</div>
+
+						<div id="contenedor-filtro-sucursal-caja" class="space-y-4 hidden">
+							<p class="text-[10px] font-black text-white/40 uppercase tracking-widest ml-1 flex items-center gap-2">
+								<i data-lucide="map-pin" class="w-3 h-3 text-red-600"></i> Sucursal
+							</p>
+							<div class="relative">
+								<select id="caja-filtro-sucursal" onchange="window.loadCaja()"
+									class="bg-black/40 text-white text-[10px] font-black p-3 rounded-xl border border-white/10 w-full outline-none focus:border-red-600 appearance-none cursor-pointer italic uppercase">
+									<option value="">TODAS LAS SEDES</option>
+								</select>
+								<div class="absolute inset-y-0 right-0 flex items-center px-3 pointer-events-none opacity-20">
+									<i data-lucide="chevron-down" class="w-3 h-3 text-white"></i>
+								</div>
+							</div>
+						</div>
+
 					</div>
 
 					<div class="flex flex-col lg:flex-row items-center justify-between gap-6 mb-8 border-b border-white/5 pb-8">
