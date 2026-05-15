@@ -1779,77 +1779,28 @@ async def ver_comprobante_alumno(comprobante_id: int, db: Session = Depends(data
 
 # --- CAJA ---
 @app.get("/api/caja/resumen", tags=["Finanzas"])
-def get_caja_resumen(sucursal_id: Optional[int] = None, db: Session = Depends(database.get_db), current_user = Depends(get_current_user)):
-    """
-    Calcula el resumen financiero.
-    Si es Administrador, calcula el total global o de la sede elegida.
-    Si es Staff, calcula solo lo de su sucursal.
-    """
-    # 1. Identificamos el rol
-    rol = str(getattr(current_user, 'rol_nombre', "")).strip()
+def get_caja_resumen(db: Session = Depends(database.get_db), current_user = Depends(get_current_user)):
+    """Calcula el resumen financiero SOLO para la sucursal del usuario actual."""
+    ing = db.query(func.sum(models.MovimientoCaja.monto)).filter(
+        models.MovimientoCaja.tipo == "Ingreso",
+        models.MovimientoCaja.sucursal_id == current_user.sucursal_id
+    ).scalar() or 0
     
-    # 2. Preparamos las consultas base
-    query_ing = db.query(func.sum(models.MovimientoCaja.monto)).filter(models.MovimientoCaja.tipo == "Ingreso")
-    query_egr = db.query(func.sum(models.MovimientoCaja.monto)).filter(models.MovimientoCaja.tipo == "Egreso")
-
-    # 3. Lógica de Filtrado por Rol
-    if rol == "Administrador":
-        if sucursal_id and sucursal_id > 0:
-            # Si el Admin quiere ver una sede puntual
-            query_ing = query_ing.filter(models.MovimientoCaja.sucursal_id == sucursal_id)
-            query_egr = query_egr.filter(models.MovimientoCaja.sucursal_id == sucursal_id)
-        else:
-            # Si el Admin quiere ver el GLOBAL (todas las sedes), no agregamos filtro de sucursal
-            pass
-    else:
-        # Para el resto, filtro obligatorio por su sede asignada
-        query_ing = query_ing.filter(models.MovimientoCaja.sucursal_id == current_user.sucursal_id)
-        query_egr = query_egr.filter(models.MovimientoCaja.sucursal_id == current_user.sucursal_id)
-
-    # 4. Ejecución
-    ing = query_ing.scalar() or 0
-    egr = query_egr.scalar() or 0
+    egr = db.query(func.sum(models.MovimientoCaja.monto)).filter(
+        models.MovimientoCaja.tipo == "Egreso",
+        models.MovimientoCaja.sucursal_id == current_user.sucursal_id
+    ).scalar() or 0
     
-    return {
-        "ingresos": float(ing), 
-        "gastos": float(egr), 
-        "balance": float(ing - egr)
-    }
+    return {"ingresos": float(ing), "gastos": float(egr), "balance": float(ing - egr)}
 
 @app.get("/api/caja/movimientos", tags=["Caja"])
-def get_movimientos(
-    sucursal_id: Optional[int] = None, 
-    fecha_desde: Optional[str] = None, 
-    fecha_hasta: Optional[str] = None, 
-    db: Session = Depends(database.get_db), 
-    current_user = Depends(get_current_user)
-):
+def get_movimientos(db: Session = Depends(database.get_db), current_user = Depends(get_current_user)):
+    """Lista los últimos 150 movimientos de la sucursal logueada."""
     try:
-        # Limpiamos el rol por si hay espacios o mayúsculas raras
-        rol = str(getattr(current_user, 'rol_nombre', "")).strip()
-        query = db.query(models.MovimientoCaja)
-
-        # ⚔️ LÓGICA DE PODER EXCLUSIVA
-        if rol == "Administrador":
-            # Si el Admin mandó una sucursal específica (ID > 0), filtramos.
-            # Si mandó 0, None, o "Todas", NO agregamos ningún filtro de sucursal.
-            if sucursal_id is not None and sucursal_id > 0:
-                query = query.filter(models.MovimientoCaja.sucursal_id == sucursal_id)
-            # Aquí NO hay else. Si no hay sucursal_id, la query queda libre (ve TODO).
-        else:
-            # Si NO es administrador, lo encerramos en su sede sí o sí.
-            query = query.filter(models.MovimientoCaja.sucursal_id == current_user.sucursal_id)
-
-        # 2. FILTRADO POR FECHAS (Indispensable para encontrar los movimientos de hoy 15/05)
-        if fecha_desde:
-            query = query.filter(models.MovimientoCaja.fecha >= f"{fecha_desde} 00:00:00")
-        if fecha_hasta:
-            query = query.filter(models.MovimientoCaja.fecha <= f"{fecha_hasta} 23:59:59")
-
-        # 3. EJECUCIÓN CON LÍMITE DE SEGURIDAD
-        movs = query.order_by(models.MovimientoCaja.fecha.desc()).limit(500).all()
+        movs = db.query(models.MovimientoCaja).filter(
+            models.MovimientoCaja.sucursal_id == current_user.sucursal_id
+        ).order_by(models.MovimientoCaja.fecha.desc()).limit(150).all()
         return movs
-        
     except Exception as e:
         logger.error(f"Error Crítico Caja: {str(e)}")
         return []
