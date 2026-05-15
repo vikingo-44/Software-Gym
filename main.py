@@ -877,7 +877,7 @@ def get_historial_accesos(db: Session = Depends(database.get_db), current_user =
         return []
 
 # --- ALUMNOS ---
-@app.get("/api/alumnos", tags=["Alumnos"]) # ⚔️ Quitamos el response_model para que no filtre
+@app.get("/api/alumnos", tags=["Alumnos"])
 def get_alumnos(db: Session = Depends(database.get_db)):
     try:
         alumnos_db = db.query(models.Usuario).options(
@@ -889,7 +889,7 @@ def get_alumnos(db: Session = Depends(database.get_db)):
         resultado = []
 
         for al in alumnos_db:
-            # Construimos el objeto a mano para asegurar que NADA falte
+            # Construimos el objeto asegurando que el PLAN no se quede afuera
             alumno_dict = {
                 "id": al.id,
                 "dni": al.dni,
@@ -901,14 +901,24 @@ def get_alumnos(db: Session = Depends(database.get_db)):
                 "peso": al.peso,
                 "altura": al.altura,
                 "imc": al.imc,
-                "fecha_nacimiento": al.fecha_nacimiento.isoformat() if al.fecha_nacimiento else None, # ⚔️ FORZAMOS EL DATO
+                "fecha_nacimiento": al.fecha_nacimiento.isoformat() if al.fecha_nacimiento else None,
                 "fecha_certificado": al.fecha_certificado.isoformat() if al.fecha_certificado else None,
                 "certificado_entregado": al.certificado_entregado,
                 "rol_nombre": al.perfil.nombre if al.perfil else "Alumno",
-                "fecha_vencimiento": al.fecha_vencimiento.isoformat() if al.fecha_vencimiento else None
+                "fecha_vencimiento": al.fecha_vencimiento.isoformat() if al.fecha_vencimiento else None,
+                
+                # ⚔️ FUNDAMENTAL: Enviamos la fecha de renovación requerida por el JS
+                "fecha_ultima_renovacion": al.fecha_ultima_renovacion.isoformat() if getattr(al, 'fecha_ultima_renovacion', None) else None,
+                
+                # ⚔️ CORRECCIÓN: Volvemos a inyectar el objeto plan que el frontend necesita leer
+                "plan": {
+                    "id": al.plan.id,
+                    "nombre": al.plan.nombre,
+                    "clases_mensuales": al.plan.clases_mensuales
+                } if al.plan else None
             }
 
-            # Recálculo de estado
+            # Recálculo de estado de cuenta
             if al.fecha_vencimiento:
                 alumno_dict["estado_cuenta"] = "Activo" if al.fecha_vencimiento >= hoy else "Caducado"
             else:
@@ -920,7 +930,6 @@ def get_alumnos(db: Session = Depends(database.get_db)):
     except Exception as e:
         logger.error(f"Error Crítico Alumnos: {str(e)}")
         return []
-
 
 @app.get("/api/alumnos/{id}/ficha", tags=["Alumnos"])
 def get_ficha_tecnica(id: int, db: Session = Depends(database.get_db)):
