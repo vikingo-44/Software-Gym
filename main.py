@@ -1794,7 +1794,7 @@ def get_caja_resumen(sucursal_id: Optional[int] = None, db: Session = Depends(da
 
     # 3. Lógica de Filtrado por Rol
     if rol == "Administrador":
-        if sucursal_id:
+        if sucursal_id and sucursal_id > 0:
             # Si el Admin quiere ver una sede puntual
             query_ing = query_ing.filter(models.MovimientoCaja.sucursal_id == sucursal_id)
             query_egr = query_egr.filter(models.MovimientoCaja.sucursal_id == sucursal_id)

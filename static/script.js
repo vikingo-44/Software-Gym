@@ -3148,188 +3148,210 @@ if (editorForm) {
 		};
 
 		window.loadCaja = async function() {
-			const inputDesde = document.getElementById('caja-filtro-desde');
-			const inputHasta = document.getElementById('caja-filtro-hasta');
-			const inputDescFiltro = document.getElementById('caja-filtro-desc');
-			const inputDetalleFiltro = document.getElementById('caja-filtro-detalle');
-			
-			// ⚔️ Capturamos el selector de sucursal
-			const sucursalSelect = document.getElementById('caja-filtro-sucursal');
-			const sucursalIdVal = sucursalSelect ? sucursalSelect.value : "";
+            const inputDesde = document.getElementById('caja-filtro-desde');
+            const inputHasta = document.getElementById('caja-filtro-hasta');
+            const inputDescFiltro = document.getElementById('caja-filtro-desc');
+            const inputDetalleFiltro = document.getElementById('caja-filtro-detalle');
+            
+            // ⚔️ Capturamos el selector de sucursal
+            const sucursalSelect = document.getElementById('caja-filtro-sucursal');
+            const sucursalIdVal = sucursalSelect ? sucursalSelect.value : "";
 
-			// 1. Seteo de HOY en formato LOCAL YYYY-MM-DD
-			const timezoneOffset = new Date().getTimezoneOffset() * 60000;
-			const hoyLocal = new Date(Date.now() - timezoneOffset).toISOString().split('T')[0];
-			
-			if (inputDesde && !inputDesde.value) inputDesde.value = hoyLocal;
-			if (inputHasta && !inputHasta.value) inputHasta.value = hoyLocal;
+            // 1. Seteo de HOY en formato LOCAL YYYY-MM-DD
+            const timezoneOffset = new Date().getTimezoneOffset() * 60000;
+            const hoyLocal = new Date(Date.now() - timezoneOffset).toISOString().split('T')[0];
+            
+            if (inputDesde && !inputDesde.value) inputDesde.value = hoyLocal;
+            if (inputHasta && !inputHasta.value) inputHasta.value = hoyLocal;
 
-			// --- LÓGICA DE FILTRO POR ROL (Administrador ve el selector) ---
-			const datosUsuario = JSON.parse(localStorage.getItem('viking_user') || '{}');
-			const nombreRol = (datosUsuario.rol_nombre || "").trim();
-			const contSuc = document.getElementById('contenedor-filtro-sucursal-caja');
+            // --- LÓGICA DE FILTRO POR ROL (Administrador ve el selector) ---
+            const datosUsuario = JSON.parse(localStorage.getItem('viking_user') || '{}');
+            const nombreRol = (datosUsuario.rol_nombre || "").trim();
+            const contSuc = document.getElementById('contenedor-filtro-sucursal-caja');
 
-			if (nombreRol === "Administrador") {
-				if (contSuc) contSuc.classList.remove('hidden');
-			} else {
-				if (contSuc) contSuc.classList.add('hidden');
-			}
+            if (nombreRol === "Administrador") {
+                if (contSuc) contSuc.classList.remove('hidden');
+            } else {
+                if (contSuc) contSuc.classList.add('hidden');
+            }
 
-			// 2. ⚔️ CONSTRUCCIÓN DE URL (Sincronizada con el backend para traer data real)
-			const fDesde = inputDesde.value;
-			const fHasta = inputHasta.value;
-			
-			// Armamos la query enviando fechas y sucursal al servidor
-			// Si sucursalIdVal es vacío, el backend (siendo Admin) traerá todo de todas las sedes
-			let url = `/caja/movimientos?fecha_desde=${fDesde}&fecha_hasta=${fHasta}`;
-			if (sucursalIdVal) url += `&sucursal_id=${sucursalIdVal}`;
-			
-			// Traemos los movimientos de la API
-			const movs = await apiFetch(url);
-			
-			let calcIngresos = 0;
-			let calcGastos = 0;
-			const table = document.getElementById('table-caja');
+            // 2. ⚔️ CONSTRUCCIÓN DE URL (Sincronizada con el backend para traer data real)
+            const fDesde = inputDesde.value;
+            const fHasta = inputHasta.value;
+            
+            // Armamos la query con fechas y sucursal para que el backend busque bien en la DB
+            let url = `/caja/movimientos?fecha_desde=${fDesde}&fecha_hasta=${fHasta}`;
+            if (sucursalIdVal) url += `&sucursal_id=${sucursalIdVal}`;
+            
+            // Traemos los movimientos de la API
+            const movs = await apiFetch(url);
+            
+            let calcIngresos = 0;
+            let calcGastos = 0;
+            const table = document.getElementById('table-caja');
 
-			if (!Array.isArray(movs)) return;
+            if (!Array.isArray(movs)) return;
 
-			// Valores de filtros de búsqueda avanzados
-			const valDesc = (inputDescFiltro?.value || "").toLowerCase().trim();
-			const valDetalle = (inputDetalleFiltro?.value || "").toLowerCase().trim();
+            // Valores de filtros de búsqueda avanzados
+            const valDesc = (inputDescFiltro?.value || "").toLowerCase().trim();
+            const valDetalle = (inputDetalleFiltro?.value || "").toLowerCase().trim();
 
-			// 3. FILTRADO CORREGIDO E INTELIGENTE
-			const filtrados = movs.filter(m => {
-				// ⚔️ FILTRO DE SUCURSAL INTEGRADO (Doble check en JS)
-				// Usamos comparación flexible (==) porque el ID de la DB puede ser número y sucursalIdVal es string
-				if (sucursalIdVal !== "" && m.sucursal_id != sucursalIdVal) return false;
+            // 3. FILTRADO CORREGIDO E INTELIGENTE
+            const filtrados = movs.filter(m => {
+                // ⚔️ FILTRO DE SUCURSAL INTEGRADO (Para el Administrador)
+                // Si el selector tiene una sede (no es ""), filtramos los que no coincidan.
+                // Si está vacío, el Administrador ve TODOS (se ignora esta condición).
+                if (sucursalIdVal !== "" && String(m.sucursal_id) !== String(sucursalIdVal)) return false;
 
-				if (!m.fecha) return false;
+                if (!m.fecha) return false;
 
-				let fechaZ = m.fecha;
-				if (!fechaZ.endsWith('Z') && !fechaZ.includes('+')) {
-					fechaZ += 'Z';
-				}
+                let fechaZ = m.fecha;
+                if (!fechaZ.endsWith('Z') && !fechaZ.includes('+')) {
+                    fechaZ += 'Z';
+                }
 
-				const d = new Date(fechaZ);
-				const yyyy = d.getFullYear();
-				const mm = String(d.getMonth() + 1).padStart(2, '0');
-				const dd = String(d.getDate()).padStart(2, '0');
-				const fechaMovLocal = `${yyyy}-${mm}-${dd}`;
-																			
-				// Filtro de rango de fechas (Doble check con lo que mandamos al server)
-				if (fechaMovLocal < inputDesde.value || fechaMovLocal > inputHasta.value) return false;
+                const d = new Date(fechaZ);
+                const yyyy = d.getFullYear();
+                const mm = String(d.getMonth() + 1).padStart(2, '0');
+                const dd = String(d.getDate()).padStart(2, '0');
+                const fechaMovLocal = `${yyyy}-${mm}-${dd}`;
+                                                                    
+                // Filtro de rango de fechas
+                if (fechaMovLocal < inputDesde.value || fechaMovLocal > inputHasta.value) return false;
 
-				// Filtro Búsqueda en Descripción
-				const descMov = (m.descripcion || "").toLowerCase();
-				if (valDesc && !descMov.includes(valDesc)) return false;
+                // Filtro Búsqueda en Descripción
+                const descMov = (m.descripcion || "").toLowerCase();
+                if (valDesc && !descMov.includes(valDesc)) return false;
 
-				// Filtro Búsqueda en Detalle (descripcion2)
-				const detMov = (m.descripcion2 || "").toLowerCase();
-				if (valDetalle && !detMov.includes(valDetalle)) return false;
+                // Filtro Búsqueda en Detalle (descripcion2)
+                const detMov = (m.descripcion2 || "").toLowerCase();
+                if (valDetalle && !detMov.includes(valDetalle)) return false;
 
-				// Filtro Método de Pago (Chips múltiples)
-				if (window.filtrosCaja.metodos.length > 0) {
-					const metodoActual = m.metodo_pago || 'Efectivo';
-					if (!window.filtrosCaja.metodos.includes(metodoActual)) return false;
-				}
+                // Filtro Método de Pago (Chips múltiples)
+                if (window.filtrosCaja.metodos.length > 0) {
+                    const metodoActual = m.metodo_pago || 'Efectivo';
+                    if (!window.filtrosCaja.metodos.includes(metodoActual)) return false;
+                }
 
-				return true;
-			});
+                return true;
+            });
 
-			// 4. RENDERIZADO DE TABLA Y CÁLCULO DINÁMICO DE TOTALES
-			if (table) {
-				if (filtrados.length > 0) {
-					filtrados.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+            // 4. RENDERIZADO DE TABLA Y CÁLCULO DINÁMICO DE TOTALES
+            if (table) {
+                if (filtrados.length > 0) {
+                    // Ordenamos por fecha descendente
+                    filtrados.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
 
-					table.innerHTML = filtrados.map(m => {
-						const tipoRaw = (m.tipo || '').toLowerCase();
-						const monto = Math.abs(parseFloat(m.monto));
-						const metodo = m.metodo_pago || 'Efectivo';
-						const cuotas = parseInt(m.cuotas) || 1;
-						
-						const esEgresoManual = tipoRaw === 'egreso' || tipoRaw === 'gasto' || tipoRaw === 'compra' || tipoRaw === 'salida';
-						const esIngresoManual = tipoRaw === 'ingreso' || tipoRaw === 'entrada';
-						const esPositivo = esIngresoManual || ((tipoRaw.includes('mercaderia') || tipoRaw.includes('plan') || tipoRaw.includes('venta') || tipoRaw.includes('cobro')) && !tipoRaw.includes('compra'));
-						const esEgreso = !esPositivo && (esEgresoManual || tipoRaw.includes('compra') || tipoRaw.includes('pago'));
+                    table.innerHTML = filtrados.map(m => {
+                        const tipoRaw = (m.tipo || '').toLowerCase();
+                        const monto = Math.abs(parseFloat(m.monto));
+                        const metodo = m.metodo_pago || 'Efectivo';
+                        const cuotas = parseInt(m.cuotas) || 1;
+                        
+                        // Lógica de Clasificación para el acumulador dinámico
+                        const esEgresoManual = tipoRaw === 'egreso' || tipoRaw === 'gasto' || tipoRaw === 'compra' || tipoRaw === 'salida';
+                        const esIngresoManual = tipoRaw === 'ingreso' || tipoRaw === 'entrada';
+                        const esPositivo = esIngresoManual || ((tipoRaw.includes('mercaderia') || tipoRaw.includes('plan') || tipoRaw.includes('venta') || tipoRaw.includes('cobro')) && !tipoRaw.includes('compra'));
+                        const esEgreso = !esPositivo && (esEgresoManual || tipoRaw.includes('compra') || tipoRaw.includes('pago'));
 
-						if (esEgreso) calcGastos += monto;
-						else calcIngresos += monto;
+                        // ⚔️ ACUMULAMOS LOS TOTALES SEGÚN LO QUE SE FILTRÓ EN PANTALLA
+                        if (esEgreso) calcGastos += monto;
+                        else calcIngresos += monto;
 
-						const flujoTexto = esEgreso ? 'EGRESO' : 'INGRESO';
-						const flujoColor = esEgreso ? 'bg-red-500/10 text-red-500 border-red-500/20' : 'bg-green-500/10 text-green-500 border-green-500/20';
+                        const flujoTexto = esEgreso ? 'EGRESO' : 'INGRESO';
+                        const flujoColor = esEgreso ? 'bg-red-500/10 text-red-500 border-red-500/20' : 'bg-green-500/10 text-green-500 border-green-500/20';
 
-						let categoriaTag = m.tipo || 'Movimiento';
-						let infoPrincipal = m.descripcion || '-';
-						let notaManual = m.descripcion2 || '';
+                        let categoriaTag = m.tipo || 'Movimiento';
+                        let infoPrincipal = m.descripcion || '-';
+                        let notaManual = m.descripcion2 || '';
 
-						if (tipoRaw.includes('plan')) {
-							categoriaTag = "Plan GymFit";
-							infoPrincipal = (m.descripcion || '').replace(/Cobro Plan\s*/i, '').replace(/Renovación\s*/i, '').trim();
-						} 
-						else if (tipoRaw.includes('mercaderia') || tipoRaw.includes('venta')) {
-							categoriaTag = "Venta Stock";
-							infoPrincipal = (m.descripcion || '').replace(/Venta Insumo:\s*/i, '').trim();
-						}
-						else if (tipoRaw.includes('compra')) {
-							categoriaTag = "Reposición";
-							infoPrincipal = (m.descripcion || '').replace(/Compra Stock:\s*/i, '').trim();
-						}
-						else if (esIngresoManual) {
-							categoriaTag = "Ingreso Manual";
-						}
-						else if (esEgresoManual) {
-							categoriaTag = "Gasto Extra";
-						}
+                        if (tipoRaw.includes('plan')) {
+                            categoriaTag = "Plan GymFit";
+                            infoPrincipal = (m.descripcion || '').replace(/Cobro Plan\s*/i, '').replace(/Renovación\s*/i, '').trim();
+                        } 
+                        else if (tipoRaw.includes('mercaderia') || tipoRaw.includes('venta')) {
+                            categoriaTag = "Venta Stock";
+                            infoPrincipal = (m.descripcion || '').replace(/Venta Insumo:\s*/i, '').trim();
+                        }
+                        else if (tipoRaw.includes('compra')) {
+                            categoriaTag = "Reposición";
+                            infoPrincipal = (m.descripcion || '').replace(/Compra Stock:\s*/i, '').trim();
+                        }
+                        else if (esIngresoManual) {
+                            categoriaTag = "Ingreso Manual";
+                        }
+                        else if (esEgresoManual) {
+                            categoriaTag = "Gasto Extra";
+                        }
 
-						let fZ = m.fecha;
-						if (!fZ.endsWith('Z') && !fZ.includes('+')) fZ += 'Z';
-						const dObj = new Date(fZ);
-						const fDisplay = String(dObj.getDate()).padStart(2, '0') + '/' + String(dObj.getMonth() + 1).padStart(2, '0');
-						const hDisplay = String(dObj.getHours()).padStart(2, '0') + ':' + String(dObj.getMinutes()).padStart(2, '0');
+                        let fZ = m.fecha;
+                        if (!fZ.endsWith('Z') && !fZ.includes('+')) fZ += 'Z';
+                        const dObj = new Date(fZ);
+                        const fDisplay = String(dObj.getDate()).padStart(2, '0') + '/' + String(dObj.getMonth() + 1).padStart(2, '0');
+                        const hDisplay = String(dObj.getHours()).padStart(2, '0') + ':' + String(dObj.getMinutes()).padStart(2, '0');
 
-						let infoCuotasMonto = '';
-						if (metodo === 'T. Credito' && cuotas > 1) {
-							const valorCuota = monto / cuotas;
-							infoCuotasMonto = `<span class="block text-[7px] text-red-500 font-black mt-0.5 tracking-tighter uppercase">
-													$ ${valorCuota.toLocaleString()} x ${cuotas}
-												</span>`;
-						}
+                        let infoCuotasMonto = '';
+                        if (metodo === 'T. Credito' && cuotas > 1) {
+                            const valorCuota = monto / cuotas;
+                            infoCuotasMonto = `<span class="block text-[7px] text-red-500 font-black mt-0.5 tracking-tighter uppercase">
+                                                    $ ${valorCuota.toLocaleString()} x ${cuotas}
+                                                </span>`;
+                        }
 
-						return `
-						<tr class="viking-table-row border-b border-white/5 hover:bg-white/5 transition-colors">
-							<td class="py-4 pl-6 text-white text-[10px] font-black">${fDisplay} <span class="block text-red text-[8px] font-bold">${hDisplay} HS</span></td>
-							<td class="py-4"><span class="px-2 py-0.5 rounded border text-[8px] font-black uppercase ${flujoColor}">${flujoTexto}</span></td>
-							<td class="py-4 text-white text-[10px] font-black uppercase tracking-tight">${infoPrincipal}</td>
-							<td class="py-4 text-white/40 text-[9px] font-bold uppercase italic"><span class="text-white/60 block mb-0.5">${categoriaTag}</span><span class="text-red-600/60">${notaManual}</span></td>
-							<td class="py-4 text-white/60 text-[10px] font-bold uppercase">${metodo}</td>
-							<td class="py-4 text-white/30 text-[10px] font-bold">${cuotas} ${cuotas > 1 ? 'CUOTAS' : 'CUOTA'}</td>
-							<td class="py-4 text-right pr-6 font-black italic text-white text-[12px]">$ ${monto.toLocaleString()} ${infoCuotasMonto}</td>
-						</tr>`;
-					}).join('');
-					
-					if (window.lucide) lucide.createIcons();
-				} else {
-					table.innerHTML = '<tr><td colspan="7" class="text-center py-20 text-white/10 italic text-[10px] font-black uppercase tracking-[0.4em]">Sin movimientos que coincidan</td></tr>';
-				}
-			}
+                        return `
+                        <tr class="viking-table-row border-b border-white/5 hover:bg-white/5 transition-colors">
+                            <td class="py-4 pl-6">
+                                <span class="text-white text-[10px] font-black">${fDisplay}</span>
+                                <span class="block text-red text-[8px] font-bold">${hDisplay} HS</span>
+                            </td>
+                            <td class="py-4">
+                                <span class="px-2 py-0.5 rounded border text-[8px] font-black uppercase tracking-wider ${flujoColor}">${flujoTexto}</span>
+                            </td>
+                            <td class="py-4 text-white text-[10px] font-black uppercase tracking-tight">
+                                ${infoPrincipal}
+                            </td>
+                            <td class="py-4 text-white/40 text-[9px] font-bold uppercase italic">
+                                <span class="text-white/60 block mb-0.5">${categoriaTag}</span>
+                                <span class="text-red-600/60">${notaManual}</span>
+                            </td>
+                            <td class="py-4 text-white/60 text-[10px] font-bold uppercase">
+                                ${metodo}
+                            </td>
+                            <td class="py-4 text-white/30 text-[10px] font-bold">
+                                ${cuotas} ${cuotas > 1 ? 'CUOTAS' : 'CUOTA'}
+                            </td>
+                            <td class="py-4 text-right pr-6 font-black italic text-white text-[12px]">
+                                $ ${monto.toLocaleString()}
+                                ${infoCuotasMonto}
+                            </td>
+                        </tr>`;
+                    }).join('');
+                    
+                    if (window.lucide) lucide.createIcons();
+                } else {
+                    table.innerHTML = '<tr><td colspan="7" class="text-center py-20 text-white/10 italic text-[10px] font-black uppercase tracking-[0.4em]">Sin movimientos que coincidan</td></tr>';
+                }
+            }
 
-			// 5. ACTUALIZACIÓN DE TARJETAS DINÁMICAS
-			const divTotales = document.getElementById('contenedor-totales-caja');
+            // 5. ACTUALIZACIÓN DE TARJETAS DINÁMICAS
+            const divTotales = document.getElementById('contenedor-totales-caja');
 
-			if (nombreRol.toLowerCase() === "administracion") {
-				if (divTotales) divTotales.style.setProperty('display', 'none', 'important');
-			} else {
-				if (divTotales) divTotales.style.setProperty('display', 'grid', 'important');
-				const finalBalance = calcIngresos - calcGastos;
-				if(document.getElementById('caja-ingresos')) document.getElementById('caja-ingresos').innerText = `$ ${calcIngresos.toLocaleString()}`;
-				if(document.getElementById('caja-gastos')) document.getElementById('caja-gastos').innerText = `$ ${calcGastos.toLocaleString()}`;
-				if(document.getElementById('caja-balance')) {
-					const eb = document.getElementById('caja-balance');
-					eb.innerText = `$ ${finalBalance.toLocaleString()}`;
-					eb.className = `text-4xl font-black italic ${finalBalance >= 0 ? 'text-green-500' : 'text-red-500'}`;
-				}
-			}
-		};
+            if (nombreRol.toLowerCase() === "administracion") {
+                if (divTotales) divTotales.style.setProperty('display', 'none', 'important');
+            } else {
+                if (divTotales) divTotales.style.setProperty('display', 'grid', 'important');
+                
+                const finalBalance = calcIngresos - calcGastos;
+
+                if(document.getElementById('caja-ingresos')) document.getElementById('caja-ingresos').innerText = `$ ${calcIngresos.toLocaleString()}`;
+                if(document.getElementById('caja-gastos')) document.getElementById('caja-gastos').innerText = `$ ${calcGastos.toLocaleString()}`;
+                if(document.getElementById('caja-balance')) {
+                    const eb = document.getElementById('caja-balance');
+                    eb.innerText = `$ ${finalBalance.toLocaleString()}`;
+                    eb.className = `text-4xl font-black italic ${finalBalance >= 0 ? 'text-green-500' : 'text-red-500'}`;
+                }
+            }
+        };
 
 		/**
 		* SISTEMA DE CAJA VIKINGA - FILTROS PRO
