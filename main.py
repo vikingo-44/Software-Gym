@@ -1825,27 +1825,28 @@ def get_movimientos(
     current_user = Depends(get_current_user)
 ):
     try:
+        # Limpiamos el rol por si hay espacios o mayúsculas raras
         rol = str(getattr(current_user, 'rol_nombre', "")).strip()
         query = db.query(models.MovimientoCaja)
 
-        # ⚔️ FILTRO VIKINGO: El Admin es Dios y ve todo.
+        # ⚔️ LÓGICA DE PODER EXCLUSIVA
         if rol == "Administrador":
-            if sucursal_id and sucursal_id > 0:
-                # Si elegís una sede en el combo, filtramos por esa
+            # Si el Admin mandó una sucursal específica (ID > 0), filtramos.
+            # Si mandó 0, None, o "Todas", NO agregamos ningún filtro de sucursal.
+            if sucursal_id is not None and sucursal_id > 0:
                 query = query.filter(models.MovimientoCaja.sucursal_id == sucursal_id)
-            else:
-                # SI NO ELIGES NADA, NO SE FILTRA. Trae todas las sedes de ND TRAINING.
-                pass 
+            # Aquí NO hay else. Si no hay sucursal_id, la query queda libre (ve TODO).
         else:
-            # El staff común sí o sí queda encerrado en su sucursal
+            # Si NO es administrador, lo encerramos en su sede sí o sí.
             query = query.filter(models.MovimientoCaja.sucursal_id == current_user.sucursal_id)
 
-        # Filtro de fechas (Indispensable para encontrar el movimiento de hoy)
+        # 2. FILTRADO POR FECHAS (Indispensable para encontrar los movimientos de hoy 15/05)
         if fecha_desde:
             query = query.filter(models.MovimientoCaja.fecha >= f"{fecha_desde} 00:00:00")
         if fecha_hasta:
             query = query.filter(models.MovimientoCaja.fecha <= f"{fecha_hasta} 23:59:59")
 
+        # 3. EJECUCIÓN CON LÍMITE DE SEGURIDAD
         movs = query.order_by(models.MovimientoCaja.fecha.desc()).limit(500).all()
         return movs
         
