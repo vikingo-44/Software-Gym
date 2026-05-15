@@ -3175,11 +3175,16 @@ if (editorForm) {
 				if (contSuc) contSuc.classList.add('hidden');
 			}
 
-			// 2. ⚔️ CONSTRUCCIÓN DE URL LIMPIA (Evita el error 422 de parámetros vacíos)
-			const queryParams = sucursalIdVal ? `?sucursal_id=${sucursalIdVal}` : "";
+			// 2. ⚔️ CONSTRUCCIÓN DE URL (Sincronizada con el backend para traer data real)
+			const fDesde = inputDesde.value;
+			const fHasta = inputHasta.value;
+			
+			// Armamos la query con fechas y sucursal para que el backend busque bien en la DB
+			let url = `/caja/movimientos?fecha_desde=${fDesde}&fecha_hasta=${fHasta}`;
+			if (sucursalIdVal) url += `&sucursal_id=${sucursalIdVal}`;
 			
 			// Traemos los movimientos de la API
-			const movs = await apiFetch(`/caja/movimientos${queryParams}`);
+			const movs = await apiFetch(url);
 			
 			let calcIngresos = 0;
 			let calcGastos = 0;
@@ -3191,10 +3196,9 @@ if (editorForm) {
 			const valDesc = (inputDescFiltro?.value || "").toLowerCase().trim();
 			const valDetalle = (inputDetalleFiltro?.value || "").toLowerCase().trim();
 
-			// 3. FILTRADO CORREGIDO E INTELIGENTE (Incluye filtro por sucursal en el JS)
+			// 3. FILTRADO CORREGIDO E INTELIGENTE
 			const filtrados = movs.filter(m => {
-				// ⚔️ FILTRO DE SUCURSAL INTEGRADO
-				// Si el selector tiene una sede (no es ""), filtramos los que no coincidan
+				// ⚔️ FILTRO DE SUCURSAL INTEGRADO (Para el Administrador)
 				if (sucursalIdVal !== "" && m.sucursal_id != sucursalIdVal) return false;
 
 				if (!m.fecha) return false;
@@ -3210,7 +3214,7 @@ if (editorForm) {
 				const dd = String(d.getDate()).padStart(2, '0');
 				const fechaMovLocal = `${yyyy}-${mm}-${dd}`;
 																			
-				// Filtro de rango de fechas
+				// Filtro de rango de fechas (Doble check con lo que mandamos al server)
 				if (fechaMovLocal < inputDesde.value || fechaMovLocal > inputHasta.value) return false;
 
 				// Filtro Búsqueda en Descripción
@@ -3233,7 +3237,6 @@ if (editorForm) {
 			// 4. RENDERIZADO DE TABLA Y CÁLCULO DINÁMICO DE TOTALES
 			if (table) {
 				if (filtrados.length > 0) {
-					// Ordenamos por fecha descendente
 					filtrados.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
 
 					table.innerHTML = filtrados.map(m => {
@@ -3242,13 +3245,11 @@ if (editorForm) {
 						const metodo = m.metodo_pago || 'Efectivo';
 						const cuotas = parseInt(m.cuotas) || 1;
 						
-						// Lógica de Clasificación para el acumulador dinámico
 						const esEgresoManual = tipoRaw === 'egreso' || tipoRaw === 'gasto' || tipoRaw === 'compra' || tipoRaw === 'salida';
 						const esIngresoManual = tipoRaw === 'ingreso' || tipoRaw === 'entrada';
 						const esPositivo = esIngresoManual || ((tipoRaw.includes('mercaderia') || tipoRaw.includes('plan') || tipoRaw.includes('venta') || tipoRaw.includes('cobro')) && !tipoRaw.includes('compra'));
 						const esEgreso = !esPositivo && (esEgresoManual || tipoRaw.includes('compra') || tipoRaw.includes('pago'));
 
-						// ⚔️ ACUMULAMOS LOS TOTALES SEGÚN LO QUE SE FILTRÓ EN PANTALLA
 						if (esEgreso) calcGastos += monto;
 						else calcIngresos += monto;
 
@@ -3294,30 +3295,13 @@ if (editorForm) {
 
 						return `
 						<tr class="viking-table-row border-b border-white/5 hover:bg-white/5 transition-colors">
-							<td class="py-4 pl-6">
-								<span class="text-white text-[10px] font-black">${fDisplay}</span>
-								<span class="block text-red text-[8px] font-bold">${hDisplay} HS</span>
-							</td>
-							<td class="py-4">
-								<span class="px-2 py-0.5 rounded border text-[8px] font-black uppercase tracking-wider ${flujoColor}">${flujoTexto}</span>
-							</td>
-							<td class="py-4 text-white text-[10px] font-black uppercase tracking-tight">
-								${infoPrincipal}
-							</td>
-							<td class="py-4 text-white/40 text-[9px] font-bold uppercase italic">
-								<span class="text-white/60 block mb-0.5">${categoriaTag}</span>
-								<span class="text-red-600/60">${notaManual}</span>
-							</td>
-							<td class="py-4 text-white/60 text-[10px] font-bold uppercase">
-								${metodo}
-							</td>
-							<td class="py-4 text-white/30 text-[10px] font-bold">
-								${cuotas} ${cuotas > 1 ? 'CUOTAS' : 'CUOTA'}
-							</td>
-							<td class="py-4 text-right pr-6 font-black italic text-white text-[12px]">
-								$ ${monto.toLocaleString()}
-								${infoCuotasMonto}
-							</td>
+							<td class="py-4 pl-6 text-white text-[10px] font-black">${fDisplay} <span class="block text-red text-[8px] font-bold">${hDisplay} HS</span></td>
+							<td class="py-4"><span class="px-2 py-0.5 rounded border text-[8px] font-black uppercase ${flujoColor}">${flujoTexto}</span></td>
+							<td class="py-4 text-white text-[10px] font-black uppercase tracking-tight">${infoPrincipal}</td>
+							<td class="py-4 text-white/40 text-[9px] font-bold uppercase italic"><span class="text-white/60 block mb-0.5">${categoriaTag}</span><span class="text-red-600/60">${notaManual}</span></td>
+							<td class="py-4 text-white/60 text-[10px] font-bold uppercase">${metodo}</td>
+							<td class="py-4 text-white/30 text-[10px] font-bold">${cuotas} ${cuotas > 1 ? 'CUOTAS' : 'CUOTA'}</td>
+							<td class="py-4 text-right pr-6 font-black italic text-white text-[12px]">$ ${monto.toLocaleString()} ${infoCuotasMonto}</td>
 						</tr>`;
 					}).join('');
 					
@@ -3334,9 +3318,7 @@ if (editorForm) {
 				if (divTotales) divTotales.style.setProperty('display', 'none', 'important');
 			} else {
 				if (divTotales) divTotales.style.setProperty('display', 'grid', 'important');
-				
 				const finalBalance = calcIngresos - calcGastos;
-
 				if(document.getElementById('caja-ingresos')) document.getElementById('caja-ingresos').innerText = `$ ${calcIngresos.toLocaleString()}`;
 				if(document.getElementById('caja-gastos')) document.getElementById('caja-gastos').innerText = `$ ${calcGastos.toLocaleString()}`;
 				if(document.getElementById('caja-balance')) {

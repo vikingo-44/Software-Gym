@@ -1817,34 +1817,37 @@ def get_caja_resumen(sucursal_id: Optional[int] = None, db: Session = Depends(da
     }
 
 @app.get("/api/caja/movimientos", tags=["Caja"])
-def get_movimientos(sucursal_id: Optional[int] = None, db: Session = Depends(database.get_db), current_user = Depends(get_current_user)):
+def get_movimientos(
+    sucursal_id: Optional[int] = None, 
+    fecha_desde: Optional[str] = None, 
+    fecha_hasta: Optional[str] = None, 
+    db: Session = Depends(database.get_db), 
+    current_user = Depends(get_current_user)
+):
     """
-    Lista los últimos 150 movimientos. 
-    Si es Administrador, puede filtrar por cualquier sucursal o ver todas.
-    Si es Staff/Supervisor, solo ve su sucursal asignada.
+    Lista movimientos con filtros de sucursal y rango de fechas.
     """
     try:
-        # 1. Extraemos el rol del usuario actual
         rol = str(getattr(current_user, 'rol_nombre', "")).strip()
-        
-        # 2. Iniciamos la consulta base
         query = db.query(models.MovimientoCaja)
 
-        # 3. LÓGICA DE FILTRADO VIKINGO
+        # 1. FILTRADO POR ROL Y SUCURSAL
         if rol == "Administrador":
-            if sucursal_id:
-                # Si el Admin seleccionó una sucursal específica en el filtro
+            if sucursal_id and sucursal_id > 0:
                 query = query.filter(models.MovimientoCaja.sucursal_id == sucursal_id)
-            else:
-                # Si el Admin no seleccionó ninguna (o eligió "Todas"), 
-                # NO aplicamos filtro de sucursal para que vea TODO.
-                pass
         else:
-            # Para cualquier otro rol, aplicamos el filtro estricto de su sucursal
             query = query.filter(models.MovimientoCaja.sucursal_id == current_user.sucursal_id)
 
-        # 4. Ejecutamos la consulta con el límite de seguridad
-        movs = query.order_by(models.MovimientoCaja.fecha.desc()).limit(150).all()
+        # 2. FILTRADO POR FECHAS (Importante para que coincida con el JS)
+        if fecha_desde:
+            # Asumimos formato YYYY-MM-DD del input date
+            query = query.filter(models.MovimientoCaja.fecha >= fecha_desde)
+        if fecha_hasta:
+            # Agregamos 23:59:59 para incluir todo el día final
+            query = query.filter(models.MovimientoCaja.fecha <= f"{fecha_hasta} 23:59:59")
+
+        # 3. ORDEN Y LÍMITE (Aumentamos a 300 por si hay muchos movimientos en el rango)
+        movs = query.order_by(models.MovimientoCaja.fecha.desc()).limit(300).all()
         
         return movs
         
