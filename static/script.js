@@ -5089,7 +5089,7 @@ if (editorForm) {
 
 			// Respaldo por nombre si viene en 0
 			if (limiteTotal === 0) {
-				if (planNombre.includes('libre') || planNombre.includes('full') || planNombre.includes('ilimitado')) {
+				if (planNombre.includes('libre') || planNombre.includes('premium')  || planNombre.includes('full') || planNombre.includes('ilimitado')) {
 					limiteTotal = 999;
 				} else if (planNombre.includes('12')) limiteTotal = 12;
 				else if (planNombre.includes('8')) limiteTotal = 8;
@@ -5097,9 +5097,7 @@ if (editorForm) {
 			}
 
 			// Identificar si es Pase Libre
-			if (limiteTotal >= 999 || planNombre.includes('libre') || planNombre.includes('full') || planNombre.includes('ilimitado')) {
-				esFull = true;
-			}
+			if (limiteTotal >= 200 || planNombre.includes('libre')) esFull = true;
 
 			// 2. Límites del ciclo real del pase del alumno
 			// Usamos el inicio del día (00:00:00) para evitar desajustes de horas
