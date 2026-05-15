@@ -3153,7 +3153,7 @@ if (editorForm) {
 			const inputDescFiltro = document.getElementById('caja-filtro-desc');
 			const inputDetalleFiltro = document.getElementById('caja-filtro-detalle');
 			
-			// ⚔️ CAPTURA DE SUCURSAL: Clave para el perfil Administrador
+			// ⚔️ CAPTURA DE SUCURSAL DINÁMICA (Desde tu nuevo componente HTML)
 			const sucursalSelect = document.getElementById('caja-filtro-sucursal');
 			const sucursalIdVal = sucursalSelect ? sucursalSelect.value : "";
 
@@ -3165,10 +3165,11 @@ if (editorForm) {
 			if (inputHasta && !inputHasta.value) inputHasta.value = hoyLocal;
 
 			// 2. CONSTRUCCIÓN DE URL CON FILTROS DE SERVIDOR
-			// Mandamos fechas y sucursal al backend para que la DB haga el trabajo pesado
 			const fDesde = inputDesde.value;
 			const fHasta = inputHasta.value;
-			let url = `/caja/movimientos?fecha_desde=${fDesde}&fecha_hasta=${fHasta}`;
+			
+			// Agregamos un cache_bust para asegurar que Render no devuelva data vieja en conexiones rápidas
+			let url = `/caja/movimientos?fecha_desde=${fDesde}&fecha_hasta=${fHasta}&_cb=${Date.now()}`;
 			if (sucursalIdVal) url += `&sucursal_id=${sucursalIdVal}`;
 			
 			// Traer los movimientos de la API
@@ -3186,8 +3187,8 @@ if (editorForm) {
 
 			// 3. FILTRADO CORREGIDO E INTELIGENTE (Frontend)
 			const filtrados = movs.filter(m => {
-				// ⚔️ FILTRO DE SUCURSAL FRONTE-END: 
-				// Si el admin eligió una sede, ocultamos lo que no coincida (por si el backend mandó de más)
+				// ⚔️ CONTROL FRONTE-END DE SUCURSAL:
+				// Si elegiste una sede específica, barremos cualquier registro que no matchee
 				if (sucursalIdVal !== "" && String(m.sucursal_id) !== String(sucursalIdVal)) return false;
 
 				if (!m.fecha) return false;
@@ -3203,7 +3204,7 @@ if (editorForm) {
 				const dd = String(d.getDate()).padStart(2, '0');
 				const fechaMovLocal = `${yyyy}-${mm}-${dd}`;
 													
-				// Filtro de rango de fechas (Doble validación)
+				// Filtro de rango de fechas (Doble validación de seguridad)
 				if (fechaMovLocal < inputDesde.value || fechaMovLocal > inputHasta.value) return false;
 
 				// Filtro Búsqueda en Descripción
@@ -3214,7 +3215,7 @@ if (editorForm) {
 				const detMov = (m.descripcion2 || "").toLowerCase();
 				if (valDetalle && !detMov.includes(valDetalle)) return false;
 
-				// Filtro Método de Pago
+				// Filtro Método de Pago (Validación robusta contra array de chips de la app)
 				if (window.filtrosCaja && window.filtrosCaja.metodos && window.filtrosCaja.metodos.length > 0) {
 					const metodoActual = m.metodo_pago || 'Efectivo';
 					if (!window.filtrosCaja.metodos.includes(metodoActual)) return false;
@@ -3226,7 +3227,7 @@ if (editorForm) {
 			// 4. Renderizado de Tabla (7 Columnas)
 			if (table) {
 				if (filtrados.length > 0) {
-					// Ordenamos por fecha descendente
+					// Ordenamos por fecha descendente (más nuevos arriba siempre)
 					filtrados.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
 
 					table.innerHTML = filtrados.map(m => {
@@ -3235,12 +3236,13 @@ if (editorForm) {
 						const metodo = m.metodo_pago || 'Efectivo';
 						const cuotas = parseInt(m.cuotas) || 1;
 						
-						// Lógica de Clasificación (Ingreso vs Egreso)
+						// Lógica de Clasificación de ND TRAINING (Ingreso vs Egreso)
 						const esEgresoManual = tipoRaw === 'egreso' || tipoRaw === 'gasto' || tipoRaw === 'compra' || tipoRaw === 'salida';
 						const esIngresoManual = tipoRaw === 'ingreso' || tipoRaw === 'entrada';
 						const esPositivo = esIngresoManual || ((tipoRaw.includes('mercaderia') || tipoRaw.includes('plan') || tipoRaw.includes('venta') || tipoRaw.includes('cobro')) && !tipoRaw.includes('compra'));
 						const esEgreso = !esPositivo && (esEgresoManual || tipoRaw.includes('compra') || tipoRaw.includes('pago'));
 
+						// Acumulamos totales según la clasificación limpia
 						if (esEgreso) calcGastos += monto;
 						else calcIngresos += monto;
 
@@ -3320,15 +3322,17 @@ if (editorForm) {
 				}
 			}
 
-			// 5. TOTALES (Con restricción para Perfil Administracion)
+			// 5. TOTALES (Con restricción para Perfil Administracion de recepción)
 			const calcBalance = calcIngresos - calcGastos;
 			const datosUsuario = JSON.parse(localStorage.getItem('viking_user') || '{}');
 			const nombreRol = (datosUsuario.rol_nombre || "").toLowerCase().trim();
 			const divTotales = document.getElementById('contenedor-totales-caja');
 
 			if (nombreRol === "administracion") {
+				// Ocultar saldos al personal de recepción de sucursal
 				if (divTotales) divTotales.style.setProperty('display', 'none', 'important');
 			} else {
+				// Mostrar grilla de totales al Dueño / Admin Maestro
 				if (divTotales) divTotales.style.setProperty('display', 'grid', 'important');
 				
 				if(document.getElementById('caja-ingresos')) document.getElementById('caja-ingresos').innerText = `$ ${calcIngresos.toLocaleString()}`;
