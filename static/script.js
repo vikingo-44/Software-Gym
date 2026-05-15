@@ -3374,7 +3374,7 @@ if (editorForm) {
 			const timezoneOffset = new Date().getTimezoneOffset() * 60000;
 			const hoy = new Date(Date.now() - timezoneOffset).toISOString().split('T')[0];
 			
-			// Limpieza de Fechas (Tu base original)
+			// Limpieza de Fechas
 			const inputDesde = document.getElementById('caja-filtro-desde');
 			const inputHasta = document.getElementById('caja-filtro-hasta');
 			if (inputDesde) inputDesde.value = hoy;
@@ -3386,11 +3386,15 @@ if (editorForm) {
 			if (inputDesc) inputDesc.value = "";
 			if (inputDetalle) inputDetalle.value = "";
 			
+			// ⚔️ Limpieza de Sucursal (Vuelve a "Todas")
+			const selectSuc = document.getElementById('caja-filtro-sucursal');
+			if (selectSuc) selectSuc.value = "";
+			
 			// Limpieza de Filtros de Método
 			window.filtrosCaja.metodos = [];
 			document.querySelectorAll('.metodo-chip').forEach(btn => btn.classList.remove('active'));
 			
-			// Recarga (Tu base original)
+			// Recarga final
 			window.loadCaja();
 		};
 
@@ -5615,88 +5619,95 @@ if (editorForm) {
 		
 		// --- GESTIÓN DE SUCURSALES ---
 		async function loadSucursales() {
-			try {
-				const response = await fetch(`${API_BASE}/sucursales`, {
-					headers: { 'Authorization': `Bearer ${localStorage.getItem('viking_token')}` }
-				});
-				
-				if (!response.ok) throw new Error("Error en API");
-				const sucursales = await response.json();
+            try {
+                const response = await fetch(`${API_BASE}/sucursales`, {
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('viking_token')}` }
+                });
+                
+                if (!response.ok) throw new Error("Error en API");
+                const sucursales = await response.json();
 
-				// Guardar en el estado global
-				state.sucursales = sucursales; 
-				
-				// 1. Renderizar Tarjetas en la vista de Sucursales
-				const container = document.getElementById('sucursales-container');
-				if (container) {
-					container.innerHTML = sucursales.length === 0 
-						? '<div class="col-span-full py-20 text-center opacity-30 italic font-black uppercase"><i data-lucide="map-pin-off" class="w-12 h-12 mx-auto mb-4"></i><p>No hay sedes registradas</p></div>'
-						: sucursales.map(s => `
-							<div class="glass-card p-8 rounded-[2.5rem] border border-white/5 hover:border-red-600/30 transition-all group relative overflow-hidden">
-								<div class="flex justify-between items-start mb-6">
-									<div class="p-4 bg-red-600/10 rounded-2xl text-red-500 group-hover:bg-red-600 group-hover:text-black transition-all">
-										<i data-lucide="map-pin" class="w-6 h-6"></i>
-									</div>
-									<button onclick="window.deleteSucursal(${s.id})" class="text-white/10 hover:text-red-600 transition-colors z-10">
-										<i data-lucide="trash-2" class="w-5 h-5"></i>
-									</button>
-								</div>
-								<h4 class="text-2xl font-black italic uppercase text-white mb-2 tracking-tighter">${s.sucursal}</h4>
-								<p class="text-[10px] text-white-500 font-bold uppercase tracking-[0.2em] italic">${s.direccion}</p>
-							</div>`).join('');
-				}
+                // Guardar en el estado global
+                state.sucursales = sucursales; 
+                
+                // 1. Renderizar Tarjetas en la vista de Sucursales
+                const container = document.getElementById('sucursales-container');
+                if (container) {
+                    container.innerHTML = sucursales.length === 0 
+                        ? '<div class="col-span-full py-20 text-center opacity-30 italic font-black uppercase"><i data-lucide="map-pin-off" class="w-12 h-12 mx-auto mb-4"></i><p>No hay sedes registradas</p></div>'
+                        : sucursales.map(s => `
+                            <div class="glass-card p-8 rounded-[2.5rem] border border-white/5 hover:border-red-600/30 transition-all group relative overflow-hidden">
+                                <div class="flex justify-between items-start mb-6">
+                                    <div class="p-4 bg-red-600/10 rounded-2xl text-red-500 group-hover:bg-red-600 group-hover:text-black transition-all">
+                                        <i data-lucide="map-pin" class="w-6 h-6"></i>
+                                    </div>
+                                    <button onclick="window.deleteSucursal(${s.id})" class="text-white/10 hover:text-red-600 transition-colors z-10">
+                                        <i data-lucide="trash-2" class="w-5 h-5"></i>
+                                    </button>
+                                </div>
+                                <h4 class="text-2xl font-black italic uppercase text-white mb-2 tracking-tighter">${s.sucursal}</h4>
+                                <p class="text-[10px] text-white-500 font-bold uppercase tracking-[0.2em] italic">${s.direccion}</p>
+                            </div>`).join('');
+                }
 
-				// 2. Selectores de Filtro (Profesores, Administrativos, ALUMNOS y COBRO)
-				const selectProf = document.getElementById('filter-sucursal-profesores');
-				const selectAdm = document.getElementById('filter-sucursal-administrativos');
-				const selectAlu = document.getElementById('filter-sucursal-alumnos');
-				const selectCob = document.getElementById('cobrar-sucursal-filter'); // <--- AGREGADO PARA COBRO
+                // 2. Selectores de Filtro (Profesores, Administrativos, ALUMNOS, COBRO y CAJA)
+                const selectProf = document.getElementById('filter-sucursal-profesores');
+                const selectAdm = document.getElementById('filter-sucursal-administrativos');
+                const selectAlu = document.getElementById('filter-sucursal-alumnos');
+                const selectCob = document.getElementById('cobrar-sucursal-filter');
+                const selectCaja = document.getElementById('caja-filtro-sucursal'); // <--- AGREGADO PARA CAJA
 
-				[selectProf, selectAdm, selectAlu, selectCob].forEach(sel => {
-					if (sel) {
-						const current = sel.value || (sel.id === 'cobrar-sucursal-filter' ? "" : "all");
-						const firstOptionText = sel.id === 'cobrar-sucursal-filter' ? "TODAS LAS SEDES" : "TODAS LAS SEDES";
-						const firstOptionValue = sel.id === 'cobrar-sucursal-filter' ? "" : "all";
+                // Incluimos selectCaja en el array de procesamiento
+                [selectProf, selectAdm, selectAlu, selectCob, selectCaja].forEach(sel => {
+                    if (sel) {
+                        // Definimos si debe usar "" o "all" como valor inicial
+                        const esFiltroVacio = (sel.id === 'cobrar-sucursal-filter' || sel.id === 'caja-filtro-sucursal');
+                        
+                        const current = sel.value || (esFiltroVacio ? "" : "all");
+                        const firstOptionText = "TODAS LAS SEDES";
+                        const firstOptionValue = esFiltroVacio ? "" : "all";
 
-						sel.innerHTML = `<option value="${firstOptionValue}" class="bg-zinc-900 text-white font-black italic uppercase">${firstOptionText}</option>` + 
-							sucursales.map(s => `<option value="${s.id}" class="bg-zinc-900 text-white font-black italic uppercase">${s.sucursal.toUpperCase()}</option>`).join('');
-						sel.value = current;
-						
-						// Si es el selector de cobro, le asignamos el evento de render
-						if (sel.id === 'cobrar-sucursal-filter') {
-							sel.onchange = () => renderCobrar();
-						}
-					}
-				});
+                        sel.innerHTML = `<option value="${firstOptionValue}" class="bg-zinc-900 text-white font-black italic uppercase">${firstOptionText}</option>` + 
+                            sucursales.map(s => `<option value="${s.id}" class="bg-zinc-900 text-white font-black italic uppercase">${s.sucursal.toUpperCase()}</option>`).join('');
+                        sel.value = current;
+                        
+                        // Lógica de eventos onchange
+                        if (sel.id === 'cobrar-sucursal-filter') {
+                            sel.onchange = () => renderCobrar();
+                        } else if (sel.id === 'caja-filtro-sucursal') {
+                            sel.onchange = () => window.loadCaja();
+                        }
+                    }
+                });
 
-				// 3. Selector en modal de Alumnos
-				const selectAl = document.getElementById('al-sucursal');
-				if (selectAl) {
-					const currentVal = selectAl.value;
-					selectAl.innerHTML = '<option value="" class="bg-zinc-900 text-white">Seleccionar Sucursal...</option>' + 
-						sucursales.map(s => `<option value="${s.id}">${s.sucursal.toUpperCase()}</option>`).join('');
-					if(currentVal) selectAl.value = currentVal;
-				}
+                // 3. Selector en modal de Alumnos
+                const selectAl = document.getElementById('al-sucursal');
+                if (selectAl) {
+                    const currentVal = selectAl.value;
+                    selectAl.innerHTML = '<option value="" class="bg-zinc-900 text-white">Seleccionar Sucursal...</option>' + 
+                        sucursales.map(s => `<option value="${s.id}">${s.sucursal.toUpperCase()}</option>`).join('');
+                    if(currentVal) selectAl.value = currentVal;
+                }
 
-				// 4. Selector en modal de CLASES y Filtro de CLASES
-				const selectCl = document.getElementById('clase-sucursal-select');
-				const selectFiltroCl = document.getElementById('filtro-clases-sucursal');
+                // 4. Selector en modal de CLASES y Filtro de CLASES
+                const selectCl = document.getElementById('clase-sucursal-select');
+                const selectFiltroCl = document.getElementById('filtro-clases-sucursal');
 
-				if (selectCl) {
-					selectCl.innerHTML = sucursales.map(s => `<option value="${s.id}" class="bg-zinc-900 text-white font-bold italic uppercase">${s.sucursal.toUpperCase()}</option>`).join('');
-				}
-				if (selectFiltroCl) {
-					const current = selectFiltroCl.value || 'todas';
-					selectFiltroCl.innerHTML = '<option value="todas" class="bg-zinc-900 text-white font-bold italic uppercase">TODAS LAS SEDES</option>' + 
-						sucursales.map(s => `<option value="${s.id}" class="bg-zinc-900 text-white font-bold italic uppercase">${s.sucursal.toUpperCase()}</option>`).join('');
-					selectFiltroCl.value = current;
-				}
+                if (selectCl) {
+                    selectCl.innerHTML = sucursales.map(s => `<option value="${s.id}" class="bg-zinc-900 text-white font-bold italic uppercase">${s.sucursal.toUpperCase()}</option>`).join('');
+                }
+                if (selectFiltroCl) {
+                    const current = selectFiltroCl.value || 'todas';
+                    selectFiltroCl.innerHTML = '<option value="todas" class="bg-zinc-900 text-white font-bold italic uppercase">TODAS LAS SEDES</option>' + 
+                        sucursales.map(s => `<option value="${s.id}" class="bg-zinc-900 text-white font-bold italic uppercase">${s.sucursal.toUpperCase()}</option>`).join('');
+                    selectFiltroCl.value = current;
+                }
 
-				if(window.lucide) lucide.createIcons();
-			} catch (error) {
-				console.error("❌ Error cargando sucursales:", error);
-			}
-		}
+                if(window.lucide) lucide.createIcons();
+            } catch (error) {
+                console.error("❌ Error cargando sucursales:", error);
+            }
+        }
 
         async function handleDrop(e, dia, horario) { e.preventDefault(); const id = e.dataTransfer.getData("clase_id"); if (!id) return; const res = await apiFetch(`/clases/${id}/move`, 'PUT', { dia, horario }); if (!res.error) { loadClases(); showVikingToast("Clase Reubicada"); } }
         
