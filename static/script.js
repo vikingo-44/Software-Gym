@@ -5839,6 +5839,7 @@ if (editorForm) {
 		let lastScannedData = null; // Para evitar lecturas duplicadas seguidas
 		let scanCooldown = false;   // Bloqueo temporal tras una lectura exitosa
 		let lastScannedDNI = null;
+		let feedbackTimeout = null; // Para poder frenar el cierre automático
 
 		// 1. Abrir Escáner y Encender Cámara
 		async function startScanner() {
@@ -5966,6 +5967,9 @@ if (editorForm) {
 		async function processAccess(qrData) {
 			scanCooldown = true; 
 			
+			// Frenamos cualquier timer de cierre anterior por seguridad
+			if (feedbackTimeout) clearTimeout(feedbackTimeout);
+			
 			const nameDisplay = document.getElementById('scanner-user-name');
 			if (nameDisplay) nameDisplay.innerText = "VERIFICANDO...";
 
@@ -5979,20 +5983,24 @@ if (editorForm) {
 						message: response.error, 
 						nombre: "SISTEMA" 
 					});
+					startFeedbackTimer(4000);
+				} else if (response.status === "CHOOSE_ACTIVITY") {
+					// ⚔️ CONTROL INTERACTIVO: El backend frenó el acceso porque hay una clase cerca.
+					showChooseActivityUI(response);
+					// NO se ejecuta el timer automático aquí. La pantalla espera que el alumno elija.
 				} else {
+					// Acceso autorizado directo o denegado directo
 					showFeedback(response);
 					
-					// --- NUEVO: Refrescar datos globales ---
-					// Llamamos a loadDashboard para que los paneles de "Accesos Recientes" se actualicen
+					// Refrescar datos globales del panel si es necesario
 					if (typeof loadDashboard === 'function') {
-						console.log("🔄 Actualizando paneles del Dashboard...");
 						loadDashboard(); 
 					}
-					
-					// Si el usuario está en la vista de Acceso Virtual, refrescamos esa lista también
 					if (typeof renderAccesos === 'function') {
 						renderAccesos();
 					}
+					// Temporizador tradicional de 4 segundos para restablecer la cámara
+					startFeedbackTimer(4000);
 				}
 
 			} catch (e) {
@@ -6002,18 +6010,132 @@ if (editorForm) {
 					message: "Error de red/servidor", 
 					nombre: "SISTEMA" 
 				});
+				startFeedbackTimer(4000);
 			}
+		}
 
-			// Esperamos 4 segundos para el feedback visual
-			setTimeout(() => {
+		/**
+		 * Muestra el panel interactivo con la pregunta de la clase actual
+		 */
+		function showChooseActivityUI(data) {
+			const overlay = document.getElementById('scanner-feedback-overlay');
+			const icon = document.getElementById('scanner-icon-container');
+			const status = document.getElementById('scanner-status-text');
+			const name = document.getElementById('scanner-user-name');
+			const msg = document.getElementById('scanner-msg');
+
+			if (!overlay) return;
+
+			overlay.classList.remove('hidden');
+			overlay.classList.add('flex');
+			overlay.style.boxShadow = "inset 0 0 150px rgba(234, 179, 8, 0.4)";
+			overlay.style.border = "8px solid #eab308";
+			overlay.style.backgroundColor = "rgba(0,0,0,0.98)";
+
+			name.innerText = data.nombre.toUpperCase();
+			status.innerText = "¿QUÉ ENTRENÁS HOY?";
+			status.className = "text-4xl font-black uppercase italic text-yellow-500 mb-6 tracking-wide text-center drop-shadow-[0_0_10px_#eab308]";
+			
+			// Ocultamos la barra de progreso tradicional inyectando los botones interactivos
+			icon.innerHTML = `
+				<div class="flex flex-col sm:flex-row gap-4 w-full max-w-md px-6 justify-center items-center pointer-events-auto">
+					<button onclick="confirmarIngresoClase(${JSON.stringify(data).replace(/"/g, '&quot;')})" 
+						class="w-full sm:w-64 py-4 bg-red-600 hover:bg-red-700 text-white font-black uppercase italic rounded-2xl shadow-lg shadow-red-600/30 transition-all transform hover:scale-105 flex flex-col items-center justify-center border border-red-500/30">
+						<span class="text-sm tracking-tight">Vengo a la clase de</span>
+						<span class="text-lg font-black tracking-normal">${data.clase_nombre}</span>
+						<span class="text-[10px] text-zinc-300 font-bold mt-0.5">${data.horario} HS • DESCUENTA 1 CUPO</span>
+					</button>
+					
+					<button onclick="confirmarIngresoMusculacion('${data.nombre}')" 
+						class="w-full sm:w-64 py-4 bg-zinc-800 hover:bg-zinc-700 text-white font-black uppercase italic rounded-2xl shadow-lg transition-all transform hover:scale-105 flex flex-col items-center justify-center border border-zinc-700">
+						<span class="text-sm tracking-tight">Ingresar solo a la</span>
+						<span class="text-lg font-black tracking-normal">SALA DE MUSCULACIÓN</span>
+						<span class="text-[10px] text-zinc-400 font-bold mt-0.5">ACCESO ACCIÓN LIBRE</span>
+					</button>
+				</div>
+			`;
+			
+			// Quitamos la animación de la barra de progreso para que no se mueva sola
+			msg.innerHTML = `<span class="text-zinc-400 text-xs font-bold uppercase tracking-widest mt-2 block">Selección requerida en la tablet del totem</span>`;
+		}
+
+		/**
+		 * Confirmación Acción A: El alumno asiste a la clase (Genera reserva automática y descuenta)
+		 */
+		async function confirmarIngresoClase(data) {
+			try {
+				// Ejecutamos el book_clase directo a tu endpoint nativo de reservas
+				const booking = await apiFetch('/reservas', 'POST', {
+					usuario_id: parseInt(data.usuario_id),
+					clase_id: parseInt(data.clase_id),
+					horario: parseFloat(data.horario_float), // Mantenemos tu mapeo de tipos de datos
+					dia_semana: parseInt(data.dia_semana),
+					fecha_clase: data.fecha_clase
+				});
+
+				if (booking.error) {
+					// Si el backend rebota (ej: se quedó sin créditos reales), mostramos el error en rojo
+					showFeedback({
+						status: "DENIED",
+						nombre: data.nombre,
+						message: booking.error,
+						color: "red"
+					});
+				} else {
+					// Éxito: Se generó la reserva, descuenta y le damos paso en Verde
+					showFeedback({
+						status: "AUTHORIZED",
+						nombre: data.nombre,
+						message: `Reserva exitosa en ${data.clase_nombre}. ¡Buen entrenamiento!`,
+						color: "green"
+					});
+				}
+			} catch (err) {
+				console.error("Error reservando desde totem:", err);
+			}
+			startFeedbackTimer(4000);
+		}
+
+		/**
+		 * Confirmación Acción B: El alumno va solo a hacer fierros (Pasa directo sin tocar su bolsa de pases)
+		 */
+		function confirmarIngresoMusculacion(nombreAlumno) {
+			showFeedback({
+				status: "AUTHORIZED",
+				nombre: nombreAlumno,
+				message: "Ingreso registrado a Sala de Musculación.",
+				color: "green"
+			});
+			startFeedbackTimer(4000);
+		}
+
+		/**
+		 * Manejador centralizado del temporizador de cierre del feedback
+		 */
+		function startFeedbackTimer(ms) {
+			if (feedbackTimeout) clearTimeout(feedbackTimeout);
+			feedbackTimeout = setTimeout(() => {
 				if (isScanning) {
 					hideFeedback();
 					scanCooldown = false;
 					lastScannedDNI = null; 
 					requestAnimationFrame(scanLoop);
 				}
-			}, 4000);
+			}, ms);
 		}
+
+		/**
+		 * Oculta la pantalla de resultados (Mantiene tu estructura original)
+		 */
+		function hideFeedback() {
+			const overlay = document.getElementById('scanner-feedback-overlay');
+			if (overlay) {
+				overlay.classList.add('hidden');
+				overlay.classList.remove('flex');
+			}
+		}
+
+
 
 		/**
 		 * 4. SIMULACIÓN (Para los botones del modal)
@@ -6057,7 +6179,6 @@ if (editorForm) {
 
 			if (!overlay) return;
 
-			// Reset total de estilos antes de pintar el nuevo estado
 			overlay.classList.remove('hidden');
 			overlay.classList.add('flex');
 			overlay.style.boxShadow = "none";
@@ -6067,11 +6188,9 @@ if (editorForm) {
 			name.innerText = data.nombre || "DESCONOCIDO";
 			msg.innerText = data.message || "";
 
-			// Obtenemos el color que manda el Jefe (Backend)
 			const colorServidor = data.color || "red";
 
 			if (colorServidor === 'green') {
-				// --- ESTADO VERDE: ALUMNO AL DÍA ---
 				status.innerText = "ACCESO PERMITIDO";
 				status.className = "text-5xl font-black uppercase italic text-green-500 mb-2 tracking-wide text-center drop-shadow-[0_0_10px_#22c55e]";
 				overlay.style.boxShadow = "inset 0 0 150px rgba(34, 197, 94, 0.4)";
@@ -6080,7 +6199,6 @@ if (editorForm) {
 				playVikingSound('success');
 
 			} else if (colorServidor === 'yellow') {
-				// --- ESTADO AMARILLO: PRÓXIMO A VENCER ---
 				status.innerText = "¡ATENCIÓN: VENCE PRONTO!";
 				status.className = "text-4xl font-black uppercase italic text-yellow-500 mb-2 tracking-wide text-center drop-shadow-[0_0_15px_#eab308]";
 				overlay.style.boxShadow = "inset 0 0 150px rgba(234, 179, 8, 0.5)";
@@ -6089,16 +6207,14 @@ if (editorForm) {
 				playVikingSound('warning');
 
 			} else if (colorServidor === 'blue') {
-				// --- ESTADO AZUL: STAFF (Administrativo, Profes, etc) ---
 				status.innerText = "ACCESO STAFF";
 				status.className = "text-5xl font-black uppercase italic text-blue-500 mb-2 tracking-wide text-center drop-shadow-[0_0_15px_#3b82f6]";
 				overlay.style.boxShadow = "inset 0 0 150px rgba(59, 130, 246, 0.4)";
 				overlay.style.border = "8px solid #3b82f6";
 				icon.innerHTML = `<div class="w-32 h-32 bg-blue-600 rounded-full flex items-center justify-center shadow-[0_0_60px_#3b82f6]"><i data-lucide="shield-check" class="w-16 h-16 text-white"></i></div>`;
-				playVikingSound('success'); // El sonido de staff es el de éxito
+				playVikingSound('success');
 
 			} else {
-				// --- ESTADO ROJO: DENEGADO / ERROR ---
 				status.innerText = "ACCESO DENEGADO";
 				status.className = "text-5xl font-black uppercase italic text-red-600 mb-2 tracking-wide text-center drop-shadow-[0_0_10px_#dc2626]";
 				overlay.style.boxShadow = "inset 0 0 150px rgba(220, 38, 38, 0.4)";
@@ -6106,6 +6222,13 @@ if (editorForm) {
 				icon.innerHTML = `<div class="w-32 h-32 bg-red-600 rounded-full flex items-center justify-center shadow-[0_0_60px_#dc2626] animate-shake"><i data-lucide="x" class="w-16 h-16 text-white"></i></div>`;
 				playVikingSound('error');
 			}
+
+			// Volvemos a dibujar la barra de progreso temporal abajo de los resultados fijos
+			msg.innerHTML += `
+				<div class="mt-10 w-48 h-1 bg-white/10 rounded-full overflow-hidden mx-auto">
+					<div class="h-full bg-red-600 animate-[width_4s_linear]"></div>
+				</div>
+			`;
 
 			if (window.lucide) lucide.createIcons();
 		}

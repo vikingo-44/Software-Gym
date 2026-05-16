@@ -732,11 +732,13 @@ def reset_password(data: UsuarioResetPassword, db: Session = Depends(database.ge
         raise HTTPException(status_code=500, detail=f"Error al actualizar: {str(e)}")
 
 # --- NUEVO: VALIDACIÓN DE ACCESO (QR CON HASHING) ---
+# --- NUEVO: VALIDACIÓN DE ACCESO CON PREGUNTA INTERACTIVA DE CLASE ---
 @app.post("/api/acceso/validar", tags=["Seguridad"])
 def validar_acceso_qr(data: AccessCheck, db: Session = Depends(database.get_db)):
     """
     Control de Acceso mediante escaneo de código QR.
-    Se espera que el QR contenga el formato "DNI:HASH" contenido en el código QR.
+    Si el alumno no tiene reserva previa y hay una clase en este horario,
+    se le frena el acceso directo para ofrecerle descontar el cupo.
     """
     raw_data = data.qr_data
     
@@ -764,8 +766,11 @@ def validar_acceso_qr(data: AccessCheck, db: Session = Depends(database.get_db))
         final_response["nombre"] = "Error Seguridad"
         return final_response
 
-    # 3. Buscar usuario por DNI
-    user = db.query(models.Usuario).options(joinedload(models.Usuario.perfil)).filter(models.Usuario.dni == dni_recibido).first()
+    # 3. Buscar usuario por DNI con sus planes cargados
+    user = db.query(models.Usuario).options(
+        joinedload(models.Usuario.perfil),
+        joinedload(models.Usuario.plan)
+    ).filter(models.Usuario.dni == dni_recibido).first()
     
     if not user:
         final_response["message"] = "Usuario no registrado"
@@ -776,43 +781,101 @@ def validar_acceso_qr(data: AccessCheck, db: Session = Depends(database.get_db))
     final_response["rol"] = user.perfil.nombre if user.perfil else "Usuario"
     rol_lower = final_response["rol"].lower()
 
-    # Lógica de Roles Staff
+    # Lógica de Roles Staff (Pasan directo en azul)
     roles_staff = ["administracion", "administrativo", "profesor", "staff", "admin", "dueño", "supervisor"]
-    
     if rol_lower in roles_staff:
         final_response["status"] = "AUTHORIZED"
         final_response["message"] = "Bienvenido Staff"
         final_response["color"] = "blue"
+        
+        # Guardamos log de staff directo
+        guardar_log_acceso(db, user, dni_recibido, final_response)
+        return final_response
     
-    # Validación para Alumnos
-    elif user.fecha_vencimiento:
-        if user.fecha_vencimiento >= date.today():
-            dias_rest = (user.fecha_vencimiento - date.today()).days
-            final_response["status"] = "AUTHORIZED"
-            
-            # --- CORRECCIÓN DE COLORES ---
-            if dias_rest <= 3:
-                final_response["message"] = "¡Atención: Próximo a vencer!"
-                final_response["color"] = "yellow"
-            else:
-                final_response["message"] = f"Pase Válido ({dias_rest} días rest.)"
-                final_response["color"] = "green"
-        else:
+    # Validation para Alumnos
+    if user.fecha_vencimiento:
+        if user.fecha_vencimiento < date.today():
             final_response["status"] = "DENIED"
             final_response["message"] = f"Plan Vencido el {user.fecha_vencimiento}"
             final_response["color"] = "red"
+            guardar_log_acceso(db, user, dni_recibido, final_response)
+            return final_response
+            
+        # Alumno al día -> Calculamos días restantes para los avisos en amarillo
+        dias_rest = (user.fecha_vencimiento - date.today()).days
+        color_alumno = "yellow" if dias_rest <= 3 else "green"
+        msg_alumno = "¡Atención: Próximo a vencer!" if dias_rest <= 3 else f"Pase Válido ({dias_rest} días rest.)"
+        
+        # ⚔️ FILTRO INTELIGENTE DE AVIVADAS PARA CLASES LIMITADAS
+        if user.plan and user.plan.clases_mensuales < 999:
+            hoy_fecha = date.today()
+            
+            # A. Verificamos si ya tiene una reserva previa para HOY
+            tiene_reserva = db.query(models.Reserva).filter(
+                models.Reserva.usuario_id == user.id,
+                models.Reserva.fecha_reserva == hoy_fecha
+            ).first()
+            
+            # B. Si NO tiene reserva hecha, buscamos qué clase está ocurriendo AHORA en su sede
+            if not tiene_reserva:
+                ahora_dt = datetime.now()
+                # Convertimos la hora actual a float para matchear con tu campo horario (Ej: 19:30 -> 19.5)
+                hora_actual_float = ahora_dt.hour + (ahora_dt.minute / 60.0)
+                dia_semana_actual = ahora_dt.weekday() # 0=Lunes, 1=Martes...
+                
+                # Buscamos clases normales en su sucursal
+                clases_hoy = db.query(models.Clase).filter(models.Clase.sucursal_id == user.sucursal_id).all()
+                clase_cercana = None
+                
+                for c in clases_hoy:
+                    if c.horarios_detalle and isinstance(c.horarios_detalle, list):
+                        for slot in c.horarios_detalle:
+                            if int(slot.get('dia', -1)) == dia_semana_actual:
+                                slot_horario = float(slot.get('horario', 0.0))
+                                # Margen: 45 minutos antes (0.75) o hasta 15 minutos después (0.25) de empezar
+                                if (slot_horario - 0.75) <= hora_actual_float <= (slot_horario + 0.25):
+                                    clase_cercana = c
+                                    clase_horario_txt = f"{int(slot_horario)}:{str(int((slot_horario % 1) * 60)).zfill(2)}"
+                                    break
+                    if clase_cercana:
+                        break
+                
+                # C. Si encontramos una clase en horario pico, frenamos el acceso directo y preguntamos
+                if clase_cercana:
+                    return {
+                        "status": "CHOOSE_ACTIVITY",
+                        "nombre": user.nombre_completo,
+                        "usuario_id": user.id,
+                        "clase_id": clase_cercana.id,
+                        "clase_nombre": clase_cercana.nombre.upper(),
+                        "horario": clase_horario_txt,
+                        "horario_float": slot_horario,
+                        "dia_semana": dia_semana_actual,
+                        "fecha_clase": hoy_fecha.isoformat(),
+                        "color": "yellow",
+                        "message": "Seleccioná tu actividad para ingresar."
+                    }
 
-    # --- REGISTRO EN HISTORIAL (SQL) ---
+        # Si tiene pase libre (999), ya tiene reserva hecha, o no hay clases cerca: pasa directo a Musculación
+        final_response["status"] = "AUTHORIZED"
+        final_response["message"] = msg_alumno
+        final_response["color"] = color_alumno
+        guardar_log_acceso(db, user, dni_recibido, final_response)
+        
+    return final_response
+
+def guardar_log_acceso(db: Session, user, dni, response):
+    """Función auxiliar interna para no duplicar líneas de logs en la DB"""
     try:
         nuevo_acceso = models.Acceso(
             usuario_id=user.id,
-            dni=dni_recibido,
+            dni=dni,
             nombre=user.nombre_completo,
-            rol=final_response["rol"],
+            rol=response["rol"],
             metodo="QR SCAN",
-            accion=final_response["status"],
-            exitoso=(final_response["status"] == "AUTHORIZED"),
-            sucursal_id=user.sucursal_id, # <--- SE GUARDA LA SUCURSAL DEL USUARIO QUE ACCEDE
+            accion=response["status"],
+            exitoso=(response["status"] == "AUTHORIZED"),
+            sucursal_id=user.sucursal_id,
             fecha=datetime.now()
         )
         db.add(nuevo_acceso)
@@ -820,8 +883,6 @@ def validar_acceso_qr(data: AccessCheck, db: Session = Depends(database.get_db))
     except Exception as e:
         db.rollback()
         logger.error(f"Error al guardar log de acceso: {e}")
-
-    return final_response
 
 # --- SUCURSALES ---
 @app.get("/api/sucursales", response_model=List[SucursalResponse], tags=["Sucursales"])
