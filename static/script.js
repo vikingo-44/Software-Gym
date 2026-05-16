@@ -5082,29 +5082,21 @@ if (editorForm) {
 				return { disponible: 0, total: 0, usado: 0, esFull: false, vencido: true };
 			}
 
-			// 1. Cupo total del plan asignado por vos en la DB (999, 144, 36, 24, etc.)
-			let limiteTotal = parseInt(usuario.plan.clases_mensuales) || 0;
+			// 1. Cupo total directo de la DB (144, 72, 36, 24, etc.)
+			let limiteTotal = parseInt(usuario.plan.clases_mensuales, 10) || 0;
 			
-			// ⚔️ CRITERIO ÚNICO Y ABSOLUTO: Si en la DB cargaste 999, el plan ES INFINITO.
+			// ⚔️ LA ÚNICA REGLA: Si pusiste 999 en la DB es Infinito. Todo lo demás es número real.
+			// Eliminamos CUALQUIER otra validación por texto o palabra clave.
 			const esFull = (limiteTotal === 999);
 
-			// Respaldo de seguridad por si un plan viejo quedó huérfano en 0 en la DB
-			if (limiteTotal === 0) {
-				const planNombre = (usuario.plan.nombre || "").toLowerCase().trim();
-				if (planNombre.includes('12')) limiteTotal = 12;
-				else if (planNombre.includes('8')) limiteTotal = 8;
-				else if (planNombre.includes('6')) limiteTotal = 6;
-			}
-
 			// 2. Límites del ciclo real del pase del alumno
-			// Usamos el inicio del día (00:00:00) para evitar desajustes de horas
 			const inicioPase = usuario.fecha_ultima_renovacion ? new Date(usuario.fecha_ultima_renovacion) : new Date();
 			inicioPase.setHours(0,0,0,0);
 			
 			const finPase = usuario.fecha_vencimiento ? new Date(usuario.fecha_vencimiento) : new Date();
 			finPase.setHours(23,59,59,999);
 
-			// 3. Contamos las reservas que caen dentro de la ventana de contratación viva
+			// 3. Contamos las reservas del ciclo contratado
 			const reservasDelCiclo = todasLasReservas.filter(res => {
 				const esMismoUsuario = String(res.usuario_id) === String(usuario.id) || (res.alumno_dni && String(res.alumno_dni) === String(usuario.dni));
 				if (!esMismoUsuario) return false;
