@@ -5082,25 +5082,18 @@ if (editorForm) {
 				return { disponible: 0, total: 0, usado: 0, esFull: false, vencido: true };
 			}
 
-			// 1. Cupo total del plan asignado en la DB
+			// 1. Cupo total del plan asignado por vos en la DB (999, 144, 36, 24, etc.)
 			let limiteTotal = parseInt(usuario.plan.clases_mensuales) || 0;
-			const planNombre = (usuario.plan.nombre || "").toLowerCase();
-			let esFull = false;
+			
+			// ⚔️ CRITERIO ÚNICO Y ABSOLUTO: Si en la DB cargaste 999, el plan ES INFINITO.
+			const esFull = (limiteTotal === 999);
 
-			// Respaldo por nombre si viene en 0 de la DB
+			// Respaldo de seguridad por si un plan viejo quedó huérfano en 0 en la DB
 			if (limiteTotal === 0) {
-				// ⚔️ AGREGADO 'premium' AL RESPALDO DE INTEGRIDAD
-				if (planNombre.includes('libre') || planNombre.includes('full') || planNombre.includes('ilimitado') || planNombre.includes('premium')) {
-					limiteTotal = 999;
-				} else if (planNombre.includes('12')) limiteTotal = 12;
+				const planNombre = (usuario.plan.nombre || "").toLowerCase().trim();
+				if (planNombre.includes('12')) limiteTotal = 12;
 				else if (planNombre.includes('8')) limiteTotal = 8;
 				else if (planNombre.includes('6')) limiteTotal = 6;
-			}
-
-			// Identificar si es Pase Libre
-			// ⚔️ CONTROL CORREGIDO: Filtro por 999 (para el anual de 144) y agregado 'premium' como libre por palabra clave
-			if (limiteTotal >= 999 || planNombre.includes('libre') || planNombre.includes('full') || planNombre.includes('ilimitado') || planNombre.includes('premium')) {
-				esFull = true;
 			}
 
 			// 2. Límites del ciclo real del pase del alumno
