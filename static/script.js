@@ -258,7 +258,7 @@
 
 			// 2. GESTIÓN DE CRÉDITOS Y RESERVAS
 			const limite = u.plan?.clases_mensuales || 0;
-			const esFull = limite >= 99; 
+			const esFull = limite >= 999; 
 
 			// Sincronizamos todas las reservas del sistema
 			const allReservas = await apiFetch('/reservas');
