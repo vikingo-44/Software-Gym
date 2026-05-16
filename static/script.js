@@ -5865,24 +5865,24 @@ if (editorForm) {
 
 			// Definimos una lista de intentos (Constraints) desde lo más ideal a lo más básico
 			const attempts = [
-				// Intento 1: Cámara frontal con resolución flexible
-				{ 
-					video: { 
-						facingMode: "user", 
-						width: { min: 320, ideal: 1280 }, 
-						height: { min: 240, ideal: 720 },
-						aspectRatio: { ideal: 1.7777777778 }
-					} 
-				},
-				// Intento 2: Cámara frontal sin restricciones de resolución (para tablets viejas)
-				{ 
-					video: { facingMode: "user" } 
-				},
-				// Intento 3: Cualquier cámara disponible (último recurso)
-				{ 
-					video: true 
-				}
-			];
+                // Intento 1: Resolución nativa estricta de la cámara para evitar zoom digital/crop
+                { 
+                    video: { 
+                        width: { ideal: 640 }, 
+                        height: { ideal: 480 },
+                        aspectRatio: { ideal: 1.3333333333 }, // Formato 4:3 nativo de la C170
+                        frameRate: { ideal: 30 }
+                    } 
+                },
+                // Intento 2: Configuración flexible para tótems/tablets
+                { 
+                    video: { facingMode: "user" } 
+                },
+                // Intento 3: Último recurso
+                { 
+                    video: true 
+                }
+            ];
 
 			let lastError = null;
 
@@ -5900,15 +5900,24 @@ if (editorForm) {
 			}
 			
 			if (videoStream && video) {
-				video.srcObject = videoStream;
-				video.onloadedmetadata = () => {
-					video.play();
-					isScanning = true;
-					lastScannedDNI = null; 
-					console.log("🛡️ Ojo de Odín Activo: Buscando QR...");
-					requestAnimationFrame(scanLoop); 
-				};
-			} else {
+                video.srcObject = videoStream;
+                video.onloadedmetadata = () => {
+                    video.play();
+                    
+                    // ⚔️ FILTRO ANTI-ENCANDILAMIENTO PARA LOGITECH C170
+                    // Bajamos el brillo un 15% para absorber la luz del celu y subimos el contraste para marcar el QR
+                    video.style.filter = "brightness(0.85) contrast(1.4) grayscale(0.2)";
+                    
+                    // Si tenías en el CSS un object-cover que te estiraba la imagen, 
+                    // lo pasamos a contain para que se vea el plano completo real sin zoom
+                    video.style.objectFit = "contain"; 
+
+                    isScanning = true;
+                    lastScannedDNI = null; 
+                    console.log("🛡️ Ojo de Odín Activo con Filtro Antirreflejo: Buscando QR...");
+                    requestAnimationFrame(scanLoop); 
+                };
+            } else {
 				console.error("No se pudo inicializar ninguna cámara después de varios intentos:", lastError);
 				showCameraError("No hay acceso a la cámara. Asegúrate de usar Chrome y tener habilitados los permisos en la tablet.");
 			}
