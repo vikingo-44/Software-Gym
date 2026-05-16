@@ -5087,9 +5087,10 @@ if (editorForm) {
 			const planNombre = (usuario.plan.nombre || "").toLowerCase();
 			let esFull = false;
 
-			// Respaldo por nombre si viene en 0
+			// Respaldo por nombre si viene en 0 de la DB
 			if (limiteTotal === 0) {
-				if (planNombre.includes('libre') || planNombre.includes('premium')  || planNombre.includes('full') || planNombre.includes('ilimitado')) {
+				// ⚔️ AGREGADO 'premium' AL RESPALDO DE INTEGRIDAD
+				if (planNombre.includes('libre') || planNombre.includes('full') || planNombre.includes('ilimitado') || planNombre.includes('premium')) {
 					limiteTotal = 999;
 				} else if (planNombre.includes('12')) limiteTotal = 12;
 				else if (planNombre.includes('8')) limiteTotal = 8;
@@ -5097,7 +5098,10 @@ if (editorForm) {
 			}
 
 			// Identificar si es Pase Libre
-			if (limiteTotal >= 200 || planNombre.includes('libre')) esFull = true;
+			// ⚔️ CONTROL CORREGIDO: Filtro por 999 (para el anual de 144) y agregado 'premium' como libre por palabra clave
+			if (limiteTotal >= 999 || planNombre.includes('libre') || planNombre.includes('full') || planNombre.includes('ilimitado') || planNombre.includes('premium')) {
+				esFull = true;
+			}
 
 			// 2. Límites del ciclo real del pase del alumno
 			// Usamos el inicio del día (00:00:00) para evitar desajustes de horas
