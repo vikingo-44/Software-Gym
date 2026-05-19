@@ -5958,41 +5958,36 @@ if (editorForm) {
 		async function processAccess(qrData) {
 			scanCooldown = true; 
 			
+			// Si había un cartel abierto de un escaneo anterior, lo limpiamos
 			if (feedbackTimeout) clearTimeout(feedbackTimeout);
 			
 			const nameDisplay = document.getElementById('scanner-user-name');
 			if (nameDisplay) nameDisplay.innerText = "VERIFICANDO...";
 
 			try {
+				// 1. Llamada al backend
 				const response = await apiFetch('/acceso/validar', 'POST', { qr_data: qrData });
 				
-				if (response.error) {
-					showFeedback({ 
-						status: "DENIED", 
-						message: response.error, 
-						nombre: "SISTEMA" 
-					});
-					startFeedbackTimer(4000);
-				} else if (response.status === "CHOOSE_ACTIVITY") {
-					// ⚔️ CONTROL INTERACTIVO: Frenamos el timer para obligar al alumno a tocar la pantalla
-					showChooseActivityUI(response);
-				} else {
-					// Acceso normal autorizado o denegado directo
-					showFeedback(response);
+				// 2. Si el backend detecta que necesitas elegir (porque no hay reserva previa)
+				if (response.status === "CHOOSE_ACTIVITY") {
+					showChooseActivityUI(response); // Abre los botones interactivos
+					// AQUÍ NO HACEMOS NADA MÁS, esperamos a que el usuario toque un botón.
+				} 
+				// 3. Si el backend ya detectó la reserva o es otro estado (AUTHORIZED / DENIED)
+				else {
+					showFeedback(response); // Muestra la pantalla verde o roja directa
 					
-					if (typeof loadDashboard === 'function') loadDashboard(); 
+					// Refrescamos datos si es necesario
+					if (typeof loadDashboard === 'function') loadDashboard();
 					if (typeof renderAccesos === 'function') renderAccesos();
 					
+					// Iniciamos el timer para cerrar la pantalla después de 4 segundos
 					startFeedbackTimer(4000);
 				}
 
 			} catch (e) {
 				console.error("Error en la validación:", e);
-				showFeedback({ 
-					status: "DENIED", 
-					message: "Error de red/servidor", 
-					nombre: "SISTEMA" 
-					});
+				showFeedback({ status: "DENIED", message: "Error de servidor", nombre: "SISTEMA" });
 				startFeedbackTimer(4000);
 			}
 		}
