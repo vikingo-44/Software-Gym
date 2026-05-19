@@ -732,17 +732,13 @@ def reset_password(data: UsuarioResetPassword, db: Session = Depends(database.ge
         raise HTTPException(status_code=500, detail=f"Error al actualizar: {str(e)}")
 
 # --- VALIDACIÓN DE ACCESO CON PREGUNTA INTERACTIVA DE CLASE ---
-import hashlib
-from datetime import datetime, timedelta, date
-from fastapi import Depends
-from sqlalchemy.orm import Session, joinedload
-# Asegúrate de importar tus módulos correspondientes:
-# import models, database
-# from core.security import SECRET_KEY (o donde guardes tu key)
-
 @app.post("/api/acceso/validar", tags=["Seguridad"])
 def validar_acceso_qr(data: AccessCheck, db: Session = Depends(database.get_db)):
+    # ⚔️ ACEPTAMOS HORA Y DIA LOCAL ENVIADOS DESDE EL TOTEM
     raw_data = data.qr_data
+    # NOTA: Asegurate que tu modelo AccessCheck tenga hora_local y dia_local definidos
+    hora_actual_float = getattr(data, 'hora_local', None)
+    dia_semana_actual = getattr(data, 'dia_local', None)
     
     # Preparar respuesta base
     final_response = {
@@ -765,7 +761,6 @@ def validar_acceso_qr(data: AccessCheck, db: Session = Depends(database.get_db))
         return final_response
 
     # 2. Validar Hash de seguridad
-    # Asegúrate de que SECRET_KEY esté definido en tu scope
     esperado = hashlib.sha256(f"{dni_recibido}{SECRET_KEY}".encode()).hexdigest()
     
     if hash_recibido != esperado:
@@ -810,19 +805,13 @@ def validar_acceso_qr(data: AccessCheck, db: Session = Depends(database.get_db))
         msg_alumno = "¡Atención: Próximo a vencer!" if dias_rest <= 3 else f"Pase Válido ({dias_rest} días rest.)"
         
         # --- LÓGICA DE ACCESO INTELIGENTE ---
-        if user.plan and user.plan.clases_mensuales < 999:
+        if user.plan and user.plan.clases_mensuales < 999 and hora_actual_float is not None and dia_semana_actual is not None:
             hoy_fecha = date.today()
             
             reserva_hoy = db.query(models.Reserva).filter(
                 models.Reserva.usuario_id == user.id,
                 models.Reserva.fecha_reserva == hoy_fecha
             ).first()
-
-            # Ajuste de hora Argentina (UTC-3)
-            comp_hora = datetime.utcnow() - timedelta(hours=3)
-            hora_actual_float = comp_hora.hour + (comp_hora.minute / 60.0)
-            # Python weekday(): lunes=0, domingo=6. Ajuste a tu lógica si es necesario
-            dia_semana_actual = comp_hora.weekday() 
 
             clase_cercana = None
             slot_horario_real = 0.0

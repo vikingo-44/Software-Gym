@@ -5962,10 +5962,19 @@ if (editorForm) {
 			const nameDisplay = document.getElementById('scanner-user-name');
 			if (nameDisplay) nameDisplay.innerText = "VERIFICANDO...";
 
+			// Capturamos el tiempo local del tótem para ser precisos
+			const now = new Date();
+			const localTimeFloat = now.getHours() + (now.getMinutes() / 60.0);
+			// Convertimos: Lunes=1...Sábado=6, Domingo=0 para que coincida con tu lógica
+			const localDay = now.getDay(); 
+
 			try {
-				const response = await apiFetch('/acceso/validar', 'POST', { qr_data: qrData });
+				const response = await apiFetch('/acceso/validar', 'POST', { 
+					qr_data: qrData,
+					hora_local: localTimeFloat,
+					dia_local: localDay 
+				});
 				
-				// El Backend ahora retorna AUTHORIZED si hay reserva, o CHOOSE_ACTIVITY si falta reservar
 				if (response.status === "CHOOSE_ACTIVITY") {
 					showChooseActivityUI(response);
 				} else {
