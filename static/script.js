@@ -5957,43 +5957,32 @@ if (editorForm) {
 		 */
 		async function processAccess(qrData) {
 			scanCooldown = true; 
-			
-			// Si había un cartel abierto de un escaneo anterior, lo limpiamos
 			if (feedbackTimeout) clearTimeout(feedbackTimeout);
 			
 			const nameDisplay = document.getElementById('scanner-user-name');
 			if (nameDisplay) nameDisplay.innerText = "VERIFICANDO...";
 
 			try {
-				// 1. Llamada al backend
 				const response = await apiFetch('/acceso/validar', 'POST', { qr_data: qrData });
 				
-				// 2. Si el backend detecta que necesitas elegir (porque no hay reserva previa)
+				// El Backend ahora retorna AUTHORIZED si hay reserva, o CHOOSE_ACTIVITY si falta reservar
 				if (response.status === "CHOOSE_ACTIVITY") {
-					showChooseActivityUI(response); // Abre los botones interactivos
-					// AQUÍ NO HACEMOS NADA MÁS, esperamos a que el usuario toque un botón.
-				} 
-				// 3. Si el backend ya detectó la reserva o es otro estado (AUTHORIZED / DENIED)
-				else {
-					showFeedback(response); // Muestra la pantalla verde o roja directa
-					
-					// Refrescamos datos si es necesario
+					showChooseActivityUI(response);
+				} else {
+					showFeedback(response);
 					if (typeof loadDashboard === 'function') loadDashboard();
 					if (typeof renderAccesos === 'function') renderAccesos();
-					
-					// Iniciamos el timer para cerrar la pantalla después de 4 segundos
 					startFeedbackTimer(4000);
 				}
-
 			} catch (e) {
-				console.error("Error en la validación:", e);
+				console.error("Error en validación:", e);
 				showFeedback({ status: "DENIED", message: "Error de servidor", nombre: "SISTEMA" });
 				startFeedbackTimer(4000);
 			}
 		}
 
 		/**
-		 * Muestra el panel interactivo con la pregunta de la clase actual
+		 * Panel interactivo: Solo aparece si el backend devuelve CHOOSE_ACTIVITY
 		 */
 		function showChooseActivityUI(data) {
 			const overlay = document.getElementById('scanner-feedback-overlay');
@@ -6014,7 +6003,6 @@ if (editorForm) {
 			status.innerText = "¿QUÉ ENTRENÁS HOY?";
 			status.className = "text-4xl font-black uppercase italic text-yellow-500 mb-6 tracking-wide text-center drop-shadow-[0_0_10px_#eab308]";
 			
-			// Inyectamos los dos botones táctiles interactivos
 			icon.innerHTML = `
 				<div class="flex flex-col sm:flex-row gap-4 w-full max-w-md px-6 justify-center items-center pointer-events-auto z-50">
 					<button onclick="confirmarIngresoClase(${JSON.stringify(data).replace(/"/g, '&quot;')})" 
@@ -6023,69 +6011,73 @@ if (editorForm) {
 						<span class="text-lg font-black tracking-normal">${data.clase_nombre}</span>
 						<span class="text-[10px] text-zinc-300 font-bold mt-0.5">${data.horario} HS • DESCUENTA 1 CUPO</span>
 					</button>
-					
 					<button onclick="confirmarIngresoMusculacion('${data.nombre}')" 
 						class="w-full sm:w-64 py-4 bg-zinc-800 hover:bg-zinc-700 text-white font-black uppercase italic rounded-2xl shadow-lg transition-all transform hover:scale-105 flex flex-col items-center justify-center border border-zinc-700">
 						<span class="text-sm tracking-tight">Ingresar solo a la</span>
 						<span class="text-lg font-black tracking-normal">SALA DE MUSCULACIÓN</span>
-						<span class="text-[10px] text-zinc-400 font-bold mt-0.5">ACCESO ACCIÓN LIBRE</span>
 					</button>
 				</div>
 			`;
-			
-			msg.innerHTML = `<span class="text-zinc-400 text-xs font-bold uppercase tracking-widest mt-2 block">Selección requerida en la tablet del totem</span>`;
+			msg.innerHTML = `<span class="text-zinc-400 text-xs font-bold uppercase tracking-widest mt-2 block">Selección requerida</span>`;
 		}
 
-		/**
-		 * Confirmación Acción A: El alumno asiste a la clase (Genera reserva automática y descuenta)
-		 */
 		async function confirmarIngresoClase(data) {
 			try {
 				const booking = await apiFetch('/reservas', 'POST', {
 					usuario_id: parseInt(data.usuario_id),
 					clase_id: parseInt(data.clase_id),
-					horario: parseFloat(data.horario_float), // <--- CAMBIADO AL FLOAT REAL RESPETANDO TU BACKEND
+					horario: parseFloat(data.horario_float),
 					dia_semana: parseInt(data.dia_semana),
 					fecha_clase: data.fecha_clase
 				});
 
 				if (booking.error) {
-					showFeedback({
-						status: "DENIED",
-						nombre: data.nombre,
-						message: booking.error,
-						color: "red"
-					});
+					showFeedback({ status: "DENIED", nombre: data.nombre, message: booking.error, color: "red" });
 				} else {
-					showFeedback({
-						status: "AUTHORIZED",
-						nombre: data.nombre,
-						message: `Reserva exitosa en ${data.clase_nombre}. ¡Buen entrenamiento!`,
-						color: "green"
-					});
+					showFeedback({ status: "AUTHORIZED", nombre: data.nombre, message: `Reserva exitosa en ${data.clase_nombre}.`, color: "green" });
 				}
-			} catch (err) {
-				console.error("Error reservando desde totem:", err);
-			}
+			} catch (err) { console.error(err); }
 			startFeedbackTimer(4000);
 		}
 
-		/**
-		 * Confirmación Acción B: El alumno va solo a hacer fierros (Pasa directo sin tocar su bolsa de pases)
-		 */
 		function confirmarIngresoMusculacion(nombreAlumno) {
-			showFeedback({
-				status: "AUTHORIZED",
-				nombre: nombreAlumno,
-				message: "Ingreso registrado a Sala de Musculación.",
-				color: "green"
-			});
+			showFeedback({ status: "AUTHORIZED", nombre: nombreAlumno, message: "Ingreso registrado a Musculación.", color: "green" });
 			startFeedbackTimer(4000);
 		}
 
-		/**
-		 * Manejador centralizado del temporizador de cierre del feedback
-		 */
+		function showFeedback(data) {
+			const overlay = document.getElementById('scanner-feedback-overlay');
+			const icon = document.getElementById('scanner-icon-container');
+			const status = document.getElementById('scanner-status-text');
+			const name = document.getElementById('scanner-user-name');
+			const msg = document.getElementById('scanner-msg');
+
+			if (!overlay) return;
+			overlay.classList.remove('hidden');
+			overlay.classList.add('flex');
+			overlay.style.backgroundColor = "rgba(0,0,0,0.95)";
+			overlay.style.border = "none";
+			overlay.style.boxShadow = "none";
+
+			name.innerText = data.nombre || "DESCONOCIDO";
+			msg.innerText = data.message || "";
+			
+			const color = data.color || "red";
+			// Lógica visual simplificada de colores...
+			if (color === 'green') {
+				status.innerText = "ACCESO PERMITIDO";
+				status.className = "text-5xl font-black italic text-green-500 mb-2";
+				overlay.style.border = "8px solid #22c55e";
+				icon.innerHTML = `<div class="w-32 h-32 bg-green-500 rounded-full flex items-center justify-center animate-bounce"><i data-lucide="check" class="w-16 h-16 text-black"></i></div>`;
+			} else {
+				status.innerText = "ACCESO DENEGADO";
+				status.className = "text-5xl font-black italic text-red-600 mb-2";
+				overlay.style.border = "8px solid #dc2626";
+				icon.innerHTML = `<div class="w-32 h-32 bg-red-600 rounded-full flex items-center justify-center animate-shake"><i data-lucide="x" class="w-16 h-16 text-white"></i></div>`;
+			}
+			if (window.lucide) lucide.createIcons();
+		}
+
 		function startFeedbackTimer(ms) {
 			if (feedbackTimeout) clearTimeout(feedbackTimeout);
 			feedbackTimeout = setTimeout(() => {
@@ -6098,110 +6090,9 @@ if (editorForm) {
 			}, ms);
 		}
 
-		/**
-		 * Oculta la pantalla de resultados (Mantiene tu estructura original)
-		 */
 		function hideFeedback() {
 			const overlay = document.getElementById('scanner-feedback-overlay');
-			if (overlay) {
-				overlay.classList.add('hidden');
-				overlay.classList.remove('flex');
-			}
-		}
-
-		/**
-		 * 4. SIMULACIÓN (Para los botones del modal)
-		 */
-		async function simulateScan(type) {
-			if (scanCooldown) return;
-			
-			let dniToTest = "00000000";
-			
-			if (type === 'ok') {
-				// Buscar un alumno activo en el estado local para simular
-				const hoy = new Date().toISOString().split('T')[0];
-				const alumno = state.alumnos.find(a => a.fecha_vencimiento && a.fecha_vencimiento >= hoy);
-				if (alumno) {
-					dniToTest = alumno.dni;
-				} else {
-					showVikingToast("No hay alumnos activos para simular", true);
-					return;
-				}
-			} else {
-				dniToTest = "99999999"; // DNI que no existe o vencido
-			}
-
-			// Generar el hash para evitar el error de "formato no válido" si el backend lo requiere
-			const hash = await generateVikingHash(dniToTest);
-			const fullData = `${dniToTest}:${hash}`;
-			
-			processAccess(fullData);
-		}
-
-		/**
-		 * UI: MOSTRAR RESULTADO BASADO EN EL COLOR DEL SERVIDOR
-		 * Ahora con soporte para Verde (OK), Amarillo (Vence), Azul (Staff) y Rojo (Error).
-		 */
-		function showFeedback(data) {
-			const overlay = document.getElementById('scanner-feedback-overlay');
-			const icon = document.getElementById('scanner-icon-container');
-			const status = document.getElementById('scanner-status-text');
-			const name = document.getElementById('scanner-user-name');
-			const msg = document.getElementById('scanner-msg');
-
-			if (!overlay) return;
-
-			overlay.classList.remove('hidden');
-			overlay.classList.add('flex');
-			overlay.style.boxShadow = "none";
-			overlay.style.border = "none";
-			overlay.style.backgroundColor = "rgba(0,0,0,0.95)";
-
-			name.innerText = data.nombre || "DESCONOCIDO";
-			msg.innerText = data.message || "";
-
-			const colorServidor = data.color || "red";
-
-			if (colorServidor === 'green') {
-				status.innerText = "ACCESO PERMITIDO";
-				status.className = "text-5xl font-black uppercase italic text-green-500 mb-2 tracking-wide text-center drop-shadow-[0_0_10px_#22c55e]";
-				overlay.style.boxShadow = "inset 0 0 150px rgba(34, 197, 94, 0.4)";
-				overlay.style.border = "8px solid #22c55e";
-				icon.innerHTML = `<div class="w-32 h-32 bg-green-500 rounded-full flex items-center justify-center shadow-[0_0_60px_#22c55e] animate-bounce"><i data-lucide="check" class="w-16 h-16 text-black"></i></div>`;
-				playVikingSound('success');
-
-			} else if (colorServidor === 'yellow') {
-				status.innerText = "¡ATENCIÓN: VENCE PRONTO!";
-				status.className = "text-4xl font-black uppercase italic text-yellow-500 mb-2 tracking-wide text-center drop-shadow-[0_0_15px_#eab308]";
-				overlay.style.boxShadow = "inset 0 0 150px rgba(234, 179, 8, 0.5)";
-				overlay.style.border = "8px solid #eab308";
-				icon.innerHTML = `<div class="w-32 h-32 bg-yellow-500 rounded-full flex items-center justify-center shadow-[0_0_60px_#eab308]"><i data-lucide="alert-triangle" class="w-16 h-16 text-black"></i></div>`;
-				playVikingSound('warning');
-
-			} else if (colorServidor === 'blue') {
-				status.innerText = "ACCESO STAFF";
-				status.className = "text-5xl font-black uppercase italic text-blue-500 mb-2 tracking-wide text-center drop-shadow-[0_0_15px_#3b82f6]";
-				overlay.style.boxShadow = "inset 0 0 150px rgba(59, 130, 246, 0.4)";
-				overlay.style.border = "8px solid #3b82f6";
-				icon.innerHTML = `<div class="w-32 h-32 bg-blue-600 rounded-full flex items-center justify-center shadow-[0_0_60px_#3b82f6]"><i data-lucide="shield-check" class="w-16 h-16 text-white"></i></div>`;
-				playVikingSound('success');
-
-			} else {
-				status.innerText = "ACCESO DENEGADO";
-				status.className = "text-5xl font-black uppercase italic text-red-600 mb-2 tracking-wide text-center drop-shadow-[0_0_10px_#dc2626]";
-				overlay.style.boxShadow = "inset 0 0 150px rgba(220, 38, 38, 0.4)";
-				overlay.style.border = "8px solid #dc2626";
-				icon.innerHTML = `<div class="w-32 h-32 bg-red-600 rounded-full flex items-center justify-center shadow-[0_0_60px_#dc2626] animate-shake"><i data-lucide="x" class="w-16 h-16 text-white"></i></div>`;
-				playVikingSound('error');
-			}
-
-			msg.innerHTML += `
-				<div class="mt-10 w-48 h-1 bg-white/10 rounded-full overflow-hidden mx-auto">
-					<div class="h-full bg-red-600 animate-[width_4s_linear]"></div>
-				</div>
-			`;
-
-			if (window.lucide) lucide.createIcons();
+			if (overlay) { overlay.classList.add('hidden'); overlay.classList.remove('flex'); }
 		}
 
 		// ⚔️ 1. ABRIR CENTRAL DE WHATSAPP
