@@ -732,6 +732,14 @@ def reset_password(data: UsuarioResetPassword, db: Session = Depends(database.ge
         raise HTTPException(status_code=500, detail=f"Error al actualizar: {str(e)}")
 
 # --- VALIDACIÓN DE ACCESO CON PREGUNTA INTERACTIVA DE CLASE ---
+import hashlib
+from datetime import datetime, timedelta, date
+from fastapi import Depends
+from sqlalchemy.orm import Session, joinedload
+# Asegúrate de importar tus módulos correspondientes:
+# import models, database
+# from core.security import SECRET_KEY (o donde guardes tu key)
+
 @app.post("/api/acceso/validar", tags=["Seguridad"])
 def validar_acceso_qr(data: AccessCheck, db: Session = Depends(database.get_db)):
     raw_data = data.qr_data
@@ -750,9 +758,14 @@ def validar_acceso_qr(data: AccessCheck, db: Session = Depends(database.get_db))
         final_response["message"] = "Formato de QR no válido"
         return final_response
 
-    dni_recibido, hash_recibido = raw_data.split(":")
+    try:
+        dni_recibido, hash_recibido = raw_data.split(":")
+    except ValueError:
+        final_response["message"] = "Formato de QR incorrecto"
+        return final_response
 
     # 2. Validar Hash de seguridad
+    # Asegúrate de que SECRET_KEY esté definido en tu scope
     esperado = hashlib.sha256(f"{dni_recibido}{SECRET_KEY}".encode()).hexdigest()
     
     if hash_recibido != esperado:
@@ -805,17 +818,18 @@ def validar_acceso_qr(data: AccessCheck, db: Session = Depends(database.get_db))
                 models.Reserva.fecha_reserva == hoy_fecha
             ).first()
 
-            # Ajuste de hora Argentina
+            # Ajuste de hora Argentina (UTC-3)
             comp_hora = datetime.utcnow() - timedelta(hours=3)
             hora_actual_float = comp_hora.hour + (comp_hora.minute / 60.0)
-            mapping_dias = {0: 1, 1: 2, 2: 3, 3: 4, 4: 5, 5: 6, 6: 0}
-            dia_semana_actual = mapping_dias[comp_hora.weekday()]
+            # Python weekday(): lunes=0, domingo=6. Ajuste a tu lógica si es necesario
+            dia_semana_actual = comp_hora.weekday() 
 
             clase_cercana = None
             slot_horario_real = 0.0
             
             # Búsqueda de clase activa
-            for c in db.query(models.Clase).filter(models.Clase.sucursal_id == user.sucursal_id).all():
+            clases_sucursal = db.query(models.Clase).filter(models.Clase.sucursal_id == user.sucursal_id).all()
+            for c in clases_sucursal:
                 if c.horarios_detalle:
                     for slot in c.horarios_detalle:
                         if int(slot.get('dia', -1)) == dia_semana_actual:
