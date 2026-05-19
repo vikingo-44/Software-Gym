@@ -734,11 +734,6 @@ def reset_password(data: UsuarioResetPassword, db: Session = Depends(database.ge
 # --- VALIDACIÓN DE ACCESO CON PREGUNTA INTERACTIVA DE CLASE ---
 @app.post("/api/acceso/validar", tags=["Seguridad"])
 def validar_acceso_qr(data: AccessCheck, db: Session = Depends(database.get_db)):
-    """
-    Control de Acceso mediante escaneo de código QR.
-    Si el alumno no tiene reserva previa y hay una clase en este horario,
-    se le frena el acceso directo para ofrecerle descontar el cupo en la tablet.
-    """
     raw_data = data.qr_data
     
     # Preparar respuesta base
@@ -765,7 +760,7 @@ def validar_acceso_qr(data: AccessCheck, db: Session = Depends(database.get_db))
         final_response["nombre"] = "Error Seguridad"
         return final_response
 
-    # 3. Buscar usuario por DNI con sus planes cargados
+    # 3. Buscar usuario
     user = db.query(models.Usuario).options(
         joinedload(models.Usuario.perfil),
         joinedload(models.Usuario.plan)
@@ -775,12 +770,11 @@ def validar_acceso_qr(data: AccessCheck, db: Session = Depends(database.get_db))
         final_response["message"] = "Usuario no registrado"
         return final_response
 
-    # Datos básicos encontrados
     final_response["nombre"] = user.nombre_completo
     final_response["rol"] = user.perfil.nombre if user.perfil else "Usuario"
     rol_lower = final_response["rol"].lower()
 
-    # Lógica de Roles Staff (Pasan directo en azul)
+    # Staff pasa directo
     roles_staff = ["administracion", "administrativo", "profesor", "staff", "admin", "dueño", "supervisor"]
     if rol_lower in roles_staff:
         final_response["status"] = "AUTHORIZED"
@@ -798,72 +792,67 @@ def validar_acceso_qr(data: AccessCheck, db: Session = Depends(database.get_db))
             guardar_log_acceso(db, user, dni_recibido, final_response)
             return final_response
             
-        # Alumno al día -> Calculamos días restantes para los avisos en amarillo
         dias_rest = (user.fecha_vencimiento - date.today()).days
         color_alumno = "yellow" if dias_rest <= 3 else "green"
         msg_alumno = "¡Atención: Próximo a vencer!" if dias_rest <= 3 else f"Pase Válido ({dias_rest} días rest.)"
         
-        # ⚔️ FILTRO INTELIGENTE DE AVIVADAS PARA CLASES LIMITADAS
+        # --- LÓGICA DE ACCESO INTELIGENTE ---
         if user.plan and user.plan.clases_mensuales < 999:
             hoy_fecha = date.today()
             
-            # A. Verificamos si ya tiene una reserva previa para HOY
-            tiene_reserva = db.query(models.Reserva).filter(
+            reserva_hoy = db.query(models.Reserva).filter(
                 models.Reserva.usuario_id == user.id,
                 models.Reserva.fecha_reserva == hoy_fecha
             ).first()
+
+            # Ajuste de hora Argentina
+            comp_hora = datetime.utcnow() - timedelta(hours=3)
+            hora_actual_float = comp_hora.hour + (comp_hora.minute / 60.0)
+            mapping_dias = {0: 1, 1: 2, 2: 3, 3: 4, 4: 5, 5: 6, 6: 0}
+            dia_semana_actual = mapping_dias[comp_hora.weekday()]
+
+            clase_cercana = None
+            slot_horario_real = 0.0
             
-            # B. Si NO tiene reserva hecha, buscamos qué clase está ocurriendo AHORA en su sede
-            if not tiene_reserva:
-                ahora_dt = datetime.now()
-                # Convertimos la hora actual a float (Ej: 12:30 -> 12.5)
-                hora_actual_float = ahora_dt.hour + (ahora_dt.minute / 60.0)
-                
-                # Mapeo estricto a formato estándar del Front (1=Lunes, ..., 6=Sábado, 0=Domingo)
-                mapping_dias = {0: 1, 1: 2, 2: 3, 3: 4, 4: 5, 5: 6, 6: 0}
-                dia_semana_actual = mapping_dias[ahora_dt.weekday()]
-                
-                # Buscamos todas las clases de la sucursal del alumno
-                clases_hoy = db.query(models.Clase).filter(models.Clase.sucursal_id == user.sucursal_id).all()
-                clase_cercana = None
-                clase_horario_txt = ""
-                slot_horario_real = 0.0
-                
-                for c in clases_hoy:
-                    if c.horarios_detalle and isinstance(c.horarios_detalle, list):
-                        for slot in c.horarios_detalle:
-                            # Validamos que el slot corresponda EXACTAMENTE al día de hoy
-                            if int(slot.get('dia', -1)) == dia_semana_actual:
-                                slot_horario = float(slot.get('horario', 0.0))
-                                
-                                # Margen estricto: 45 minutos antes o hasta 15 minutos después de empezar
-                                if (slot_horario - 0.75) <= hora_actual_float <= (slot_horario + 0.25):
-                                    clase_cercana = c
-                                    slot_horario_real = slot_horario
-                                    horas = int(slot_horario)
-                                    minutos = int(round((slot_horario % 1) * 60))
-                                    clase_horario_txt = f"{horas}:{str(minutos).zfill(2)}"
-                                    break
-                    if clase_cercana:
-                        break
+            # Búsqueda de clase activa
+            for c in db.query(models.Clase).filter(models.Clase.sucursal_id == user.sucursal_id).all():
+                if c.horarios_detalle:
+                    for slot in c.horarios_detalle:
+                        if int(slot.get('dia', -1)) == dia_semana_actual:
+                            slot_horario = float(slot.get('horario', 0.0))
+                            if (slot_horario - 0.75) <= hora_actual_float <= (slot_horario + 1.5):
+                                clase_cercana = c
+                                slot_horario_real = slot_horario
+                                break
+                if clase_cercana: break
 
-                # C. Si encontramos una clase en horario pico, frenamos el acceso y enviamos la interactividad
-                if clase_cercana:
-                    return {
-                        "status": "CHOOSE_ACTIVITY",
-                        "nombre": user.nombre_completo,
-                        "usuario_id": user.id,
-                        "clase_id": clase_cercana.id,
-                        "clase_nombre": clase_cercana.nombre.upper(),
-                        "horario": clase_horario_txt,
-                        "horario_float": slot_horario_real, # <--- ENVIADO COMO FLOAT REAL PARA LA DB
-                        "dia_semana": dia_semana_actual,
-                        "fecha_clase": hoy_fecha.isoformat(),
-                        "color": "yellow",
-                        "message": "Seleccioná tu actividad para ingresar."
-                    }
+            # Caso 1: Tiene reserva -> Pasa directo
+            if reserva_hoy and clase_cercana and reserva_hoy.clase_id == clase_cercana.id:
+                final_response["status"] = "AUTHORIZED"
+                final_response["message"] = f"¡Bienvenido a {clase_cercana.nombre}!"
+                final_response["color"] = "green"
+                guardar_log_acceso(db, user, dni_recibido, final_response)
+                return final_response
 
-        # Si tiene pase libre (999), ya reservó, o no hay clases cerca: pasa directo
+            # Caso 2: No tiene reserva pero hay clase -> Preguntar
+            if clase_cercana:
+                horas = int(slot_horario_real)
+                minutos = int(round((slot_horario_real % 1) * 60))
+                return {
+                    "status": "CHOOSE_ACTIVITY",
+                    "nombre": user.nombre_completo,
+                    "usuario_id": user.id,
+                    "clase_id": clase_cercana.id,
+                    "clase_nombre": clase_cercana.nombre.upper(),
+                    "horario": f"{horas}:{str(minutos).zfill(2)}",
+                    "horario_float": slot_horario_real,
+                    "dia_semana": dia_semana_actual,
+                    "fecha_clase": hoy_fecha.isoformat(),
+                    "color": "yellow",
+                    "message": "Tenés una clase disponible. ¿Querés reservarla?"
+                }
+        
+        # Acceso estándar
         final_response["status"] = "AUTHORIZED"
         final_response["message"] = msg_alumno
         final_response["color"] = color_alumno
