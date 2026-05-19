@@ -731,14 +731,13 @@ def reset_password(data: UsuarioResetPassword, db: Session = Depends(database.ge
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Error al actualizar: {str(e)}")
 
-# --- NUEVO: VALIDACIÓN DE ACCESO (QR CON HASHING) ---
-# --- NUEVO: VALIDACIÓN DE ACCESO CON PREGUNTA INTERACTIVA DE CLASE ---
+# --- VALIDACIÓN DE ACCESO CON PREGUNTA INTERACTIVA DE CLASE ---
 @app.post("/api/acceso/validar", tags=["Seguridad"])
 def validar_acceso_qr(data: AccessCheck, db: Session = Depends(database.get_db)):
     """
     Control de Acceso mediante escaneo de código QR.
     Si el alumno no tiene reserva previa y hay una clase en este horario,
-    se le frena el acceso directo para ofrecerle descontar el cupo.
+    se le frena el acceso directo para ofrecerle descontar el cupo en la tablet.
     """
     raw_data = data.qr_data
     
@@ -787,12 +786,10 @@ def validar_acceso_qr(data: AccessCheck, db: Session = Depends(database.get_db))
         final_response["status"] = "AUTHORIZED"
         final_response["message"] = "Bienvenido Staff"
         final_response["color"] = "blue"
-        
-        # Guardamos log de staff directo
         guardar_log_acceso(db, user, dni_recibido, final_response)
         return final_response
     
-    # Validation para Alumnos
+    # Validación para Alumnos
     if user.fecha_vencimiento:
         if user.fecha_vencimiento < date.today():
             final_response["status"] = "DENIED"
@@ -819,28 +816,38 @@ def validar_acceso_qr(data: AccessCheck, db: Session = Depends(database.get_db))
             # B. Si NO tiene reserva hecha, buscamos qué clase está ocurriendo AHORA en su sede
             if not tiene_reserva:
                 ahora_dt = datetime.now()
-                # Convertimos la hora actual a float para matchear con tu campo horario (Ej: 19:30 -> 19.5)
+                # Convertimos la hora actual a float (Ej: 12:30 -> 12.5)
                 hora_actual_float = ahora_dt.hour + (ahora_dt.minute / 60.0)
-                dia_semana_actual = ahora_dt.weekday() # 0=Lunes, 1=Martes...
                 
-                # Buscamos clases normales en su sucursal
+                # Mapeo estricto a formato estándar del Front (1=Lunes, ..., 6=Sábado, 0=Domingo)
+                mapping_dias = {0: 1, 1: 2, 2: 3, 3: 4, 4: 5, 5: 6, 6: 0}
+                dia_semana_actual = mapping_dias[ahora_dt.weekday()]
+                
+                # Buscamos todas las clases de la sucursal del alumno
                 clases_hoy = db.query(models.Clase).filter(models.Clase.sucursal_id == user.sucursal_id).all()
                 clase_cercana = None
+                clase_horario_txt = ""
+                slot_horario_real = 0.0
                 
                 for c in clases_hoy:
                     if c.horarios_detalle and isinstance(c.horarios_detalle, list):
                         for slot in c.horarios_detalle:
+                            # Validamos que el slot corresponda EXACTAMENTE al día de hoy
                             if int(slot.get('dia', -1)) == dia_semana_actual:
                                 slot_horario = float(slot.get('horario', 0.0))
-                                # Margen: 45 minutos antes (0.75) o hasta 15 minutos después (0.25) de empezar
+                                
+                                # Margen estricto: 45 minutos antes o hasta 15 minutos después de empezar
                                 if (slot_horario - 0.75) <= hora_actual_float <= (slot_horario + 0.25):
                                     clase_cercana = c
-                                    clase_horario_txt = f"{int(slot_horario)}:{str(int((slot_horario % 1) * 60)).zfill(2)}"
+                                    slot_horario_real = slot_horario
+                                    horas = int(slot_horario)
+                                    minutos = int(round((slot_horario % 1) * 60))
+                                    clase_horario_txt = f"{horas}:{str(minutos).zfill(2)}"
                                     break
                     if clase_cercana:
                         break
-                
-                # C. Si encontramos una clase en horario pico, frenamos el acceso directo y preguntamos
+
+                # C. Si encontramos una clase en horario pico, frenamos el acceso y enviamos la interactividad
                 if clase_cercana:
                     return {
                         "status": "CHOOSE_ACTIVITY",
@@ -849,14 +856,14 @@ def validar_acceso_qr(data: AccessCheck, db: Session = Depends(database.get_db))
                         "clase_id": clase_cercana.id,
                         "clase_nombre": clase_cercana.nombre.upper(),
                         "horario": clase_horario_txt,
-                        "horario_float": slot_horario,
+                        "horario_float": slot_horario_real, # <--- ENVIADO COMO FLOAT REAL PARA LA DB
                         "dia_semana": dia_semana_actual,
                         "fecha_clase": hoy_fecha.isoformat(),
                         "color": "yellow",
                         "message": "Seleccioná tu actividad para ingresar."
                     }
 
-        # Si tiene pase libre (999), ya tiene reserva hecha, o no hay clases cerca: pasa directo a Musculación
+        # Si tiene pase libre (999), ya reservó, o no hay clases cerca: pasa directo
         final_response["status"] = "AUTHORIZED"
         final_response["message"] = msg_alumno
         final_response["color"] = color_alumno
@@ -865,13 +872,12 @@ def validar_acceso_qr(data: AccessCheck, db: Session = Depends(database.get_db))
     return final_response
 
 def guardar_log_acceso(db: Session, user, dni, response):
-    """Función auxiliar interna para no duplicar líneas de logs en la DB"""
     try:
         nuevo_acceso = models.Acceso(
             usuario_id=user.id,
             dni=dni,
             nombre=user.nombre_completo,
-            rol=response["rol"],
+            rol=response.get("rol", "Alumno"),
             metodo="QR SCAN",
             accion=response["status"],
             exitoso=(response["status"] == "AUTHORIZED"),

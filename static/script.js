@@ -360,40 +360,74 @@
 					</button>` : ''}
 				</div>`;
 		}
-				
-		// 1. Dibuja una fila de horario (Día + Hora + Coach)
-			function addNewScheduleSlot(data = { dia: 1, horario: 7, coach: "" }) {
-				const container = document.getElementById('cl-schedule-slots');
-				if (container.querySelector('p.italic')) container.innerHTML = "";
 
-				const row = document.createElement('div');
-				row.className = "schedule-slot-row flex flex-col gap-2 bg-white/5 p-3 rounded-2xl border border-white/5 mb-2";
-				
-				const diasMap = {1: 'Lunes', 2: 'Martes', 3: 'Miércoles', 4: 'Jueves', 5: 'Viernes', 6: 'Sábado'};
-				
-				// Opciones de Días
-				let diasOptions = "";
-				for(let d=1; d<=6; d++) diasOptions += `<option value="${d}" ${data.dia == d ? 'selected' : ''}>${diasMap[d]}</option>`;
+		/**
+		 * Agrega dinámicamente un nuevo bloque de día, hora y profesor en la grilla del modal de clases.
+		 * Sincronizado con el estado de profesores y la estética de ND TRAINING.
+		 */
+		function addNewScheduleSlot(data = { dia: 1, horario: 7, coach: "" }) {
+			const container = document.getElementById('cl-schedule-slots');
+			if (!container) return;
 
-				// Opciones de Horas
-				let horasOptions = "";
-				for(let i=7; i<=21.5; i+=0.5) {
-					const label = i % 1 === 0 ? `${i}:00` : `${Math.floor(i)}:30`;
-					horasOptions += `<option value="${i}" ${data.horario == i ? 'selected' : ''}>${label} HS</option>`;
-				}
-
-				row.innerHTML = `
-					<div class="flex items-center justify-between gap-2">
-						<select class="viking-input py-1 h-9 text-[10px] flex-1 slot-dia">${diasOptions}</select>
-						<select class="viking-input py-1 h-9 text-[10px] flex-1 slot-hora">${horasOptions}</select>
-						<button type="button" onclick="this.closest('.schedule-slot-row').remove()" class="text-red-500 p-1">
-							<i data-lucide="x" class="w-4 h-4"></i>
-						</button>
-					</div>
-				`;
-				container.appendChild(row);
-				if(window.lucide) lucide.createIcons();
+			// Si está el mensaje de marcador de posición vacío ("No hay horarios configurados"), lo limpiamos
+			if (container.querySelector('p.italic')) {
+				container.innerHTML = "";
 			}
+
+			const row = document.createElement('div');
+			row.className = "schedule-slot-row flex flex-col gap-2 bg-white/5 p-3 rounded-xl border border-white/5 mb-3 group hover:border-red-600/30 transition-all";
+			
+			const diasMap = {1: 'Lunes', 2: 'Martes', 3: 'Miércoles', 4: 'Jueves', 5: 'Viernes', 6: 'Sábado'};
+			
+			// Generar opciones de Días (1 al 6)
+			let diasOptions = "";
+			for(let d = 1; d <= 6; d++) {
+				diasOptions += `<option value="${d}" ${data.dia == d ? 'selected' : ''}>${diasMap[d]}</option>`;
+			}
+
+			// Generar opciones de Horarios de 30 minutos (7:00 a 21:30)
+			let horasOptions = "";
+			for(let i = 7; i <= 21.5; i += 0.5) {
+				const label = i % 1 === 0 ? `${i}:00` : `${Math.floor(i)}:30`;
+				horasOptions += `<option value="${i}" ${data.horario == i ? 'selected' : ''}>${label} HS</option>`;
+			}
+
+			// Generar opciones de Profesores desde el estado global local
+			let coachOptions = `<option value="">Asignar Profesor...</option>`;
+			if (state.profesores && state.profesores.length > 0) {
+				coachOptions += state.profesores.map(p => 
+					`<option value="${p.nombre_completo}" ${data.coach === p.nombre_completo ? 'selected' : ''}>${p.nombre_completo}</option>`
+				).join('');
+			} else {
+				coachOptions += `<option value="Staff">Staff General</option>`;
+			}
+
+			// Inyectamos la estructura final del bloque con el grid de inputs y el delete button
+			row.innerHTML = `
+				<div class="flex items-center justify-between">
+					<span class="text-[9px] font-black text-red-600 uppercase italic tracking-widest">Turno</span>
+					<button type="button" onclick="this.closest('.schedule-slot-row').remove()" class="text-gray-500 hover:text-red-500 transition-all">
+						<i data-lucide="x" class="w-4 h-4"></i>
+					</button>
+				</div>
+				<div class="grid grid-cols-2 gap-2">
+					<select class="viking-input py-1 h-9 text-[10px] slot-dia bg-black/40 border-white/10 text-white">${diasOptions}</select>
+					<select class="viking-input py-1 h-9 text-[10px] slot-hora bg-black/40 border-white/10 text-white">${horasOptions}</select>
+				</div>
+				<div class="w-full">
+					<select class="viking-input py-1 h-9 text-[10px] w-full slot-coach bg-black/40 border-white/10 text-gray-300">
+						${coachOptions}
+					</select>
+				</div>
+			`;
+
+			container.appendChild(row);
+			
+			// Volvemos a inicializar Lucide para que pinte el icono "x" en el botón de borrar
+			if (window.lucide) {
+				lucide.createIcons();
+			}
+		}
 
 			// 2. Reemplaza tu función de guardado de clase
 			async function saveClaseVikinga(e) {
@@ -5400,58 +5434,6 @@ if (editorForm) {
 			loadBoxes(); 
 			openModal('modal-clase'); 
 		}
-		
-		function addNewScheduleSlot(data = { dia: 1, horario: 7, coach: "" }) {
-			const container = document.getElementById('cl-schedule-slots');
-			if (!container) return;
-
-			if (container.querySelector('p.italic')) container.innerHTML = "";
-
-			const row = document.createElement('div');
-			row.className = "schedule-slot-row flex flex-col gap-2 bg-white/5 p-3 rounded-xl border border-white/5 mb-3 group hover:border-red-600/30 transition-all";
-			
-			const diasMap = {1: 'Lunes', 2: 'Martes', 3: 'Miércoles', 4: 'Jueves', 5: 'Viernes', 6: 'Sábado'};
-			
-			let diasOptions = "";
-			for(let d=1; d<=6; d++) {
-				diasOptions += `<option value="${d}" ${data.dia == d ? 'selected' : ''}>${diasMap[d]}</option>`;
-			}
-
-			let horasOptions = "";
-			for(let i=7; i<=21.5; i+=0.5) {
-				const label = i % 1 === 0 ? `${i}:00` : `${Math.floor(i)}:30`;
-				horasOptions += `<option value="${i}" ${data.horario == i ? 'selected' : ''}>${label} HS</option>`;
-			}
-
-			let coachOptions = `<option value="">Asignar Profesor...</option>`;
-			if (state.profesores && state.profesores.length > 0) {
-				coachOptions += state.profesores.map(p => 
-					`<option value="${p.nombre_completo}" ${data.coach === p.nombre_completo ? 'selected' : ''}>${p.nombre_completo}</option>`
-				).join('');
-			} else {
-				coachOptions += `<option value="Staff">Staff General</option>`;
-			}
-
-			row.innerHTML = `
-				<div class="flex items-center justify-between">
-					<span class="text-[9px] font-black text-red-600 uppercase italic tracking-widest">Turno</span>
-					<button type="button" onclick="this.closest('.schedule-slot-row').remove()" class="text-gray-500 hover:text-red-500 transition-all">
-						<i data-lucide="x" class="w-4 h-4"></i>
-					</button>
-				</div>
-				<div class="grid grid-cols-2 gap-2">
-					<select class="viking-input py-1 h-9 text-[10px] slot-dia bg-black/40 border-white/10">${diasOptions}</select>
-					<select class="viking-input py-1 h-9 text-[10px] slot-hora bg-black/40 border-white/10">${horasOptions}</select>
-				</div>
-				<div class="w-full">
-					<select class="viking-input py-1 h-9 text-[10px] w-full slot-coach bg-black/40 border-white/10 text-gray-300">
-						${coachOptions}
-					</select>
-				</div>
-			`;
-			container.appendChild(row);
-			if(window.lucide) lucide.createIcons();
-		}
 
 		async function openEditClase(id) {
 			const c = state.clases.find(x => x.id == id); 
@@ -5976,14 +5958,12 @@ if (editorForm) {
 		async function processAccess(qrData) {
 			scanCooldown = true; 
 			
-			// Frenamos cualquier timer de cierre anterior por seguridad
 			if (feedbackTimeout) clearTimeout(feedbackTimeout);
 			
 			const nameDisplay = document.getElementById('scanner-user-name');
 			if (nameDisplay) nameDisplay.innerText = "VERIFICANDO...";
 
 			try {
-				// Consultamos al servidor. 
 				const response = await apiFetch('/acceso/validar', 'POST', { qr_data: qrData });
 				
 				if (response.error) {
@@ -5994,21 +5974,15 @@ if (editorForm) {
 					});
 					startFeedbackTimer(4000);
 				} else if (response.status === "CHOOSE_ACTIVITY") {
-					// ⚔️ CONTROL INTERACTIVO: El backend frenó el acceso porque hay una clase cerca.
+					// ⚔️ CONTROL INTERACTIVO: Frenamos el timer para obligar al alumno a tocar la pantalla
 					showChooseActivityUI(response);
-					// NO se ejecuta el timer automático aquí. La pantalla espera que el alumno elija.
 				} else {
-					// Acceso autorizado directo o denegado directo
+					// Acceso normal autorizado o denegado directo
 					showFeedback(response);
 					
-					// Refrescar datos globales del panel si es necesario
-					if (typeof loadDashboard === 'function') {
-						loadDashboard(); 
-					}
-					if (typeof renderAccesos === 'function') {
-						renderAccesos();
-					}
-					// Temporizador tradicional de 4 segundos para restablecer la cámara
+					if (typeof loadDashboard === 'function') loadDashboard(); 
+					if (typeof renderAccesos === 'function') renderAccesos();
+					
 					startFeedbackTimer(4000);
 				}
 
@@ -6018,7 +5992,7 @@ if (editorForm) {
 					status: "DENIED", 
 					message: "Error de red/servidor", 
 					nombre: "SISTEMA" 
-				});
+					});
 				startFeedbackTimer(4000);
 			}
 		}
@@ -6045,9 +6019,9 @@ if (editorForm) {
 			status.innerText = "¿QUÉ ENTRENÁS HOY?";
 			status.className = "text-4xl font-black uppercase italic text-yellow-500 mb-6 tracking-wide text-center drop-shadow-[0_0_10px_#eab308]";
 			
-			// Ocultamos la barra de progreso tradicional inyectando los botones interactivos
+			// Inyectamos los dos botones táctiles interactivos
 			icon.innerHTML = `
-				<div class="flex flex-col sm:flex-row gap-4 w-full max-w-md px-6 justify-center items-center pointer-events-auto">
+				<div class="flex flex-col sm:flex-row gap-4 w-full max-w-md px-6 justify-center items-center pointer-events-auto z-50">
 					<button onclick="confirmarIngresoClase(${JSON.stringify(data).replace(/"/g, '&quot;')})" 
 						class="w-full sm:w-64 py-4 bg-red-600 hover:bg-red-700 text-white font-black uppercase italic rounded-2xl shadow-lg shadow-red-600/30 transition-all transform hover:scale-105 flex flex-col items-center justify-center border border-red-500/30">
 						<span class="text-sm tracking-tight">Vengo a la clase de</span>
@@ -6064,7 +6038,6 @@ if (editorForm) {
 				</div>
 			`;
 			
-			// Quitamos la animación de la barra de progreso para que no se mueva sola
 			msg.innerHTML = `<span class="text-zinc-400 text-xs font-bold uppercase tracking-widest mt-2 block">Selección requerida en la tablet del totem</span>`;
 		}
 
@@ -6073,17 +6046,15 @@ if (editorForm) {
 		 */
 		async function confirmarIngresoClase(data) {
 			try {
-				// Ejecutamos el book_clase directo a tu endpoint nativo de reservas
 				const booking = await apiFetch('/reservas', 'POST', {
 					usuario_id: parseInt(data.usuario_id),
 					clase_id: parseInt(data.clase_id),
-					horario: parseFloat(data.horario_float), // Mantenemos tu mapeo de tipos de datos
+					horario: parseFloat(data.horario_float), // <--- CAMBIADO AL FLOAT REAL RESPETANDO TU BACKEND
 					dia_semana: parseInt(data.dia_semana),
 					fecha_clase: data.fecha_clase
 				});
 
 				if (booking.error) {
-					// Si el backend rebota (ej: se quedó sin créditos reales), mostramos el error en rojo
 					showFeedback({
 						status: "DENIED",
 						nombre: data.nombre,
@@ -6091,7 +6062,6 @@ if (editorForm) {
 						color: "red"
 					});
 				} else {
-					// Éxito: Se generó la reserva, descuenta y le damos paso en Verde
 					showFeedback({
 						status: "AUTHORIZED",
 						nombre: data.nombre,
@@ -6143,8 +6113,6 @@ if (editorForm) {
 				overlay.classList.remove('flex');
 			}
 		}
-
-
 
 		/**
 		 * 4. SIMULACIÓN (Para los botones del modal)
@@ -6232,7 +6200,6 @@ if (editorForm) {
 				playVikingSound('error');
 			}
 
-			// Volvemos a dibujar la barra de progreso temporal abajo de los resultados fijos
 			msg.innerHTML += `
 				<div class="mt-10 w-48 h-1 bg-white/10 rounded-full overflow-hidden mx-auto">
 					<div class="h-full bg-red-600 animate-[width_4s_linear]"></div>
