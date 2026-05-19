@@ -826,31 +826,33 @@ def validar_acceso_qr(data: AccessCheck, db: Session = Depends(database.get_db))
                                 break
                 if clase_cercana: break
 
-            # Caso 1: Tiene reserva -> Pasa directo
+            # 1. ¿Tiene reserva para HOY y es la misma clase que detectamos? -> PASA DIRECTO
             if reserva_hoy and clase_cercana and reserva_hoy.clase_id == clase_cercana.id:
-                final_response["status"] = "AUTHORIZED"
-                final_response["message"] = f"¡Bienvenido a {clase_cercana.nombre}!"
-                final_response["color"] = "green"
-                guardar_log_acceso(db, user, dni_recibido, final_response)
-                return final_response
+                    final_response["status"] = "AUTHORIZED"
+                    final_response["message"] = f"¡Bienvenido a {clase_cercana.nombre}! Ya tenías tu lugar."
+                    final_response["color"] = "green"
+                    guardar_log_acceso(db, user, dni_recibido, final_response)
+                    return final_response
 
-            # Caso 2: No tiene reserva pero hay clase -> Preguntar
+            # 2. ¿NO tiene reserva? -> AHORA SÍ, mostramos el cartel de elegir actividad
+            # El sistema detectó la clase, pero como no tiene reserva, obligamos a elegir
             if clase_cercana:
-                horas = int(slot_horario_real)
-                minutos = int(round((slot_horario_real % 1) * 60))
-                return {
-                    "status": "CHOOSE_ACTIVITY",
-                    "nombre": user.nombre_completo,
-                    "usuario_id": user.id,
-                    "clase_id": clase_cercana.id,
-                    "clase_nombre": clase_cercana.nombre.upper(),
-                    "horario": f"{horas}:{str(minutos).zfill(2)}",
-                    "horario_float": slot_horario_real,
-                    "dia_semana": dia_semana_actual,
-                    "fecha_clase": hoy_fecha.isoformat(),
-                    "color": "yellow",
-                    "message": "Tenés una clase disponible. ¿Querés reservarla?"
-                }
+                    horas = int(slot_horario_real)
+                    minutos = int(round((slot_horario_real % 1) * 60))
+                    
+                    return {
+                        "status": "CHOOSE_ACTIVITY",
+                        "nombre": user.nombre_completo,
+                        "usuario_id": user.id,
+                        "clase_id": clase_cercana.id,
+                        "clase_nombre": clase_cercana.nombre.upper(),
+                        "horario": f"{horas}:{str(minutos).zfill(2)}",
+                        "horario_float": slot_horario_real,
+                        "dia_semana": dia_semana_actual,
+                        "fecha_clase": hoy_fecha.isoformat(),
+                        "color": "yellow",
+                        "message": "Clase detectada. ¿Venís a entrenar?"
+                    }
         
         # Acceso estándar
         final_response["status"] = "AUTHORIZED"
