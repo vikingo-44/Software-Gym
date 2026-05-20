@@ -6036,19 +6036,32 @@ if (editorForm) {
 					clase_id: parseInt(data.clase_id),
 					horario: parseFloat(data.horario_float),
 					dia_semana: parseInt(data.dia_semana),
-					fecha_clase: data.fecha_clase,
-					fecha_reserva: data.fecha_clase
+					fecha_clase: data.fecha_clase
 				};
 
+				// Enviamos al backend para que intente reservar y valide el cupo
 				const booking = await apiFetch('/reservas', 'POST', payload);
 
-				if (booking.error) {
-					showFeedback({ status: "DENIED", nombre: data.nombre, message: booking.error, color: "red" });
+				// Si el backend responde con error (ej: "Sin cupos"), lo manejamos
+				if (booking.status === "error" || booking.detail) {
+					showFeedback({ 
+						status: "DENIED", 
+						nombre: data.nombre, 
+						message: booking.detail || "No se pudo reservar el cupo.", 
+						color: "red" 
+					});
 				} else {
-					showFeedback({ status: "AUTHORIZED", nombre: data.nombre, message: `Reserva exitosa en ${data.clase_nombre}.`, color: "green" });
+					// Reserva exitosa
+					showFeedback({ 
+						status: "AUTHORIZED", 
+						nombre: data.nombre, 
+						message: `Reserva exitosa en ${data.clase_nombre}. ¡Adelante!`, 
+						color: "green" 
+					});
 				}
 			} catch (err) { 
-				console.error("Error en reserva:", err); 
+				console.error("Error en reserva:", err);
+				showFeedback({ status: "DENIED", nombre: data.nombre, message: "Error al conectar.", color: "red" });
 			}
 			startFeedbackTimer(4000);
 		}
