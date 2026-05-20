@@ -228,7 +228,9 @@ class BulkAlumnoSchema(BaseModel):
 
 # --- NUEVO: Schema para Validación de QR ---
 class AccessCheck(BaseModel):
-    qr_data: str # Recibirá el formato "DNI:HASH" contenido en el código QR
+    qr_data: str
+    hora_local: float = 0.0
+    dia_local: int = -1
 
 class TipoPlanSchema(BaseModel):
     id: int
