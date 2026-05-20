@@ -2775,35 +2775,41 @@ if (editorForm) {
 			if (body) options.body = JSON.stringify(body);
 			
 			try {
+				console.log(`[API FETCH] ${method} ${endpoint}`, body || ""); // Log para debuguear
 				const res = await fetch(`${API_BASE}${endpoint}`, options);
 				
 				// 1. Manejo de sesión expirada
 				if (res.status === 401) {
+					console.error("Sesión expirada detectada en:", endpoint);
 					localStorage.removeItem('viking_token');
 					location.reload();
 					return { error: "Sesión expirada" };
 				}
 
-				// 2. LEER EL CUERPO UNA SOLA VEZ
+				// 2. LEER EL CUERPO
 				const responseText = await res.text();
-				
-				// 3. Intentar parsear como JSON
 				let responseData;
+				
 				try {
 					responseData = JSON.parse(responseText);
 				} catch (e) {
-					// Si no es JSON, devolvemos el texto plano (útil para errores 500 crudos)
-					responseData = { error: responseText || "Error desconocido del servidor" };
+					responseData = { error: responseText || "Error de formato en servidor" };
 				}
 
+				// 3. Manejo de Errores (400, 500, etc.)
 				if (!res.ok) {
-					return { error: responseData.detail || responseData.error || "Error en la petición" };
+					const errorMsg = responseData.detail || responseData.error || `Error ${res.status}`;
+					console.error(`[API ERROR] ${endpoint}:`, errorMsg);
+					
+					// 🔥 CORRECCIÓN IMPORTANTE: Devolvemos el objeto completo con un flag de error
+					// en lugar de solo devolver un string, para no romper las interfaces que esperan datos.
+					return { error: errorMsg, status: "ERROR", data: responseData };
 				}
 
 				return responseData;
 			} catch (e) { 
-				console.error("Error Fetch:", e);
-				return { error: "Error de conexión" }; 
+				console.error("Error Crítico de Conexión:", e);
+				return { error: "Error de conexión con el servidor" }; 
 			}
 		}
 
@@ -5829,6 +5835,12 @@ if (editorForm) {
 			const video = document.getElementById('scanner-video');
 			const hud = document.getElementById('scanner-hud');
 			
+			// ⚔️ CORRECCIÓN: Limpieza profunda de streams anteriores para evitar conflictos de hardware
+			if (videoStream) {
+				videoStream.getTracks().forEach(track => track.stop());
+				videoStream = null;
+			}
+			
 			// Limpiamos cualquier rastro de la lectura anterior en la UI
 			hideFeedback();
 			
@@ -5839,69 +5851,59 @@ if (editorForm) {
 			}
 			if (hud) hud.classList.remove('hidden');
 
-			// VALIDACIÓN CRÍTICA: HTTPS (Obligatorio para cámaras en la mayoría de tablets)
+			// VALIDACIÓN CRÍTICA: HTTPS
 			if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
-				showCameraError("ERROR DE SEGURIDAD: La cámara requiere una conexión segura HTTPS. Verifica la URL.");
+				showCameraError("ERROR DE SEGURIDAD: La cámara requiere una conexión segura HTTPS.");
 				return;
 			}
 
-			// Definimos una lista de intentos (Constraints) desde lo más ideal a lo más básico
 			const attempts = [
-                // Intento 1: Resolución nativa estricta de la cámara para evitar zoom digital/crop
-                { 
-                    video: { 
-                        width: { ideal: 640 }, 
-                        height: { ideal: 480 },
-                        aspectRatio: { ideal: 1.3333333333 }, // Formato 4:3 nativo de la C170
-                        frameRate: { ideal: 30 }
-                    } 
-                },
-                // Intento 2: Configuración flexible para tótems/tablets
-                { 
-                    video: { facingMode: "user" } 
-                },
-                // Intento 3: Último recurso
-                { 
-                    video: true 
-                }
-            ];
+				{ 
+					video: { 
+						width: { ideal: 640 }, 
+						height: { ideal: 480 },
+						aspectRatio: { ideal: 1.3333333333 },
+						frameRate: { ideal: 30 }
+					} 
+				},
+				{ video: { facingMode: "user" } },
+				{ video: true }
+			];
 
 			let lastError = null;
 
-			// Bucle de compatibilidad: Probamos cada configuración hasta que una funcione
 			for (const config of attempts) {
 				try {
 					console.log("Intentando acceso con configuración:", config);
 					videoStream = await navigator.mediaDevices.getUserMedia(config);
-					if (videoStream) break; // Si tuvimos éxito, salimos del bucle
+					if (videoStream) break;
 				} catch (err) {
 					lastError = err;
 					console.warn("Fallo un intento de cámara:", err.name);
-					// Continuamos al siguiente intento...
 				}
 			}
 			
 			if (videoStream && video) {
-                video.srcObject = videoStream;
-                video.onloadedmetadata = () => {
-                    video.play();
-                    
-                    // ⚔️ FILTRO ANTI-ENCANDILAMIENTO PARA LOGITECH C170
-                    // Bajamos el brillo un 15% para absorber la luz del celu y subimos el contraste para marcar el QR
-                    video.style.filter = "brightness(0.85) contrast(1.4) grayscale(0.2)";
-                    
-                    // Si tenías en el CSS un object-cover que te estiraba la imagen, 
-                    // lo pasamos a contain para que se vea el plano completo real sin zoom
-                    video.style.objectFit = "contain"; 
+				video.srcObject = videoStream;
+				video.onloadedmetadata = () => {
+					video.play();
+					
+					// Filtro Anti-encandilamiento
+					video.style.filter = "brightness(0.85) contrast(1.4) grayscale(0.2)";
+					video.style.objectFit = "contain"; 
 
-                    isScanning = true;
-                    lastScannedDNI = null; 
-                    console.log("🛡️ Ojo de Odín Activo con Filtro Antirreflejo: Buscando QR...");
-                    requestAnimationFrame(scanLoop); 
-                };
-            } else {
-				console.error("No se pudo inicializar ninguna cámara después de varios intentos:", lastError);
-				showCameraError("No hay acceso a la cámara. Asegúrate de usar Chrome y tener habilitados los permisos en la tablet.");
+					isScanning = true;
+					lastScannedDNI = null; 
+					console.log("🛡️ Ojo de Odín Activo: Buscando QR...");
+					
+					// ⚔️ CORRECCIÓN: Aseguramos que el bucle solo se inicie una vez
+					if (typeof scanLoop === 'function') {
+						requestAnimationFrame(scanLoop);
+					}
+				};
+			} else {
+				console.error("No se pudo inicializar ninguna cámara:", lastError);
+				showCameraError("No hay acceso a la cámara. Asegúrate de tener habilitados los permisos en el navegador.");
 			}
 		}
 
@@ -5913,9 +5915,9 @@ if (editorForm) {
 			if (!isScanning) return; 
 
 			const video = document.getElementById('scanner-video');
-			let canvasElement = document.getElementById('scanner-canvas');
 			
-			// Si no existe el canvas auxiliar, lo creamos dinámicamente
+			// ⚔️ CORRECCIÓN: Buscamos o creamos el canvas una sola vez, sin recrear elementos innecesarios
+			let canvasElement = document.getElementById('scanner-canvas');
 			if (!canvasElement) {
 				canvasElement = document.createElement('canvas');
 				canvasElement.id = 'scanner-canvas';
@@ -5926,29 +5928,36 @@ if (editorForm) {
 			const canvas = canvasElement.getContext("2d", { willReadFrequently: true });
 
 			if (video && video.readyState === video.HAVE_ENOUGH_DATA) {
-				canvasElement.height = video.videoHeight;
-				canvasElement.width = video.videoWidth;
+				// Ajustamos las dimensiones del canvas al video
+				if (canvasElement.height !== video.videoHeight || canvasElement.width !== video.videoWidth) {
+					canvasElement.height = video.videoHeight;
+					canvasElement.width = video.videoWidth;
+				}
 				
-				// Procesamos la imagen del video
 				canvas.drawImage(video, 0, 0, canvasElement.width, canvasElement.height);
+				
+				// ⚔️ OPTIMIZACIÓN: Solo leemos el área central o la imagen completa si es necesario.
+				// Si el QR tarda en leer, esto es lo que lo acelera.
 				const imageData = canvas.getImageData(0, 0, canvasElement.width, canvasElement.height);
 				
-				// Intentamos detectar el QR con la librería jsQR
 				const code = (typeof jsQR !== 'undefined') 
-					? jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: "dontInvert" }) 
+					? jsQR(imageData.data, imageData.width, imageData.height, { 
+						inversionAttempts: "dontInvert" 
+					}) 
 					: null;
 
-				// Si encontró un código y no estamos esperando (cooldown)
 				if (code && code.data && !scanCooldown) {
+					// Comparamos el dato detectado
 					if (code.data !== lastScannedDNI) {
 						console.log("🎯 QR Detectado:", code.data);
 						lastScannedDNI = code.data;
 						processAccess(code.data);
-						return; // Pausamos el bucle hasta procesar
+						return; // Salimos del bucle para esperar a que processAccess termine
 					}
 				}
 			}
 
+			// Continuamos el bucle si no se encontró nada o si seguimos escaneando
 			requestAnimationFrame(scanLoop);
 		}
 
@@ -5962,7 +5971,7 @@ if (editorForm) {
 			const nameDisplay = document.getElementById('scanner-user-name');
 			if (nameDisplay) nameDisplay.innerText = "VERIFICANDO...";
 
-			// Capturamos tiempo local del tótem
+			// Capturamos tiempo local del tótem para el backend
 			const now = new Date();
 			const localTimeFloat = now.getHours() + (now.getMinutes() / 60.0);
 			const localDay = now.getDay(); 
@@ -5974,17 +5983,36 @@ if (editorForm) {
 					dia_local: localDay 
 				});
 				
-				if (response.status === "CHOOSE_ACTIVITY") {
+				// ⚔️ CORRECCIÓN: Manejo robusto del objeto de respuesta
+				if (response && response.status === "CHOOSE_ACTIVITY") {
 					showChooseActivityUI(response);
+				} else if (response && response.error) {
+					// Manejo específico si apiFetch devolvió un error controlado
+					showFeedback({ 
+						status: "DENIED", 
+						nombre: "ERROR", 
+						message: response.error, 
+						color: "red" 
+					});
+					startFeedbackTimer(4000);
 				} else {
+					// Caso estándar (AUTHORIZED o DENIED)
 					showFeedback(response);
+					
+					// Actualizamos la UI si las funciones existen
 					if (typeof loadDashboard === 'function') loadDashboard();
 					if (typeof renderAccesos === 'function') renderAccesos();
+					
 					startFeedbackTimer(4000);
 				}
 			} catch (e) {
-				console.error("Error en validación:", e);
-				showFeedback({ status: "DENIED", message: "Error de servidor", nombre: "SISTEMA" });
+				console.error("Error crítico en validación:", e);
+				showFeedback({ 
+					status: "DENIED", 
+					nombre: "SISTEMA", 
+					message: "Error de conexión con servidor", 
+					color: "red" 
+				});
 				startFeedbackTimer(4000);
 			}
 		}
@@ -6007,30 +6035,47 @@ if (editorForm) {
 			overlay.style.border = "8px solid #eab308";
 			overlay.style.backgroundColor = "rgba(0,0,0,0.98)";
 
-			name.innerText = data.nombre.toUpperCase();
+			name.innerText = data.nombre ? data.nombre.toUpperCase() : "ALUMNO";
 			status.innerText = "¿QUÉ ENTRENÁS HOY?";
 			status.className = "text-4xl font-black uppercase italic text-yellow-500 mb-6 tracking-wide text-center drop-shadow-[0_0_10px_#eab308]";
 			
+			// ⚔️ CORRECCIÓN: Usamos un manejo de eventos limpio en lugar de stringify en el HTML
+			// Esto evita errores de sintaxis con caracteres especiales
 			icon.innerHTML = `
 				<div class="flex flex-col sm:flex-row gap-4 w-full max-w-md px-6 justify-center items-center pointer-events-auto z-50">
-					<button onclick='confirmarIngresoClase(${JSON.stringify(data)})' 
-						class="w-full sm:w-64 py-4 bg-red-600 hover:bg-red-700 text-white font-black uppercase italic rounded-2xl shadow-lg shadow-red-600/30 transition-all transform hover:scale-105 flex flex-col items-center justify-center border border-red-500/30">
+					<button id="btn-clase" class="w-full sm:w-64 py-4 bg-red-600 hover:bg-red-700 text-white font-black uppercase italic rounded-2xl shadow-lg shadow-red-600/30 transition-all transform hover:scale-105 flex flex-col items-center justify-center border border-red-500/30">
 						<span class="text-sm tracking-tight">Vengo a la clase de</span>
 						<span class="text-lg font-black tracking-normal">${data.clase_nombre}</span>
 						<span class="text-[10px] text-zinc-300 font-bold mt-0.5">${data.horario} HS • DESCUENTA 1 CUPO</span>
 					</button>
-					<button onclick="confirmarIngresoMusculacion('${data.nombre}')" 
-						class="w-full sm:w-64 py-4 bg-zinc-800 hover:bg-zinc-700 text-white font-black uppercase italic rounded-2xl shadow-lg transition-all transform hover:scale-105 flex flex-col items-center justify-center border border-zinc-700">
+					<button id="btn-musculacion" class="w-full sm:w-64 py-4 bg-zinc-800 hover:bg-zinc-700 text-white font-black uppercase italic rounded-2xl shadow-lg transition-all transform hover:scale-105 flex flex-col items-center justify-center border border-zinc-700">
 						<span class="text-sm tracking-tight">Ingresar solo a la</span>
 						<span class="text-lg font-black tracking-normal">SALA DE MUSCULACIÓN</span>
 					</button>
 				</div>
 			`;
-			msg.innerHTML = `<span class="text-zinc-400 text-xs font-bold uppercase tracking-widest mt-2 block">Selección requerida</span>`;
+
+			// ⚔️ CORRECCIÓN: Asignamos los eventos de forma segura
+			document.getElementById('btn-clase').onclick = () => confirmarIngresoClase(data);
+			document.getElementById('btn-musculacion').onclick = () => confirmarIngresoMusculacion(data.nombre);
+
+			msg.innerHTML = `<span class="text-zinc-400 text-xs font-bold uppercase tracking-widest mt-2 block">Tenés 15 segundos para elegir</span>`;
+
+			// ⚔️ SEGURIDAD: Auto-cancelar si el usuario se queda parado ahí
+			if (feedbackTimeout) clearTimeout(feedbackTimeout);
+			feedbackTimeout = setTimeout(() => {
+				if (!overlay.classList.contains('hidden')) {
+					hideFeedback();
+					scanCooldown = false;
+					lastScannedDNI = null;
+					requestAnimationFrame(scanLoop);
+				}
+			}, 15000); // Se cierra solo a los 15 segundos
 		}
 
 		async function confirmarIngresoClase(data) {
 			try {
+				// Preparamos el payload exactamente como el backend lo espera
 				const payload = {
 					usuario_id: parseInt(data.usuario_id),
 					clase_id: parseInt(data.clase_id),
@@ -6039,15 +6084,15 @@ if (editorForm) {
 					fecha_clase: data.fecha_clase
 				};
 
-				// Enviamos al backend para que intente reservar y valide el cupo
+				// Enviamos al backend. Si hay error, apiFetch nos devuelve { error: "mensaje" }
 				const booking = await apiFetch('/reservas', 'POST', payload);
 
-				// Si el backend responde con error (ej: "Sin cupos"), lo manejamos
-				if (booking.status === "error" || booking.detail) {
+				// ⚔️ CORRECCIÓN: Validamos si existe la propiedad 'error' que definimos en el nuevo apiFetch
+				if (booking && booking.error) {
 					showFeedback({ 
 						status: "DENIED", 
 						nombre: data.nombre, 
-						message: booking.detail || "No se pudo reservar el cupo.", 
+						message: booking.error, // El mensaje real (ej: "Sin cupos disponibles")
 						color: "red" 
 					});
 				} else {
@@ -6055,19 +6100,44 @@ if (editorForm) {
 					showFeedback({ 
 						status: "AUTHORIZED", 
 						nombre: data.nombre, 
-						message: `Reserva exitosa en ${data.clase_nombre}. ¡Adelante!`, 
+						message: `Reserva confirmada en ${data.clase_nombre}. ¡Adelante!`, 
 						color: "green" 
 					});
 				}
 			} catch (err) { 
-				console.error("Error en reserva:", err);
-				showFeedback({ status: "DENIED", nombre: data.nombre, message: "Error al conectar.", color: "red" });
+				console.error("Error crítico en reserva:", err);
+				showFeedback({ 
+					status: "DENIED", 
+					nombre: data.nombre, 
+					message: "Fallo de comunicación con el sistema.", 
+					color: "red" 
+				});
 			}
+			
+			// Esto asegura que, pase lo que pase, el tótem vuelva a estar disponible
 			startFeedbackTimer(4000);
 		}
 
-		function confirmarIngresoMusculacion(nombreAlumno) {
-			showFeedback({ status: "AUTHORIZED", nombre: nombreAlumno, message: "Ingreso registrado a Musculación.", color: "green" });
+		async function confirmarIngresoMusculacion(nombreAlumno) {
+			// ⚔️ CORRECCIÓN: Enviamos un log al backend para que registre que el alumno entró a Sala
+			// Esto es vital para tus reportes de asistencia
+			try {
+				await apiFetch('/acceso/registrar-musculacion', 'POST', {
+					nombre: nombreAlumno,
+					tipo: "MUSCULACION"
+				});
+			} catch (err) {
+				console.warn("No se pudo registrar el ingreso a musculación en el log:", err);
+			}
+
+			// Feedback visual para el alumno
+			showFeedback({ 
+				status: "AUTHORIZED", 
+				nombre: nombreAlumno, 
+				message: "Ingreso registrado a Sala de Musculación.", 
+				color: "green" 
+			});
+			
 			startFeedbackTimer(4000);
 		}
 
@@ -6079,17 +6149,17 @@ if (editorForm) {
 			const msg = document.getElementById('scanner-msg');
 
 			if (!overlay) return;
+
+			// Reset de estilos previos
 			overlay.classList.remove('hidden');
 			overlay.classList.add('flex');
 			overlay.style.backgroundColor = "rgba(0,0,0,0.95)";
-			overlay.style.border = "none";
-			overlay.style.boxShadow = "none";
-
+			
 			name.innerText = data.nombre || "DESCONOCIDO";
 			msg.innerText = data.message || "";
 			
 			const color = data.color || "red";
-			// Lógica visual simplificada de colores...
+			
 			if (color === 'green') {
 				status.innerText = "ACCESO PERMITIDO";
 				status.className = "text-5xl font-black italic text-green-500 mb-2";
@@ -6101,7 +6171,11 @@ if (editorForm) {
 				overlay.style.border = "8px solid #dc2626";
 				icon.innerHTML = `<div class="w-32 h-32 bg-red-600 rounded-full flex items-center justify-center animate-shake"><i data-lucide="x" class="w-16 h-16 text-white"></i></div>`;
 			}
-			if (window.lucide) lucide.createIcons();
+
+			// ⚔️ SEGURIDAD: Solo llamar a lucide si está disponible para evitar errores en consola
+			if (window.lucide && typeof window.lucide.createIcons === 'function') {
+				window.lucide.createIcons();
+			}
 		}
 
 		function startFeedbackTimer(ms) {
@@ -6118,7 +6192,12 @@ if (editorForm) {
 
 		function hideFeedback() {
 			const overlay = document.getElementById('scanner-feedback-overlay');
-			if (overlay) { overlay.classList.add('hidden'); overlay.classList.remove('flex'); }
+			if (overlay) { 
+				overlay.classList.add('hidden'); 
+				overlay.classList.remove('flex'); 
+				// Limpiamos bordes para que no queden guardados de la sesión anterior
+				overlay.style.border = "none"; 
+			}
 		}
 
 		// ⚔️ 1. ABRIR CENTRAL DE WHATSAPP
