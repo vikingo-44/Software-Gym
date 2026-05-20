@@ -817,15 +817,19 @@ def validar_acceso_qr(data: AccessCheck, db: Session = Depends(database.get_db))
         clase_cercana = None
         slot_horario_real = 0.0
         
-        # Búsqueda de clase activa (Ventana: 45 min antes, 30 min después)
         clases_sucursal = db.query(models.Clase).filter(models.Clase.sucursal_id == user.sucursal_id).all()
+        
         for c in clases_sucursal:
             if c.horarios_detalle:
                 for slot in c.horarios_detalle:
-                    if int(slot.get('dia', -1)) == dia_semana_actual:
-                        slot_horario = float(slot.get('horario', 0.0))
-                        # Rango: [inicio-0.75 , fin+0.5]
-                        if (slot_horario - 0.75) <= hora_actual_float <= (slot_horario + 0.5):
+                    # Forzamos conversión a int/float para asegurar la comparación
+                    slot_dia = int(slot.get('dia', -1))
+                    slot_horario = float(slot.get('horario', 0.0))
+                    
+                    # Verificamos si es el mismo día y si la hora cae en el rango
+                    # Rango: 45 min antes (-0.75) y 30 min después (+0.5)
+                    if slot_dia == int(dia_semana_actual):
+                        if (slot_horario - 0.75) <= float(hora_actual_float) <= (slot_horario + 0.5):
                             clase_cercana = c
                             slot_horario_real = slot_horario
                             break
