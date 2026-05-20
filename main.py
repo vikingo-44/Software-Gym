@@ -784,6 +784,8 @@ def validar_acceso_qr(data: AccessCheck, db: Session = Depends(database.get_db))
     slot_horario_real = 0.0
     
     clases_sucursal = db.query(models.Clase).filter(models.Clase.sucursal_id == user.sucursal_id).all()
+    print(f"DEBUG: Buscando clases para Sucursal ID: {user.sucursal_id}")
+    print(f"DEBUG: Hora actual: {hora_actual_float}, Día: {dia_semana_actual}")
     for c in clases_sucursal:
         if c.horarios_detalle:
             for slot in c.horarios_detalle:
