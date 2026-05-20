@@ -5962,10 +5962,9 @@ if (editorForm) {
 			const nameDisplay = document.getElementById('scanner-user-name');
 			if (nameDisplay) nameDisplay.innerText = "VERIFICANDO...";
 
-			// Capturamos el tiempo local del tótem para ser precisos
+			// Capturamos tiempo local del tótem
 			const now = new Date();
 			const localTimeFloat = now.getHours() + (now.getMinutes() / 60.0);
-			// Convertimos: Lunes=1...Sábado=6, Domingo=0 para que coincida con tu lógica
 			const localDay = now.getDay(); 
 
 			try {
@@ -6014,7 +6013,7 @@ if (editorForm) {
 			
 			icon.innerHTML = `
 				<div class="flex flex-col sm:flex-row gap-4 w-full max-w-md px-6 justify-center items-center pointer-events-auto z-50">
-					<button onclick="confirmarIngresoClase(${JSON.stringify(data).replace(/"/g, '&quot;')})" 
+					<button onclick='confirmarIngresoClase(${JSON.stringify(data)})' 
 						class="w-full sm:w-64 py-4 bg-red-600 hover:bg-red-700 text-white font-black uppercase italic rounded-2xl shadow-lg shadow-red-600/30 transition-all transform hover:scale-105 flex flex-col items-center justify-center border border-red-500/30">
 						<span class="text-sm tracking-tight">Vengo a la clase de</span>
 						<span class="text-lg font-black tracking-normal">${data.clase_nombre}</span>
@@ -6032,20 +6031,25 @@ if (editorForm) {
 
 		async function confirmarIngresoClase(data) {
 			try {
-				const booking = await apiFetch('/reservas', 'POST', {
+				const payload = {
 					usuario_id: parseInt(data.usuario_id),
 					clase_id: parseInt(data.clase_id),
 					horario: parseFloat(data.horario_float),
 					dia_semana: parseInt(data.dia_semana),
-					fecha_clase: data.fecha_clase
-				});
+					fecha_clase: data.fecha_clase,
+					fecha_reserva: data.fecha_clase
+				};
+
+				const booking = await apiFetch('/reservas', 'POST', payload);
 
 				if (booking.error) {
 					showFeedback({ status: "DENIED", nombre: data.nombre, message: booking.error, color: "red" });
 				} else {
 					showFeedback({ status: "AUTHORIZED", nombre: data.nombre, message: `Reserva exitosa en ${data.clase_nombre}.`, color: "green" });
 				}
-			} catch (err) { console.error(err); }
+			} catch (err) { 
+				console.error("Error en reserva:", err); 
+			}
 			startFeedbackTimer(4000);
 		}
 
