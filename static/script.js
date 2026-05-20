@@ -5971,35 +5971,43 @@ if (editorForm) {
 			const nameDisplay = document.getElementById('scanner-user-name');
 			if (nameDisplay) nameDisplay.innerText = "VERIFICANDO...";
 
-			// Capturamos tiempo local del tótem para el backend
+			// ⚔️ CORRECCIÓN CRÍTICA: Forzamos la obtención de tiempo local
 			const now = new Date();
-			const localTimeFloat = now.getHours() + (now.getMinutes() / 60.0);
-			const localDay = now.getDay(); 
+			// Usamos getHours y getMinutes directos, asegurando formato numérico
+			const hours = now.getHours();
+			const minutes = now.getMinutes();
+			const localTimeFloat = parseFloat((hours + (minutes / 60.0)).toFixed(2));
+			
+			// getDay() devuelve 0 (Domingo) a 6 (Sábado). 
+			// Aseguramos que sea un número real.
+			const localDay = parseInt(now.getDay()); 
+
+			console.log(`DEBUG TÓTEM: Enviando -> Hora: ${localTimeFloat}, Día: ${localDay}`);
 
 			try {
-				const response = await apiFetch('/acceso/validar', 'POST', { 
+				const payload = { 
 					qr_data: qrData,
-					hora_local: localTimeFloat,
-					dia_local: localDay 
-				});
+					hora_local: localTimeFloat, // Ya es un float limpio
+					dia_local: localDay         // Ya es un int limpio
+				};
+
+				const response = await apiFetch('/acceso/validar', 'POST', payload);
 				
-				// ⚔️ CORRECCIÓN: Manejo robusto del objeto de respuesta
+				// Manejo de respuesta
 				if (response && response.status === "CHOOSE_ACTIVITY") {
 					showChooseActivityUI(response);
-				} else if (response && response.error) {
-					// Manejo específico si apiFetch devolvió un error controlado
+				} else if (response && (response.error || response.status === "DENIED")) {
 					showFeedback({ 
 						status: "DENIED", 
-						nombre: "ERROR", 
-						message: response.error, 
+						nombre: response.nombre || "ERROR", 
+						message: response.message || response.error || "Acceso denegado", 
 						color: "red" 
 					});
 					startFeedbackTimer(4000);
-				} else {
-					// Caso estándar (AUTHORIZED o DENIED)
+				} else if (response) {
 					showFeedback(response);
 					
-					// Actualizamos la UI si las funciones existen
+					// Actualización de UI solo si es necesario
 					if (typeof loadDashboard === 'function') loadDashboard();
 					if (typeof renderAccesos === 'function') renderAccesos();
 					
@@ -6010,7 +6018,7 @@ if (editorForm) {
 				showFeedback({ 
 					status: "DENIED", 
 					nombre: "SISTEMA", 
-					message: "Error de conexión con servidor", 
+					message: "Error de conexión con el servidor", 
 					color: "red" 
 				});
 				startFeedbackTimer(4000);
