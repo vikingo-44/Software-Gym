@@ -6378,10 +6378,10 @@ if (editorForm) {
         }
 
 		/**
-		 * 1. OBTENER HISTORIAL DE ACCESOS DEL SERVIDOR
-		 * Se llama al entrar a la vista o después de un escaneo.
-		 */
-		async function fetchAccesos() {
+         * 1. OBTENER HISTORIAL DE ACCESOS DEL SERVIDOR
+         * Se llama al entrar a la vista o después de un escaneo.
+         */
+        async function fetchAccesos() {
             // ⚔️ CORRECCIÓN: Uso de tu llave correcta 'viking_token'
             const token = localStorage.getItem('viking_token') || (state ? state.token : null);
             
@@ -6427,6 +6427,7 @@ if (editorForm) {
                             fecha_local: `${horaResult} - ${fechaResult}`, // Esto lo mantiene compatible con el render anterior
                             hora_solo: horaResult,
                             fecha_solo: fechaResult,
+                            // Se asegura de tomar la actividad real guardada en BD
                             actividad: acc.actividad || acc.clase_nombre || 'MUSCULACIÓN'
                         };
                     });
@@ -6464,7 +6465,7 @@ if (editorForm) {
             }
         }
 
-        // Renderiza la lista de ingresos con estilo de filas/tarjetas (GRID-12 PARA ALINEACIÓN PERFECTA)
+        // Renderiza la lista de ingresos con estilo de filas/tarjetas
         function renderAccesos() {
             const container = document.getElementById('acceso-list-view');
             if (!container) return;
@@ -6568,34 +6569,31 @@ if (editorForm) {
             }, 15000); 
         }
 
-			/**
-			 * 3. REGISTRAR NUEVO ACCESO (LLAMADO DESDE EL ESCÁNER)
-			 * Actualiza la lista en tiempo real sin recargar.
-			 
-			function registerAccessLog(nombre, dni, metodo, estado, actividad = 'MUSCULACIÓN') { // <--- Agregamos actividad aquí
-				const nuevoAcceso = {
-					nombre: nombre,
-					dni: dni,
-					fecha_local: `${new Date().toLocaleTimeString()} - ${new Date().toLocaleDateString()}`, // Formato coherente
-					metodo: metodo,
-					estado: estado,
-					actividad: actividad // <--- La asignamos aquí
-				};
+        /**
+         * 3. REGISTRAR NUEVO ACCESO (LLAMADO DESDE EL ESCÁNER)
+         * Actualiza la lista en tiempo real sin recargar.
+         */
+        /*
+        function registerAccessLog(nombre, dni, metodo, estado, actividad = 'MUSCULACIÓN') { 
+            const nuevoAcceso = {
+                nombre: nombre,
+                dni: dni,
+                fecha_local: `${new Date().toLocaleTimeString()} - ${new Date().toLocaleDateString()}`,
+                metodo: metodo,
+                estado: estado,
+                actividad: actividad 
+            };
 
-				if (!state.accesos) state.accesos = [];
-				
-				// Lo agregamos al principio del array
-				state.accesos.unshift(nuevoAcceso);
-				
-				// Mantenemos solo los últimos 50
-				if (state.accesos.length > 50) state.accesos.pop();
+            if (!state.accesos) state.accesos = [];
+            state.accesos.unshift(nuevoAcceso);
+            if (state.accesos.length > 50) state.accesos.pop();
 
-				// Refrescamos la vista
-				const currentView = document.querySelector('.view-content.active')?.id;
-				if (currentView === 'view-acceso-virtual') {
-					renderAccesos();
-				}
-			} */
+            const currentView = document.querySelector('.view-content.active')?.id;
+            if (currentView === 'view-acceso-virtual') {
+                renderAccesos();
+            }
+        }
+        */
 
 			// FUNCIONES PARA EL MODAL DE MI QR
 			async function showMyQR() {
