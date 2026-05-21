@@ -3020,10 +3020,16 @@ if (editorForm) {
 
 			if (view === 'cobrar' && typeof renderCobrar === 'function') renderCobrar();
 			
-			// ⚔️ CORRECCIÓN: Llamada forzada a fetchAccesos al entrar a acceso-virtual
+			// ⚔️ CORRECCIÓN: Llamada con pequeño retardo para asegurar que la sesión esté cargada
 			if (view === 'acceso-virtual') {
 				console.log("📥 Solicitando carga de accesos...");
-				fetchAccesos(); 
+				setTimeout(() => {
+					if (typeof fetchAccesos === 'function') {
+						fetchAccesos();
+					} else if (typeof renderAccesos === 'function') {
+						renderAccesos();
+					}
+				}, 100); // Espera 100ms a que el DOM y el estado se estabilicen
 			}
 			
 			if (view === 'rutinas' && typeof renderRutinas === 'function') renderRutinas();
@@ -6376,10 +6382,13 @@ if (editorForm) {
 		 * Se llama al entrar a la vista o después de un escaneo.
 		 */
 		async function fetchAccesos() {
-			// 🛡️ SEGURIDAD: Verificación de token en localStorage (estandarizado a 'gymfit_token')
+			// ⚔️ CORRECCIÓN: Damos prioridad al objeto state si el localStorage está tardando en leerse
 			const token = localStorage.getItem('gymfit_token') || state.token;
+			
 			if (!token) {
-				console.warn("⚠️ Intento de sincronización sin sesión activa. Abortando.");
+				console.warn("⚠️ Sesión no encontrada todavía. Reintentando en 500ms...");
+				// Reintento único si no encuentra token al instante
+				setTimeout(fetchAccesos, 500); 
 				return; 
 			}
 
