@@ -175,6 +175,8 @@ class Acceso(Base):
     dni = Column(String, nullable=True)
     rol = Column(String, nullable=True)
     metodo = Column(String, default="QR")
+    actividad = Column(String, default="MUSCULACIÓN") # Nombre para mostrar rápido
+    clase_id = Column(Integer, ForeignKey("clases.id"), nullable=True) # ID para estadísticas
     usuario = relationship("Usuario", back_populates="accesos")
     sucursal_id = Column(Integer, ForeignKey("sucursales.id"), nullable=True)
     sucursal = relationship("Sucursal")

@@ -762,22 +762,23 @@ def validar_acceso_qr(data: AccessCheck, db: Session = Depends(database.get_db))
     final_response["nombre"] = user.nombre_completo
     rol_lower = (user.perfil.nombre.lower() if user.perfil else "alumno")
 
-    # 3. Staff pasa directo (sin restricciones de clase)
+    # 3. Staff pasa directo
     if rol_lower in ["administracion", "administrativo", "profesor", "staff", "admin", "dueño", "supervisor"]:
         res = {"status": "AUTHORIZED", "nombre": user.nombre_completo, "message": "Bienvenido Staff", "color": "blue"}
-        guardar_log_acceso(db, user, dni_recibido, res)
+        # Pasamos "STAFF" como actividad
+        guardar_log_acceso(db, user, dni_recibido, res, nombre_clase="STAFF")
         return res
 
-    # 4. Control Horario (Cierre 20:30)
+    # 4. Control Horario
     if hora_actual_float >= 20.5:
         res = {"status": "DENIED", "nombre": user.nombre_completo, "message": "Cierre 20:30", "color": "red"}
-        guardar_log_acceso(db, user, dni_recibido, res)
+        guardar_log_acceso(db, user, dni_recibido, res, nombre_clase="BLOQUEADO")
         return res
 
-    # 5. Validación Plan Vencido
+    # 5. Plan Vencido
     if user.fecha_vencimiento and user.fecha_vencimiento < date.today():
         res = {"status": "DENIED", "nombre": user.nombre_completo, "message": f"Plan Vencido el {user.fecha_vencimiento}", "color": "red"}
-        guardar_log_acceso(db, user, dni_recibido, res)
+        guardar_log_acceso(db, user, dni_recibido, res, nombre_clase="VENCIDO")
         return res
         
     # --- LÓGICA DE ACCESO INTELIGENTE (SIN EL IF DEL PLAN) ---
@@ -810,7 +811,8 @@ def validar_acceso_qr(data: AccessCheck, db: Session = Depends(database.get_db))
         
         if reserva:
             res = {"status": "AUTHORIZED", "nombre": user.nombre_completo, "message": f"Bienvenido a {clase_cercana.nombre}", "color": "green"}
-            guardar_log_acceso(db, user, dni_recibido, res)
+            # Pasamos nombre y ID
+            guardar_log_acceso(db, user, dni_recibido, res, nombre_clase=clase_cercana.nombre, clase_id=clase_cercana.id)
             return res
 
         # B) NO tiene reserva pero la clase está ocurriendo -> PREGUNTAR
@@ -832,10 +834,14 @@ def validar_acceso_qr(data: AccessCheck, db: Session = Depends(database.get_db))
 
     # C) Acceso estándar (Sin clase cerca) -> VERDE
     res = {"status": "AUTHORIZED", "nombre": user.nombre_completo, "message": "Acceso permitido (Musculación)", "color": "green"}
-    guardar_log_acceso(db, user, dni_recibido, res)
+    # Pasamos nombre (ID como None porque no pertenece a una clase de la tabla)
+    guardar_log_acceso(db, user, dni_recibido, res, nombre_clase="MUSCULACIÓN", clase_id=None)
     return res
 
-def guardar_log_acceso(db: Session, user, dni, response):
+def guardar_log_acceso(db: Session, user, dni, response, nombre_clase="MUSCULACIÓN", clase_id=None):
+    """
+    Registra el acceso en el historial con actividad y ID de clase para estadísticas.
+    """
     try:
         nuevo_acceso = models.Acceso(
             usuario_id=user.id,
@@ -843,6 +849,8 @@ def guardar_log_acceso(db: Session, user, dni, response):
             nombre=user.nombre_completo,
             rol=response.get("rol", "Alumno"),
             metodo="QR SCAN",
+            actividad=nombre_clase,      # Nombre legible (String)
+            clase_id=clase_id,           # ID para estadísticas (Integer/None)
             accion=response["status"],
             exitoso=(response["status"] == "AUTHORIZED"),
             sucursal_id=user.sucursal_id,
@@ -850,6 +858,8 @@ def guardar_log_acceso(db: Session, user, dni, response):
         )
         db.add(nuevo_acceso)
         db.commit()
+        db.refresh(nuevo_acceso) 
+        logger.info(f"Acceso registrado: {user.nombre_completo} en {nombre_clase}")
     except Exception as e:
         db.rollback()
         logger.error(f"Error al guardar log de acceso: {e}")
