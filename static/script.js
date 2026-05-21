@@ -6486,35 +6486,36 @@ if (editorForm) {
 				const bgColor = isAuth ? 'bg-green-500/10' : 'bg-red-500/10';
 				const borderColor = isAuth ? 'border-green-500/20' : 'border-red-500/20';
 
+				// Partir fecha y hora correctamente según el formato "HH:mm - DD/MM/YY"
 				const partes = acc.fecha_local ? acc.fecha_local.split(' - ') : ["--:--", "--/--"];
 				const horaSolo = partes[0];
 				const fechaSolo = partes[1];
 
 				return `
-					<div class="grid grid-cols-7 gap-2 px-6 py-4 ${bgColor} border ${borderColor} rounded-2xl items-center transition-all hover:scale-[1.01]">
-						<div class="col-span-2 flex items-center gap-3">
+					<div class="grid grid-cols-12 gap-2 px-6 py-4 ${bgColor} border ${borderColor} rounded-2xl items-center text-[10px] transition-all hover:scale-[1.01]">
+						<div class="col-span-3 flex items-center gap-3">
 							<div class="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-[10px] font-black italic border border-white/10">
 								${acc.nombre ? acc.nombre.substring(0,2).toUpperCase() : '??'}
 							</div>
 							<span class="text-[11px] font-black uppercase italic text-white truncate">${acc.nombre}</span>
 						</div>
 
-						<span class="col-span-1 text-[10px] font-bold text-white-400">${acc.dni}</span>
+						<span class="col-span-2 text-center font-bold text-white-400 truncate">${acc.dni}</span>
 
-						<span class="col-span-1 text-[10px] font-black text-white/80">${fechaSolo || '--'}</span>
+						<span class="col-span-1 text-center font-black text-white/80">${fechaSolo || '--'}</span>
 
-						<span class="col-span-1 text-[10px] font-black text-white/80">${horaSolo || '--'}</span>
+						<span class="col-span-1 text-center font-black text-white/80">${horaSolo || '--'}</span>
 
-						<span class="col-span-1 text-[10px] font-black text-yellow-500 uppercase italic truncate text-center">
+						<span class="col-span-2 text-center font-black text-yellow-500 uppercase italic truncate px-1">
 							${acc.actividad || 'MUSCULACIÓN'}
 						</span>
 
-						<div class="col-span-1 flex items-center justify-center gap-1">
+						<div class="col-span-1 flex justify-center items-center gap-1">
 							<i data-lucide="${acc.metodo?.includes('QR') ? 'qr-code' : 'hard-drive'}" class="w-3 h-3 text-red-600"></i>
-							<span class="text-[9px] font-bold text-white-500 uppercase">${acc.metodo || 'S/D'}</span>
+							<span class="font-bold text-white-500 uppercase">${acc.metodo || 'S/D'}</span>
 						</div>
 
-						<div class="col-span-1 text-right">
+						<div class="col-span-2 text-right">
 							<span class="px-3 py-1 rounded-full ${statusColor} text-[9px] font-black bg-black/40 border border-current uppercase italic">
 								${statusText}
 							</span>
