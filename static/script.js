@@ -6383,7 +6383,7 @@ if (editorForm) {
 		 */
 		async function fetchAccesos() {
 			// 1. Verificación simple: Si no hay token, abortamos de forma silenciosa sin bucles
-			const token = localStorage.getItem('gymfit_token') || (state ? state.token : null);
+			const token = localStorage.getItem('viking_token') || (state ? state.token : null);
 			
 			if (!token) {
 				console.warn("⚠️ No hay sesión activa. Saltando sincronización...");
@@ -7723,7 +7723,7 @@ if (editorForm) {
 			 * Solo activamos el motor de datos si el usuario está logueado.
 			 * Esto evita el error 401 y el bucle de refresco infinito.
 			 */
-			const token = localStorage.getItem('gymfit_token') || (state && state.token);
+			const token = localStorage.getItem('viking_token') || (state && state.token);
 
 			if (token) {
 				// 2. PRIORIDAD 1: Activar el motor de tiempo real para el historial
