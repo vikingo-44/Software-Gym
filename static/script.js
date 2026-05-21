@@ -6382,56 +6382,56 @@ if (editorForm) {
 		 * Se llama al entrar a la vista o después de un escaneo.
 		 */
 		async function fetchAccesos() {
-			// 1. Verificación simple: Si no hay token, abortamos de forma silenciosa sin bucles
+			// ⚔️ CORRECCIÓN: Uso de tu llave correcta 'viking_token'
 			const token = localStorage.getItem('viking_token') || (state ? state.token : null);
 			
 			if (!token) {
 				console.warn("⚠️ No hay sesión activa. Saltando sincronización...");
-				return; // Terminamos aquí, sin recursividad
+				return; 
 			}
 
 			console.log("🔄 Sincronizando historial de accesos...");
 			try {
 				const res = await apiFetch('/acceso/historial'); 
 				
-				// 2. Validación de respuesta (apiFetch ya maneja errores 401 internamente)
 				if (res && !res.error && Array.isArray(res)) {
 					state.accesos = res.map(acc => {
-						let fechaMostrar = acc.fecha;
+						let horaResult = "--:--";
+						let fechaResult = "--/--";
 
 						try {
-							// Procesamiento de fecha robusto
+							// Procesamiento de fecha para separar Hora y Fecha
 							let dateObj = new Date(acc.fecha.replace(/-/g, '/'));
 							
-							if (isNaN(dateObj.getTime())) {
-								if (acc.fecha && acc.fecha.includes(' - ')) {
-									let [horaCompleta, fechaCompleta] = acc.fecha.split(' - ');
-									fechaMostrar = `${horaCompleta} - ${fechaCompleta}`;
-								}
-							} else {
-								// Formateo estándar
+							if (!isNaN(dateObj.getTime())) {
 								const h = String(dateObj.getHours()).padStart(2, '0');
 								const m = String(dateObj.getMinutes()).padStart(2, '0');
 								const day = String(dateObj.getDate()).padStart(2, '0');
 								const month = String(dateObj.getMonth() + 1).padStart(2, '0');
-								const year = String(dateObj.getFullYear()).substring(2);
 								
-								fechaMostrar = `${h}:${m} - ${day}/${month}/${year}`;
+								horaResult = `${h}:${m}`;
+								fechaResult = `${day}/${month}`;
+							} else if (acc.fecha && acc.fecha.includes(' - ')) {
+								// Fallback si el formato viene como "HH:mm - DD/MM/YY"
+								let [h, f] = acc.fecha.split(' - ');
+								horaResult = h;
+								fechaResult = f.substring(0, 5); // DD/MM
 							}
 						} catch (e) {
 							console.warn("Error procesando fecha, usando original:", e);
-							fechaMostrar = acc.fecha;
 						}
 
-						// 3. Mapeo final con la columna actividad garantizada
+						// ⚔️ RETORNO CON DATOS SEPARADOS Y ACTIVIDAD
 						return {
 							...acc,
-							fecha_local: fechaMostrar,
+							fecha_local: `${horaResult} - ${fechaResult}`, // Esto lo mantiene compatible con el render anterior
+							hora_solo: horaResult,
+							fecha_solo: fechaResult,
 							actividad: acc.actividad || acc.clase_nombre || 'MUSCULACIÓN'
 						};
 					});
 					
-					// 4. Renderizado directo
+					// Disparamos el renderizado
 					if (typeof renderAccesos === 'function') {
 						renderAccesos();
 					}
@@ -6485,34 +6485,37 @@ if (editorForm) {
 				const bgColor = isAuth ? 'bg-green-500/10' : 'bg-red-500/10';
 				const borderColor = isAuth ? 'border-green-500/20' : 'border-red-500/20';
 
-				// ⚔️ CORRECCIÓN: Grid actualizado a 6 columnas y columna extra de actividad añadida
+				// Separamos Fecha y Hora manualmente
+				const partes = acc.fecha_local ? acc.fecha_local.split(' - ') : ["--", "--"];
+				const horaSolo = partes[0];
+				const fechaSolo = partes[1];
+
 				return `
-					<div class="grid grid-cols-6 gap-4 px-6 py-4 ${bgColor} border ${borderColor} rounded-2xl items-center transition-all hover:scale-[1.01]">
-						<div class="flex items-center gap-3">
-							<div class="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-[10px] font-black italic border border-white/10">
+					<div class="grid grid-cols-7 gap-2 px-4 py-3 ${bgColor} border ${borderColor} rounded-2xl items-center text-[10px] transition-all hover:scale-[1.01]">
+						<div class="col-span-2 flex items-center gap-2">
+							<div class="w-7 h-7 rounded-full bg-white/5 flex items-center justify-center text-[9px] font-black italic border border-white/10">
 								${acc.nombre ? acc.nombre.substring(0,2).toUpperCase() : '??'}
 							</div>
-							<span class="text-[11px] font-black uppercase italic text-white truncate">${acc.nombre}</span>
+							<span class="font-black uppercase italic text-white truncate">${acc.nombre}</span>
 						</div>
 
-						<span class="text-[10px] font-bold text-white-400">${acc.dni}</span>
+						<span class="col-span-1 font-bold text-white-400 truncate">${acc.dni}</span>
 
-						<div class="flex flex-col">
-							<span class="text-[10px] font-black text-white/80">${acc.fecha_local}</span>
-						</div>
+						<span class="col-span-1 font-black text-white/80">${fechaSolo || '--'}</span>
+						<span class="col-span-1 font-black text-white/50">${horaSolo || '--'}</span>
 
-						<span class="text-[10px] font-black text-yellow-500 uppercase italic truncate">
+						<span class="col-span-1 font-black text-yellow-500 uppercase italic truncate">
 							${acc.actividad || 'MUSCULACIÓN'}
 						</span>
 
-						<div class="flex items-center gap-2">
-							<i data-lucide="${acc.metodo && acc.metodo.includes('QR') ? 'qr-code' : 'hard-drive'}" class="w-3 h-3 text-red-600"></i>
-							<span class="text-[9px] font-bold text-white-500 uppercase">${acc.metodo || 'S/D'}</span>
+						<div class="col-span-1 flex items-center gap-1">
+							<i data-lucide="${acc.metodo?.includes('QR') ? 'qr-code' : 'hard-drive'}" class="w-3 h-3 text-red-600"></i>
+							<span class="font-bold text-white-500 uppercase">${acc.metodo || 'S/D'}</span>
 						</div>
 
-						<div class="text-right">
-							<span class="px-3 py-1 rounded-full ${statusColor} text-[9px] font-black bg-black/40 border border-current uppercase italic">
-								${isAuth ? 'Permitido' : 'Denegado'}
+						<div class="col-span-1 text-right">
+							<span class="px-2 py-1 rounded-full ${statusColor} font-black bg-black/40 border border-current uppercase italic">
+								${isAuth ? 'OK' : 'NO'}
 							</span>
 						</div>
 					</div>
