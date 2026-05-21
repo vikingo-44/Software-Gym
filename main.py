@@ -911,7 +911,8 @@ def get_historial_accesos(db: Session = Depends(database.get_db), current_user =
             "rol": a.rol or "Alumno",
             "fecha": (a.fecha + offset).strftime("%H:%M - %d/%m/%y") if a.fecha else "S/D",
             "metodo": a.metodo or "QR",
-            "estado": a.accion 
+            "estado": a.accion,
+            "actividad": a.actividad # <--- ESTO ES LO QUE FALTABA
         } for a in accesos]
     except Exception as e:
         logger.error(f"Error al obtener historial: {e}")
