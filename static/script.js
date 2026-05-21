@@ -2905,14 +2905,12 @@ if (editorForm) {
 			console.log(`🚀 Navegando a: ${view}`);
 
 			// --- 1. LÓGICA DE OCULTACIÓN (DOM) ---
-			// Ocultar todas las vistas de contenido
 			document.querySelectorAll('.view-content').forEach(v => {
 				v.classList.remove('active');
 				v.classList.add('hidden');
 				v.style.setProperty('display', 'none', 'important'); 
 			});
 
-			// Ocultar layouts internos de Dashboard (Admin, Alumno, Profesor)
 			const layouts = ['admin-dashboard-layout', 'alumno-dashboard-layout', 'view-professor-dashboard'];
 			layouts.forEach(id => {
 				const l = document.getElementById(id);
@@ -2922,7 +2920,6 @@ if (editorForm) {
 				}
 			});
 
-			// Desactivar botones de navegación (clases active)
 			document.querySelectorAll('.nav-btn, .nav-item').forEach(b => b.classList.remove('active'));
 
 			// --- 2. SELECCIÓN DE TARGET POR ROL ---
@@ -2955,21 +2952,17 @@ if (editorForm) {
 			if (targetView) {
 				targetView.classList.add('active');
 				targetView.classList.remove('hidden');
-				// Dashboard usa block, el resto flex para alineación de tarjetas
 				targetView.style.setProperty('display', (view === 'dashboard' ? 'block' : 'flex'), 'important'); 
 			}
 
-			// Activar botón en el menú
 			const n = document.getElementById('nav-' + view); 
 			if (n) n.classList.add('active');
 			
-			// Cambiar título de la sección
 			const titleEl = document.getElementById('view-title');
 			if (titleEl) titleEl.innerText = view.replace('-', ' ').toUpperCase();
 
 			// --- 4. LÓGICA DE NEGOCIO Y CARGA DE DATOS ---
 
-			// Membresías
 			if (typeof checkUserMembresia === 'function') checkUserMembresia(view);
 
 			// Sección Mi Perfil
@@ -3009,7 +3002,7 @@ if (editorForm) {
 				}
 			}
 
-			// Calendario y Panel de Feriados
+			// Calendario
 			if (view === 'calendario' && typeof renderCalendar === 'function') {
 				renderCalendar();
 				const isAdmin = (state.user?.rol_nombre === "Administrador" || state.user?.rol_nombre === "Supervisor");
@@ -3025,39 +3018,32 @@ if (editorForm) {
 				}
 			}
 
-			// Cobros, Accesos, Rutinas
 			if (view === 'cobrar' && typeof renderCobrar === 'function') renderCobrar();
 			
+			// ⚔️ CORRECCIÓN: Llamada forzada a fetchAccesos al entrar a acceso-virtual
 			if (view === 'acceso-virtual') {
-				if (typeof fetchAccesos === 'function') fetchAccesos();
-				else if (typeof renderAccesos === 'function') renderAccesos();
+				console.log("📥 Solicitando carga de accesos...");
+				fetchAccesos(); 
 			}
 			
 			if (view === 'rutinas' && typeof renderRutinas === 'function') renderRutinas();
 
-			// Alumnos (Sección y carga de sucursales para modales)
 			if (view === 'alumnos') {
 				if (typeof renderAlumnosSection === 'function') renderAlumnosSection();
 				if (typeof fetchAlumnos === 'function') fetchAlumnos();
 				if (typeof loadSucursales === 'function') loadSucursales();
 			}
 
-			// Sedes / Sucursales
-			if (view === 'sucursales' && typeof loadSucursales === 'function') {
-				loadSucursales();
-			}
+			if (view === 'sucursales' && typeof loadSucursales === 'function') loadSucursales();
 
-			// Inventario / Merca
-			if (view === 'merca' && typeof fetchStock === 'function') {
-				fetchStock();
-			}
+			if (view === 'merca' && typeof fetchStock === 'function') fetchStock();
 
-			// Permisos y Lucide
 			if (typeof applyPermissions === 'function') applyPermissions();
 			if (window.lucide) {
 				setTimeout(() => lucide.createIcons(), 50);
 			}
 		};
+
 		window.switchView.isVikingo = true;
 		console.log("✅ Sistema de navegación extendido correctamente.");
 
@@ -6390,75 +6376,65 @@ if (editorForm) {
 		 * Se llama al entrar a la vista o después de un escaneo.
 		 */
 		async function fetchAccesos() {
-
-			// 🛡️ SEGURIDAD: Si no hay token, no intentamos pedir datos
-			if (!localStorage.getItem('gymfit_token') && !state.token) {
+			// 🛡️ SEGURIDAD: Verificación de token en localStorage (estandarizado a 'gymfit_token')
+			const token = localStorage.getItem('gymfit_token') || state.token;
+			if (!token) {
 				console.warn("⚠️ Intento de sincronización sin sesión activa. Abortando.");
 				return; 
 			}
 
-            console.log("🔄 Sincronizando historial...");
-            try {
-                const res = await apiFetch('/acceso/historial'); 
-                
-                if (!res.error && Array.isArray(res)) {
-                    state.accesos = res.map(acc => {
-                        let fechaMostrar = acc.fecha;
+			console.log("🔄 Sincronizando historial de accesos...");
+			try {
+				const res = await apiFetch('/acceso/historial'); 
+				
+				// Verificamos que sea un array válido
+				if (!res.error && Array.isArray(res)) {
+					state.accesos = res.map(acc => {
+						let fechaMostrar = acc.fecha;
 
-                        try {
-                            /**
-                             * AJUSTE DE SEGURIDAD:
-                             * Si el servidor (main.py) ya resta las 3 horas, aquí debe ser 0.
-                             * Si ponemos -3 aquí también, se atrasa 6 horas en total.
-                             */
-                            const manualOffset = 0; 
-                            
-                            // Intentamos convertir el string del servidor a un objeto Date
-                            // Reemplazamos el guion por barra para mejor compatibilidad en navegadores
-                            let dateObj = new Date(acc.fecha.replace(/-/g, '/'));
+						try {
+							// Procesamiento de fecha robusto
+							let dateObj = new Date(acc.fecha.replace(/-/g, '/'));
+							
+							if (isNaN(dateObj.getTime())) {
+								// Fallback para formato manual
+								if (acc.fecha && acc.fecha.includes(' - ')) {
+									let [horaCompleta, fechaCompleta] = acc.fecha.split(' - ');
+									fechaMostrar = `${horaCompleta} - ${fechaCompleta}`;
+								}
+							} else {
+								// Formateo estándar
+								const h = String(dateObj.getHours()).padStart(2, '0');
+								const m = String(dateObj.getMinutes()).padStart(2, '0');
+								const day = String(dateObj.getDate()).padStart(2, '0');
+								const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+								const year = String(dateObj.getFullYear()).substring(2);
+								
+								fechaMostrar = `${h}:${m} - ${day}/${month}/${year}`;
+							}
+						} catch (e) {
+							console.warn("Error procesando fecha, usando original:", e);
+							fechaMostrar = acc.fecha;
+						}
 
-                            // Si la fecha es inválida (formato custom), procesamos el string manualmente
-                            if (isNaN(dateObj.getTime())) {
-                                if (acc.fecha && acc.fecha.includes(' - ')) {
-                                    let [horaCompleta, fechaCompleta] = acc.fecha.split(' - ');
-                                    let [hh, mm] = horaCompleta.split(':');
-                                    
-                                    // Calculamos la nueva hora asegurando que sea positiva (0-23)
-                                    let nuevaHH = (parseInt(hh) + manualOffset + 24) % 24;
-                                    fechaMostrar = `${String(nuevaHH).padStart(2, '0')}:${mm} - ${fechaCompleta}`;
-                                }
-                            } else {
-                                // Si es una fecha válida, restamos las horas directamente al objeto Date
-                                dateObj.setHours(dateObj.getHours() + manualOffset);
-                                
-                                const h = String(dateObj.getHours()).padStart(2, '0');
-                                const m = String(dateObj.getMinutes()).padStart(2, '0');
-                                const day = String(dateObj.getDate()).padStart(2, '0');
-                                const month = String(dateObj.getMonth() + 1).padStart(2, '0');
-                                const year = String(dateObj.getFullYear()).substring(2);
-                                
-                                fechaMostrar = `${h}:${m} - ${day}/${month}/${year}`;
-                            }
-                        } catch (e) {
-                            console.warn("Error crítico procesando fecha, usando original:", e);
-                            fechaMostrar = acc.fecha; // Fallback al original
-                        }
-
-                        return {
-                            ...acc,
-                            fecha_local: fechaMostrar
-                        };
-                    });
-                    
-                    // Gatillo de renderizado
-                    if (typeof renderAccesos === 'function') {
-                        renderAccesos();
-                    }
-                }
-            } catch (error) {
-                console.error("Error en sincronización automática:", error);
-            }
-        }
+						// ⚔️ RETORNO CON COLUMNA ACTIVIDAD
+						// Si el backend envía 'clase_nombre' o 'actividad', lo usamos.
+						return {
+							...acc,
+							fecha_local: fechaMostrar,
+							actividad: acc.actividad || acc.clase_nombre || 'MUSCULACIÓN'
+						};
+					});
+					
+					// Disparamos el renderizado
+					if (typeof renderAccesos === 'function') {
+						renderAccesos();
+					}
+				}
+			} catch (error) {
+				console.error("Error en sincronización automática:", error);
+			}
+		}
 
 		// 2. EL INTEGRADOR DEL ESCÁNER (Llamar esto desde scanLoop en index.html)
 		async function procesarEscaneoRealTime(codigoQR) {
@@ -6482,58 +6458,63 @@ if (editorForm) {
 		}
 
 		// Renderiza la lista de ingresos con estilo de filas/tarjetas
-			function renderAccesos() {
-				const container = document.getElementById('acceso-list-view');
-				if (!container) return;
+		function renderAccesos() {
+			const container = document.getElementById('acceso-list-view');
+			if (!container) return;
 
-				if (!state.accesos || state.accesos.length === 0) {
-					container.innerHTML = `
-						<div class="flex flex-col items-center justify-center py-20 opacity-20">
-							<i data-lucide="database-zap" class="w-12 h-12 mb-4"></i>
-							<p class="text-sm font-white uppercase italic tracking-widest">Esperando Guerreros...</p>
-						</div>`;
-					if(window.lucide) lucide.createIcons();
-					return;
-				}
-
-				container.innerHTML = state.accesos.map(acc => {
-					const isAuth = acc.estado === 'AUTHORIZED' || acc.estado === 'AUTORIZADO';
-					const statusColor = isAuth ? 'text-green-500' : 'text-red-500';
-					const bgColor = isAuth ? 'bg-green-500/10' : 'bg-red-500/10';
-					const borderColor = isAuth ? 'border-green-500/20' : 'border-red-500/20';
-
-					return `
-						<div class="grid grid-cols-5 gap-4 px-6 py-4 ${bgColor} border ${borderColor} rounded-2xl items-center transition-all hover:scale-[1.01]">
-							<div class="flex items-center gap-3">
-								<div class="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-[10px] font-black italic border border-white/10">
-									${acc.nombre ? acc.nombre.substring(0,2).toUpperCase() : '??'}
-								</div>
-								<span class="text-[11px] font-black uppercase italic text-white truncate">${acc.nombre}</span>
-							</div>
-
-							<span class="text-[10px] font-bold text-white-400">${acc.dni}</span>
-
-							<div class="flex flex-col">
-								<!-- Se muestra el texto directo del servidor -->
-								<span class="text-[10px] font-black text-white/80">${acc.fecha_local}</span>
-							</div>
-
-							<div class="flex items-center gap-2">
-								<i data-lucide="${acc.metodo && acc.metodo.includes('QR') ? 'qr-code' : 'hard-drive'}" class="w-3 h-3 text-red-600"></i>
-								<span class="text-[9px] font-bold text-white-500 uppercase">${acc.metodo || 'S/D'}</span>
-							</div>
-
-							<div class="text-right">
-								<span class="px-3 py-1 rounded-full ${statusColor} text-[9px] font-black bg-black/40 border border-current uppercase italic">
-									${isAuth ? 'Permitido' : 'Denegado'}
-								</span>
-							</div>
-						</div>
-					`;
-				}).join('');
-
-				if(window.lucide) lucide.createIcons();
+			if (!state.accesos || state.accesos.length === 0) {
+				container.innerHTML = `
+					<div class="flex flex-col items-center justify-center py-20 opacity-20">
+						<i data-lucide="database-zap" class="w-12 h-12 mb-4"></i>
+						<p class="text-sm font-white uppercase italic tracking-widest">Esperando Guerreros...</p>
+					</div>`;
+				if (window.lucide) lucide.createIcons();
+				return;
 			}
+
+			container.innerHTML = state.accesos.map(acc => {
+				const isAuth = acc.estado === 'AUTHORIZED' || acc.estado === 'AUTORIZADO';
+				const statusColor = isAuth ? 'text-green-500' : 'text-red-500';
+				const bgColor = isAuth ? 'bg-green-500/10' : 'bg-red-500/10';
+				const borderColor = isAuth ? 'border-green-500/20' : 'border-red-500/20';
+
+				// ⚔️ CORRECCIÓN: Grid actualizado a 6 columnas y columna extra de actividad añadida
+				return `
+					<div class="grid grid-cols-6 gap-4 px-6 py-4 ${bgColor} border ${borderColor} rounded-2xl items-center transition-all hover:scale-[1.01]">
+						<div class="flex items-center gap-3">
+							<div class="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-[10px] font-black italic border border-white/10">
+								${acc.nombre ? acc.nombre.substring(0,2).toUpperCase() : '??'}
+							</div>
+							<span class="text-[11px] font-black uppercase italic text-white truncate">${acc.nombre}</span>
+						</div>
+
+						<span class="text-[10px] font-bold text-white-400">${acc.dni}</span>
+
+						<div class="flex flex-col">
+							<span class="text-[10px] font-black text-white/80">${acc.fecha_local}</span>
+						</div>
+
+						<span class="text-[10px] font-black text-yellow-500 uppercase italic truncate">
+							${acc.actividad || 'MUSCULACIÓN'}
+						</span>
+
+						<div class="flex items-center gap-2">
+							<i data-lucide="${acc.metodo && acc.metodo.includes('QR') ? 'qr-code' : 'hard-drive'}" class="w-3 h-3 text-red-600"></i>
+							<span class="text-[9px] font-bold text-white-500 uppercase">${acc.metodo || 'S/D'}</span>
+						</div>
+
+						<div class="text-right">
+							<span class="px-3 py-1 rounded-full ${statusColor} text-[9px] font-black bg-black/40 border border-current uppercase italic">
+								${isAuth ? 'Permitido' : 'Denegado'}
+							</span>
+						</div>
+					</div>
+				`;
+			}).join('');
+
+			if (window.lucide) lucide.createIcons();
+		}
+
 
 			async function procesarEscaneo(codigoQR) {
 				try {
