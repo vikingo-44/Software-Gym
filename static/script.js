@@ -6382,22 +6382,20 @@ if (editorForm) {
 		 * Se llama al entrar a la vista o después de un escaneo.
 		 */
 		async function fetchAccesos() {
-			// ⚔️ CORRECCIÓN: Damos prioridad al objeto state si el localStorage está tardando en leerse
-			const token = localStorage.getItem('gymfit_token') || state.token;
+			// 1. Verificación simple: Si no hay token, abortamos de forma silenciosa sin bucles
+			const token = localStorage.getItem('gymfit_token') || (state ? state.token : null);
 			
 			if (!token) {
-				console.warn("⚠️ Sesión no encontrada todavía. Reintentando en 500ms...");
-				// Reintento único si no encuentra token al instante
-				setTimeout(fetchAccesos, 500); 
-				return; 
+				console.warn("⚠️ No hay sesión activa. Saltando sincronización...");
+				return; // Terminamos aquí, sin recursividad
 			}
 
 			console.log("🔄 Sincronizando historial de accesos...");
 			try {
 				const res = await apiFetch('/acceso/historial'); 
 				
-				// Verificamos que sea un array válido
-				if (!res.error && Array.isArray(res)) {
+				// 2. Validación de respuesta (apiFetch ya maneja errores 401 internamente)
+				if (res && !res.error && Array.isArray(res)) {
 					state.accesos = res.map(acc => {
 						let fechaMostrar = acc.fecha;
 
@@ -6406,7 +6404,6 @@ if (editorForm) {
 							let dateObj = new Date(acc.fecha.replace(/-/g, '/'));
 							
 							if (isNaN(dateObj.getTime())) {
-								// Fallback para formato manual
 								if (acc.fecha && acc.fecha.includes(' - ')) {
 									let [horaCompleta, fechaCompleta] = acc.fecha.split(' - ');
 									fechaMostrar = `${horaCompleta} - ${fechaCompleta}`;
@@ -6426,8 +6423,7 @@ if (editorForm) {
 							fechaMostrar = acc.fecha;
 						}
 
-						// ⚔️ RETORNO CON COLUMNA ACTIVIDAD
-						// Si el backend envía 'clase_nombre' o 'actividad', lo usamos.
+						// 3. Mapeo final con la columna actividad garantizada
 						return {
 							...acc,
 							fecha_local: fechaMostrar,
@@ -6435,13 +6431,15 @@ if (editorForm) {
 						};
 					});
 					
-					// Disparamos el renderizado
+					// 4. Renderizado directo
 					if (typeof renderAccesos === 'function') {
 						renderAccesos();
 					}
+				} else {
+					console.warn("Respuesta del servidor inesperada o vacía.");
 				}
 			} catch (error) {
-				console.error("Error en sincronización automática:", error);
+				console.error("Error grave en fetchAccesos:", error);
 			}
 		}
 
