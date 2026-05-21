@@ -6382,205 +6382,204 @@ if (editorForm) {
 		 * Se llama al entrar a la vista o después de un escaneo.
 		 */
 		async function fetchAccesos() {
-			// ⚔️ CORRECCIÓN: Uso de tu llave correcta 'viking_token'
-			const token = localStorage.getItem('viking_token') || (state ? state.token : null);
-			
-			if (!token) {
-				console.warn("⚠️ No hay sesión activa. Saltando sincronización...");
-				return; 
-			}
+            // ⚔️ CORRECCIÓN: Uso de tu llave correcta 'viking_token'
+            const token = localStorage.getItem('viking_token') || (state ? state.token : null);
+            
+            if (!token) {
+                console.warn("⚠️ No hay sesión activa. Saltando sincronización...");
+                return; 
+            }
 
-			console.log("🔄 Sincronizando historial de accesos...");
-			try {
-				const res = await apiFetch('/acceso/historial'); 
-				
-				if (res && !res.error && Array.isArray(res)) {
-					state.accesos = res.map(acc => {
-						let horaResult = "--:--";
-						let fechaResult = "--/--";
+            console.log("🔄 Sincronizando historial de accesos...");
+            try {
+                const res = await apiFetch('/acceso/historial'); 
+                
+                if (res && !res.error && Array.isArray(res)) {
+                    state.accesos = res.map(acc => {
+                        let horaResult = "--:--";
+                        let fechaResult = "--/--";
 
-						try {
-							// Procesamiento de fecha para separar Hora y Fecha
-							let dateObj = new Date(acc.fecha.replace(/-/g, '/'));
-							
-							if (!isNaN(dateObj.getTime())) {
-								const h = String(dateObj.getHours()).padStart(2, '0');
-								const m = String(dateObj.getMinutes()).padStart(2, '0');
-								const day = String(dateObj.getDate()).padStart(2, '0');
-								const month = String(dateObj.getMonth() + 1).padStart(2, '0');
-								
-								horaResult = `${h}:${m}`;
-								fechaResult = `${day}/${month}`;
-							} else if (acc.fecha && acc.fecha.includes(' - ')) {
-								// Fallback si el formato viene como "HH:mm - DD/MM/YY"
-								let [h, f] = acc.fecha.split(' - ');
-								horaResult = h;
-								fechaResult = f.substring(0, 5); // DD/MM
-							}
-						} catch (e) {
-							console.warn("Error procesando fecha, usando original:", e);
-						}
+                        try {
+                            // Procesamiento de fecha para separar Hora y Fecha
+                            let dateObj = new Date(acc.fecha.replace(/-/g, '/'));
+                            
+                            if (!isNaN(dateObj.getTime())) {
+                                const h = String(dateObj.getHours()).padStart(2, '0');
+                                const m = String(dateObj.getMinutes()).padStart(2, '0');
+                                const day = String(dateObj.getDate()).padStart(2, '0');
+                                const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+                                
+                                horaResult = `${h}:${m}`;
+                                fechaResult = `${day}/${month}`;
+                            } else if (acc.fecha && acc.fecha.includes(' - ')) {
+                                // Fallback si el formato viene como "HH:mm - DD/MM/YY"
+                                let [h, f] = acc.fecha.split(' - ');
+                                horaResult = h;
+                                fechaResult = f.substring(0, 5); // DD/MM
+                            }
+                        } catch (e) {
+                            console.warn("Error procesando fecha, usando original:", e);
+                        }
 
-						// ⚔️ RETORNO CON DATOS SEPARADOS Y ACTIVIDAD
-						return {
-							...acc,
-							fecha_local: `${horaResult} - ${fechaResult}`, // Esto lo mantiene compatible con el render anterior
-							hora_solo: horaResult,
-							fecha_solo: fechaResult,
-							actividad: acc.actividad || acc.clase_nombre || 'MUSCULACIÓN'
-						};
-					});
-					
-					// Disparamos el renderizado
-					if (typeof renderAccesos === 'function') {
-						renderAccesos();
-					}
-				} else {
-					console.warn("Respuesta del servidor inesperada o vacía.");
-				}
-			} catch (error) {
-				console.error("Error grave en fetchAccesos:", error);
-			}
-		}
+                        // ⚔️ RETORNO CON DATOS SEPARADOS Y ACTIVIDAD
+                        return {
+                            ...acc,
+                            fecha_local: `${horaResult} - ${fechaResult}`, // Esto lo mantiene compatible con el render anterior
+                            hora_solo: horaResult,
+                            fecha_solo: fechaResult,
+                            actividad: acc.actividad || acc.clase_nombre || 'MUSCULACIÓN'
+                        };
+                    });
+                    
+                    // Disparamos el renderizado
+                    if (typeof renderAccesos === 'function') {
+                        renderAccesos();
+                    }
+                } else {
+                    console.warn("Respuesta del servidor inesperada o vacía.");
+                }
+            } catch (error) {
+                console.error("Error grave en fetchAccesos:", error);
+            }
+        }
 
-		// 2. EL INTEGRADOR DEL ESCÁNER (Llamar esto desde scanLoop en index.html)
-		async function procesarEscaneoRealTime(codigoQR) {
-			try {
-				const response = await apiFetch('/acceso/validar', {
-					method: 'POST',
-					body: JSON.stringify({ qr_data: codigoQR })
-				});
+        // 2. EL INTEGRADOR DEL ESCÁNER (Llamar esto desde scanLoop en index.html)
+        async function procesarEscaneoRealTime(codigoQR) {
+            try {
+                const response = await apiFetch('/acceso/validar', {
+                    method: 'POST',
+                    body: JSON.stringify({ qr_data: codigoQR })
+                });
 
-				if (typeof showScannerFeedback === 'function') {
-					showScannerFeedback(response.status === "AUTHORIZED", response);
-				}
+                if (typeof showScannerFeedback === 'function') {
+                    showScannerFeedback(response.status === "AUTHORIZED", response);
+                }
 
-				// ACTUALIZACIÓN FORZADA: Refrescamos la lista inmediatamente tras el escaneo
-				console.log("⚡ Acceso detectado: Actualizando historial...");
-				await fetchAccesos(); 
+                // ACTUALIZACIÓN FORZADA: Refrescamos la lista inmediatamente tras el escaneo
+                console.log("⚡ Acceso detectado: Actualizando historial...");
+                await fetchAccesos(); 
 
-			} catch (error) {
-				console.error("Error procesando escaneo:", error);
-			}
-		}
+            } catch (error) {
+                console.error("Error procesando escaneo:", error);
+            }
+        }
 
-		// Renderiza la lista de ingresos con estilo de filas/tarjetas
-		function renderAccesos() {
-			const container = document.getElementById('acceso-list-view');
-			if (!container) return;
+        // Renderiza la lista de ingresos con estilo de filas/tarjetas (GRID-12 PARA ALINEACIÓN PERFECTA)
+        function renderAccesos() {
+            const container = document.getElementById('acceso-list-view');
+            if (!container) return;
 
-			if (!state.accesos || state.accesos.length === 0) {
-				container.innerHTML = `
-					<div class="flex flex-col items-center justify-center py-20 opacity-20">
-						<i data-lucide="database-zap" class="w-12 h-12 mb-4"></i>
-						<p class="text-sm font-white uppercase italic tracking-widest">Esperando Guerreros...</p>
-					</div>`;
-				if (window.lucide) lucide.createIcons();
-				return;
-			}
+            if (!state.accesos || state.accesos.length === 0) {
+                container.innerHTML = `
+                    <div class="flex flex-col items-center justify-center py-20 opacity-20">
+                        <i data-lucide="database-zap" class="w-12 h-12 mb-4"></i>
+                        <p class="text-sm font-white uppercase italic tracking-widest">Esperando Guerreros...</p>
+                    </div>`;
+                if (window.lucide) lucide.createIcons();
+                return;
+            }
 
-			container.innerHTML = state.accesos.map(acc => {
-				const isAuth = acc.estado === 'AUTHORIZED' || acc.estado === 'AUTORIZADO';
-				const statusText = isAuth ? 'Permitido' : 'Denegado';
-				const statusColor = isAuth ? 'text-green-500' : 'text-red-500';
-				const bgColor = isAuth ? 'bg-green-500/10' : 'bg-red-500/10';
-				const borderColor = isAuth ? 'border-green-500/20' : 'border-red-500/20';
+            container.innerHTML = state.accesos.map(acc => {
+                const isAuth = acc.estado === 'AUTHORIZED' || acc.estado === 'AUTORIZADO';
+                const statusText = isAuth ? 'Permitido' : 'Denegado';
+                const statusColor = isAuth ? 'text-green-500' : 'text-red-500';
+                const bgColor = isAuth ? 'bg-green-500/10' : 'bg-red-500/10';
+                const borderColor = isAuth ? 'border-green-500/20' : 'border-red-500/20';
 
-				// Partir fecha y hora correctamente según el formato "HH:mm - DD/MM/YY"
-				const partes = acc.fecha_local ? acc.fecha_local.split(' - ') : ["--:--", "--/--"];
-				const horaSolo = partes[0];
-				const fechaSolo = partes[1];
+                // Partir fecha y hora correctamente según el formato "HH:mm - DD/MM/YY"
+                const partes = acc.fecha_local ? acc.fecha_local.split(' - ') : ["--:--", "--/--"];
+                const horaSolo = partes[0];
+                const fechaSolo = partes[1];
 
-				return `
-					<div class="grid grid-cols-12 gap-2 px-6 py-4 ${bgColor} border ${borderColor} rounded-2xl items-center text-[10px] transition-all hover:scale-[1.01]">
-						<div class="col-span-3 flex items-center gap-3">
-							<div class="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-[10px] font-black italic border border-white/10">
-								${acc.nombre ? acc.nombre.substring(0,2).toUpperCase() : '??'}
-							</div>
-							<span class="text-[11px] font-black uppercase italic text-white truncate">${acc.nombre}</span>
-						</div>
+                return `
+                    <div class="grid grid-cols-12 gap-2 px-6 py-4 ${bgColor} border ${borderColor} rounded-2xl items-center text-[10px] transition-all hover:scale-[1.01]">
+                        <div class="col-span-3 flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-[10px] font-black italic border border-white/10">
+                                ${acc.nombre ? acc.nombre.substring(0,2).toUpperCase() : '??'}
+                            </div>
+                            <span class="text-[11px] font-black uppercase italic text-white truncate">${acc.nombre}</span>
+                        </div>
 
-						<span class="col-span-2 text-center font-bold text-white-400 truncate">${acc.dni}</span>
+                        <span class="col-span-2 text-center font-bold text-white-400 truncate">${acc.dni}</span>
 
-						<span class="col-span-1 text-center font-black text-white/80">${fechaSolo || '--'}</span>
+                        <span class="col-span-1 text-center font-black text-white/80">${fechaSolo || '--'}</span>
 
-						<span class="col-span-1 text-center font-black text-white/80">${horaSolo || '--'}</span>
+                        <span class="col-span-1 text-center font-black text-white/80">${horaSolo || '--'}</span>
 
-						<span class="col-span-2 text-center font-black text-yellow-500 uppercase italic truncate px-1">
-							${acc.actividad || 'MUSCULACIÓN'}
-						</span>
+                        <span class="col-span-2 text-center font-black text-yellow-500 uppercase italic truncate px-1">
+                            ${acc.actividad || 'MUSCULACIÓN'}
+                        </span>
 
-						<div class="col-span-1 flex justify-center items-center gap-1">
-							<i data-lucide="${acc.metodo?.includes('QR') ? 'qr-code' : 'hard-drive'}" class="w-3 h-3 text-red-600"></i>
-							<span class="font-bold text-white-500 uppercase">${acc.metodo || 'S/D'}</span>
-						</div>
+                        <div class="col-span-1 flex justify-center items-center gap-1">
+                            <i data-lucide="${acc.metodo?.includes('QR') ? 'qr-code' : 'hard-drive'}" class="w-3 h-3 text-red-600"></i>
+                            <span class="font-bold text-white-500 uppercase">${acc.metodo || 'S/D'}</span>
+                        </div>
 
-						<div class="col-span-2 text-right">
-							<span class="px-3 py-1 rounded-full ${statusColor} text-[9px] font-black bg-black/40 border border-current uppercase italic">
-								${statusText}
-							</span>
-						</div>
-					</div>
-				`;
-			}).join('');
+                        <div class="col-span-2 text-right">
+                            <span class="px-3 py-1 rounded-full ${statusColor} text-[9px] font-black bg-black/40 border border-current uppercase italic">
+                                ${statusText}
+                            </span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
 
-			if (window.lucide) lucide.createIcons();
-		}
+            if (window.lucide) lucide.createIcons();
+        }
 
+        async function procesarEscaneo(codigoQR) {
+            try {
+                const response = await apiFetch('/acceso/validar', {
+                    method: 'POST',
+                    body: JSON.stringify({ qr_data: codigoQR })
+                });
 
-			async function procesarEscaneo(codigoQR) {
-				try {
-					const response = await apiFetch('/acceso/validar', {
-						method: 'POST',
-						body: JSON.stringify({ qr_data: codigoQR })
-					});
+                if (response.success) {
+                    if (typeof showScannerFeedback === 'function') {
+                        showScannerFeedback(true, response.usuario);
+                    }
 
-					if (response.success) {
-						if (typeof showScannerFeedback === 'function') {
-							showScannerFeedback(true, response.usuario);
-						}
+                    // Actualización inmediata al detectar un guerrero
+                    console.log("⚡ Guerrero detectado: Actualizando historial...");
+                    await fetchAccesos(); 
+                    
+                } else {
+                    if (typeof showScannerFeedback === 'function') {
+                        showScannerFeedback(false, null, response.error);
+                    }
+                }
+            } catch (error) {
+                console.error("Error en proceso de escaneo:", error);
+            }
+        }
 
-						// Actualización inmediata al detectar un guerrero
-						console.log("⚡ Guerrero detectado: Actualizando historial...");
-						await fetchAccesos(); 
-						
-					} else {
-						if (typeof showScannerFeedback === 'function') {
-							showScannerFeedback(false, null, response.error);
-						}
-					}
-				} catch (error) {
-					console.error("Error en proceso de escaneo:", error);
-				}
-			}
+        // 3. EL REFRESCO DE CORTESÍA (POLLING)
+        let vikingoRefreshInterval = null;
 
-			// 3. EL REFRESCO DE CORTESÍA (POLLING)
-			let vikingoRefreshInterval = null;
+        function iniciarRefrescoAutomatico() {
+            if (vikingoRefreshInterval) clearInterval(vikingoRefreshInterval);
 
-			function iniciarRefrescoAutomatico() {
-				if (vikingoRefreshInterval) clearInterval(vikingoRefreshInterval);
-
-				console.log("🛡️ Centinela Vikingo activado (Refresco cada 15s)");
-				
-				vikingoRefreshInterval = setInterval(() => {
-					if (!document.hidden) {
-						fetchAccesos();
-					}
-				}, 15000); 
-			}
-
+            console.log("🛡️ Centinela Vikingo activado (Refresco cada 15s)");
+            
+            vikingoRefreshInterval = setInterval(() => {
+                if (!document.hidden) {
+                    fetchAccesos();
+                }
+            }, 15000); 
+        }
 
 			/**
 			 * 3. REGISTRAR NUEVO ACCESO (LLAMADO DESDE EL ESCÁNER)
 			 * Actualiza la lista en tiempo real sin recargar.
-			 */
-			function registerAccessLog(nombre, dni, metodo, estado) {
+			 
+			function registerAccessLog(nombre, dni, metodo, estado, actividad = 'MUSCULACIÓN') { // <--- Agregamos actividad aquí
 				const nuevoAcceso = {
 					nombre: nombre,
 					dni: dni,
-					fecha: new Date().toLocaleTimeString(),
+					fecha_local: `${new Date().toLocaleTimeString()} - ${new Date().toLocaleDateString()}`, // Formato coherente
 					metodo: metodo,
-					estado: estado
+					estado: estado,
+					actividad: actividad // <--- La asignamos aquí
 				};
 
 				if (!state.accesos) state.accesos = [];
@@ -6588,15 +6587,15 @@ if (editorForm) {
 				// Lo agregamos al principio del array
 				state.accesos.unshift(nuevoAcceso);
 				
-				// Mantenemos solo los últimos 50 para no matar el navegador
+				// Mantenemos solo los últimos 50
 				if (state.accesos.length > 50) state.accesos.pop();
 
-				// Si estamos viendo la pantalla de accesos, refrescamos la lista
+				// Refrescamos la vista
 				const currentView = document.querySelector('.view-content.active')?.id;
 				if (currentView === 'view-acceso-virtual') {
 					renderAccesos();
 				}
-			}
+			} */
 
 			// FUNCIONES PARA EL MODAL DE MI QR
 			async function showMyQR() {
