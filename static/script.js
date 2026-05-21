@@ -6480,13 +6480,15 @@ if (editorForm) {
 			}
 
 			container.innerHTML = state.accesos.map(acc => {
+				// Textos originales solicitados
 				const isAuth = acc.estado === 'AUTHORIZED' || acc.estado === 'AUTORIZADO';
+				const statusText = isAuth ? 'Permitido' : 'Denegado';
 				const statusColor = isAuth ? 'text-green-500' : 'text-red-500';
 				const bgColor = isAuth ? 'bg-green-500/10' : 'bg-red-500/10';
 				const borderColor = isAuth ? 'border-green-500/20' : 'border-red-500/20';
 
-				// Separamos Fecha y Hora manualmente
-				const partes = acc.fecha_local ? acc.fecha_local.split(' - ') : ["--", "--"];
+				// Partir fecha y hora correctamente según el formato "HH:mm - DD/MM/YY"
+				const partes = acc.fecha_local ? acc.fecha_local.split(' - ') : ["--:--", "--/--"];
 				const horaSolo = partes[0];
 				const fechaSolo = partes[1];
 
@@ -6502,20 +6504,21 @@ if (editorForm) {
 						<span class="col-span-1 font-bold text-white-400 truncate">${acc.dni}</span>
 
 						<span class="col-span-1 font-black text-white/80">${fechaSolo || '--'}</span>
-						<span class="col-span-1 font-black text-white/50">${horaSolo || '--'}</span>
+
+						<span class="col-span-1 font-black text-white/80">${horaSolo || '--'}</span>
 
 						<span class="col-span-1 font-black text-yellow-500 uppercase italic truncate">
 							${acc.actividad || 'MUSCULACIÓN'}
 						</span>
 
-						<div class="col-span-1 flex items-center gap-1">
+						<div class="col-span-1 flex items-center gap-1 justify-center">
 							<i data-lucide="${acc.metodo?.includes('QR') ? 'qr-code' : 'hard-drive'}" class="w-3 h-3 text-red-600"></i>
 							<span class="font-bold text-white-500 uppercase">${acc.metodo || 'S/D'}</span>
 						</div>
 
 						<div class="col-span-1 text-right">
 							<span class="px-2 py-1 rounded-full ${statusColor} font-black bg-black/40 border border-current uppercase italic">
-								${isAuth ? 'OK' : 'NO'}
+								${statusText}
 							</span>
 						</div>
 					</div>
