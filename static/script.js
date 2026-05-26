@@ -5413,37 +5413,48 @@ if (editorForm) {
 		 * Se encarga de procesar los datos crudos y dibujar los gráficos.
 		 */
 		function actualizarDashboard(movimientos, stock) {
-			// 1. Calcular ventas por día para el gráfico
-			const ventasPorDia = movimientos.reduce((acc, mov) => {
-				// Solo contamos si es ingreso (venta)
-				if (mov.tipo.toLowerCase() === 'ingreso') {
-					let fecha = mov.fecha.split(' ')[0]; // Sacamos la parte de la fecha (YYYY-MM-DD)
+			// A. VENTAS POR DÍA (Total de ingresos diarios)
+			const ventasPorDia = movimientos
+				.filter(m => m.tipo.toLowerCase() === 'ingreso')
+				.reduce((acc, mov) => {
+					let fecha = mov.fecha.split(' ')[0];
 					acc[fecha] = (acc[fecha] || 0) + parseFloat(mov.monto);
-				}
-				return acc;
-			}, {});
+					return acc;
+				}, {});
 
-			// 2. Filtrar productos que necesitan reposición (Stock <= Mínimo)
-			// Usamos el stock que ya traes de la DB
-			const listaReponer = stock.filter(p => p.stock_actual <= p.stock_minimo);
-			
-			// --- AQUÍ DIBUJAMOS CON CHART.JS ---
-			const ctx = document.getElementById('chartVentas').getContext('2d');
-			
-			// Si ya existe un gráfico, lo destruimos para no encimar gráficos
-			if (window.miGrafico) window.miGrafico.destroy();
-			
-			window.miGrafico = new Chart(ctx, {
-				type: 'line', // Gráfico de líneas para ver tendencia diaria
+			// B. RENTABILIDAD POR PRODUCTO (Cálculo)
+			const datosRentabilidad = stock.map(p => {
+				const hist = movimientos.filter(m => String(m.producto_id) === String(p.id));
+				const inv = hist.filter(m => m.tipo.toLowerCase() === 'egreso').reduce((a, b) => a + parseFloat(b.monto), 0);
+				const rec = hist.filter(m => m.tipo.toLowerCase() === 'ingreso').reduce((a, b) => a + parseFloat(b.monto), 0);
+				return { nombre: p.nombre_producto, utilidad: rec - inv };
+			}).filter(d => d.utilidad !== 0);
+
+			// --- CONFIGURACIÓN DE GRÁFICOS ---
+			const config = { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } };
+
+			// 1. Gráfico de Líneas (Ventas)
+			const ctxVentas = document.getElementById('chartVentas').getContext('2d');
+			if (window.chartVentas) window.chartVentas.destroy();
+			window.chartVentas = new Chart(ctxVentas, {
+				type: 'line',
 				data: {
 					labels: Object.keys(ventasPorDia),
-					datasets: [{
-						label: 'Ventas Diarias ($)',
-						data: Object.values(ventasPorDia),
-						borderColor: '#ef4444', // Rojo Vikingo
-						tension: 0.4
-					}]
-				}
+					datasets: [{ label: 'Ventas ($)', data: Object.values(ventasPorDia), borderColor: '#22c55e', backgroundColor: 'rgba(34, 197, 94, 0.1)', fill: true }]
+				},
+				options: config
+			});
+
+			// 2. Gráfico de Barras (Rentabilidad)
+			const ctxRenta = document.getElementById('chartRentabilidad').getContext('2d');
+			if (window.chartRenta) window.chartRenta.destroy();
+			window.chartRenta = new Chart(ctxRenta, {
+				type: 'bar',
+				data: {
+					labels: datosRentabilidad.map(d => d.nombre),
+					datasets: [{ label: 'Utilidad ($)', data: datosRentabilidad.map(d => d.utilidad), backgroundColor: '#ef4444' }]
+				},
+				options: config
 			});
 		}
 
