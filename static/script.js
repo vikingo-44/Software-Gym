@@ -5301,11 +5301,19 @@ if (editorForm) {
 			stockForm.onsubmit = saveStockVikingo;
 		}
 
-		// VISTA DE RENTABILIDAD
+		/**
+		 * VISTA DE RENTABILIDAD
+		 * Ahora incluye filtrado por fechas y renderizado de gráfico automático.
+		 */
 		async function generarInformeRentabilidad() {
-			// 1. Traemos la info fresca de la DB
+			// 0. Capturamos los filtros de fecha del DOM (asegúrate de tener estos inputs en tu HTML)
+			const fechaDesde = document.getElementById('fecha-desde')?.value || '';
+			const fechaHasta = document.getElementById('fecha-hasta')?.value || '';
+
+			// 1. Traemos la info fresca de la DB con filtros
 			const resStock = await apiFetch('/stock', 'GET');
-			const resCaja = await apiFetch('/caja/movimientos', 'GET'); // O filtrar por fecha desde el backend
+			// Enviamos los filtros al backend para que el servidor haga el trabajo pesado
+			const resCaja = await apiFetch(`/caja/movimientos?fecha_desde=${fechaDesde}&fecha_hasta=${fechaHasta}`, 'GET');
 
 			if(resStock.error || resCaja.error) return showVikingToast("Error al cargar datos", true);
 
@@ -5315,9 +5323,9 @@ if (editorForm) {
 			body.innerHTML = '';
 
 			let totalesGeneral = { inversion: 0, recaudacion: 0 };
+			let datosGrafico = { labels: [], ganancias: [] };
 
 			stock.forEach(producto => {
-				// Filtramos movimientos de caja vinculados a ESTE producto por ID
 				const historial = movimientos.filter(m => parseInt(m.producto_id) === producto.id);
 
 				let inversionProducto = 0;
@@ -5344,6 +5352,10 @@ if (editorForm) {
 					
 					totalesGeneral.inversion += inversionProducto;
 					totalesGeneral.recaudacion += recaudacionProducto;
+
+					// Preparamos datos para el gráfico
+					datosGrafico.labels.push(producto.nombre_producto);
+					datosGrafico.ganancias.push(utilidad);
 
 					body.innerHTML += `
 						<tr class="border-b border-white/5 hover:bg-white/10 transition-colors">
@@ -5374,7 +5386,23 @@ if (editorForm) {
 			document.getElementById('renta-total-venta').innerText = `$${totalesGeneral.recaudacion.toLocaleString()}`;
 			const totalUtilidad = totalesGeneral.recaudacion - totalesGeneral.inversion;
 			document.getElementById('renta-utilidad').innerText = `$${totalUtilidad.toLocaleString()}`;
-			document.getElementById('renta-utilidad').className = `text-2xl font-bold ${totalUtilidad >= 0 ? 'text-white' : 'text-red-500'}`;
+			document.getElementById('renta-utilidad').className = `text-4xl font-black ${totalUtilidad >= 0 ? 'text-white' : 'text-red-500'} italic tracking-tight`;
+
+			// --- INTEGRACIÓN DE GRÁFICO (CHART.JS) ---
+			const ctx = document.getElementById('rentabilidadChart').getContext('2d');
+			if (window.myChart) window.myChart.destroy();
+			window.myChart = new Chart(ctx, {
+				type: 'bar',
+				data: {
+					labels: datosGrafico.labels,
+					datasets: [{
+						label: 'Utilidad por Producto ($)',
+						data: datosGrafico.ganancias,
+						backgroundColor: datosGrafico.ganancias.map(g => g >= 0 ? '#22c55e' : '#ef4444')
+					}]
+				},
+				options: { responsive: true, plugins: { legend: { labels: { color: 'white' } } } }
+			});
 		}
 
         /**

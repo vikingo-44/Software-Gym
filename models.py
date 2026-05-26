@@ -143,7 +143,9 @@ class Stock(Base):
     stock_inicial = Column(Integer)
     url_imagen = Column(String, nullable=True)
     sucursal_id = Column(Integer, ForeignKey("sucursales.id"), nullable=True)
-    sucursal = relationship("Sucursal") 
+    sucursal = relationship("Sucursal")
+    categoria = Column(String(50), nullable=True) # Ejemplo: "Bebida", "Snack"
+    nomenclatura = Column(String(10), nullable=True) # Ejemplo: "B001", "S001" 
 
 class MovimientoCaja(Base):
     __tablename__ = "caja"

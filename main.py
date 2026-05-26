@@ -1882,7 +1882,8 @@ def get_movimientos(
         print(f"SUCURSAL FRONT   : {sucursal_id}")
         print("="*50)
 
-        query = db.query(models.MovimientoCaja)
+        # Modificamos la query para incluir el producto si existe (para tener nombre/categoría en rentabilidad)
+        query = db.query(models.MovimientoCaja).options(joinedload(models.MovimientoCaja.producto))
 
         if rol.lower() in ["administrador", "admin", "dueño", "supervisor"]:
             if sucursal_id is not None and sucursal_id > 0:
@@ -1902,6 +1903,8 @@ def get_movimientos(
             query = query.filter(models.MovimientoCaja.fecha <= f"{fecha_hasta} 23:59:59")
 
         movs = query.order_by(models.MovimientoCaja.fecha.desc()).limit(500).all()
+        
+        # Retorno adaptado para el frontend: Incluimos datos extra del producto si el frontend lo necesita
         return movs
     except Exception as e:
         logger.error(f"Error Crítico Caja: {str(e)}")

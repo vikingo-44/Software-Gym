@@ -496,53 +496,61 @@
 				</div>
 			</div>
 
-			<!-- SECCIÓN RENTABILIDAD -->
-			<div id="view-rentabilidad" class="view-content hidden p-6">
-
-				<div class="flex justify-between items-center mb-10">
+			<div id="view-rentabilidad" class="view-content hidden p-6 space-y-8">
+				<div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
 					<div>
 						<h2 class="text-4xl font-black text-white italic uppercase tracking-tighter">Rentabilidad</h2>
 						<p class="text-white/40 text-[10px] font-bold uppercase tracking-[0.3em] ml-1">Análisis Financiero de Mercadería</p>
 					</div>
 					
-					<button onclick="generarInformeRentabilidad()" class="bg-red-600 hover:bg-red-700 text-white text-[11px] font-black uppercase px-8 py-4 rounded-2xl transition-all shadow-lg shadow-red-900/20 italic flex items-center gap-2">
-						<i data-lucide="refresh-cw" class="w-4 h-4"></i>
-						Actualizar Datos
-					</button>
+					<div class="flex flex-wrap items-center gap-3 bg-black/20 p-2 rounded-2xl border border-white/5">
+						<input type="date" id="fecha-desde" class="bg-transparent text-[10px] text-white/60 border border-white/10 px-4 py-2 rounded-xl focus:outline-none uppercase font-bold">
+						<input type="date" id="fecha-hasta" class="bg-transparent text-[10px] text-white/60 border border-white/10 px-4 py-2 rounded-xl focus:outline-none uppercase font-bold">
+						<button onclick="generarInformeRentabilidad()" class="bg-red-600 hover:bg-red-700 text-white text-[11px] font-black uppercase px-6 py-3 rounded-xl transition-all shadow-lg shadow-red-900/20 italic flex items-center gap-2">
+							<i data-lucide="refresh-cw" class="w-4 h-4"></i> Generar
+						</button>
+					</div>
 				</div>
 
-				<div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-10">
-					<div class="bg-black/40 border border-white/5 p-8 rounded-3xl backdrop-blur-md">
+				<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+					<div class="bg-black/40 border border-white/5 p-6 rounded-3xl backdrop-blur-md hover:border-white/10 transition-colors">
 						<p class="text-white/30 text-[10px] font-black uppercase mb-2 tracking-widest">Inversión Total</p>
-						<h3 id="renta-total-compra" class="text-4xl font-black text-red-600 italic tracking-tight">$0</h3>
+						<h3 id="renta-total-compra" class="text-3xl font-black text-red-600 italic tracking-tight">$0</h3>
 					</div>
 					
-					<div class="bg-black/40 border border-white/5 p-8 rounded-3xl backdrop-blur-md">
+					<div class="bg-black/40 border border-white/5 p-6 rounded-3xl backdrop-blur-md hover:border-white/10 transition-colors">
 						<p class="text-white/30 text-[10px] font-black uppercase mb-2 tracking-widest">Recaudación</p>
-						<h3 id="renta-total-venta" class="text-4xl font-black text-green-500 italic tracking-tight">$0</h3>
+						<h3 id="renta-total-venta" class="text-3xl font-black text-green-500 italic tracking-tight">$0</h3>
 					</div>
 					
-					<div class="bg-black/40 border border-white/5 p-8 rounded-3xl backdrop-blur-md border-l-4 border-l-white">
+					<div class="bg-black/40 border border-white/5 p-6 rounded-3xl backdrop-blur-md border-l-4 border-l-white hover:border-white/20 transition-colors">
 						<p class="text-white/30 text-[10px] font-black uppercase mb-2 tracking-widest">Ganancia Neta</p>
-						<h3 id="renta-utilidad" class="text-4xl font-black text-white italic tracking-tight">$0</h3>
+						<h3 id="renta-utilidad" class="text-3xl font-black text-white italic tracking-tight">$0</h3>
 					</div>
 				</div>
 
-				<div class="bg-black/40 border border-white/5 rounded-3xl overflow-hidden backdrop-blur-md shadow-2xl">
-					<div class="overflow-x-auto">
-						<table class="w-full text-left border-collapse">
-							<thead>
-								<tr class="bg-white/5 text-white/30 text-[10px] font-black uppercase tracking-[0.2em]">
-									<th class="p-6">Producto</th>
-									<th class="p-6">Inversión</th>
-									<th class="p-6">Ventas</th>
-									<th class="p-6">Diferencia</th>
-									<th class="p-6 text-right">Rendimiento</th>
-								</tr>
-							</thead>
-							<tbody id="tabla-rentabilidad-body" class="divide-y divide-white/5">
-								</tbody>
-						</table>
+				<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+					<div class="lg:col-span-2 bg-black/40 border border-white/5 rounded-3xl overflow-hidden backdrop-blur-md shadow-2xl">
+						<div class="overflow-x-auto">
+							<table class="w-full text-left border-collapse">
+								<thead>
+									<tr class="bg-white/5 text-white/30 text-[10px] font-black uppercase tracking-[0.2em]">
+										<th class="p-6">Producto</th>
+										<th class="p-6">Inversión</th>
+										<th class="p-6">Ventas</th>
+										<th class="p-6">Diferencia</th>
+										<th class="p-6 text-right">Estado</th>
+									</tr>
+								</thead>
+								<tbody id="tabla-rentabilidad-body" class="divide-y divide-white/5">
+									</tbody>
+							</table>
+						</div>
+					</div>
+
+					<div class="bg-black/40 border border-white/5 p-6 rounded-3xl backdrop-blur-md flex flex-col justify-center">
+						<p class="text-white/30 text-[10px] font-black uppercase mb-4 tracking-widest text-center">Utilidad por Producto</p>
+						<canvas id="rentabilidadChart" class="w-full"></canvas>
 					</div>
 				</div>
 			</div>
@@ -2138,6 +2146,7 @@
 		</div>
 
 	<script src="/static/script.js?v=1.2.1"></script>
+	<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 	<script>
 		window.toggleCamposCompra = function(tipo) {
