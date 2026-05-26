@@ -5409,50 +5409,86 @@ if (editorForm) {
 		}
 
 		/**
-		 * ESTA ES LA FUNCIÓN NUEVA QUE VAMOS A LLAMAR
-		 * Se encarga de procesar los datos crudos y dibujar los gráficos.
+		 * ACTUALIZAR DASHBOARD - GYMFIT PRO
+		 * Procesa movimientos y stock para renderizar gráficos y alertas.
 		 */
 		function actualizarDashboard(movimientos, stock) {
-			// A. VENTAS POR DÍA (Total de ingresos diarios)
+			// 1. VENTAS POR DÍA (Total de ingresos diarios)
 			const ventasPorDia = movimientos
-				.filter(m => m.tipo.toLowerCase() === 'ingreso')
+				.filter(m => m.tipo && m.tipo.toLowerCase() === 'ingreso')
 				.reduce((acc, mov) => {
-					let fecha = mov.fecha.split(' ')[0];
-					acc[fecha] = (acc[fecha] || 0) + parseFloat(mov.monto);
+					let fecha = mov.fecha ? mov.fecha.split(' ')[0] : 'Sin Fecha';
+					acc[fecha] = (acc[fecha] || 0) + parseFloat(mov.monto || 0);
 					return acc;
 				}, {});
 
-			// B. RENTABILIDAD POR PRODUCTO (Cálculo)
+			// 2. RENTABILIDAD POR PRODUCTO
 			const datosRentabilidad = stock.map(p => {
 				const hist = movimientos.filter(m => String(m.producto_id) === String(p.id));
-				const inv = hist.filter(m => m.tipo.toLowerCase() === 'egreso').reduce((a, b) => a + parseFloat(b.monto), 0);
-				const rec = hist.filter(m => m.tipo.toLowerCase() === 'ingreso').reduce((a, b) => a + parseFloat(b.monto), 0);
+				const inv = hist.filter(m => m.tipo && m.tipo.toLowerCase() === 'egreso').reduce((a, b) => a + parseFloat(b.monto || 0), 0);
+				const rec = hist.filter(m => m.tipo && m.tipo.toLowerCase() === 'ingreso').reduce((a, b) => a + parseFloat(b.monto || 0), 0);
 				return { nombre: p.nombre_producto, utilidad: rec - inv };
 			}).filter(d => d.utilidad !== 0);
 
+			// 3. REPOSICIÓN NECESARIA
+			const listaReponer = document.getElementById('listaReponer');
+			if (listaReponer) {
+				listaReponer.innerHTML = stock
+					.filter(p => p.stock_actual <= p.stock_minimo)
+					.map(p => `<li class="flex justify-between items-center bg-white/5 p-2 rounded-lg border border-red-500/20">
+								<span class="text-white font-bold">${p.nombre_producto}</span>
+								<span class="text-red-500 font-black">${p.stock_actual} un.</span>
+							</li>`)
+					.join('') || '<li class="text-white/40 italic">Todo en orden, sin faltantes.</li>';
+			}
+
 			// --- CONFIGURACIÓN DE GRÁFICOS ---
-			const config = { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } };
+			const config = { 
+				responsive: true, 
+				maintainAspectRatio: false, 
+				plugins: { 
+					legend: { display: false } 
+				},
+				scales: {
+					y: { ticks: { color: '#ffffff66', font: { size: 10 } }, grid: { color: '#ffffff10' } },
+					x: { ticks: { color: '#ffffff66', font: { size: 10 } }, grid: { display: false } }
+				}
+			};
+
+			// --- DESTRUCCIÓN SEGURA ---
+			if (window.chartVentas instanceof Chart) window.chartVentas.destroy();
+			if (window.chartRenta instanceof Chart) window.chartRenta.destroy();
 
 			// 1. Gráfico de Líneas (Ventas)
 			const ctxVentas = document.getElementById('chartVentas').getContext('2d');
-			if (window.chartVentas) window.chartVentas.destroy();
 			window.chartVentas = new Chart(ctxVentas, {
 				type: 'line',
 				data: {
 					labels: Object.keys(ventasPorDia),
-					datasets: [{ label: 'Ventas ($)', data: Object.values(ventasPorDia), borderColor: '#22c55e', backgroundColor: 'rgba(34, 197, 94, 0.1)', fill: true }]
+					datasets: [{ 
+						label: 'Ventas ($)', 
+						data: Object.values(ventasPorDia), 
+						borderColor: '#22c55e', 
+						backgroundColor: 'rgba(34, 197, 94, 0.1)', 
+						fill: true,
+						tension: 0.3 
+					}]
 				},
 				options: config
 			});
 
 			// 2. Gráfico de Barras (Rentabilidad)
 			const ctxRenta = document.getElementById('chartRentabilidad').getContext('2d');
-			if (window.chartRenta) window.chartRenta.destroy();
 			window.chartRenta = new Chart(ctxRenta, {
 				type: 'bar',
 				data: {
 					labels: datosRentabilidad.map(d => d.nombre),
-					datasets: [{ label: 'Utilidad ($)', data: datosRentabilidad.map(d => d.utilidad), backgroundColor: '#ef4444' }]
+					datasets: [{ 
+						label: 'Utilidad ($)', 
+						data: datosRentabilidad.map(d => d.utilidad), 
+						backgroundColor: '#ef4444',
+						borderRadius: 8
+					}]
 				},
 				options: config
 			});
