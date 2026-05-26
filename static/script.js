@@ -5306,13 +5306,10 @@ if (editorForm) {
 		 * Ahora incluye filtrado por fechas y renderizado de gráfico automático.
 		 */
 		async function generarInformeRentabilidad() {
-			// 0. Capturamos los filtros de fecha del DOM (asegúrate de tener estos inputs en tu HTML)
 			const fechaDesde = document.getElementById('fecha-desde')?.value || '';
 			const fechaHasta = document.getElementById('fecha-hasta')?.value || '';
 
-			// 1. Traemos la info fresca de la DB con filtros
 			const resStock = await apiFetch('/stock', 'GET');
-			// Enviamos los filtros al backend para que el servidor haga el trabajo pesado
 			const resCaja = await apiFetch(`/caja/movimientos?fecha_desde=${fechaDesde}&fecha_hasta=${fechaHasta}`, 'GET');
 
 			if(resStock.error || resCaja.error) return showVikingToast("Error al cargar datos", true);
@@ -5323,89 +5320,44 @@ if (editorForm) {
 			body.innerHTML = '';
 
 			let totalesGeneral = { inversion: 0, recaudacion: 0 };
-			let datosGrafico = { labels: [], ganancias: [] };
 
 			stock.forEach(producto => {
-				const historial = movimientos.filter(m => parseInt(m.producto_id) === producto.id);
+				const historial = movimientos.filter(m => String(m.producto_id) === String(producto.id));
 
-				let inversionProducto = 0;
-				let recaudacionProducto = 0;
-				let unidadesVendidas = 0;
-				let unidadesCompradas = 0;
-
+				let inv = 0, rec = 0, unidadesV = 0, unidadesC = 0;
 				historial.forEach(mov => {
-					const monto = parseFloat(mov.monto);
-					const cant = parseInt(mov.cantidad) || 0;
+					const monto = parseFloat(mov.monto || 0);
+					const cant = parseInt(mov.cantidad || 0);
 
-					if (mov.tipo.toLowerCase() === 'egreso') {
-						inversionProducto += monto;
-						unidadesCompradas += cant;
-					} else if (mov.tipo.toLowerCase() === 'ingreso') {
-						recaudacionProducto += monto;
-						unidadesVendidas += cant;
-					}
+					if (mov.tipo.toLowerCase() === 'egreso') { inv += monto; unidadesC += cant; }
+					else if (mov.tipo.toLowerCase() === 'ingreso') { rec += monto; unidadesV += cant; }
 				});
 
-				if (inversionProducto > 0 || recaudacionProducto > 0) {
-					const utilidad = recaudacionProducto - inversionProducto;
-					const margen = inversionProducto > 0 ? ((utilidad / inversionProducto) * 100).toFixed(1) : 0;
-					
-					totalesGeneral.inversion += inversionProducto;
-					totalesGeneral.recaudacion += recaudacionProducto;
-
-					// Preparamos datos para el gráfico
-					datosGrafico.labels.push(producto.nombre_producto);
-					datosGrafico.ganancias.push(utilidad);
+				if (inv > 0 || rec > 0) {
+					const utilidad = rec - inv;
+					const margen = inv > 0 ? ((utilidad / inv) * 100).toFixed(1) : 0;
+					totalesGeneral.inversion += inv;
+					totalesGeneral.recaudacion += rec;
 
 					body.innerHTML += `
 						<tr class="border-b border-white/5 hover:bg-white/10 transition-colors">
-							<td class="p-4">
-								<div class="font-bold text-white">${producto.nombre_producto}</div>
-								<div class="text-[10px] text-white/40 italic">${producto.categoria || 'Sin categoría'}</div>
-							</td>
-							<td class="p-4 text-red-400">$${inversionProducto.toLocaleString()} <span class="text-[10px] block text-white/20">(${unidadesCompradas} un.)</span></td>
-							<td class="p-4 text-green-400">$${recaudacionProducto.toLocaleString()} <span class="text-[10px] block text-white/20">(${unidadesVendidas} un.)</span></td>
-							<td class="p-4">
-								<span class="${utilidad >= 0 ? 'text-green-500' : 'text-red-500'} font-bold">
-									$${utilidad.toLocaleString()}
-								</span>
-								<div class="text-[10px] text-white/40">${margen}% margen</div>
-							</td>
-							<td class="p-4 text-right">
-								<span class="px-2 py-1 rounded text-[10px] font-black ${utilidad >= 0 ? 'bg-green-600/20 text-green-500' : 'bg-red-600/20 text-red-600'}">
-									${utilidad >= 0 ? 'RENTABLE' : 'ALERTA'}
-								</span>
-							</td>
+							<td class="p-4"><div class="font-bold text-white">${producto.nombre_producto}</div><div class="text-[10px] text-white/40 italic">${producto.categoria || 'Sin categoría'}</div></td>
+							<td class="p-4 text-red-400">$${inv.toLocaleString()}</td>
+							<td class="p-4 text-green-400">$${rec.toLocaleString()}</td>
+							<td class="p-4"><span class="${utilidad >= 0 ? 'text-green-500' : 'text-red-500'} font-bold">$${utilidad.toLocaleString()}</span><div class="text-[10px] text-white/40">${margen}% margen</div></td>
+							<td class="p-4 text-right"><span class="px-2 py-1 rounded text-[10px] font-black ${utilidad >= 0 ? 'bg-green-600/20 text-green-500' : 'bg-red-600/20 text-red-600'}">${utilidad >= 0 ? 'RENTABLE' : 'ALERTA'}</span></td>
 						</tr>
 					`;
 				}
 			});
 
-			// Actualizamos las tarjetas de arriba
 			document.getElementById('renta-total-compra').innerText = `$${totalesGeneral.inversion.toLocaleString()}`;
 			document.getElementById('renta-total-venta').innerText = `$${totalesGeneral.recaudacion.toLocaleString()}`;
 			const totalUtilidad = totalesGeneral.recaudacion - totalesGeneral.inversion;
 			document.getElementById('renta-utilidad').innerText = `$${totalUtilidad.toLocaleString()}`;
 			document.getElementById('renta-utilidad').className = `text-4xl font-black ${totalUtilidad >= 0 ? 'text-white' : 'text-red-500'} italic tracking-tight`;
 
-			// --- INTEGRACIÓN DE GRÁFICO (CHART.JS) ---
-			const ctx = document.getElementById('rentabilidadChart').getContext('2d');
-			if (window.myChart) window.myChart.destroy();
-			window.myChart = new Chart(ctx, {
-				type: 'bar',
-				data: {
-					labels: datosGrafico.labels,
-					datasets: [{
-						label: 'Utilidad por Producto ($)',
-						data: datosGrafico.ganancias,
-						backgroundColor: datosGrafico.ganancias.map(g => g >= 0 ? '#22c55e' : '#ef4444')
-					}]
-				},
-				options: { responsive: true, plugins: { legend: { labels: { color: 'white' } } } }
-			});
-
-			actualizarDashboard(resCaja, resStock);
-
+			actualizarDashboard(movimientos, stock);
 		}
 
 		/**
@@ -5413,7 +5365,6 @@ if (editorForm) {
 		 * Procesa movimientos y stock para renderizar los 4 gráficos y alertas.
 		 */
 		function actualizarDashboard(movimientos, stock) {
-			// 1. VENTAS POR DÍA
 			const ventasPorDia = movimientos
 				.filter(m => m.tipo && m.tipo.toLowerCase() === 'ingreso')
 				.reduce((acc, mov) => {
@@ -5422,7 +5373,6 @@ if (editorForm) {
 					return acc;
 				}, {});
 
-			// 2. RENTABILIDAD POR PRODUCTO
 			const datosRentabilidad = stock.map(p => {
 				const hist = movimientos.filter(m => String(m.producto_id) === String(p.id));
 				const inv = hist.filter(m => m.tipo && m.tipo.toLowerCase() === 'egreso').reduce((a, b) => a + parseFloat(b.monto || 0), 0);
@@ -5430,13 +5380,11 @@ if (editorForm) {
 				return { nombre: p.nombre_producto, categoria: p.categoria || 'Otros', utilidad: rec - inv };
 			}).filter(d => d.utilidad !== 0);
 
-			// 3. DATOS CATEGORÍAS (Para gráfico de torta)
 			const datosCategorias = datosRentabilidad.reduce((acc, d) => {
 				acc[d.categoria] = (acc[d.categoria] || 0) + d.utilidad;
 				return acc;
 			}, {});
 
-			// 4. REPOSICIÓN NECESARIA
 			const listaReponer = document.getElementById('listaReponer');
 			if (listaReponer) {
 				listaReponer.innerHTML = stock
@@ -5448,43 +5396,36 @@ if (editorForm) {
 					.join('') || '<li class="text-white/40 italic">Todo en orden.</li>';
 			}
 
-			// --- CONFIGURACIÓN DE GRÁFICOS ---
 			const config = { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } };
 
-			// --- DESTRUCCIÓN SEGURA ---
-			[window.chartVentas, window.chartRenta, window.chartCats].forEach(c => {
-				if (c instanceof Chart) c.destroy();
+			['chartVentas', 'rentabilidadChart', 'chartCategorias'].forEach(id => {
+				const canvas = document.getElementById(id);
+				if (canvas && canvas.chart instanceof Chart) canvas.chart.destroy();
 			});
 
-			// 1. Gráfico de Líneas (Ventas)
-			window.chartVentas = new Chart(document.getElementById('chartVentas').getContext('2d'), {
+			const ctxV = document.getElementById('chartVentas').getContext('2d');
+			const cV = new Chart(ctxV, {
 				type: 'line',
-				data: {
-					labels: Object.keys(ventasPorDia),
-					datasets: [{ label: 'Ventas ($)', data: Object.values(ventasPorDia), borderColor: '#22c55e', backgroundColor: 'rgba(34, 197, 94, 0.1)', fill: true, tension: 0.3 }]
-				},
+				data: { labels: Object.keys(ventasPorDia), datasets: [{ label: 'Ventas ($)', data: Object.values(ventasPorDia), borderColor: '#22c55e', backgroundColor: 'rgba(34, 197, 94, 0.1)', fill: true, tension: 0.3 }] },
 				options: config
 			});
+			ctxV.canvas.chart = cV;
 
-			// 2. Gráfico de Barras (Rentabilidad)
-			window.chartRenta = new Chart(document.getElementById('rentabilidadChart').getContext('2d'), {
+			const ctxR = document.getElementById('rentabilidadChart').getContext('2d');
+			const cR = new Chart(ctxR, {
 				type: 'bar',
-				data: {
-					labels: datosRentabilidad.map(d => d.nombre),
-					datasets: [{ label: 'Utilidad ($)', data: datosRentabilidad.map(d => d.utilidad), backgroundColor: '#ef4444', borderRadius: 8 }]
-				},
+				data: { labels: datosRentabilidad.map(d => d.nombre), datasets: [{ label: 'Utilidad ($)', data: datosRentabilidad.map(d => d.utilidad), backgroundColor: '#ef4444', borderRadius: 8 }] },
 				options: config
 			});
+			ctxR.canvas.chart = cR;
 
-			// 3. Gráfico de Categorías (Doughnut)
-			window.chartCats = new Chart(document.getElementById('chartCategorias').getContext('2d'), {
+			const ctxC = document.getElementById('chartCategorias').getContext('2d');
+			const cC = new Chart(ctxC, {
 				type: 'doughnut',
-				data: {
-					labels: Object.keys(datosCategorias),
-					datasets: [{ data: Object.values(datosCategorias), backgroundColor: ['#3b82f6', '#f59e0b', '#8b5cf6', '#ec4899'] }]
-				},
+				data: { labels: Object.keys(datosCategorias), datasets: [{ data: Object.values(datosCategorias), backgroundColor: ['#3b82f6', '#f59e0b', '#8b5cf6', '#ec4899'] }] },
 				options: { ...config, plugins: { legend: { position: 'bottom', labels: { color: 'white', fontSize: 10 } } } }
 			});
+			ctxC.canvas.chart = cC;
 		}
 
         /**
