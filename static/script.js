@@ -5403,6 +5403,48 @@ if (editorForm) {
 				},
 				options: { responsive: true, plugins: { legend: { labels: { color: 'white' } } } }
 			});
+
+			actualizarDashboard(resCaja, resStock);
+
+		}
+
+		/**
+		 * ESTA ES LA FUNCIÓN NUEVA QUE VAMOS A LLAMAR
+		 * Se encarga de procesar los datos crudos y dibujar los gráficos.
+		 */
+		function actualizarDashboard(movimientos, stock) {
+			// 1. Calcular ventas por día para el gráfico
+			const ventasPorDia = movimientos.reduce((acc, mov) => {
+				// Solo contamos si es ingreso (venta)
+				if (mov.tipo.toLowerCase() === 'ingreso') {
+					let fecha = mov.fecha.split(' ')[0]; // Sacamos la parte de la fecha (YYYY-MM-DD)
+					acc[fecha] = (acc[fecha] || 0) + parseFloat(mov.monto);
+				}
+				return acc;
+			}, {});
+
+			// 2. Filtrar productos que necesitan reposición (Stock <= Mínimo)
+			// Usamos el stock que ya traes de la DB
+			const listaReponer = stock.filter(p => p.stock_actual <= p.stock_minimo);
+			
+			// --- AQUÍ DIBUJAMOS CON CHART.JS ---
+			const ctx = document.getElementById('chartVentas').getContext('2d');
+			
+			// Si ya existe un gráfico, lo destruimos para no encimar gráficos
+			if (window.miGrafico) window.miGrafico.destroy();
+			
+			window.miGrafico = new Chart(ctx, {
+				type: 'line', // Gráfico de líneas para ver tendencia diaria
+				data: {
+					labels: Object.keys(ventasPorDia),
+					datasets: [{
+						label: 'Ventas Diarias ($)',
+						data: Object.values(ventasPorDia),
+						borderColor: '#ef4444', // Rojo Vikingo
+						tension: 0.4
+					}]
+				}
+			});
 		}
 
         /**
