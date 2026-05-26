@@ -5410,10 +5410,10 @@ if (editorForm) {
 
 		/**
 		 * ACTUALIZAR DASHBOARD - GYMFIT PRO
-		 * Procesa movimientos y stock para renderizar gráficos y alertas.
+		 * Procesa movimientos y stock para renderizar los 4 gráficos y alertas.
 		 */
 		function actualizarDashboard(movimientos, stock) {
-			// 1. VENTAS POR DÍA (Total de ingresos diarios)
+			// 1. VENTAS POR DÍA
 			const ventasPorDia = movimientos
 				.filter(m => m.tipo && m.tipo.toLowerCase() === 'ingreso')
 				.reduce((acc, mov) => {
@@ -5427,70 +5427,63 @@ if (editorForm) {
 				const hist = movimientos.filter(m => String(m.producto_id) === String(p.id));
 				const inv = hist.filter(m => m.tipo && m.tipo.toLowerCase() === 'egreso').reduce((a, b) => a + parseFloat(b.monto || 0), 0);
 				const rec = hist.filter(m => m.tipo && m.tipo.toLowerCase() === 'ingreso').reduce((a, b) => a + parseFloat(b.monto || 0), 0);
-				return { nombre: p.nombre_producto, utilidad: rec - inv };
+				return { nombre: p.nombre_producto, categoria: p.categoria || 'Otros', utilidad: rec - inv };
 			}).filter(d => d.utilidad !== 0);
 
-			// 3. REPOSICIÓN NECESARIA
+			// 3. DATOS CATEGORÍAS (Para gráfico de torta)
+			const datosCategorias = datosRentabilidad.reduce((acc, d) => {
+				acc[d.categoria] = (acc[d.categoria] || 0) + d.utilidad;
+				return acc;
+			}, {});
+
+			// 4. REPOSICIÓN NECESARIA
 			const listaReponer = document.getElementById('listaReponer');
 			if (listaReponer) {
 				listaReponer.innerHTML = stock
 					.filter(p => p.stock_actual <= p.stock_minimo)
 					.map(p => `<li class="flex justify-between items-center bg-white/5 p-2 rounded-lg border border-red-500/20">
-								<span class="text-white font-bold">${p.nombre_producto}</span>
-								<span class="text-red-500 font-black">${p.stock_actual} un.</span>
+									<span class="text-white font-bold">${p.nombre_producto}</span>
+									<span class="text-red-500 font-black">${p.stock_actual} un.</span>
 							</li>`)
-					.join('') || '<li class="text-white/40 italic">Todo en orden, sin faltantes.</li>';
+					.join('') || '<li class="text-white/40 italic">Todo en orden.</li>';
 			}
 
 			// --- CONFIGURACIÓN DE GRÁFICOS ---
-			const config = { 
-				responsive: true, 
-				maintainAspectRatio: false, 
-				plugins: { 
-					legend: { display: false } 
-				},
-				scales: {
-					y: { ticks: { color: '#ffffff66', font: { size: 10 } }, grid: { color: '#ffffff10' } },
-					x: { ticks: { color: '#ffffff66', font: { size: 10 } }, grid: { display: false } }
-				}
-			};
+			const config = { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } };
 
 			// --- DESTRUCCIÓN SEGURA ---
-			if (window.chartVentas instanceof Chart) window.chartVentas.destroy();
-			if (window.chartRenta instanceof Chart) window.chartRenta.destroy();
+			[window.chartVentas, window.chartRenta, window.chartCats].forEach(c => {
+				if (c instanceof Chart) c.destroy();
+			});
 
 			// 1. Gráfico de Líneas (Ventas)
-			const ctxVentas = document.getElementById('chartVentas').getContext('2d');
-			window.chartVentas = new Chart(ctxVentas, {
+			window.chartVentas = new Chart(document.getElementById('chartVentas').getContext('2d'), {
 				type: 'line',
 				data: {
 					labels: Object.keys(ventasPorDia),
-					datasets: [{ 
-						label: 'Ventas ($)', 
-						data: Object.values(ventasPorDia), 
-						borderColor: '#22c55e', 
-						backgroundColor: 'rgba(34, 197, 94, 0.1)', 
-						fill: true,
-						tension: 0.3 
-					}]
+					datasets: [{ label: 'Ventas ($)', data: Object.values(ventasPorDia), borderColor: '#22c55e', backgroundColor: 'rgba(34, 197, 94, 0.1)', fill: true, tension: 0.3 }]
 				},
 				options: config
 			});
 
 			// 2. Gráfico de Barras (Rentabilidad)
-			const ctxRenta = document.getElementById('chartRentabilidad').getContext('2d');
-			window.chartRenta = new Chart(ctxRenta, {
+			window.chartRenta = new Chart(document.getElementById('rentabilidadChart').getContext('2d'), {
 				type: 'bar',
 				data: {
 					labels: datosRentabilidad.map(d => d.nombre),
-					datasets: [{ 
-						label: 'Utilidad ($)', 
-						data: datosRentabilidad.map(d => d.utilidad), 
-						backgroundColor: '#ef4444',
-						borderRadius: 8
-					}]
+					datasets: [{ label: 'Utilidad ($)', data: datosRentabilidad.map(d => d.utilidad), backgroundColor: '#ef4444', borderRadius: 8 }]
 				},
 				options: config
+			});
+
+			// 3. Gráfico de Categorías (Doughnut)
+			window.chartCats = new Chart(document.getElementById('chartCategorias').getContext('2d'), {
+				type: 'doughnut',
+				data: {
+					labels: Object.keys(datosCategorias),
+					datasets: [{ data: Object.values(datosCategorias), backgroundColor: ['#3b82f6', '#f59e0b', '#8b5cf6', '#ec4899'] }]
+				},
+				options: { ...config, plugins: { legend: { position: 'bottom', labels: { color: 'white', fontSize: 10 } } } }
 			});
 		}
 
