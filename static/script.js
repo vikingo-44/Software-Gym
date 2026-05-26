@@ -5323,29 +5323,25 @@ if (editorForm) {
 
 			stock.forEach(producto => {
 				const historial = movimientos.filter(m => String(m.producto_id) === String(producto.id));
-
 				let inv = 0, rec = 0, unidadesV = 0, unidadesC = 0;
+
 				historial.forEach(mov => {
 					const monto = parseFloat(mov.monto || 0);
 					const cant = parseInt(mov.cantidad || 0);
-
 					if (mov.tipo.toLowerCase() === 'egreso') { inv += monto; unidadesC += cant; }
 					else if (mov.tipo.toLowerCase() === 'ingreso') { rec += monto; unidadesV += cant; }
 				});
 
 				if (inv > 0 || rec > 0) {
-					const utilidad = rec - inv;
-					const margen = inv > 0 ? ((utilidad / inv) * 100).toFixed(1) : 0;
 					totalesGeneral.inversion += inv;
 					totalesGeneral.recaudacion += rec;
-
 					body.innerHTML += `
 						<tr class="border-b border-white/5 hover:bg-white/10 transition-colors">
 							<td class="p-4"><div class="font-bold text-white">${producto.nombre_producto}</div><div class="text-[10px] text-white/40 italic">${producto.categoria || 'Sin categoría'}</div></td>
 							<td class="p-4 text-red-400">$${inv.toLocaleString()}</td>
 							<td class="p-4 text-green-400">$${rec.toLocaleString()}</td>
-							<td class="p-4"><span class="${utilidad >= 0 ? 'text-green-500' : 'text-red-500'} font-bold">$${utilidad.toLocaleString()}</span><div class="text-[10px] text-white/40">${margen}% margen</div></td>
-							<td class="p-4 text-right"><span class="px-2 py-1 rounded text-[10px] font-black ${utilidad >= 0 ? 'bg-green-600/20 text-green-500' : 'bg-red-600/20 text-red-600'}">${utilidad >= 0 ? 'RENTABLE' : 'ALERTA'}</span></td>
+							<td class="p-4 text-white font-bold">$${(rec - inv).toLocaleString()}</td>
+							<td class="p-4 text-right"><span class="px-2 py-1 rounded text-[10px] font-black ${rec - inv >= 0 ? 'bg-green-600/20 text-green-500' : 'bg-red-600/20 text-red-600'}">${rec - inv >= 0 ? 'RENTABLE' : 'ALERTA'}</span></td>
 						</tr>
 					`;
 				}
@@ -5353,9 +5349,7 @@ if (editorForm) {
 
 			document.getElementById('renta-total-compra').innerText = `$${totalesGeneral.inversion.toLocaleString()}`;
 			document.getElementById('renta-total-venta').innerText = `$${totalesGeneral.recaudacion.toLocaleString()}`;
-			const totalUtilidad = totalesGeneral.recaudacion - totalesGeneral.inversion;
-			document.getElementById('renta-utilidad').innerText = `$${totalUtilidad.toLocaleString()}`;
-			document.getElementById('renta-utilidad').className = `text-4xl font-black ${totalUtilidad >= 0 ? 'text-white' : 'text-red-500'} italic tracking-tight`;
+			document.getElementById('renta-utilidad').innerText = `$${(totalesGeneral.recaudacion - totalesGeneral.inversion).toLocaleString()}`;
 
 			actualizarDashboard(movimientos, stock);
 		}
@@ -5365,6 +5359,7 @@ if (editorForm) {
 		 * Procesa movimientos y stock para renderizar los 4 gráficos y alertas.
 		 */
 		function actualizarDashboard(movimientos, stock) {
+			// 1. VENTAS POR DÍA (Agrupado estrictamente por día)
 			const ventasPorDia = movimientos
 				.filter(m => m.tipo && m.tipo.toLowerCase() === 'ingreso')
 				.reduce((acc, mov) => {
@@ -5373,59 +5368,50 @@ if (editorForm) {
 					return acc;
 				}, {});
 
-			const datosRentabilidad = stock.map(p => {
-				const hist = movimientos.filter(m => String(m.producto_id) === String(p.id));
-				const inv = hist.filter(m => m.tipo && m.tipo.toLowerCase() === 'egreso').reduce((a, b) => a + parseFloat(b.monto || 0), 0);
-				const rec = hist.filter(m => m.tipo && m.tipo.toLowerCase() === 'ingreso').reduce((a, b) => a + parseFloat(b.monto || 0), 0);
-				return { nombre: p.nombre_producto, categoria: p.categoria || 'Otros', utilidad: rec - inv };
+			// 2. DATOS DE RENTABILIDAD Y CANTIDADES
+			const datosProd = stock.map(p => {
+				const h = movimientos.filter(m => String(m.producto_id) === String(p.id));
+				const inv = h.filter(m => m.tipo && m.tipo.toLowerCase() === 'egreso').reduce((a, b) => a + parseFloat(b.monto || 0), 0);
+				const rec = h.filter(m => m.tipo && m.tipo.toLowerCase() === 'ingreso').reduce((a, b) => a + parseFloat(b.monto || 0), 0);
+				const cantV = h.filter(m => m.tipo && m.tipo.toLowerCase() === 'ingreso').reduce((a, b) => a + parseInt(b.cantidad || 0), 0);
+				return { nombre: p.nombre_producto, utilidad: rec - inv, cantidad: cantV };
 			}).filter(d => d.utilidad !== 0);
 
-			const datosCategorias = datosRentabilidad.reduce((acc, d) => {
-				acc[d.categoria] = (acc[d.categoria] || 0) + d.utilidad;
-				return acc;
-			}, {});
-
-			const listaReponer = document.getElementById('listaReponer');
-			if (listaReponer) {
-				listaReponer.innerHTML = stock
-					.filter(p => p.stock_actual <= p.stock_minimo)
-					.map(p => `<li class="flex justify-between items-center bg-white/5 p-2 rounded-lg border border-red-500/20">
-									<span class="text-white font-bold">${p.nombre_producto}</span>
-									<span class="text-red-500 font-black">${p.stock_actual} un.</span>
-							</li>`)
-					.join('') || '<li class="text-white/40 italic">Todo en orden.</li>';
-			}
-
-			const config = { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } };
-
-			['chartVentas', 'rentabilidadChart', 'chartCategorias'].forEach(id => {
-				const canvas = document.getElementById(id);
-				if (canvas && canvas.chart instanceof Chart) canvas.chart.destroy();
+			// Destrucción segura de gráficos
+			['chartVentas', 'chartRentabilidad', 'chartCategorias', 'chartStock'].forEach(id => {
+				const c = document.getElementById(id);
+				if (c && c.chart instanceof Chart) c.chart.destroy();
 			});
 
+			// 1. VENTAS DIARIAS (Línea)
 			const ctxV = document.getElementById('chartVentas').getContext('2d');
-			const cV = new Chart(ctxV, {
+			ctxV.canvas.chart = new Chart(ctxV, {
 				type: 'line',
-				data: { labels: Object.keys(ventasPorDia), datasets: [{ label: 'Ventas ($)', data: Object.values(ventasPorDia), borderColor: '#22c55e', backgroundColor: 'rgba(34, 197, 94, 0.1)', fill: true, tension: 0.3 }] },
-				options: config
+				data: { labels: Object.keys(ventasPorDia), datasets: [{ label: 'Ventas ($)', data: Object.values(ventasPorDia), borderColor: '#22c55e', fill: true }] },
+				options: { responsive: true, maintainAspectRatio: false }
 			});
-			ctxV.canvas.chart = cV;
 
-			const ctxR = document.getElementById('rentabilidadChart').getContext('2d');
-			const cR = new Chart(ctxR, {
+			// 2. MIXTO: Ganancia (Barras) + Cantidad Vendida (Línea)
+			const ctxR = document.getElementById('chartRentabilidad').getContext('2d');
+			ctxR.canvas.chart = new Chart(ctxR, {
 				type: 'bar',
-				data: { labels: datosRentabilidad.map(d => d.nombre), datasets: [{ label: 'Utilidad ($)', data: datosRentabilidad.map(d => d.utilidad), backgroundColor: '#ef4444', borderRadius: 8 }] },
-				options: config
+				data: {
+					labels: datosProd.map(d => d.nombre),
+					datasets: [
+						{ label: 'Utilidad ($)', data: datosProd.map(d => d.utilidad), backgroundColor: '#ef4444', type: 'bar' },
+						{ label: 'Cantidad Vendida', data: datosProd.map(d => d.cantidad), borderColor: '#ffffff', type: 'line', yAxisID: 'y1' }
+					]
+				},
+				options: { responsive: true, maintainAspectRatio: false, scales: { y1: { position: 'right' } } }
 			});
-			ctxR.canvas.chart = cR;
 
+			// 3. PRODUCTOS MÁS VENDIDOS (Barras Horizontales)
 			const ctxC = document.getElementById('chartCategorias').getContext('2d');
-			const cC = new Chart(ctxC, {
-				type: 'doughnut',
-				data: { labels: Object.keys(datosCategorias), datasets: [{ data: Object.values(datosCategorias), backgroundColor: ['#3b82f6', '#f59e0b', '#8b5cf6', '#ec4899'] }] },
-				options: { ...config, plugins: { legend: { position: 'bottom', labels: { color: 'white', fontSize: 10 } } } }
+			ctxC.canvas.chart = new Chart(ctxC, {
+				type: 'bar',
+				data: { labels: datosProd.map(d => d.nombre), datasets: [{ data: datosProd.map(d => d.cantidad), backgroundColor: '#3b82f6' }] },
+				options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false }
 			});
-			ctxC.canvas.chart = cC;
 		}
 
         /**
