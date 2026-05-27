@@ -6303,32 +6303,35 @@ if (editorForm) {
 		function renderWaAlumnosList() {
 			const contenedor = document.getElementById('wa-alumno-select');
 			const inputBusqueda = document.getElementById('wa-search-input').value.toLowerCase();
-			const filtroTiempo = document.getElementById('wa-filtro-tiempo').value;
-			const hoy = new Date();
+			const filtro = document.getElementById('wa-filtro-tiempo').value;
+			const hoy = new Date('2026-05-27'); // Fecha actual
 
-			// Filtramos la lista global según el buscador de texto y el filtro de tiempo
 			const listaFiltrada = state.alumnos.filter(a => {
 				if (!a.telefono || a.telefono.trim() === "") return false;
 
-				// 1. Filtro de Texto (Buscador)
-				const coincideNombre = a.nombre_completo.toLowerCase().includes(inputBusqueda);
-				const coincideDni = a.dni.toString().includes(inputBusqueda);
-				if (!coincideNombre && !coincideDni) return false;
+				// Filtro por Buscador (Nombre o DNI)
+				const coincide = a.nombre_completo.toLowerCase().includes(inputBusqueda) || 
+							(a.dni && a.dni.toString().includes(inputBusqueda));
+				if (!coincide) return false;
 
-				// 2. Filtro de Tiempo
-				if (filtroTiempo === "todos") return true;
+				// Filtro por Tiempo / Vencimiento
+				if (filtro === "todos") return true;
+
+				if (filtro === "vencidos") {
+					// Asumimos que a.fecha_vencimiento viene en formato "YYYY-MM-DD"
+					if (!a.fecha_vencimiento) return false;
+					return new Date(a.fecha_vencimiento) <= hoy;
+				}
+
+				// Filtros de Ausencia
+				if (!a.ultima_asistencia) return true;
+				const diffDays = Math.ceil((hoy - new Date(a.ultima_asistencia)) / (1000 * 60 * 60 * 24));
 				
-				// Asumiendo que tenés la lógica de ultima_asistencia en el objeto alumno
-				if (!a.ultima_asistencia) return true; // Si no vino nunca o no hay registro, lo mostramos
+				if (filtro === "7") return diffDays >= 7;
+				if (filtro === "15") return diffDays >= 15;
+				if (filtro === "30") return diffDays >= 30;
 				
-				const diffTime = Math.abs(hoy - new Date(a.ultima_asistencia));
-				const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-				
-				if (filtroTiempo === "7") return diffDays >= 7;
-				if (filtroTiempo === "15") return diffDays >= 15;
-				if (filtroTiempo === "30") return diffDays >= 30;
-				
-				return true;
+				return false;
 			});
 
 			// Dibujamos el checkbox "Tildar Todos" y la lista
