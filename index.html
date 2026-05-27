@@ -2211,91 +2211,61 @@
     	<i data-lucide="message-circle"></i>
 	</button>
 
-	<!-- CENTRAL DE MENSAJES WHATSAPP (REDISEÑO PRO) -->
+	<!-- CENTRAL DE MENSAJES WHATSAPP -->
 	<div id="modal-whatsapp" class="viking-modal fixed inset-0 z-[100] hidden flex items-center justify-center bg-black/80 backdrop-blur-sm">
-		<!-- Lo hicimos más ancho: max-w-2xl -->
-		<div class="bg-zinc-900 border border-white/10 p-8 rounded-[2.5rem] w-full max-w-2xl shadow-2xl relative max-h-[95vh] flex flex-col">
-			
-			<!-- CABECERA -->
-			<div class="flex items-center justify-between mb-6 shrink-0 border-b border-white/10 pb-4">
-				<div class="flex items-center gap-3">
-					<div class="w-2 h-8 bg-green-500 rounded-full shadow-[0_0_15px_rgba(34,197,94,0.5)]"></div>
-					<h3 class="text-2xl font-black uppercase italic text-white tracking-tighter">Central de Difusión</h3>
-				</div>
-				<div class="text-[10px] font-black uppercase tracking-widest text-white/30 bg-white/5 px-3 py-1 rounded-full">
-					Módulo WhatsApp
-				</div>
+		<div class="bg-zinc-900 border border-white/10 p-8 rounded-[2.5rem] w-full max-w-lg shadow-2xl relative max-h-[90vh] flex flex-col">
+			<div class="flex items-center gap-3 mb-6 shrink-0">
+				<div class="w-2 h-8 bg-green-500 rounded-full"></div>
+				<h3 class="text-2xl font-black uppercase italic text-white tracking-tighter">Central WhatsApp</h3>
 			</div>
 
-			<!-- CONTENIDO SCROLLEABLE -->
-			<div class="space-y-6 overflow-y-auto pr-2 flex-1 custom-scrollbar">
+			<div class="space-y-4 overflow-y-auto pr-2 flex-1">
 				
-				<!-- CONTROLES SUPERIORES: BUSCADOR Y FILTROS -->
-				<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-					<!-- Buscador de Texto -->
-					<div class="flex flex-col gap-2">
-						<label class="text-[10px] font-black text-white/40 uppercase ml-2 flex items-center gap-1">
-							<i data-lucide="search" class="w-3 h-3"></i> Buscar Alumno
-						</label>
-						<input type="text" id="wa-search-input" oninput="renderWaAlumnosList()" placeholder="Escribí nombre, apellido o DNI..." class="bg-zinc-800 border border-white/10 rounded-xl p-3 text-white text-sm outline-none focus:border-green-500 focus:bg-zinc-800/50 transition-all">
-					</div>
-
-					<!-- Filtro de Tiempo -->
-					<div class="flex flex-col gap-2">
-						<label class="text-[10px] font-black text-white/40 uppercase ml-2 flex items-center gap-1">
-							<i data-lucide="calendar-clock" class="w-3 h-3"></i> Filtrar por Asistencia
-						</label>
-						<select id="wa-filtro-tiempo" onchange="renderWaAlumnosList()" class="bg-zinc-800 border border-white/10 rounded-xl p-3 text-white text-sm outline-none focus:border-green-500 transition-all font-bold appearance-none cursor-pointer hover:bg-zinc-800/80">
-							<option value="todos">Mostrar TODOS</option>
-							<option value="7">Ausentes hace +1 Semana</option>
-							<option value="15">Ausentes hace +15 Días</option>
-							<option value="30">Ausentes hace +1 Mes</option>
-						</select>
-					</div>
-				</div>
-
-				<!-- LISTA DE ALUMNOS (CHECKBOXES) -->
-				<div class="flex flex-col gap-2 bg-black/20 p-4 rounded-2xl border border-white/5">
-					<label class="text-[10px] font-black text-green-500 uppercase flex justify-between items-center">
-						<span>Seleccionar Destinatarios</span>
-					</label>
-					<!-- El contenedor mantiene tu ID original para compatibilidad -->
-					<div id="wa-alumno-select" class="transition-all flex flex-col">
-						<!-- SE LLENA CON JS -->
-					</div>
-				</div>
-
-				<!-- MENSAJE PREDEFINIDO -->
 				<div class="flex flex-col gap-2">
-					<label class="text-[10px] font-black text-white/40 uppercase ml-2">Mensaje Rápido</label>
-					<select id="wa-mensaje-pre-select" onchange="updateWAMessage(this.value)" class="bg-zinc-800 border border-white/10 rounded-xl p-3 text-white text-sm outline-none focus:border-green-500 transition-all cursor-pointer">
-						<option value="">-- Escribir mensaje libre --</option>
-						<option value="HOLA_ALUMNO! Te confirmamos que la clase de hoy ha sido reprogramada. Revisá el calendario.">AVISO DE CLASE</option>
-						<option value="HOLA_ALUMNO! Te avisamos que a tu suscripción en ND Training le quedan solo 3 días de vigencia 💪🏼 Queremos que sigas entrenando con todo y no pierdas continuidad 🔥 Podés renovar directamente por acá y dejar tu lugar asegurado.">SUSCRIPCION POR VENCER</option>
-						<option value="HOLA_ALUMNO! Te avisamos que hoy venció tu suscripción en ND Training. Esperamos verte nuevamente entrenando con nosotros 💪🏼🔥 Cuando quieras renovar, escribinos y te ayudamos al instante. ¡No cortes el ritmo!">SUSCRIPCION VENCIDA</option>
-						<option value="HOLA_ALUMNO! ¿Cómo estás? Te extrañamos por ND Training 💚 Hace unos días que no te vemos entrenando y queríamos invitarte a volver 🔥 Tenemos una promo imperdible para vos… Respóndenos este mensaje y te contamos de qué trata.">NO VIENE HACE 15 DIAS</option>
+					<label class="text-[10px] font-black text-white/40 uppercase ml-2">Buscar Alumno (Nombre/DNI)</label>
+					<input type="text" id="wa-search-input" oninput="renderWaAlumnosList()" placeholder="Escribí para filtrar..." class="bg-zinc-800 border border-white/10 rounded-xl p-3 text-white text-sm outline-none focus:border-green-500 transition-all">
+				</div>
+
+				<div class="flex flex-col gap-2">
+					<label class="text-[10px] font-black text-white/40 uppercase ml-2">Filtro de Ausencia</label>
+					<select id="wa-filtro-tiempo" onchange="renderWaAlumnosList()" class="bg-zinc-800 border border-white/10 rounded-xl p-3 text-white text-sm outline-none focus:border-green-500 transition-all font-bold">
+						<option value="todos">Todos los alumnos</option>
+						<option value="7">Ausentes +1 Semana</option>
+						<option value="15">Ausentes +15 Días</option>
+						<option value="30">Ausentes +1 Mes</option>
 					</select>
 				</div>
 
-				<!-- TEXTAREA FINAL -->
 				<div class="flex flex-col gap-2">
-					<label class="text-[10px] font-black text-white/40 uppercase ml-2 flex justify-between">
-						<span>Mensaje Final a Enviar</span>
-						<span class="text-white/20 normal-case italic">Permite emojis</span>
-					</label>
-					<textarea id="wa-mensaje-texto" rows="4" class="bg-zinc-800 border border-white/10 rounded-xl p-4 text-white text-sm outline-none focus:border-green-500 transition-all resize-none shadow-inner" placeholder="Escribí acá tu mensaje personalizado..."></textarea>
+					<label class="text-[10px] font-black text-white/40 uppercase ml-2">Seleccionar Alumnos</label>
+					<div id="wa-alumno-select" class="bg-zinc-800 border border-white/10 rounded-xl p-4 transition-all">
+						</div>
+				</div>
+
+				<div class="flex flex-col gap-2">
+					<label class="text-[10px] font-black text-white/40 uppercase ml-2">Mensaje Rápido</label>
+					<select id="wa-mensaje-pre-select" onchange="updateWAMessage(this.value)" class="bg-zinc-800 border border-white/10 rounded-xl p-3 text-white text-sm outline-none focus:border-green-500 transition-all">
+						<option value="">-- Escribir mensaje libre --</option>
+						<option value="HOLA_ALUMNO! Te confirmamos que la clase de hoy ha sido reprogramada. Revisá el calendario.">AVISO DE CLASE</option>
+						<option value="HOLA_ALUMNO! Te avisamos que a tu suscripción en ND Training le quedan solo 3 días de vigencia 💪🏼 Queremos que sigas entrenando con todo y no pierdas continuidad 🔥 Podés renovar directamente por acá y dejar tu lugar asegurado. Cualquier cosa estamos para ayudarte">SUSCRIPCION POR VENCER</option>
+						<option value="HOLA_ALUMNO! Te avisamos que hoy venció tu suscripción en ND Training. Esperamos verte nuevamente entrenando con nosotros 💪🏼🔥 Cuando quieras renovar, escribinos y te ayudamos al instante. ¡No cortes el ritmo!">SUSCRIPCION VENCIDA</option>
+						<option value="HOLA_ALUMNO! ¿Cómo estás? Te extrañamos por ND Training 💚 Hace unos días que no te vemos entrenando y queríamos invitarte a volver 🔥 Tenemos una promo imperdible para vos… Respóndenos este mensaje y te contamos de qué trata. Volvé a activar tu mejor versión!!!">NO VIENE HACE 15 DIAS</option>
+					</select>
+				</div>
+
+				<div class="flex flex-col gap-2">
+					<label class="text-[10px] font-black text-white/40 uppercase ml-2">Mensaje Final</label>
+					<textarea id="wa-mensaje-texto" rows="4" class="bg-zinc-800 border border-white/10 rounded-xl p-4 text-white text-sm outline-none focus:border-green-500 transition-all resize-none" placeholder="Escribí acá tu mensaje personalizado..."></textarea>
 				</div>
 			</div>
 
-			<!-- BOTONERA -->
-			<div class="grid grid-cols-2 gap-3 mt-6 shrink-0 pt-4 border-t border-white/10">
+			<div class="grid grid-cols-2 gap-3 mt-6 shrink-0">
 				<button onclick="closeModal('modal-whatsapp')" class="py-4 bg-white/5 hover:bg-white/10 text-white rounded-2xl font-black uppercase italic text-[11px] transition-all">Cancelar</button>
-				<button onclick="sendVikingWhatsApp()" class="py-4 bg-green-600 hover:bg-green-700 hover:scale-[1.02] text-white rounded-2xl font-black uppercase italic text-[11px] transition-all flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(34,197,94,0.3)]">
-					<i data-lucide="send" class="w-4 h-4"></i> Iniciar Difusión
+				<button onclick="sendVikingWhatsApp()" class="py-4 bg-green-600 hover:bg-green-700 text-white rounded-2xl font-black uppercase italic text-[11px] transition-all flex items-center justify-center gap-2">
+					<i data-lucide="send" class="w-4 h-4"></i> Enviar Masivo
 				</button>
 			</div>
 			
-			<!-- TRIGGER OCULTO (Requerido por tu función JS) -->
 			<a id="whatsapp-trigger" href="#" target="_blank" class="hidden"></a>
 		</div>
 	</div>
