@@ -5400,38 +5400,55 @@ if (editorForm) {
 		 * Procesa movimientos y stock para renderizar los 4 gráficos y alertas.
 		 */
 		function actualizarDashboard(movimientos, stock) {
-			// 1. Agrupación por DÍA (No por hora)
+			// 1. VENTAS POR DÍA (Agrupado por día YYYY-MM-DD)
 			const ventasPorDia = {};
 			movimientos.filter(m => m.tipo && m.tipo.toLowerCase() === 'ingreso').forEach(mov => {
-				const fecha = mov.fecha ? mov.fecha.split(' ')[0] : 'Sin fecha';
+				const fecha = mov.fecha ? mov.fecha.split(' ')[0].split('T')[0] : 'Sin fecha';
 				ventasPorDia[fecha] = (ventasPorDia[fecha] || 0) + parseFloat(mov.monto || 0);
 			});
 
-			// 2. Datos para rentabilidad
+			// 2. DATOS DE RENTABILIDAD Y CATEGORÍAS
 			const datosProd = stock.map(p => {
 				const hist = movimientos.filter(m => String(m.producto_id) === String(p.id));
-				const inv = hist.filter(m => m.tipo && m.tipo.toLowerCase() === 'egreso').reduce((a, b) => a + parseFloat(b.monto || 0), 0);
-				const rec = hist.filter(m => m.tipo && m.tipo.toLowerCase() === 'ingreso').reduce((a, b) => a + parseFloat(b.monto || 0), 0);
-				const cantV = hist.filter(m => m.tipo && m.tipo.toLowerCase() === 'ingreso').reduce((a, b) => a + parseInt(b.cantidad || 0), 0);
+				const inv = hist.filter(m => m.tipo.toLowerCase() === 'egreso').reduce((a, b) => a + parseFloat(b.monto || 0), 0);
+				const rec = hist.filter(m => m.tipo.toLowerCase() === 'ingreso').reduce((a, b) => a + parseFloat(b.monto || 0), 0);
+				const cantV = hist.filter(m => m.tipo.toLowerCase() === 'ingreso').reduce((a, b) => a + parseInt(b.cantidad || 0), 0);
 				return { nombre: p.nombre_producto, categoria: p.categoria || 'Otros', utilidad: rec - inv, cantidad: cantV };
 			}).filter(d => d.utilidad !== 0);
 
-			// 3. Destrucción segura de gráficos existentes
+			const ventasPorCat = datosProd.reduce((acc, d) => {
+				acc[d.categoria] = (acc[d.categoria] || 0) + d.cantidad;
+				return acc;
+			}, {});
+
+			// 3. REPOSICIÓN NECESARIA
+			const listaReponer = document.getElementById('listaReponer');
+			if (listaReponer) {
+				listaReponer.innerHTML = stock
+					.filter(p => p.stock_actual <= p.stock_minimo)
+					.map(p => `<li class="flex justify-between items-center bg-white/5 p-2 rounded-lg border border-red-500/20">
+									<span class="text-white font-bold">${p.nombre_producto}</span>
+									<span class="text-red-500 font-black">${p.stock_actual} un.</span>
+							</li>`)
+					.join('') || '<li class="text-white/40 italic">Todo en orden.</li>';
+			}
+
+			// 4. DESTRUCCIÓN SEGURA
 			['chartVentas', 'rentabilidadChart', 'chartCategorias'].forEach(id => {
 				const canvas = document.getElementById(id);
 				if (canvas && canvas.chart instanceof Chart) canvas.chart.destroy();
 			});
 
-			// 4. Renderizado de Gráficos
-			// Gráfico Ventas (Línea)
+			// 5. RENDERIZADO DE GRÁFICOS
+			// A. Ventas Diarias (Línea)
 			const ctxV = document.getElementById('chartVentas').getContext('2d');
 			ctxV.canvas.chart = new Chart(ctxV, {
 				type: 'line',
-				data: { labels: Object.keys(ventasPorDia), datasets: [{ label: 'Ventas ($)', data: Object.values(ventasPorDia), borderColor: '#22c55e', fill: true }] },
+				data: { labels: Object.keys(ventasPorDia), datasets: [{ label: 'Ventas ($)', data: Object.values(ventasPorDia), borderColor: '#22c55e', fill: true, tension: 0.3 }] },
 				options: { responsive: true, maintainAspectRatio: false }
 			});
 
-			// Gráfico Mixto (Rentabilidad Barras + Cantidad Línea)
+			// B. Rentabilidad Mixta (Barra + Línea Cantidad)
 			const ctxR = document.getElementById('rentabilidadChart').getContext('2d');
 			ctxR.canvas.chart = new Chart(ctxR, {
 				type: 'bar',
@@ -5439,17 +5456,26 @@ if (editorForm) {
 					labels: datosProd.map(d => d.nombre),
 					datasets: [
 						{ label: 'Utilidad ($)', data: datosProd.map(d => d.utilidad), backgroundColor: '#ef4444', type: 'bar' },
-						{ label: 'Cantidad', data: datosProd.map(d => d.cantidad), borderColor: '#ffffff', type: 'line', yAxisID: 'y1' }
+						{ label: 'Cant. Vendida', data: datosProd.map(d => d.cantidad), borderColor: '#ffffff', type: 'line', yAxisID: 'y1', tension: 0 }
 					]
 				},
-				options: { responsive: true, maintainAspectRatio: false, scales: { y1: { position: 'right' } } }
+				options: { 
+					responsive: true, maintainAspectRatio: false, 
+					scales: { 
+						y: { beginAtZero: true }, 
+						y1: { position: 'right', beginAtZero: true, grid: { drawOnChartArea: false } } 
+					} 
+				}
 			});
 
-			// Gráfico Categorías (Horizontal Bar)
+			// C. Categorías más vendidas (Horizontal Bar)
 			const ctxC = document.getElementById('chartCategorias').getContext('2d');
 			ctxC.canvas.chart = new Chart(ctxC, {
 				type: 'bar',
-				data: { labels: datosProd.map(d => d.nombre), datasets: [{ label: 'Ventas', data: datosProd.map(d => d.cantidad), backgroundColor: '#3b82f6' }] },
+				data: { 
+					labels: Object.keys(ventasPorCat), 
+					datasets: [{ label: 'Unidades Vendidas', data: Object.values(ventasPorCat), backgroundColor: '#3b82f6' }] 
+				},
 				options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false }
 			});
 		}
