@@ -6204,75 +6204,66 @@ if (editorForm) {
 		}
 
 		// ⚔️ 1. ABRIR CENTRAL DE WHATSAPP
-		// ⚔️ VARIABLES GLOBALES PARA WA
-		let waAlumnosFiltrados = []; // Para mantener la lista actual
+		let waAlumnosFiltrados = []; // Variable auxiliar para los filtros
 
-		// ⚔️ 1. ABRIR CENTRAL DE WHATSAPP Y CARGAR LISTA
-		async function openWhatsAppCentral() {
-			openModal('modal-whatsapp');
-			
-			// Mostramos estado de carga
-			const contenedor = document.getElementById('wa-alumno-select'); // Mantengo tu ID aunque ahora sea un div
-			contenedor.innerHTML = `<div class="text-white/50 text-center py-4 italic">Cargando guerreros y accesos...</div>`;
+		// ⚔️ 1. ABRIR CENTRAL DE WHATSAPP
+		function openWhatsAppCentral() {
+			const select = document.getElementById('wa-alumno-select'); // Ahora será un DIV en tu HTML, pero mantenemos tu ID
+			const alumnosConTel = state.alumnos.filter(a => a.telefono && a.telefono.trim() !== "");
 
-			// 1.1 Traemos el historial de accesos para poder filtrar por última vez que vinieron
-			let accesos = [];
-			try {
-				const token = localStorage.getItem('viking_token');
-				const res = await fetch('/api/acceso/historial', {
-					headers: { 'Authorization': `Bearer ${token}` }
-				});
-				if (res.ok) accesos = await res.json();
-			} catch (e) {
-				console.error("Error cargando accesos para WA", e);
+			if (alumnosConTel.length === 0) {
+				return showVikingToast("No hay alumnos con teléfono cargado", true);
 			}
 
-			// 1.2 Mapeamos la última fecha de acceso a cada alumno
-			state.alumnos.forEach(alumno => {
-				// Buscamos el último acceso (asumiendo que el historial viene ordenado desc)
-				const ultimoAcceso = accesos.find(acc => acc.dni === alumno.dni && acc.exitoso);
-				
-				if (ultimoAcceso) {
-					// El formato de tu endpoint es "HH:MM - DD/MM/YY", lo pasamos a un Date real para poder comparar
-					const partes = ultimoAcceso.fecha.split(' - ')[1].split('/');
-					// asumiendo año 2000+ para el formato corto YY
-					alumno.ultima_asistencia = new Date(`20${partes[2]}-${partes[1]}-${partes[0]}`); 
-				} else {
-					alumno.ultima_asistencia = null; // Nunca vino o fue hace mucho (no está en los últimos 50/100)
-				}
-			});
+			waAlumnosFiltrados = alumnosConTel;
 
-			// 1.3 Alumnos base con teléfono
-			waAlumnosFiltrados = state.alumnos.filter(a => a.telefono && a.telefono.trim() !== "");
-
-			if (waAlumnosFiltrados.length === 0) {
-				contenedor.innerHTML = `<div class="text-red-500 font-black text-center py-4">No hay alumnos con teléfono cargado.</div>`;
-				return;
-			}
-
-			// 1.4 Limpiamos campos
+			// Limpiamos el textarea y los selectores
 			document.getElementById('wa-mensaje-texto').value = "";
 			document.getElementById('wa-mensaje-pre-select').value = "";
-			document.getElementById('wa-filtro-tiempo').value = "todos"; // Reseteamos filtro
+			const filtroEl = document.getElementById('wa-filtro-tiempo');
+			if (filtroEl) filtroEl.value = "todos";
 
-			// 1.5 Renderizamos la lista
+			// Llamamos a la función que dibuja los checkboxes
 			renderWaAlumnosList();
+
+			openModal('modal-whatsapp');
 			if(window.lucide) lucide.createIcons();
+
+			// Cargamos el historial de accesos de fondo (sin usar async/await para no tocar tu función)
+			const token = localStorage.getItem('viking_token');
+			fetch('/api/acceso/historial', { headers: { 'Authorization': `Bearer ${token}` } })
+				.then(res => res.json())
+				.then(accesos => {
+					state.alumnos.forEach(alumno => {
+						const ultimoAcceso = accesos.find(acc => acc.dni === alumno.dni && acc.exitoso);
+						if (ultimoAcceso && ultimoAcceso.fecha) {
+							try {
+								const partes = ultimoAcceso.fecha.split(' - ')[1].split('/');
+								alumno.ultima_asistencia = new Date(`20${partes[2]}-${partes[1]}-${partes[0]}`); 
+							} catch(e) { alumno.ultima_asistencia = null; }
+						} else {
+							alumno.ultima_asistencia = null;
+						}
+					});
+					// Redibujamos la lista ahora que sabemos cuándo vinieron
+					renderWaAlumnosList();
+				})
+				.catch(err => console.log("Error al cargar accesos", err));
 		}
 
-		// ⚔️ 1.B RENDERIZAR LISTA Y FILTROS
+		// ⚔️ 1.B NUEVA FUNCIÓN (Solo para renderizar los checkboxes y filtrar)
 		function renderWaAlumnosList() {
-			const contenedor = document.getElementById('wa-alumno-select'); // Mantengo tu ID
-			const filtro = document.getElementById('wa-filtro-tiempo').value;
+			const select = document.getElementById('wa-alumno-select');
+			const filtroEl = document.getElementById('wa-filtro-tiempo');
+			const filtro = filtroEl ? filtroEl.value : "todos";
 			const hoy = new Date();
 
 			let listaAMostrar = waAlumnosFiltrados;
 
-			// Lógica de filtros por tiempo
+			// Filtramos según la ausencia
 			if (filtro !== "todos") {
 				listaAMostrar = waAlumnosFiltrados.filter(a => {
-					if (!a.ultima_asistencia) return true; // Si no tiene historial reciente, entra en "ausentes"
-					
+					if (!a.ultima_asistencia) return true; // Si no hay registro, cuenta como ausente
 					const diffTime = Math.abs(hoy - a.ultima_asistencia);
 					const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
 					
@@ -6283,20 +6274,16 @@ if (editorForm) {
 				});
 			}
 
-			if (listaAMostrar.length === 0) {
-				contenedor.innerHTML = `<div class="text-white/50 text-center py-4 italic">No hay alumnos en esta categoría.</div>`;
-				return;
-			}
-
-			// Dibujamos la lista con checkboxes. El primero es "Tildar Todos"
+			// Dibujamos el "Tildar Todos" y los checkboxes
 			let html = `
 				<label class="flex items-center gap-2 py-2 mb-2 border-b border-white/10 cursor-pointer text-green-500 font-black">
-					<input type="checkbox" id="wa-check-all" onchange="toggleAllWaCheckboxes(this)" class="accent-green-600 w-4 h-4">
-					<span class="text-xs uppercase">Tildar Todos (${listaAMostrar.length})</span>
+					<input type="checkbox" onchange="toggleAllWaCheckboxes(this)" class="accent-green-600 w-4 h-4">
+					<span class="text-xs uppercase">TILDAR TODOS (${listaAMostrar.length})</span>
 				</label>
 				<div class="max-h-40 overflow-y-auto space-y-1 pr-2">
 			`;
 
+			// Llenamos la lista (reemplaza tu viejo map de <option>)
 			html += listaAMostrar.map(a => {
 				let textoAsistencia = "Sin reg. reciente";
 				if (a.ultima_asistencia) {
@@ -6304,22 +6291,21 @@ if (editorForm) {
 					const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 					textoAsistencia = `Hace ${diffDays} días`;
 				}
-
 				return `
-				<label class="flex items-center justify-between gap-2 py-1 cursor-pointer hover:bg-white/5 px-2 rounded transition-colors">
+				<label class="flex items-center justify-between gap-2 py-1 cursor-pointer hover:bg-white/5 px-2 rounded">
 					<div class="flex items-center gap-2">
-						<input type="checkbox" class="wa-alumno-check accent-red-600 w-4 h-4" value="${a.telefono}" data-nombre="${a.nombre_completo}">
-						<span class="text-xs text-white uppercase font-bold">${a.nombre_completo}</span>
+						<input type="checkbox" class="wa-alumno-check accent-green-600 w-4 h-4" value="${a.telefono}" data-nombre="${a.nombre_completo}">
+						<span class="text-xs font-bold text-white uppercase">${a.nombre_completo}</span>
 					</div>
-					<span class="text-[9px] text-white/30 italic">${textoAsistencia}</span>
+					<span class="text-[9px] text-white/40 italic">${textoAsistencia}</span>
 				</label>`;
 			}).join('');
-
+			
 			html += `</div>`;
-			contenedor.innerHTML = html;
+			select.innerHTML = html;
 		}
 
-		// ⚔️ 1.C FUNCIÓN AUXILIAR PARA TILDAR TODOS
+		// ⚔️ 1.C NUEVA FUNCIÓN AUXILIAR (Para que funcione el Tildar Todos)
 		function toggleAllWaCheckboxes(masterCheckbox) {
 			const checkboxes = document.querySelectorAll('.wa-alumno-check');
 			checkboxes.forEach(cb => cb.checked = masterCheckbox.checked);
@@ -6328,68 +6314,61 @@ if (editorForm) {
 		// ⚔️ 2. ACTUALIZAR TEXTO AL ELEGIR PREDEFINIDO
 		function updateWAMessage(val) {
 			const textarea = document.getElementById('wa-mensaje-texto');
-			const checkedBoxes = document.querySelectorAll('.wa-alumno-check:checked');
+			const checkboxes = document.querySelectorAll('.wa-alumno-check:checked');
 
 			if (!val) {
 				textarea.value = "";
 				return;
 			}
 
-			// Determinamos el nombre
-			let nombreAlumno = "Vikingo"; // Por defecto si hay varios
-			if (checkedBoxes.length === 1) {
-				// Si hay solo 1 tildado, usamos su nombre
-				nombreAlumno = checkedBoxes[0].getAttribute('data-nombre') || "Vikingo";
+			// Buscamos el nombre dependiendo de cuántos tildaste
+			let nombreAlumno = "Vikingo";
+			if (checkboxes.length === 1) {
+				nombreAlumno = checkboxes[0].getAttribute('data-nombre') || "Vikingo";
+			} else if (checkboxes.length > 1) {
+				nombreAlumno = "Guerrero";
 			}
 
-			// Reemplazamos el placeholder
-			let mensajeFinal = val.replace("HOLA_ALUMNO!", `¡Hola ${nombreAlumno.split(' ')[0]}! 👋`);
+			// Reemplazamos el placeholder por el nombre real del alumno (usamos /g para reemplazar todos si hay varios)
+			let mensajeFinal = val.replace(/HOLA_ALUMNO!/g, `¡Hola ${nombreAlumno.split(' ')[0]}! 👋`);
 			textarea.value = mensajeFinal;
 		}
 
-		// ⚔️ 3. EL DISPARO FINAL (MASIVO / DIFUSIÓN VÍA TABS)
+		// ⚔️ 3. EL DISPARO FINAL
 		function sendVikingWhatsApp() {
-			const checkedBoxes = document.querySelectorAll('.wa-alumno-check:checked');
+			const checkboxes = document.querySelectorAll('.wa-alumno-check:checked');
 			const mensaje = document.getElementById('wa-mensaje-texto').value;
+			const trigger = document.getElementById('whatsapp-trigger');
 
-			if (checkedBoxes.length === 0) {
-				return showVikingToast("Falta seleccionar al menos un alumno", true);
-			}
-			if (!mensaje) {
-				return showVikingToast("Escribe un mensaje", true);
+			if (checkboxes.length === 0 || !mensaje) {
+				return showVikingToast("Falta elegir alumno o escribir mensaje", true);
 			}
 
-			showVikingToast(`Iniciando envío a ${checkedBoxes.length} guerreros...`);
+			showVikingToast(`Enviando a ${checkboxes.length} guerreros...`);
 
-			// Iteramos sobre todos los tildados
-			checkedBoxes.forEach((cb, index) => {
+			// Hacemos el loop usando tu lógica del "trigger.click()"
+			checkboxes.forEach((cb, index) => {
 				const telefono = cb.value;
-				const nombreCompleto = cb.getAttribute('data-nombre');
-				const primerNombre = nombreCompleto.split(' ')[0];
+				const nombreAlumno = cb.getAttribute('data-nombre') || "Vikingo";
 
-				// 3.1 Limpiamos el teléfono (tu lógica + blindaje código país)
+				// Limpiamos el teléfono (por si tiene espacios o guiones ruidosos) y aseguramos el 549
 				let telLimpio = telefono.replace(/\D/g, '');
-				// Si arranca con 15, se lo sacamos
 				if (telLimpio.startsWith('15') && telLimpio.length === 10) telLimpio = telLimpio.substring(2);
-				// Si no arranca con 54, se lo ponemos (código Argentina)
 				if (!telLimpio.startsWith('54')) telLimpio = '549' + telLimpio;
-
-				// 3.2 Personalizamos el mensaje (reemplaza el "¡Hola Vikingo!" por el nombre real de cada uno)
-				// Esto permite que aunque el textarea diga Vikingo, cada mensaje salga personalizado.
-				let msgPersonalizado = mensaje;
-				if (checkedBoxes.length > 1) {
-					msgPersonalizado = mensaje.replace(/¡Hola .*?! 👋/, `¡Hola ${primerNombre}! 👋`);
-					// Por si el usuario no usó el predefinido pero escribió "HOLA_ALUMNO!" a mano
-					msgPersonalizado = msgPersonalizado.replace("HOLA_ALUMNO!", `¡Hola ${primerNombre}! 👋`);
+				
+				// Personalizamos el mensaje final si seleccionaste a varios (para que cada pestaña salga con un nombre distinto)
+				let mensajeFinal = mensaje;
+				if (checkboxes.length > 1) {
+					mensajeFinal = mensajeFinal.replace(/¡Hola .*?! 👋/, `¡Hola ${nombreAlumno.split(' ')[0]}! 👋`);
 				}
 
-				// 3.3 Generamos la URL
-				const url = `https://wa.me/${telLimpio}?text=${encodeURIComponent(msgPersonalizado)}`;
-
-				// 3.4 Disparo en cadena con delay (EVITA BLOQUEO DE POPUPS DEL NAVEGADOR)
-				// 800ms de diferencia entre cada pestaña
+				// Generamos la URL de WhatsApp
+				const url = `https://wa.me/${telLimpio}?text=${encodeURIComponent(mensajeFinal)}`;
+				
+				// Ejecutamos el disparo con delay para que el navegador no te bloquee los clicks rápidos
 				setTimeout(() => {
-					window.open(url, '_blank');
+					trigger.href = url;
+					trigger.click();
 				}, index * 800);
 			});
 
