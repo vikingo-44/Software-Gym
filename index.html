@@ -2220,12 +2220,12 @@
 			</div>
 
 			<div class="space-y-4">
-				<!-- Selección de Alumno -->
+				<!-- Selección de Alumnos (Ahora con contenedor para checkboxes) -->
 				<div class="flex flex-col gap-2">
-					<label class="text-[10px] font-black text-white/40 uppercase ml-2">Seleccionar Alumno</label>
-					<select id="wa-alumno-select" class="bg-zinc-800 border border-white/10 rounded-xl p-4 text-white text-sm outline-none focus:border-green-500 transition-all">
+					<label class="text-[10px] font-black text-white/40 uppercase ml-2">Seleccionar Alumnos</label>
+					<div id="wa-alumno-container" class="bg-zinc-800 border border-white/10 rounded-xl p-4 text-white text-sm outline-none max-h-40 overflow-y-auto flex flex-col gap-2">
 						<!-- Se llena con JS -->
-					</select>
+					</div>
 				</div>
 
 				<!-- Selección de Mensaje Predefinido -->
@@ -2233,10 +2233,10 @@
 					<label class="text-[10px] font-black text-white/40 uppercase ml-2">Mensaje Rápido</label>
 					<select id="wa-mensaje-pre-select" onchange="updateWAMessage(this.value)" class="bg-zinc-800 border border-white/10 rounded-xl p-4 text-white text-sm outline-none focus:border-green-500 transition-all">
 						<option value="">-- Escribir mensaje libre --</option>
-						<option value="HOLA_ALUMNO! Te recordamos que tu cuota de ND TRAINING vence pronto. ¡Te esperamos!">Aviso de Vencimiento</option>
-						<option value="HOLA_ALUMNO! ¿Cómo estás? Hace unos días que no te vemos por el box. ¡No aflojes!">Motivación (Ausencia)</option>
-						<option value="HOLA_ALUMNO! Te confirmamos que la clase de hoy ha sido reprogramada. Revisá el calendario.">Aviso de Clase</option>
-						<option value="HOLA_ALUMNO! ¡Feliz cumpleaños te desea todo el equipo de ND TRAINING! Pasá a retirar tu regalo.">Cumpleaños</option>
+						<option value="HOLA_ALUMNO! Te confirmamos que la clase de hoy ha sido reprogramada. Revisá el calendario.">AVISO DE CLASE</option>
+						<option value="HOLA_ALUMNO! Te avisamos que a tu suscripción en ND Training le quedan solo 3 días de vigencia 💪🏼 Queremos que sigas entrenando con todo y no pierdas continuidad 🔥 Podés renovar directamente por acá y dejar tu lugar asegurado. Cualquier cosa estamos para ayudarte">SUSCRIPCION POR VENCER</option>
+						<option value="HOLA_ALUMNO! Te avisamos que hoy venció tu suscripción en ND Training. Esperamos verte nuevamente entrenando con nosotros 💪🏼🔥 Cuando quieras renovar, escribinos y te ayudamos al instante. ¡No cortes el ritmo!">SUSCRIPCION VENCIDA</option>
+						<option value="HOLA_ALUMNO! ¿Cómo estás? Te extrañamos por ND Training 💚 Hace unos días que no te vemos entrenando y queríamos invitarte a volver 🔥 Tenemos una promo imperdible para vos… Respóndenos este mensaje y te contamos de qué trata. Volvé a activar tu mejor versión!!!">NO VIENE HACE 15 DIAS</option>
 					</select>
 				</div>
 
