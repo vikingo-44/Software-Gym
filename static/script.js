@@ -5220,6 +5220,7 @@ if (editorForm) {
 			// 1. Capturamos los valores NI BIEN arranca la función
 			const idExistente = document.getElementById('stock-id').value;
 			const nombre = document.getElementById('stock-nombre').value;
+			const categoria = document.getElementById('stock-categoria').value;
 			const cantidadACargar = parseInt(document.getElementById('stock-cant').value) || 0;
 			const precioVenta = parseFloat(document.getElementById('stock-precio').value) || 0;
 			const imagenB64 = document.getElementById('stock-imagen-base64').value;
@@ -5232,7 +5233,8 @@ if (editorForm) {
 				nombre_producto: nombre,
 				stock_actual: cantidadACargar,
 				precio_venta: precioVenta,
-				url_imagen: imagenB64 
+				url_imagen: imagenB64,
+				categoria: categoria 
 			};
 
 			if(!payload.nombre_producto) return showVikingToast("Falta el nombre", true);
@@ -5306,12 +5308,15 @@ if (editorForm) {
 		 * Ahora incluye filtrado por fechas y renderizado de gráfico automático.
 		 */
 		async function generarInformeRentabilidad() {
+			// 0. Capturamos los filtros del DOM
 			const fechaDesde = document.getElementById('fecha-desde')?.value || '';
 			const fechaHasta = document.getElementById('fecha-hasta')?.value || '';
+			const sucursalId = document.getElementById('filtro-sucursal')?.value || '0';
 
 			// 1. Obtención de datos
-			const resStock = await apiFetch('/stock', 'GET');
-			const resCaja = await apiFetch(`/caja/movimientos?fecha_desde=${fechaDesde}&fecha_hasta=${fechaHasta}`, 'GET');
+			// Enviamos el sucursal_id al endpoint de stock para filtrar lo que el usuario quiere ver
+			const resStock = await apiFetch(`/stock?sucursal_id=${sucursalId}`, 'GET');
+			const resCaja = await apiFetch(`/caja/movimientos?fecha_desde=${fechaDesde}&fecha_hasta=${fechaHasta}&sucursal_id=${sucursalId}`, 'GET');
 
 			if (resStock.error || resCaja.error) {
 				return showVikingToast("Error al cargar datos", true);
@@ -5353,14 +5358,17 @@ if (editorForm) {
 					totalesGeneral.inversion += inversionProducto;
 					totalesGeneral.recaudacion += recaudacionProducto;
 
+					// Generamos la nomenclatura automática usando tu función
+					const codigoNomenclatura = generarNomenclatura(producto);
+
 					body.innerHTML += `
 						<tr class="border-b border-white/5 hover:bg-white/10 transition-colors">
 							<td class="p-4">
 								<div class="font-bold text-white">${producto.nombre_producto}</div>
-								<div class="text-[10px] text-white/40 italic">${producto.categoria || 'Sin categoría'}</div>
+								<div class="text-[10px] text-white/40 italic">${codigoNomenclatura} - ${producto.categoria || 'Sin categoría'}</div>
 							</td>
-							<td class="p-4 text-red-400">$${inversionProducto.toLocaleString()}</td>
-							<td class="p-4 text-green-400">$${recaudacionProducto.toLocaleString()}</td>
+							<td class="p-4 text-red-400">$${inversionProducto.toLocaleString()} <span class="text-[10px] block text-white/20">(${unidadesCompradas} un.)</span></td>
+							<td class="p-4 text-green-400">$${recaudacionProducto.toLocaleString()} <span class="text-[10px] block text-white/20">(${unidadesVendidas} un.)</span></td>
 							<td class="p-4">
 								<span class="${utilidad >= 0 ? 'text-green-500' : 'text-red-500'} font-bold">$${utilidad.toLocaleString()}</span>
 								<div class="text-[10px] text-white/40">${margen}% margen</div>
@@ -5379,9 +5387,11 @@ if (editorForm) {
 			document.getElementById('renta-total-compra').innerText = `$${totalesGeneral.inversion.toLocaleString()}`;
 			document.getElementById('renta-total-venta').innerText = `$${totalesGeneral.recaudacion.toLocaleString()}`;
 			const totalUtilidad = totalesGeneral.recaudacion - totalesGeneral.inversion;
-			document.getElementById('renta-utilidad').innerText = `$${totalUtilidad.toLocaleString()}`;
-			
-			// Llamada a la función de gráficos
+			const rentaUtilidadEl = document.getElementById('renta-utilidad');
+			rentaUtilidadEl.innerText = `$${totalUtilidad.toLocaleString()}`;
+			rentaUtilidadEl.className = `text-4xl font-black ${totalUtilidad >= 0 ? 'text-white' : 'text-red-500'} italic tracking-tight`;
+
+			// 4. Llamada al dashboard para renderizar los 4 gráficos
 			actualizarDashboard(movimientos, stock);
 		}
 
@@ -5442,6 +5452,14 @@ if (editorForm) {
 				data: { labels: datosProd.map(d => d.nombre), datasets: [{ label: 'Ventas', data: datosProd.map(d => d.cantidad), backgroundColor: '#3b82f6' }] },
 				options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false }
 			});
+		}
+
+		// Esta función ahora usa tu objeto 'producto' tal cual viene de la tabla 'stock'
+		function generarNomenclatura(producto) {
+			const prefijos = { 'Bebidas': 'B', 'Snacks': 'SN', 'Suplementos': 'S', 'Alimentos': 'A' };
+			const prefijo = prefijos[producto.categoria] || 'P';
+			const idFormateado = String(producto.id).padStart(3, '0');
+			return `${prefijo}${idFormateado}`;
 		}
 
         /**

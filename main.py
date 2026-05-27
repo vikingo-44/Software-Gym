@@ -300,7 +300,8 @@ class StockUpdate(BaseModel):
     stock_actual: int
     precio_venta: float
     url_imagen: Optional[str] = None
-    sucursal_id: Optional[int] = None 
+    sucursal_id: Optional[int] = None
+    categoria: str = None 
 
 class PlanUpdate(BaseModel):
     nombre: str
@@ -1335,7 +1336,8 @@ def create_stock(data: StockUpdate, db: Session = Depends(database.get_db), curr
         stock_inicial=data.stock_actual, # Guardamos la cantidad inicial para referencia
         precio_venta=data.precio_venta,
         url_imagen=data.url_imagen,
-        sucursal_id=current_user.sucursal_id  # <--- VINCULACIÓN AUTOMÁTICA A LA SUCURSAL
+        sucursal_id=current_user.sucursal_id,  # <--- VINCULACIÓN AUTOMÁTICA A LA SUCURSAL
+        categoria=data.categoria
     )
     db.add(new_s)
     db.commit()
