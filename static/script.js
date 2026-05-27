@@ -7640,16 +7640,17 @@ if (editorForm) {
 			if (!contenedor) return;
 
 			state.routineWizard.filteredAlumnos = listaDatos;
-
-			// 1. CÁLCULO DE ESTADÍSTICAS (Ahora con lógica correcta sobre state.alumnos)
 			const hoy = new Date().toISOString().split('T')[0];
+
+			// 1. CÁLCULO DE ESTADÍSTICAS
 			const baseMusc = state.alumnos.filter(a => {
 				const plan = (a.plan?.nombre || "").toLowerCase().trim();
 				return plan.includes('musculacion') || plan.includes('completo') || plan.includes('personalizado') || plan === 'premium';
 			});
 
 			const total = baseMusc.length;
-			const conRutina = baseMusc.filter(a => a.planes_rutina && a.planes_rutina.length > 0).length;
+			// Un alumno tiene rutina cargada si el array existe y tiene al menos un item activo
+			const conRutina = baseMusc.filter(a => a.planes_rutina && a.planes_rutina.some(r => r.activo)).length;
 			const sinRutina = total - conRutina;
 
 			if (document.getElementById('stats-rutinas-total')) document.getElementById('stats-rutinas-total').innerText = total;
@@ -7662,15 +7663,22 @@ if (editorForm) {
 			const inicio = (state.routineWizard.currentPage - 1) * state.routineWizard.itemsPerPage;
 			const listaPaginada = listaDatos.slice(inicio, inicio + state.routineWizard.itemsPerPage);
 
-			// 3. RENDERIZADO CON TU DISEÑO ORIGINAL
+			// 3. RENDERIZADO
 			contenedor.innerHTML = listaPaginada.map(a => {
 				const initials = (a.nombre_completo || "??").substring(0, 2).toUpperCase();
-				const tieneRutina = a.planes_rutina && a.planes_rutina.length > 0;
-				const activa = tieneRutina ? a.planes_rutina.find(r => r.activo) : null;
 				
-				const colorEstado = tieneRutina ? 'bg-green-600' : 'bg-red-600'; 
-				const textoEstado = tieneRutina ? 'CARGADO' : 'PENDIENTE';
-				const colorBadge = tieneRutina ? 'text-green-500 bg-green-500/10 border-green-500/20' : 'text-red-500 bg-red-500/10 border-red-500/20';
+				// Buscamos la rutina activa
+				const activa = a.planes_rutina ? a.planes_rutina.find(r => r.activo) : null;
+				const tieneRutina = !!activa;
+				
+				// Lógica de vencimiento específica de la rutina
+				const vencidaRutina = activa && activa.fecha_vencimiento && activa.fecha_vencimiento < hoy;
+				
+				const colorEstado = tieneRutina ? (vencidaRutina ? 'bg-amber-500' : 'bg-green-600') : 'bg-red-600'; 
+				const textoEstado = tieneRutina ? (vencidaRutina ? 'VENCIDO' : 'CARGADO') : 'PENDIENTE';
+				const colorBadge = tieneRutina ? 
+					(vencidaRutina ? 'text-amber-500 bg-amber-500/10 border-amber-500/20' : 'text-green-500 bg-green-500/10 border-green-500/20') 
+					: 'text-red-500 bg-red-500/10 border-red-500/20';
 
 				return `
 				<div class="glass-card p-5 rounded-3xl border border-white/5 flex flex-col md:flex-row md:items-center gap-6 hover:border-red-600/20 transition-all group relative overflow-hidden mb-3">
@@ -7693,7 +7701,7 @@ if (editorForm) {
 						<div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
 							<div>
 								<p class="text-[9px] text-white/20 font-black uppercase tracking-widest mb-1 flex items-center gap-1.5 italic">
-									<i data-lucide="dumbbell" class="w-3 h-3 text-red-600"></i> Plan Musculación
+									<i data-lucide="dumbbell" class="w-3 h-3 text-red-600"></i> Plan Actual
 								</p>
 								<p class="text-sm font-black uppercase italic text-white truncate">
 									${activa ? (activa.nombre_grupo || activa.objetivo) : 'SIN ASIGNAR'}
@@ -7709,7 +7717,7 @@ if (editorForm) {
 					</div>
 
 					<div class="flex items-center justify-end gap-3 min-w-[120px] border-t md:border-t-0 border-white/5 pt-3 md:pt-0">
-						<button onclick="window.openFichaTecnica(${a.id})" class="h-12 w-12 bg-white/5 hover:bg-white/10 text-white rounded-xl flex items-center justify-center transition-all border border-white/5" title="Ver Arsenal">
+						<button onclick="window.openFichaTecnica(${a.id})" class="h-12 w-12 bg-white/5 hover:bg-white/10 text-white rounded-xl flex items-center justify-center transition-all border border-white/5">
 							<i data-lucide="clipboard-list" class="w-5 h-5"></i>
 						</button>
 						<button onclick="window.openRoutineEditor(${a.id})" class="viking-bg-red text-black px-6 py-3 rounded-xl font-black uppercase italic text-[10px] shadow-xl flex items-center gap-2 hover:scale-105 transition-all">
