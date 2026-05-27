@@ -7639,7 +7639,6 @@ if (editorForm) {
 			const contenedor = document.getElementById('rutinas-lista');
 			if (!contenedor) return;
 
-			// Mantenemos los datos para que la paginación funcione correctamente
 			state.routineWizard.filteredAlumnos = listaDatos;
 			const hoy = new Date().toISOString().split('T')[0];
 
@@ -7658,9 +7657,8 @@ if (editorForm) {
 			if (document.getElementById('stats-rutinas-pendientes')) document.getElementById('stats-rutinas-pendientes').innerText = sinRutina;
 			if (document.getElementById('stats-rutinas-pagina')) document.getElementById('stats-rutinas-pagina').innerText = state.routineWizard.currentPage;
 
-			// 2. PAGINACIÓN (Respetando el filtro actual)
+			// 2. PAGINACIÓN (INTACTA)
 			const totalPages = Math.ceil(listaDatos.length / state.routineWizard.itemsPerPage);
-			// Control de seguridad: Si la página actual supera el total tras un filtro, volvemos a la 1
 			if (state.routineWizard.currentPage > totalPages && totalPages > 0) state.routineWizard.currentPage = 1;
 			
 			const inicio = (state.routineWizard.currentPage - 1) * state.routineWizard.itemsPerPage;
@@ -7671,7 +7669,10 @@ if (editorForm) {
 				const initials = (a.nombre_completo || "??").substring(0, 2).toUpperCase();
 				const sucursalNombre = a.sucursal?.nombre || 'SIN SUCURSAL';
 				
-				// Rutina activa
+				// Membresía
+				const vencidaMembresia = a.fecha_vencimiento && a.fecha_vencimiento < hoy;
+				
+				// Rutina
 				const activa = a.planes_rutina ? a.planes_rutina.find(r => r.activo === true || r.activo === 1) : null;
 				const tieneRutina = !!activa;
 				const fechaVencRutina = activa?.fecha_vencimiento ? activa.fecha_vencimiento.split('T')[0] : null;
@@ -7680,9 +7681,7 @@ if (editorForm) {
 				// Estado visual
 				const colorEstado = tieneRutina ? (vencidaRutina ? 'bg-amber-500' : 'bg-green-600') : 'bg-red-600'; 
 				const textoEstado = tieneRutina ? (vencidaRutina ? 'VENCIDO' : 'CARGADO') : 'PENDIENTE';
-				const colorBadge = tieneRutina ? 
-					(vencidaRutina ? 'text-amber-500 bg-amber-500/10 border-amber-500/20' : 'text-green-500 bg-green-500/10 border-green-500/20') 
-					: 'text-red-500 bg-red-500/10 border-red-500/20';
+				const colorBadge = tieneRutina ? (vencidaRutina ? 'text-amber-500 bg-amber-500/10 border-amber-500/20' : 'text-green-500 bg-green-500/10 border-green-500/20') : 'text-red-500 bg-red-500/10 border-red-500/20';
 
 				return `
 				<div class="glass-card p-5 rounded-3xl border border-white/5 flex flex-col md:flex-row md:items-center gap-6 hover:border-red-600/20 transition-all group relative overflow-hidden mb-3">
@@ -7711,18 +7710,24 @@ if (editorForm) {
 									${activa ? (activa.nombre_grupo || activa.objetivo || 'RUTINA') : 'SIN ASIGNAR'}
 								</p>
 							</div>
-							<div class="flex flex-row md:flex-col items-center md:items-start justify-between gap-2">
-								<span class="px-3 py-1 rounded-lg text-[9px] font-black uppercase border ${colorBadge} italic">${textoEstado}</span>
-								<div class="text-[10px] text-white/50 font-bold italic">
-									Memb: <span class="text-white">${a.fecha_vencimiento || 'N/A'}</span><br>
-									Rutina: <span class="text-white">${fechaVencRutina || 'N/A'}</span>
+							
+							<div class="flex flex-col md:flex-row gap-4">
+								<div class="flex flex-col">
+									<span class="text-[8px] text-white/30 font-black uppercase">Estado Memb.</span>
+									<span class="text-[10px] font-bold ${vencidaMembresia ? 'text-red-500' : 'text-green-500'}">${vencidaMembresia ? 'VENCIDO' : 'ACTIVO'}</span>
+									<span class="text-[10px] text-white/50">Venc: ${a.fecha_vencimiento || 'N/A'}</span>
+								</div>
+								<div class="flex flex-col">
+									<span class="text-[8px] text-white/30 font-black uppercase">Estado Rutina</span>
+									<span class="px-2 py-0.5 rounded text-[9px] font-black uppercase border ${colorBadge} inline-block w-fit">${textoEstado}</span>
+									<span class="text-[10px] text-white/50">Venc: ${fechaVencRutina || 'N/A'}</span>
 								</div>
 							</div>
 						</div>
 					</div>
 
 					<div class="flex items-center justify-end gap-3 min-w-[120px] border-t md:border-t-0 border-white/5 pt-3 md:pt-0">
-						<button onclick="window.openFichaTecnica(${a.id})" class="h-12 w-12 bg-white/5 hover:bg-white/10 text-white rounded-xl flex items-center justify-center transition-all border border-white/5" title="Ver Arsenal">
+						<button onclick="window.openFichaTecnica(${a.id})" class="h-12 w-12 bg-white/5 hover:bg-white/10 text-white rounded-xl flex items-center justify-center transition-all border border-white/5">
 							<i data-lucide="clipboard-list" class="w-5 h-5"></i>
 						</button>
 						<button onclick="window.openRoutineEditor(${a.id})" class="viking-bg-red text-black px-6 py-3 rounded-xl font-black uppercase italic text-[10px] shadow-xl flex items-center gap-2 hover:scale-105 transition-all">
