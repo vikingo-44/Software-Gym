@@ -535,10 +535,36 @@
 				</div>
 
 				<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-					<div class="bg-black/40 border border-white/5 p-6 rounded-3xl"><p class="text-white/30 text-[10px] font-black uppercase mb-4 text-center">Ventas Diarias</p><div class="h-64"><canvas id="chartVentas"></canvas></div></div>
-					<div class="bg-black/40 border border-white/5 p-6 rounded-3xl"><p class="text-white/30 text-[10px] font-black uppercase mb-4 text-center">Rentabilidad Producto</p><div class="h-64"><canvas id="rentabilidadChart"></canvas></div></div>
-					<div class="bg-black/40 border border-white/5 p-6 rounded-3xl"><p class="text-white/30 text-[10px] font-black uppercase mb-4 text-center">Categorías</p><div class="h-64"><canvas id="chartCategorias"></canvas></div></div>
-					<div class="bg-black/40 border border-white/5 p-6 rounded-3xl"><p class="text-white/30 text-[10px] font-black uppercase mb-4 text-center">🚨 Reposición Necesaria</p><ul id="listaReponer" class="text-[11px] text-white/60 space-y-2 overflow-y-auto h-48"></ul></div>
+					<div class="bg-black/40 border border-white/5 p-6 rounded-3xl">
+						<p class="text-white/30 text-[10px] font-black uppercase mb-4 text-center">Ventas Diarias</p>
+							<div class="h-64"><canvas id="chartVentas"></canvas>
+						</div>
+					</div>
+					<div class="bg-black/40 border border-white/5 p-6 rounded-3xl">
+						<p class="text-white/30 text-[10px] font-black uppercase mb-4 text-center">Rentabilidad Producto</p>
+							<div class="h-64"><canvas id="rentabilidadChart"></canvas>
+							</div>
+						</div>
+					<div class="bg-black/40 border border-white/5 p-6 rounded-3xl">
+						<p class="text-white/30 text-[10px] font-black uppercase mb-4 text-center">Categorías</p>
+							<div class="h-64"><canvas id="chartCategorias"></canvas>
+						</div>
+					</div>
+					<div class="glass-card p-8 rounded-[2.5rem] border-orange-500/10 flex flex-col h-[450px]">
+						<div class="flex justify-between items-center mb-6 border-b border-white/5 pb-4">
+							<div>
+								<h4 class="text-sm font-black uppercase italic text-orange-500 tracking-widest">
+									<i data-lucide="alert-triangle" class="w-4 h-4 inline mr-2"></i>Alertas Stock
+								</h4>
+								<p class="text-[9px] text-white-500 font-bold uppercase mt-1">Provisiones bajas</p>
+							</div>
+							<!-- Corregido: Restablecida la lógica original de switchView('stock') -->
+							<button onclick="switchView('caja')" class="text-[9px] bg-white/5 hover:bg-white/10 px-3 py-1 rounded-lg transition-colors font-black uppercase italic border border-white/10">Reponer</button>
+						</div>
+						<div id="dash-low-stock" class="flex-1 overflow-y-auto custom-scrollbar space-y-3 pr-2">
+							<p class="text-center text-white-600 italic text-[10px] py-10">Analizando inventario...</p>
+						</div>
+					</div>
 				</div>
 			</div>
 
