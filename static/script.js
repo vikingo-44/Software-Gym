@@ -7642,14 +7642,13 @@ if (editorForm) {
 			state.routineWizard.filteredAlumnos = listaDatos;
 			const hoy = new Date().toISOString().split('T')[0];
 
-			// 1. CÁLCULO DE ESTADÍSTICAS (Lógica segura)
+			// 1. CÁLCULO DE ESTADÍSTICAS
 			const baseMusc = state.alumnos.filter(a => {
 				const plan = (a.plan?.nombre || "").toLowerCase().trim();
 				return plan.includes('musculacion') || plan.includes('completo') || plan.includes('personalizado') || plan === 'premium';
 			});
 
 			const total = baseMusc.length;
-			// Buscamos si existe al menos una rutina activa
 			const conRutina = baseMusc.filter(a => a.planes_rutina && a.planes_rutina.some(r => r.activo === true || r.activo === 1)).length;
 			const sinRutina = total - conRutina;
 
@@ -7663,18 +7662,18 @@ if (editorForm) {
 			const inicio = (state.routineWizard.currentPage - 1) * state.routineWizard.itemsPerPage;
 			const listaPaginada = listaDatos.slice(inicio, inicio + state.routineWizard.itemsPerPage);
 
-			// 3. RENDERIZADO (Diseño intacto)
+			// 3. RENDERIZADO
 			contenedor.innerHTML = listaPaginada.map(a => {
 				const initials = (a.nombre_completo || "??").substring(0, 2).toUpperCase();
+				const sucursalNombre = a.sucursal?.nombre || 'SIN SUCURSAL';
 				
-				// Buscamos la rutina activa (usamos .some o .find de forma segura)
+				// Rutina activa
 				const activa = a.planes_rutina ? a.planes_rutina.find(r => r.activo === true || r.activo === 1) : null;
 				const tieneRutina = !!activa;
+				const fechaVencRutina = activa?.fecha_vencimiento ? activa.fecha_vencimiento.split('T')[0] : null;
+				const vencidaRutina = fechaVencRutina && fechaVencRutina < hoy;
 				
-				// Fecha vencimiento (limpiamos por si viene con tiempo)
-				const fechaVenc = activa?.fecha_vencimiento ? activa.fecha_vencimiento.split('T')[0] : null;
-				const vencidaRutina = fechaVenc && fechaVenc < hoy;
-				
+				// Estado visual según rutina
 				const colorEstado = tieneRutina ? (vencidaRutina ? 'bg-amber-500' : 'bg-green-600') : 'bg-red-600'; 
 				const textoEstado = tieneRutina ? (vencidaRutina ? 'VENCIDO' : 'CARGADO') : 'PENDIENTE';
 				const colorBadge = tieneRutina ? 
@@ -7691,9 +7690,9 @@ if (editorForm) {
 						</div>
 						<div class="overflow-hidden">
 							<h4 class="text-sm font-black uppercase italic text-white group-hover:text-red-500 transition-colors truncate">${a.nombre_completo}</h4>
-							<div class="flex flex-col mt-1">
-								<p class="text-[10px] text-white/30 font-bold flex items-center gap-1.5 uppercase tracking-widest"><i data-lucide="id-card" class="w-3 h-3"></i> ${a.dni || 'S/DNI'}</p>
-								<p class="text-[10px] text-white/30 font-bold flex items-center gap-1.5 uppercase tracking-widest truncate"><i data-lucide="ticket" class="w-3 h-3"></i> ${a.plan?.nombre || 'SIN PLAN'}</p>
+							<div class="flex flex-col mt-1 gap-1">
+								<p class="text-[10px] text-white/40 font-bold flex items-center gap-1.5"><i data-lucide="id-card" class="w-3 h-3"></i> ${a.dni || 'S/DNI'}</p>
+								<p class="text-[9px] text-red-500 font-black flex items-center gap-1.5 uppercase italic"><i data-lucide="map-pin" class="w-3 h-3"></i> ${sucursalNombre.toUpperCase()}</p>
 							</div>
 						</div>
 					</div>
@@ -7701,7 +7700,7 @@ if (editorForm) {
 					<div class="flex-1 border-t md:border-t-0 md:border-l border-white/5 pt-4 md:pt-0 md:pl-8">
 						<div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
 							<div>
-								<p class="text-[9px] text-white/20 font-black uppercase tracking-widest mb-1 flex items-center gap-1.5 italic">
+								<p class="text-[9px] text-white/30 font-black uppercase tracking-widest mb-1 flex items-center gap-1.5 italic">
 									<i data-lucide="dumbbell" class="w-3 h-3 text-red-600"></i> Plan Actual
 								</p>
 								<p class="text-sm font-black uppercase italic text-white truncate">
@@ -7710,15 +7709,16 @@ if (editorForm) {
 							</div>
 							<div class="flex flex-row md:flex-col items-center md:items-start justify-between gap-2">
 								<span class="px-3 py-1 rounded-lg text-[9px] font-black uppercase border ${colorBadge} italic">${textoEstado}</span>
-								<p class="text-[10px] text-white/20 font-bold italic flex items-center gap-1 uppercase tracking-tighter">
-									Venc: <span class="text-white">${fechaVenc || 'N/A'}</span>
-								</p>
+								<div class="text-[10px] text-white/50 font-bold italic">
+									Memb: <span class="text-white">${a.fecha_vencimiento || 'N/A'}</span><br>
+									Rutina: <span class="text-white">${fechaVencRutina || 'N/A'}</span>
+								</div>
 							</div>
 						</div>
 					</div>
 
 					<div class="flex items-center justify-end gap-3 min-w-[120px] border-t md:border-t-0 border-white/5 pt-3 md:pt-0">
-						<button onclick="window.openFichaTecnica(${a.id})" class="h-12 w-12 bg-white/5 hover:bg-white/10 text-white rounded-xl flex items-center justify-center transition-all border border-white/5">
+						<button onclick="window.openFichaTecnica(${a.id})" class="h-12 w-12 bg-white/5 hover:bg-white/10 text-white rounded-xl flex items-center justify-center transition-all border border-white/5" title="Ver Arsenal">
 							<i data-lucide="clipboard-list" class="w-5 h-5"></i>
 						</button>
 						<button onclick="window.openRoutineEditor(${a.id})" class="viking-bg-red text-black px-6 py-3 rounded-xl font-black uppercase italic text-[10px] shadow-xl flex items-center gap-2 hover:scale-105 transition-all">
