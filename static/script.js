@@ -7713,9 +7713,11 @@ if (editorForm) {
 							
 							<div class="flex flex-col md:flex-row gap-4">
 								<div class="flex flex-col">
-									<span class="text-[8px] text-white/30 font-black uppercase">Estado Memb.</span>
-									<span class="text-[10px] font-bold ${vencidaMembresia ? 'text-red-500' : 'text-green-500'}">${vencidaMembresia ? 'VENCIDO' : 'ACTIVO'}</span>
-									<span class="text-[10px] text-white/50">Venc: ${a.fecha_vencimiento || 'N/A'}</span>
+									<span class="text-[8px] text-white/30 font-black uppercase mb-1">Estado Memb.</span>
+									<span class="px-2 py-0.5 rounded text-[9px] font-black uppercase border ${vencidaMembresia ? 'text-red-500 bg-red-500/10 border-red-500/20' : 'text-green-500 bg-green-500/10 border-green-500/20'} inline-block w-fit">
+										${vencidaMembresia ? 'VENCIDO' : 'ACTIVO'}
+									</span>
+									<span class="text-[10px] text-white/50 mt-1">Venc: ${a.fecha_vencimiento || 'N/A'}</span>
 								</div>
 								<div class="flex flex-col">
 									<span class="text-[8px] text-white/30 font-black uppercase">Estado Rutina</span>
