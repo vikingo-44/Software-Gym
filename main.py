@@ -1360,7 +1360,8 @@ def update_stock(id: int, data: StockUpdate, db: Session = Depends(database.get_
         s.nombre_producto = data.nombre_producto
         s.stock_actual = data.stock_actual
         s.precio_venta = data.precio_venta
-        s.url_imagen = data.url_imagen 
+        s.url_imagen = data.url_imagen
+        s.categoria = data.categoria
         db.commit()
         return {"status": "success"}
     return {"status": "error", "message": "Producto no encontrado en esta sucursal"}
