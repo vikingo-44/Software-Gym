@@ -7639,6 +7639,7 @@ if (editorForm) {
 			const contenedor = document.getElementById('rutinas-lista');
 			if (!contenedor) return;
 
+			// Mantenemos los datos para que la paginación funcione correctamente
 			state.routineWizard.filteredAlumnos = listaDatos;
 			const hoy = new Date().toISOString().split('T')[0];
 
@@ -7657,8 +7658,11 @@ if (editorForm) {
 			if (document.getElementById('stats-rutinas-pendientes')) document.getElementById('stats-rutinas-pendientes').innerText = sinRutina;
 			if (document.getElementById('stats-rutinas-pagina')) document.getElementById('stats-rutinas-pagina').innerText = state.routineWizard.currentPage;
 
-			// 2. PAGINACIÓN
+			// 2. PAGINACIÓN (Respetando el filtro actual)
 			const totalPages = Math.ceil(listaDatos.length / state.routineWizard.itemsPerPage);
+			// Control de seguridad: Si la página actual supera el total tras un filtro, volvemos a la 1
+			if (state.routineWizard.currentPage > totalPages && totalPages > 0) state.routineWizard.currentPage = 1;
+			
 			const inicio = (state.routineWizard.currentPage - 1) * state.routineWizard.itemsPerPage;
 			const listaPaginada = listaDatos.slice(inicio, inicio + state.routineWizard.itemsPerPage);
 
@@ -7673,7 +7677,7 @@ if (editorForm) {
 				const fechaVencRutina = activa?.fecha_vencimiento ? activa.fecha_vencimiento.split('T')[0] : null;
 				const vencidaRutina = fechaVencRutina && fechaVencRutina < hoy;
 				
-				// Estado visual según rutina
+				// Estado visual
 				const colorEstado = tieneRutina ? (vencidaRutina ? 'bg-amber-500' : 'bg-green-600') : 'bg-red-600'; 
 				const textoEstado = tieneRutina ? (vencidaRutina ? 'VENCIDO' : 'CARGADO') : 'PENDIENTE';
 				const colorBadge = tieneRutina ? 

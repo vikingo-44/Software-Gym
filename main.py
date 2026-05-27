@@ -925,7 +925,8 @@ def get_alumnos(db: Session = Depends(database.get_db)):
     try:
         alumnos_db = db.query(models.Usuario).options(
             joinedload(models.Usuario.perfil),
-            joinedload(models.Usuario.plan).joinedload(models.Plan.tipo)
+            joinedload(models.Usuario.plan).joinedload(models.Plan.tipo),
+            joinedload(models.Usuario.planes_rutina)
         ).join(models.Perfil).filter(func.lower(models.Perfil.nombre) == "alumno").order_by(models.Usuario.nombre_completo.asc()).all()
         
         hoy = date.today()
@@ -958,7 +959,15 @@ def get_alumnos(db: Session = Depends(database.get_db)):
                     "id": al.plan.id,
                     "nombre": al.plan.nombre,
                     "clases_mensuales": al.plan.clases_mensuales
-                } if al.plan else None
+                } if al.plan else None,
+                # PASAMOS EL ARRAY DE RUTINAS AL FRONTEND
+                "planes_rutina": [{
+                    "id": r.id,
+                    "activo": r.activo,
+                    "fecha_vencimiento": r.fecha_vencimiento.isoformat() if r.fecha_vencimiento else None,
+                    "nombre_grupo": r.nombre_grupo,
+                    "objetivo": r.objetivo
+                } for r in al.planes_rutina]
             }
 
             # Recálculo de estado de cuenta
@@ -2127,10 +2136,14 @@ def create_plan_rutina(data: PlanRutinaCreate, db: Session = Depends(database.ge
 
 @app.get("/api/rutinas/usuario/{id}", response_model=Optional[PlanRutinaResponse], tags=["Musculación"])
 def get_rutina_activa(id: int, db: Session = Depends(database.get_db)):
-    # --- VERIFICACIÓN DE PLAN VENCIDO PARA VER RUTINA ---
-    # --- user = db.query(models.Usuario).filter(models.Usuario.id == id).first()
-    # ---if not user or (user.fecha_vencimiento and user.fecha_vencimiento < date.today()):
-    # ---    return None
+    """
+    Retorna la rutina activa del usuario. 
+    Se permite la lectura aunque la membresía esté vencida para permitir 
+    la gestión administrativa de rutinas y detección de vencimientos.
+    """
+    user = db.query(models.Usuario).filter(models.Usuario.id == id).first()
+    if not user:
+        return None 
 
     return db.query(models.PlanRutina).filter(
         models.PlanRutina.usuario_id == id, 
@@ -2142,8 +2155,13 @@ def get_rutina_activa(id: int, db: Session = Depends(database.get_db)):
 
 @app.get("/api/rutinas/historial/{id}", response_model=List[PlanRutinaResponse], tags=["Musculación"])
 def get_historial_rutinas(id: int, db: Session = Depends(database.get_db)):
+    """
+    Retorna el historial completo de rutinas de un usuario.
+    Se eliminó la restricción de fecha de membresía para permitir auditoría
+    y revisión de entrenamiento histórico.
+    """
     user = db.query(models.Usuario).filter(models.Usuario.id == id).first()
-    if not user or (user.fecha_vencimiento and user.fecha_vencimiento < date.today()):
+    if not user:
         return [] 
 
     return db.query(models.PlanRutina).filter(
