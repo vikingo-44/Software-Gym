@@ -6205,21 +6205,19 @@ if (editorForm) {
 
 		// ⚔️ 1. ABRIR CENTRAL DE WHATSAPP
 		function openWhatsAppCentral() {
-			const contenedor = document.getElementById('wa-alumno-list');
+			const select = document.getElementById('wa-alumno-select');
 			const alumnosConTel = state.alumnos.filter(a => a.telefono && a.telefono.trim() !== "");
 
 			if (alumnosConTel.length === 0) {
 				return showVikingToast("No hay alumnos con teléfono cargado", true);
 			}
 
-			// Inyectamos checkboxes
-			contenedor.innerHTML = alumnosConTel.map(a => `
-				<label class="flex items-center gap-2 cursor-pointer hover:text-green-500 transition-colors">
-					<input type="checkbox" value="${a.telefono}" data-nombre="${a.nombre_completo}" class="wa-check accent-green-600">
-					<span>${a.nombre_completo.toUpperCase()}</span>
-				</label>
-			`).join('');
+			// Llenamos el select de alumnos
+			select.innerHTML = alumnosConTel.map(a => 
+				`<option value="${a.telefono}" data-nombre="${a.nombre_completo}">${a.nombre_completo.toUpperCase()} (${a.telefono})</option>`
+			).join('');
 
+			// Limpiamos el textarea
 			document.getElementById('wa-mensaje-texto').value = "";
 			document.getElementById('wa-mensaje-pre-select').value = "";
 
@@ -6230,42 +6228,40 @@ if (editorForm) {
 		// ⚔️ 2. ACTUALIZAR TEXTO AL ELEGIR PREDEFINIDO
 		function updateWAMessage(val) {
 			const textarea = document.getElementById('wa-mensaje-texto');
-			const checked = document.querySelectorAll('.wa-check:checked');
-			
-			if (!val) { textarea.value = ""; return; }
+			const selectAlumno = document.getElementById('wa-alumno-select');
+			const nombreAlumno = selectAlumno.options[selectAlumno.selectedIndex]?.getAttribute('data-nombre') || "Vikingo";
 
-			let nombre = "Vikingo";
-			if (checked.length === 1) {
-				nombre = checked[0].getAttribute('data-nombre').split(' ')[0];
+			if (!val) {
+				textarea.value = "";
+				return;
 			}
 
-			textarea.value = val.replace("HOLA_ALUMNO!", `¡Hola ${nombre}! 👋`);
+			// Reemplazamos el placeholder por el nombre real del alumno
+			let mensajeFinal = val.replace("HOLA_ALUMNO!", `¡Hola ${nombreAlumno.split(' ')[0]}! 👋`);
+			textarea.value = mensajeFinal;
 		}
 
 		// ⚔️ 3. EL DISPARO FINAL
 		function sendVikingWhatsApp() {
-			const checked = document.querySelectorAll('.wa-check:checked');
+			const telefono = document.getElementById('wa-alumno-select').value;
 			const mensaje = document.getElementById('wa-mensaje-texto').value;
+			const trigger = document.getElementById('whatsapp-trigger');
 
-			if (checked.length === 0) return showVikingToast("Elegí al menos un alumno", true);
-			if (!mensaje) return showVikingToast("Escribí un mensaje", true);
+			if (!telefono || !mensaje) {
+				return showVikingToast("Falta elegir alumno o escribir mensaje", true);
+			}
 
-			checked.forEach((check, index) => {
-				const telLimpio = check.value.replace(/\D/g, '');
-				const nombre = check.getAttribute('data-nombre').split(' ')[0];
-				
-				// Personalizamos el mensaje para cada alumno
-				let mensajePersonalizado = mensaje.replace(/¡Hola .*?! 👋/g, `¡Hola ${nombre}! 👋`);
-				
-				const url = `https://wa.me/${telLimpio}?text=${encodeURIComponent(mensajePersonalizado)}`;
-				
-				// Abrimos en delay para que el navegador no bloquee las ventanas
-				setTimeout(() => {
-					window.open(url, '_blank');
-				}, index * 500);
-			});
+			// Limpiamos el teléfono (por si tiene espacios o guiones ruidosos)
+			const telLimpio = telefono.replace(/\D/g, '');
+			
+			// Generamos la URL de WhatsApp
+			const url = `https://wa.me/${telLimpio}?text=${encodeURIComponent(mensaje)}`;
+			
+			// Ejecutamos el disparo
+			trigger.href = url;
+			trigger.click();
 
-			showVikingToast(`Abriendo ${checked.length} chats...`);
+			showVikingToast("¡WhatsApp abierto!");
 			closeModal('modal-whatsapp');
 		}
 
