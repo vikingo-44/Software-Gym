@@ -7642,15 +7642,15 @@ if (editorForm) {
 			state.routineWizard.filteredAlumnos = listaDatos;
 			const hoy = new Date().toISOString().split('T')[0];
 
-			// 1. CÁLCULO DE ESTADÍSTICAS
+			// 1. CÁLCULO DE ESTADÍSTICAS (Lógica segura)
 			const baseMusc = state.alumnos.filter(a => {
 				const plan = (a.plan?.nombre || "").toLowerCase().trim();
 				return plan.includes('musculacion') || plan.includes('completo') || plan.includes('personalizado') || plan === 'premium';
 			});
 
 			const total = baseMusc.length;
-			// Un alumno tiene rutina cargada si el array existe y tiene al menos un item activo
-			const conRutina = baseMusc.filter(a => a.planes_rutina && a.planes_rutina.some(r => r.activo)).length;
+			// Buscamos si existe al menos una rutina activa
+			const conRutina = baseMusc.filter(a => a.planes_rutina && a.planes_rutina.some(r => r.activo === true || r.activo === 1)).length;
 			const sinRutina = total - conRutina;
 
 			if (document.getElementById('stats-rutinas-total')) document.getElementById('stats-rutinas-total').innerText = total;
@@ -7663,16 +7663,17 @@ if (editorForm) {
 			const inicio = (state.routineWizard.currentPage - 1) * state.routineWizard.itemsPerPage;
 			const listaPaginada = listaDatos.slice(inicio, inicio + state.routineWizard.itemsPerPage);
 
-			// 3. RENDERIZADO
+			// 3. RENDERIZADO (Diseño intacto)
 			contenedor.innerHTML = listaPaginada.map(a => {
 				const initials = (a.nombre_completo || "??").substring(0, 2).toUpperCase();
 				
-				// Buscamos la rutina activa
-				const activa = a.planes_rutina ? a.planes_rutina.find(r => r.activo) : null;
+				// Buscamos la rutina activa (usamos .some o .find de forma segura)
+				const activa = a.planes_rutina ? a.planes_rutina.find(r => r.activo === true || r.activo === 1) : null;
 				const tieneRutina = !!activa;
 				
-				// Lógica de vencimiento específica de la rutina
-				const vencidaRutina = activa && activa.fecha_vencimiento && activa.fecha_vencimiento < hoy;
+				// Fecha vencimiento (limpiamos por si viene con tiempo)
+				const fechaVenc = activa?.fecha_vencimiento ? activa.fecha_vencimiento.split('T')[0] : null;
+				const vencidaRutina = fechaVenc && fechaVenc < hoy;
 				
 				const colorEstado = tieneRutina ? (vencidaRutina ? 'bg-amber-500' : 'bg-green-600') : 'bg-red-600'; 
 				const textoEstado = tieneRutina ? (vencidaRutina ? 'VENCIDO' : 'CARGADO') : 'PENDIENTE';
@@ -7704,13 +7705,13 @@ if (editorForm) {
 									<i data-lucide="dumbbell" class="w-3 h-3 text-red-600"></i> Plan Actual
 								</p>
 								<p class="text-sm font-black uppercase italic text-white truncate">
-									${activa ? (activa.nombre_grupo || activa.objetivo) : 'SIN ASIGNAR'}
+									${activa ? (activa.nombre_grupo || activa.objetivo || 'RUTINA') : 'SIN ASIGNAR'}
 								</p>
 							</div>
 							<div class="flex flex-row md:flex-col items-center md:items-start justify-between gap-2">
 								<span class="px-3 py-1 rounded-lg text-[9px] font-black uppercase border ${colorBadge} italic">${textoEstado}</span>
 								<p class="text-[10px] text-white/20 font-bold italic flex items-center gap-1 uppercase tracking-tighter">
-									Venc: <span class="text-white">${activa ? (activa.fecha_vencimiento || 'N/A') : 'N/A'}</span>
+									Venc: <span class="text-white">${fechaVenc || 'N/A'}</span>
 								</p>
 							</div>
 						</div>

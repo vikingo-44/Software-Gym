@@ -2128,9 +2128,9 @@ def create_plan_rutina(data: PlanRutinaCreate, db: Session = Depends(database.ge
 @app.get("/api/rutinas/usuario/{id}", response_model=Optional[PlanRutinaResponse], tags=["Musculación"])
 def get_rutina_activa(id: int, db: Session = Depends(database.get_db)):
     # --- VERIFICACIÓN DE PLAN VENCIDO PARA VER RUTINA ---
-    user = db.query(models.Usuario).filter(models.Usuario.id == id).first()
-    if not user or (user.fecha_vencimiento and user.fecha_vencimiento < date.today()):
-        return None 
+    # --- user = db.query(models.Usuario).filter(models.Usuario.id == id).first()
+    # ---if not user or (user.fecha_vencimiento and user.fecha_vencimiento < date.today()):
+    # ---    return None
 
     return db.query(models.PlanRutina).filter(
         models.PlanRutina.usuario_id == id, 
