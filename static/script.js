@@ -7557,57 +7557,69 @@ if (editorForm) {
 
 		window.actualizarStatsRutinas = function() {
 			if (!state.alumnos) return;
-
-			// 1. Definir base de musculación (la misma lógica de tus filtros)
 			const hoy = new Date().toISOString().split('T')[0];
+
 			const baseMusculacion = state.alumnos.filter(a => {
-				const planNombre = (a.plan?.nombre || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-				return planNombre.includes('musculacion') || planNombre.includes('completo') || planNombre.includes('personalizado') || planNombre.includes('premium');
+				const plan = (a.plan?.nombre || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+				return plan.includes('musculacion') || plan.includes('completo') || plan.includes('personalizado') || plan === 'premium';
 			});
 
-			// 2. Calcular los estados
-			const total = baseMusculacion.length;
-			const conRutina = baseMusculacion.filter(a => a.rutina_id && (!a.rutina_vencimiento || a.rutina_vencimiento >= hoy));
-			const vencidas = baseMusculacion.filter(a => a.rutina_id && a.rutina_vencimiento && a.rutina_vencimiento < hoy);
-			const sinRutina = baseMusculacion.filter(a => !a.rutina_id);
+			// Filtramos usando la misma lógica que en renderRutinasList
+			const conRutina = baseMusculacion.filter(a => a.planes_rutina && a.planes_rutina.some(r => r.activo));
+			const vencidas = baseMusculacion.filter(a => {
+				const activa = a.planes_rutina?.find(r => r.activo);
+				return activa && activa.fecha_vencimiento && activa.fecha_vencimiento.split('T')[0] < hoy;
+			});
+			const sinRutina = baseMusculacion.filter(a => !a.planes_rutina || !a.planes_rutina.some(r => r.activo));
 
-			// 3. Actualizar el DOM
-			document.getElementById('stats-rutinas-total').innerText = total;
+			document.getElementById('stats-rutinas-total').innerText = baseMusculacion.length;
 			document.getElementById('stats-rutinas-cargados').innerText = conRutina.length;
 			document.getElementById('stats-rutinas-pendientes').innerText = sinRutina.length;
-			// Opcional: podrías agregar un ID para vencidas si quisieras mostrarlo arriba
+			// Si tenés un ID para vencidas, descomentá esto:
+			document.getElementById('stats-rutinas-vencidas').innerText = vencidas.length;
 		};
 
 		// --- FILTROS SECCIÓN RUTINAS ---
 		window.filterRutinas = function(filtro) {
 			if(!state.alumnos) return;
 			
-			// Actualizar botones visualmente (filtros de rutina)
+			// UI: Actualizar botones
 			document.querySelectorAll('.filter-btn-rutina').forEach(btn => {
 				btn.classList.remove('bg-red-600', 'text-black');
-				btn.classList.add('text-white-500', 'hover:text-white');
+				btn.classList.add('text-white/30', 'hover:text-white');
 			});
 			const activeBtn = document.getElementById('filter-rutina-' + filtro);
 			if(activeBtn) {
-				activeBtn.classList.remove('text-white-500', 'hover:text-white');
+				activeBtn.classList.remove('text-white/30', 'hover:text-white');
 				activeBtn.classList.add('bg-red-600', 'text-black');
 			}
 
 			const hoy = new Date().toISOString().split('T')[0];
 			
-			// Filtro base: Solo alumnos con planes que permiten musculación
-			let baseMusculacion = state.alumnos.filter(a => {
-				const planNombre = (a.plan?.nombre || "").toLowerCase();
-				const normalized = planNombre.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-				return normalized.includes('musculacion') || normalized.includes('completo') || normalized.includes('personalizado') || planNombre === 'premium';
+			const baseMusculacion = state.alumnos.filter(a => {
+				const plan = (a.plan?.nombre || "").toLowerCase();
+				const normalized = plan.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+				return normalized.includes('musculacion') || normalized.includes('completo') || normalized.includes('personalizado') || plan === 'premium';
 			});
 
 			let filtrados = baseMusculacion;
 			
-			// Aplicar filtros de estado de rutina
-			if(filtro === 'con') filtrados = baseMusculacion.filter(a => a.rutina_id);
-			if(filtro === 'sin') filtrados = baseMusculacion.filter(a => !a.rutina_id);
-			if(filtro === 'vencidas') filtrados = baseMusculacion.filter(a => a.rutina_vencimiento && a.rutina_vencimiento < hoy);
+			if (filtro === 'con') {
+				// Solo los que tienen al menos una rutina activa
+				filtrados = baseMusculacion.filter(a => a.planes_rutina && a.planes_rutina.some(r => r.activo));
+			} else if (filtro === 'sin') {
+				// Los que no tienen ninguna rutina activa
+				filtrados = baseMusculacion.filter(a => !a.planes_rutina || !a.planes_rutina.some(r => r.activo));
+			} else if (filtro === 'vencidas') {
+				// Los que tienen una activa, pero su fecha de vencimiento es menor a hoy
+				filtrados = baseMusculacion.filter(a => {
+					const activa = a.planes_rutina?.find(r => r.activo);
+					return activa && activa.fecha_vencimiento && activa.fecha_vencimiento.split('T')[0] < hoy;
+				});
+			}
+			
+			// Resetear a página 1 al filtrar
+			state.routineWizard.currentPage = 1;
 			
 			renderRutinasList(filtrados);
 			window.actualizarStatsRutinas();
