@@ -6285,6 +6285,13 @@ if (editorForm) {
 					mensajePersonalizado = mensaje.replace(/¡Hola .*?! 👋/, `¡Hola ${nombreAlumno.split(' ')[0]}! 👋`);
 				}
 
+				const dni = cb.getAttribute('data-dni');
+				let enviados = JSON.parse(localStorage.getItem('wa_enviados_viking') || "[]");
+				if (!enviados.includes(dni)) {
+					enviados.push(dni);
+					localStorage.setItem('wa_enviados_viking', JSON.stringify(enviados));
+				}
+
 				// Generamos la URL
 				const url = `https://wa.me/${telLimpio}?text=${encodeURIComponent(mensajePersonalizado)}`;
 
@@ -6304,26 +6311,25 @@ if (editorForm) {
 			const contenedor = document.getElementById('wa-alumno-select');
 			const inputBusqueda = document.getElementById('wa-search-input').value.toLowerCase();
 			const filtro = document.getElementById('wa-filtro-tiempo').value;
-			const hoy = new Date('2026-05-27'); // Fecha actual
+			const hoy = new Date(); // Fecha dinámica
+
+			// Recuperamos los DNI que ya recibieron mensajes
+			const enviados = JSON.parse(localStorage.getItem('wa_enviados_viking') || "[]");
 
 			const listaFiltrada = state.alumnos.filter(a => {
 				if (!a.telefono || a.telefono.trim() === "") return false;
 
-				// Filtro por Buscador (Nombre o DNI)
 				const coincide = a.nombre_completo.toLowerCase().includes(inputBusqueda) || 
-							(a.dni && a.dni.toString().includes(inputBusqueda));
+								(a.dni && a.dni.toString().includes(inputBusqueda));
 				if (!coincide) return false;
 
-				// Filtro por Tiempo / Vencimiento
 				if (filtro === "todos") return true;
 
 				if (filtro === "vencidos") {
-					// Asumimos que a.fecha_vencimiento viene en formato "YYYY-MM-DD"
 					if (!a.fecha_vencimiento) return false;
 					return new Date(a.fecha_vencimiento) <= hoy;
 				}
 
-				// Filtros de Ausencia
 				if (!a.ultima_asistencia) return true;
 				const diffDays = Math.ceil((hoy - new Date(a.ultima_asistencia)) / (1000 * 60 * 60 * 24));
 				
@@ -6334,22 +6340,30 @@ if (editorForm) {
 				return false;
 			});
 
-			// Dibujamos el checkbox "Tildar Todos" y la lista
 			let html = `
 				<label class="flex items-center gap-3 py-2 px-2 border-b border-white/10 mb-2 cursor-pointer hover:bg-white/5 rounded-xl text-green-500 font-black">
 					<input type="checkbox" onchange="toggleAllWaCheckboxes(this)" class="accent-green-600 w-4 h-4">
 					<span class="text-xs uppercase">TILDAR TODOS (${listaFiltrada.length})</span>
 				</label>
-				<div class="max-h-60 overflow-y-auto space-y-1">
+				<div class="max-h-[450px] overflow-y-auto space-y-1 custom-scrollbar">
 			`;
 
-			html += listaFiltrada.map(a => `
-				<label class="flex items-center gap-3 py-2 px-2 hover:bg-white/5 rounded-xl cursor-pointer">
-					<input type="checkbox" class="wa-alumno-check accent-green-600 w-4 h-4" value="${a.telefono}" data-nombre="${a.nombre_completo}">
-					<span class="text-xs font-bold text-white uppercase">${a.nombre_completo.toUpperCase()}</span>
-					<span class="ml-auto text-[9px] text-white/30">${a.telefono}</span>
-				</label>
-			`).join('');
+			html += listaFiltrada.map(a => {
+				// Verificamos si este DNI está en la lista de enviados
+				const yaContactado = enviados.includes(a.dni.toString());
+				
+				return `
+					<label class="flex items-center gap-3 py-2 px-2 hover:bg-white/5 rounded-xl cursor-pointer">
+						<input type="checkbox" class="wa-alumno-check accent-green-600 w-4 h-4" value="${a.telefono}" data-nombre="${a.nombre_completo}" data-dni="${a.dni}">
+						
+						<!-- El puntito verde si ya fue contactado -->
+						<span class="${yaContactado ? 'text-green-500' : 'text-transparent'} text-[10px]">●</span>
+						
+						<span class="text-xs font-bold text-white uppercase">${a.nombre_completo.toUpperCase()}</span>
+						<span class="ml-auto text-[9px] text-white/30">${a.telefono}</span>
+					</label>
+				`;
+			}).join('');
 
 			html += `</div>`;
 			contenedor.innerHTML = html;
