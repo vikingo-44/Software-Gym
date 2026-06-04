@@ -6232,6 +6232,7 @@ if (editorForm) {
 			if(filtro) filtro.value = "todos";
 
 			openModal('modal-whatsapp');
+			renderWaAlumnosList();
 			if(window.lucide) lucide.createIcons();
 		}
 
