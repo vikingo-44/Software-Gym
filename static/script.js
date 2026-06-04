@@ -6330,20 +6330,25 @@ if (editorForm) {
 					return new Date(a.fecha_vencimiento) <= hoy;
 				}
 
-				if (!a.ultima_asistencia) return true;
-				const diffDays = Math.ceil((hoy - new Date(a.ultima_asistencia)) / (1000 * 60 * 60 * 24));
-				
+				if (!a.ultima_asistencia) return true; // Nuevos sin historial
+
+				const hoy = new Date(); // 2026-06-04
+				const ultima = new Date(a.ultima_asistencia);
+				// Calculamos días de diferencia
+				const diffDays = Math.floor((hoy - ultima) / (1000 * 60 * 60 * 24));
+
+				// LOGICA DE RANGOS ESTRICTOS
 				if (filtro === "7") {
-					// Exactamente hasta 7 días (de 0 a 7 días sin venir)
-					return diffDays <= 7;
+					// Solo alumnos que no vienen hace 7 a 14 días
+					return diffDays >= 7 && diffDays < 15;
 				}
 				if (filtro === "15") {
-					// Del día 8 al 15 (excluye a los que vinieron hace menos de 8 días)
-					return diffDays > 7 && diffDays <= 15;
+					// Solo alumnos que no vienen hace 15 a 30 días
+					return diffDays >= 15 && diffDays < 30;
 				}
 				if (filtro === "30") {
-					// Del día 16 al 30 (excluye a los que vinieron hace menos de 16 días)
-					return diffDays > 15 && diffDays <= 30;
+					// Solo alumnos que no vienen hace más de 30 días
+					return diffDays >= 30;
 				}
 				
 				return false;
