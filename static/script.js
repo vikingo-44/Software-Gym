@@ -6333,9 +6333,18 @@ if (editorForm) {
 				if (!a.ultima_asistencia) return true;
 				const diffDays = Math.ceil((hoy - new Date(a.ultima_asistencia)) / (1000 * 60 * 60 * 24));
 				
-				if (filtro === "7") return diffDays >= 7;
-				if (filtro === "15") return diffDays >= 15;
-				if (filtro === "30") return diffDays >= 30;
+				if (filtro === "7") {
+					// Exactamente hasta 7 días (de 0 a 7 días sin venir)
+					return diffDays <= 7;
+				}
+				if (filtro === "15") {
+					// Del día 8 al 15 (excluye a los que vinieron hace menos de 8 días)
+					return diffDays > 7 && diffDays <= 15;
+				}
+				if (filtro === "30") {
+					// Del día 16 al 30 (excluye a los que vinieron hace menos de 16 días)
+					return diffDays > 15 && diffDays <= 30;
+				}
 				
 				return false;
 			});
