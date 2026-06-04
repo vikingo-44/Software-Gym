@@ -6309,6 +6309,7 @@ if (editorForm) {
 
 		// ⚔️ RENDERIZAR LISTA CON FILTROS Y BUSCADOR
 		function renderWaAlumnosList() {
+			console.log("Iniciando renderWaAlumnosList...");
 			const contenedor = document.getElementById('wa-alumno-select');
 			const inputBusqueda = document.getElementById('wa-search-input').value.toLowerCase();
 			const filtro = document.getElementById('wa-filtro-tiempo').value;
@@ -6336,6 +6337,7 @@ if (editorForm) {
 				const ultima = new Date(a.ultima_asistencia);
 				// Calculamos días de diferencia
 				const diffDays = Math.floor((hoy - ultima) / (1000 * 60 * 60 * 24));
+				console.log(`Auditoría: ${a.nombre_completo} | Días: ${diffDays}`);
 
 				// --- CAJA NEGRA DE AUDITORÍA ---
 				console.log(`Alumno: ${a.nombre_completo} | Última: ${a.ultima_asistencia} | Días ausente: ${diffDays}`);
