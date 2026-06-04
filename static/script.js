@@ -6332,10 +6332,13 @@ if (editorForm) {
 
 				if (!a.ultima_asistencia) return true; // Nuevos sin historial
 
-				const hoy = new Date(); // 2026-06-04
 				const ultima = new Date(a.ultima_asistencia);
 				// Calculamos días de diferencia
 				const diffDays = Math.floor((hoy - ultima) / (1000 * 60 * 60 * 24));
+
+				// --- CAJA NEGRA DE AUDITORÍA ---
+				console.log(`Alumno: ${a.nombre_completo} | Última: ${a.ultima_asistencia} | Días ausente: ${diffDays}`);
+				// -------------------------------
 
 				// LOGICA DE RANGOS ESTRICTOS
 				if (filtro === "7") {
