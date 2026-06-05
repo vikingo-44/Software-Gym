@@ -960,8 +960,8 @@ def get_alumnos(db: Session = Depends(database.get_db)):
                 "rol_nombre": al.perfil.nombre if al.perfil else "Alumno",
                 "fecha_vencimiento": al.fecha_vencimiento.isoformat() if al.fecha_vencimiento else None,
                 
-                # ⚔️ FECHA DE ALTA PARA EL FILTRO NUEVOS
-                "fecha_alta": al.fecha_alta.isoformat() if getattr(al, 'fecha_alta', None) else None,
+                # ⚔️ FECHA DE CREACIÓN PARA EL FILTRO NUEVOS
+                "fecha_creacion": al.fecha_creacion.isoformat() if getattr(al, 'fecha_creacion', None) else None,
                 
                 # FECHA DE ÚLTIMA ASISTENCIA REAL (Inyectada desde el historial)
                 "ultima_asistencia": ultima_fecha.isoformat() if ultima_fecha else None,

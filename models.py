@@ -65,7 +65,9 @@ class Usuario(Base):
     certificado_entregado = Column(Boolean, default=False)
     fecha_certificado = Column(Date, nullable=True)
     especialidad = Column(String, nullable=True)
-    fecha_alta = Column(Date, default=datetime.date.today)
+    
+    # ⚔️ CAMBIO: Usamos fecha_creacion en lugar de fecha_alta
+    fecha_creacion = Column(Date, default=datetime.date.today)
     fecha_ultima_renovacion = Column(Date, nullable=True)
     fecha_vencimiento = Column(Date, nullable=True)
     estado_cuenta = Column(String, default="Activo")

@@ -6355,9 +6355,9 @@ if (editorForm) {
 
 				// 4. Filtro "NUEVOS" (Basado en fecha_alta real)
 				if (filtro === "nuevos") {
-					if (!a.fecha_alta) return false;
-					const alta = new Date(a.fecha_alta);
-					const diffTime = Math.abs(hoy - alta);
+					if (!a.fecha_creacion) return false;
+					const creacion = new Date(a.fecha_creacion);
+					const diffTime = Math.abs(hoy - creacion);
 					const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 					return diffDays <= 7;
 				}
