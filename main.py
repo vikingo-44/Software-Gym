@@ -7,7 +7,7 @@ from fastapi.responses import FileResponse
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy.exc import IntegrityError, ProgrammingError
-from sqlalchemy import func, extract, text
+from sqlalchemy import func, extract, text, select
 from sqlalchemy.orm.attributes import flag_modified
 from typing import List, Optional, Union
 from pydantic import BaseModel, ConfigDict
@@ -923,7 +923,16 @@ def get_historial_accesos(db: Session = Depends(database.get_db), current_user =
 @app.get("/api/alumnos", tags=["Alumnos"])
 def get_alumnos(db: Session = Depends(database.get_db)):
     try:
-        alumnos_db = db.query(models.Usuario).options(
+        # 1. Creamos una subconsulta para obtener la fecha de último acceso EXITOSO por usuario
+        subquery = db.query(
+            models.Acceso.usuario_id, 
+            func.max(models.Acceso.fecha).label("ultima_fecha_acceso")
+        ).filter(models.Acceso.exitoso == True).group_by(models.Acceso.usuario_id).subquery()
+
+        # 2. Hacemos el join con la tabla de usuarios
+        alumnos_db = db.query(models.Usuario, subquery.c.ultima_fecha_acceso).outerjoin(
+            subquery, models.Usuario.id == subquery.c.usuario_id
+        ).options(
             joinedload(models.Usuario.perfil),
             joinedload(models.Usuario.plan).joinedload(models.Plan.tipo),
             joinedload(models.Usuario.planes_rutina)
@@ -932,8 +941,8 @@ def get_alumnos(db: Session = Depends(database.get_db)):
         hoy = date.today()
         resultado = []
 
-        for al in alumnos_db:
-            # Construimos el objeto asegurando que el PLAN no se quede afuera
+        for al, ultima_fecha in alumnos_db:
+            # Construimos el objeto
             alumno_dict = {
                 "id": al.id,
                 "dni": al.dni,
@@ -951,16 +960,17 @@ def get_alumnos(db: Session = Depends(database.get_db)):
                 "rol_nombre": al.perfil.nombre if al.perfil else "Alumno",
                 "fecha_vencimiento": al.fecha_vencimiento.isoformat() if al.fecha_vencimiento else None,
                 
-                # ⚔️ FUNDAMENTAL: Enviamos la fecha de renovación requerida por el JS
+                # FECHA DE ÚLTIMA ASISTENCIA REAL (Inyectada desde el historial)
+                "ultima_asistencia": ultima_fecha.isoformat() if ultima_fecha else None,
+                
                 "fecha_ultima_renovacion": al.fecha_ultima_renovacion.isoformat() if getattr(al, 'fecha_ultima_renovacion', None) else None,
                 
-                # ⚔️ CORRECCIÓN: Volvemos a inyectar el objeto plan que el frontend necesita leer
                 "plan": {
                     "id": al.plan.id,
                     "nombre": al.plan.nombre,
                     "clases_mensuales": al.plan.clases_mensuales
                 } if al.plan else None,
-                # PASAMOS EL ARRAY DE RUTINAS AL FRONTEND
+                
                 "planes_rutina": [{
                     "id": r.id,
                     "activo": r.activo,

@@ -6329,40 +6329,47 @@ if (editorForm) {
 			const inputBusqueda = document.getElementById('wa-search-input')?.value.toLowerCase() || "";
 			const filtro = document.getElementById('wa-filtro-tiempo')?.value || "todos";
 			const hoy = new Date();
+
+			if (!state.alumnos || state.alumnos.length === 0) {
+				console.error("❌ ERROR: state.alumnos está vacío o es undefined.");
+				contenedor.innerHTML = "<p>No hay datos de alumnos cargados.</p>";
+				return;
+			}
+
+			// Recuperamos los DNI que ya recibieron mensajes
 			const enviados = JSON.parse(localStorage.getItem('wa_enviados_viking') || "[]");
 
 			const listaFiltrada = state.alumnos.filter(a => {
-				if (!a.telefono) return false;
-
-				// Filtro por Buscador
+				// 1. Filtro por buscador
 				const coincide = a.nombre_completo.toLowerCase().includes(inputBusqueda) || 
 								(a.dni && a.dni.toString().includes(inputBusqueda));
 				if (!coincide) return false;
 
-				// Filtro Vencidos (Este ya te funcionaba)
+				// 2. Filtros de estado (Vencidos y Ausencia)
 				if (filtro === "vencidos") {
 					return a.fecha_vencimiento && new Date(a.fecha_vencimiento) <= hoy;
 				}
 
-				// --- LÓGICA DE AUSENCIA ROBUSTA ---
-				// Si no tiene fecha, lo tratamos como "nunca vino" (lo incluimos en TODOS para que lo veas)
-				if (!a.ultima_asistencia) return filtro === "todos";
+				// Si es "todos", no filtramos por asistencia
+				if (filtro === "todos") return true;
+
+				// Si no tiene última asistencia, no entra en filtros de tiempo (pero sí en "todos")
+				if (!a.ultima_asistencia) return false;
 
 				const ultima = new Date(a.ultima_asistencia);
-				// Validar fecha real
-				if (isNaN(ultima.getTime())) return filtro === "todos"; 
-
 				const diffDays = Math.floor((hoy - ultima) / (1000 * 60 * 60 * 24));
 				
-				console.log(`Auditoría: ${a.nombre_completo} | Días ausente: ${diffDays}`);
+				console.log(`🔍 Auditoría: ${a.nombre_completo} | Asistió hace: ${diffDays} días`);
 
-				// Rangos exluyentes reales
+				// Lógica de rangos excluyentes
 				if (filtro === "7") return diffDays >= 7 && diffDays < 15;
 				if (filtro === "15") return diffDays >= 15 && diffDays < 30;
 				if (filtro === "30") return diffDays >= 30;
 				
-				return true; // Filtro "todos"
+				return false;
 			});
+
+			console.log(`📊 Filtro aplicado: ${filtro}. Resultado: ${listaFiltrada.length} alumnos.`);
 
 			let html = `
 				<label class="flex items-center gap-3 py-2 px-2 border-b border-white/10 mb-2 cursor-pointer hover:bg-white/5 rounded-xl text-green-500 font-black">
