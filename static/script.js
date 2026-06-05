@@ -5281,7 +5281,12 @@ if (editorForm) {
 				const inv = hist.filter(m => m.tipo.toLowerCase() === 'egreso').reduce((a, b) => a + parseFloat(b.monto || 0), 0);
 				const rec = hist.filter(m => m.tipo.toLowerCase() === 'ingreso').reduce((a, b) => a + parseFloat(b.monto || 0), 0);
 				const cantV = hist.filter(m => m.tipo.toLowerCase() === 'ingreso').reduce((a, b) => a + parseInt(b.cantidad || 0), 0);
-				return { nombre: p.nombre_producto, categoria: p.categoria || 'Otros', utilidad: rec - inv, cantidad: cantV };
+				return { 
+					nombre: p.nombre_producto, 
+					categoria: p.categoria || 'Otros', 
+					utilidad: rec - inv, 
+					cantidad: cantV 
+				};
 			}).filter(d => d.utilidad !== 0);
 
 			const ventasPorCat = datosProd.reduce((acc, d) => {
@@ -5289,7 +5294,7 @@ if (editorForm) {
 				return acc;
 			}, {});
 
-			// 3. REPOSICIÓN NECESARIA (Ajustada al estándar del dashboard: stock <= 5)
+			// 3. REPOSICIÓN NECESARIA
 			const listaReponer = document.getElementById('listaReponer');
 			if (listaReponer) {
 				const lowStock = stock.filter(p => parseFloat(p.stock_actual) <= 5).sort((a, b) => a.stock_actual - b.stock_actual);
@@ -5311,32 +5316,66 @@ if (editorForm) {
 			});
 
 			// 5. RENDERIZADO DE GRÁFICOS
-			const commonOptions = { responsive: true, maintainAspectRatio: false };
+			const commonOptions = { 
+				responsive: true, 
+				maintainAspectRatio: false 
+			};
 
 			// A. Ventas Diarias
 			const ctxV = document.getElementById('chartVentas').getContext('2d');
 			ctxV.canvas.chart = new Chart(ctxV, {
 				type: 'line',
-				data: { labels: Object.keys(ventasPorDia), datasets: [{ label: 'Ventas ($)', data: Object.values(ventasPorDia), borderColor: '#22c55e', backgroundColor: 'rgba(34, 197, 94, 0.1)', fill: true, tension: 0.3 }] },
+				data: { 
+					labels: Object.keys(ventasPorDia), 
+					datasets: [{ 
+						label: 'Ventas ($)', 
+						data: Object.values(ventasPorDia), 
+						borderColor: '#22c55e', 
+						backgroundColor: 'rgba(34, 197, 94, 0.1)', 
+						fill: true, 
+						tension: 0.3 
+					}] 
+				},
 				options: commonOptions
 			});
 
-			// B. Rentabilidad Mixta (Barra + Línea Cantidad encima)
+			// B. Rentabilidad Mixta
 			const ctxR = document.getElementById('rentabilidadChart').getContext('2d');
 			ctxR.canvas.chart = new Chart(ctxR, {
 				type: 'bar',
 				data: {
 					labels: datosProd.map(d => d.nombre),
 					datasets: [
-						{ label: 'Utilidad ($)', data: datosProd.map(d => d.utilidad), backgroundColor: '#ef4444', order: 2 },
-						{ label: 'Cant. Vendida', data: datosProd.map(d => d.cantidad), borderColor: '#ffffff', type: 'line', yAxisID: 'y1', tension: 0.4, borderWidth: 3, order: 1 }
+						{ 
+							label: 'Utilidad ($)', 
+							data: datosProd.map(d => d.utilidad), 
+							backgroundColor: '#ef4444', 
+							order: 2 
+						},
+						{ 
+							label: 'Cant. Vendida', 
+							data: datosProd.map(d => d.cantidad), 
+							borderColor: '#ffffff', 
+							type: 'line', 
+							yAxisID: 'y1', 
+							tension: 0.4, 
+							borderWidth: 3, 
+							order: 1 
+						}
 					]
 				},
 				options: { 
 					...commonOptions, 
 					scales: { 
-						y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.05)' } }, 
-						y1: { position: 'right', beginAtZero: true, grid: { drawOnChartArea: false } } 
+						y: { 
+							beginAtZero: true, 
+							grid: { color: 'rgba(255,255,255,0.05)' } 
+						}, 
+						y1: { 
+							position: 'right', 
+							beginAtZero: true, 
+							grid: { drawOnChartArea: false } 
+						} 
 					} 
 				}
 			});
@@ -5345,8 +5384,18 @@ if (editorForm) {
 			const ctxC = document.getElementById('chartCategorias').getContext('2d');
 			ctxC.canvas.chart = new Chart(ctxC, {
 				type: 'bar',
-				data: { labels: Object.keys(ventasPorCat), datasets: [{ label: 'Unidades Vendidas', data: Object.values(ventasPorCat), backgroundColor: '#3b82f6' }] },
-				options: { ...commonOptions, indexAxis: 'y' }
+				data: { 
+					labels: Object.keys(ventasPorCat), 
+					datasets: [{ 
+						label: 'Unidades Vendidas', 
+						data: Object.values(ventasPorCat), 
+						backgroundColor: '#3b82f6' 
+					}] 
+				},
+				options: { 
+					...commonOptions, 
+					indexAxis: 'y' 
+				}
 			});
 		}
 
