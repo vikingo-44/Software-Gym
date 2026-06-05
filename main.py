@@ -942,7 +942,7 @@ def get_alumnos(db: Session = Depends(database.get_db)):
         resultado = []
 
         for al, ultima_fecha in alumnos_db:
-            # Construimos el objeto
+            # Construimos el objeto asegurando que el PLAN no se quede afuera
             alumno_dict = {
                 "id": al.id,
                 "dni": al.dni,
@@ -960,17 +960,22 @@ def get_alumnos(db: Session = Depends(database.get_db)):
                 "rol_nombre": al.perfil.nombre if al.perfil else "Alumno",
                 "fecha_vencimiento": al.fecha_vencimiento.isoformat() if al.fecha_vencimiento else None,
                 
+                # ⚔️ FECHA DE ALTA PARA EL FILTRO NUEVOS
+                "fecha_alta": al.fecha_alta.isoformat() if getattr(al, 'fecha_alta', None) else None,
+                
                 # FECHA DE ÚLTIMA ASISTENCIA REAL (Inyectada desde el historial)
                 "ultima_asistencia": ultima_fecha.isoformat() if ultima_fecha else None,
                 
                 "fecha_ultima_renovacion": al.fecha_ultima_renovacion.isoformat() if getattr(al, 'fecha_ultima_renovacion', None) else None,
                 
+                # ⚔️ CORRECCIÓN: Volvemos a inyectar el objeto plan que el frontend necesita leer
                 "plan": {
                     "id": al.plan.id,
                     "nombre": al.plan.nombre,
                     "clases_mensuales": al.plan.clases_mensuales
                 } if al.plan else None,
                 
+                # PASAMOS EL ARRAY DE RUTINAS AL FRONTEND
                 "planes_rutina": [{
                     "id": r.id,
                     "activo": r.activo,

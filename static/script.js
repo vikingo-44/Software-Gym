@@ -6322,7 +6322,7 @@ if (editorForm) {
 			closeModal('modal-whatsapp');
 		}
 
-		// ⚔️ RENDERIZAR LISTA CON FILTROS Y BUSCADOR (COMPLETA Y CORREGIDA)
+		// ⚔️ RENDERIZAR LISTA CON FILTROS Y BUSCADOR (CORREGIDA CON FECHA_ALTA)
 		function renderWaAlumnosList() {
 			console.log("Iniciando renderWaAlumnosList...");
 			const contenedor = document.getElementById('wa-alumno-select');
@@ -6336,6 +6336,7 @@ if (editorForm) {
 				return;
 			}
 
+			// Recuperamos los DNI que ya recibieron mensajes
 			const enviados = JSON.parse(localStorage.getItem('wa_enviados_viking') || "[]");
 
 			const listaFiltrada = state.alumnos.filter(a => {
@@ -6352,18 +6353,13 @@ if (editorForm) {
 					return a.fecha_vencimiento && new Date(a.fecha_vencimiento) <= hoy;
 				}
 
-				// 4. Filtro "NUEVOS" (Semana en curso)
+				// 4. Filtro "NUEVOS" (Basado en fecha_alta real)
 				if (filtro === "nuevos") {
-					if (!a.fecha_ultima_renovacion) return false;
-					const ren = new Date(a.fecha_ultima_renovacion);
-					// Comparamos si es la misma semana del año actual
-					const getSemana = (d) => {
-						const temp = new Date(d);
-						temp.setHours(0, 0, 0, 0);
-						temp.setDate(temp.getDate() + 4 - (temp.getDay() || 7));
-						return Math.ceil((((temp - new Date(temp.getFullYear(), 0, 1)) / 86400000) + 1) / 7);
-					};
-					return ren.getFullYear() === hoy.getFullYear() && getSemana(ren) === getSemana(hoy);
+					if (!a.fecha_alta) return false;
+					const alta = new Date(a.fecha_alta);
+					const diffTime = Math.abs(hoy - alta);
+					const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+					return diffDays <= 7;
 				}
 
 				// 5. Filtro "TODOS"
@@ -6377,6 +6373,7 @@ if (editorForm) {
 				
 				console.log(`🔍 Auditoría: ${a.nombre_completo} | Asistió hace: ${diffDays} días`);
 
+				// Lógica de rangos excluyentes
 				if (filtro === "7") return diffDays >= 7 && diffDays < 15;
 				if (filtro === "15") return diffDays >= 15 && diffDays < 30;
 				if (filtro === "30") return diffDays >= 30;
@@ -6388,7 +6385,7 @@ if (editorForm) {
 
 			let html = `
 				<label class="flex items-center gap-3 py-2 px-2 border-b border-white/10 mb-2 cursor-pointer hover:bg-white/5 rounded-xl text-green-500 font-black">
-					<input type="checkbox" onchange="toggleAllWaCheckboxes(this)" class="accent-green-600 w-4 h-4">
+					<input type="checkbox" onchange="toggleAllWaAlumnos(this)" class="accent-green-600 w-4 h-4">
 					<span class="text-xs uppercase">TILDAR TODOS (${listaFiltrada.length})</span>
 				</label>
 				<div class="max-h-[450px] overflow-y-auto space-y-1 custom-scrollbar">
@@ -6400,7 +6397,9 @@ if (editorForm) {
 				return `
 					<label class="flex items-center gap-3 py-2 px-2 hover:bg-white/5 rounded-xl cursor-pointer">
 						<input type="checkbox" class="wa-alumno-check accent-green-600 w-4 h-4" value="${a.telefono}" data-nombre="${a.nombre_completo}" data-dni="${a.dni}">
+						
 						<span class="${yaContactado ? 'text-green-500' : 'text-transparent'} text-[10px]">●</span>
+						
 						<span class="text-xs font-bold text-white uppercase">${a.nombre_completo.toUpperCase()}</span>
 						<span class="ml-auto text-[9px] text-white/30">${a.telefono}</span>
 					</label>
