@@ -6322,47 +6322,46 @@ if (editorForm) {
 			closeModal('modal-whatsapp');
 		}
 
-		// ⚔️ RENDERIZAR LISTA CON FILTROS Y BUSCADOR
+		// ⚔️ RENDERIZAR LISTA CON FILTROS Y BUSCADOR (CORREGIDA)
 		function renderWaAlumnosList() {
 			console.log("Iniciando renderWaAlumnosList...");
 			const contenedor = document.getElementById('wa-alumno-select');
-			const inputBusqueda = document.getElementById('wa-search-input').value.toLowerCase();
-			const filtro = document.getElementById('wa-filtro-tiempo').value;
-			const hoy = new Date(); // Fecha dinámica
-
-			// Recuperamos los DNI que ya recibieron mensajes
+			const inputBusqueda = document.getElementById('wa-search-input')?.value.toLowerCase() || "";
+			const filtro = document.getElementById('wa-filtro-tiempo')?.value || "todos";
+			const hoy = new Date();
 			const enviados = JSON.parse(localStorage.getItem('wa_enviados_viking') || "[]");
 
 			const listaFiltrada = state.alumnos.filter(a => {
-				// 1. Validaciones básicas
-				if (!a.telefono || a.telefono.trim() === "") return false;
+				if (!a.telefono) return false;
 
-				// 2. Filtro por buscador
+				// Filtro por Buscador
 				const coincide = a.nombre_completo.toLowerCase().includes(inputBusqueda) || 
 								(a.dni && a.dni.toString().includes(inputBusqueda));
 				if (!coincide) return false;
 
-				// 3. Filtro por estado
-				if (filtro === "todos") return true;
-
+				// Filtro Vencidos (Este ya te funcionaba)
 				if (filtro === "vencidos") {
 					return a.fecha_vencimiento && new Date(a.fecha_vencimiento) <= hoy;
 				}
 
-				// 4. Filtro por ausencia (con auditoría)
-				if (!a.ultima_asistencia) return false; // Excluimos si no hay registro para no ensuciar
+				// --- LÓGICA DE AUSENCIA ROBUSTA ---
+				// Si no tiene fecha, lo tratamos como "nunca vino" (lo incluimos en TODOS para que lo veas)
+				if (!a.ultima_asistencia) return filtro === "todos";
 
 				const ultima = new Date(a.ultima_asistencia);
+				// Validar fecha real
+				if (isNaN(ultima.getTime())) return filtro === "todos"; 
+
 				const diffDays = Math.floor((hoy - ultima) / (1000 * 60 * 60 * 24));
 				
-				// Log de auditoría para detectar errores
 				console.log(`Auditoría: ${a.nombre_completo} | Días ausente: ${diffDays}`);
 
+				// Rangos exluyentes reales
 				if (filtro === "7") return diffDays >= 7 && diffDays < 15;
 				if (filtro === "15") return diffDays >= 15 && diffDays < 30;
 				if (filtro === "30") return diffDays >= 30;
 				
-				return false;
+				return true; // Filtro "todos"
 			});
 
 			let html = `
