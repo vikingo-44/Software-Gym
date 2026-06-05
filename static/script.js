@@ -6322,7 +6322,7 @@ if (editorForm) {
 			closeModal('modal-whatsapp');
 		}
 
-		// ⚔️ RENDERIZAR LISTA CON FILTROS Y BUSCADOR (CORREGIDA)
+		// ⚔️ RENDERIZAR LISTA CON FILTROS Y BUSCADOR (COMPLETA Y CORREGIDA)
 		function renderWaAlumnosList() {
 			console.log("Iniciando renderWaAlumnosList...");
 			const contenedor = document.getElementById('wa-alumno-select');
@@ -6336,24 +6336,40 @@ if (editorForm) {
 				return;
 			}
 
-			// Recuperamos los DNI que ya recibieron mensajes
 			const enviados = JSON.parse(localStorage.getItem('wa_enviados_viking') || "[]");
 
 			const listaFiltrada = state.alumnos.filter(a => {
-				// 1. Filtro por buscador
+				// 1. FILTRO DE TELÉFONO OBLIGATORIO
+				if (!a.telefono || a.telefono.trim() === "") return false;
+
+				// 2. Filtro por buscador
 				const coincide = a.nombre_completo.toLowerCase().includes(inputBusqueda) || 
 								(a.dni && a.dni.toString().includes(inputBusqueda));
 				if (!coincide) return false;
 
-				// 2. Filtros de estado (Vencidos y Ausencia)
+				// 3. Filtro Vencidos
 				if (filtro === "vencidos") {
 					return a.fecha_vencimiento && new Date(a.fecha_vencimiento) <= hoy;
 				}
 
-				// Si es "todos", no filtramos por asistencia
+				// 4. Filtro "NUEVOS" (Semana en curso)
+				if (filtro === "nuevos") {
+					if (!a.fecha_ultima_renovacion) return false;
+					const ren = new Date(a.fecha_ultima_renovacion);
+					// Comparamos si es la misma semana del año actual
+					const getSemana = (d) => {
+						const temp = new Date(d);
+						temp.setHours(0, 0, 0, 0);
+						temp.setDate(temp.getDate() + 4 - (temp.getDay() || 7));
+						return Math.ceil((((temp - new Date(temp.getFullYear(), 0, 1)) / 86400000) + 1) / 7);
+					};
+					return ren.getFullYear() === hoy.getFullYear() && getSemana(ren) === getSemana(hoy);
+				}
+
+				// 5. Filtro "TODOS"
 				if (filtro === "todos") return true;
 
-				// Si no tiene última asistencia, no entra en filtros de tiempo (pero sí en "todos")
+				// 6. Filtro Ausencia (Basado en la fecha que inyectamos desde el backend)
 				if (!a.ultima_asistencia) return false;
 
 				const ultima = new Date(a.ultima_asistencia);
@@ -6361,7 +6377,6 @@ if (editorForm) {
 				
 				console.log(`🔍 Auditoría: ${a.nombre_completo} | Asistió hace: ${diffDays} días`);
 
-				// Lógica de rangos excluyentes
 				if (filtro === "7") return diffDays >= 7 && diffDays < 15;
 				if (filtro === "15") return diffDays >= 15 && diffDays < 30;
 				if (filtro === "30") return diffDays >= 30;
@@ -6385,9 +6400,7 @@ if (editorForm) {
 				return `
 					<label class="flex items-center gap-3 py-2 px-2 hover:bg-white/5 rounded-xl cursor-pointer">
 						<input type="checkbox" class="wa-alumno-check accent-green-600 w-4 h-4" value="${a.telefono}" data-nombre="${a.nombre_completo}" data-dni="${a.dni}">
-						
 						<span class="${yaContactado ? 'text-green-500' : 'text-transparent'} text-[10px]">●</span>
-						
 						<span class="text-xs font-bold text-white uppercase">${a.nombre_completo.toUpperCase()}</span>
 						<span class="ml-auto text-[9px] text-white/30">${a.telefono}</span>
 					</label>
