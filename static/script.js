@@ -5200,13 +5200,10 @@ if (editorForm) {
 		 * Ahora incluye filtrado por fechas y renderizado de gráfico automático.
 		 */
 		async function generarInformeRentabilidad() {
-			// 0. Capturamos los filtros del DOM
 			const fechaDesde = document.getElementById('fecha-desde')?.value || '';
 			const fechaHasta = document.getElementById('fecha-hasta')?.value || '';
 			const sucursalId = document.getElementById('filtro-sucursal')?.value || '0';
 
-			// 1. Obtención de datos
-			// Enviamos el sucursal_id al endpoint de stock para filtrar lo que el usuario quiere ver
 			const resStock = await apiFetch(`/stock?sucursal_id=${sucursalId}`, 'GET');
 			const resCaja = await apiFetch(`/caja/movimientos?fecha_desde=${fechaDesde}&fecha_hasta=${fechaHasta}&sucursal_id=${sucursalId}`, 'GET');
 
@@ -5221,19 +5218,13 @@ if (editorForm) {
 
 			let totalesGeneral = { inversion: 0, recaudacion: 0 };
 
-			// 2. Procesamiento de tabla
 			stock.forEach(producto => {
 				const historial = movimientos.filter(m => String(m.producto_id) === String(producto.id));
-
-				let inversionProducto = 0;
-				let recaudacionProducto = 0;
-				let unidadesVendidas = 0;
-				let unidadesCompradas = 0;
+				let inversionProducto = 0, recaudacionProducto = 0, unidadesVendidas = 0, unidadesCompradas = 0;
 
 				historial.forEach(mov => {
 					const monto = parseFloat(mov.monto || 0);
 					const cant = parseInt(mov.cantidad || 0);
-
 					if (mov.tipo.toLowerCase() === 'egreso') {
 						inversionProducto += monto;
 						unidadesCompradas += cant;
@@ -5246,36 +5237,21 @@ if (editorForm) {
 				if (inversionProducto > 0 || recaudacionProducto > 0) {
 					const utilidad = recaudacionProducto - inversionProducto;
 					const margen = inversionProducto > 0 ? ((utilidad / inversionProducto) * 100).toFixed(1) : 0;
-					
 					totalesGeneral.inversion += inversionProducto;
 					totalesGeneral.recaudacion += recaudacionProducto;
 
-					// Generamos la nomenclatura automática usando tu función
-					const codigoNomenclatura = generarNomenclatura(producto);
-
 					body.innerHTML += `
 						<tr class="border-b border-white/5 hover:bg-white/10 transition-colors">
-							<td class="p-4">
-								<div class="font-bold text-white">${producto.nombre_producto}</div>
-								<div class="text-[10px] text-white/40 italic">${codigoNomenclatura} - ${producto.categoria || 'Sin categoría'}</div>
-							</td>
+							<td class="p-4"><div class="font-bold text-white">${producto.nombre_producto}</div><div class="text-[10px] text-white/40 italic">${generarNomenclatura(producto)}</div></td>
 							<td class="p-4 text-red-400">$${inversionProducto.toLocaleString()} <span class="text-[10px] block text-white/20">(${unidadesCompradas} un.)</span></td>
 							<td class="p-4 text-green-400">$${recaudacionProducto.toLocaleString()} <span class="text-[10px] block text-white/20">(${unidadesVendidas} un.)</span></td>
-							<td class="p-4">
-								<span class="${utilidad >= 0 ? 'text-green-500' : 'text-red-500'} font-bold">$${utilidad.toLocaleString()}</span>
-								<div class="text-[10px] text-white/40">${margen}% margen</div>
-							</td>
-							<td class="p-4 text-right">
-								<span class="px-2 py-1 rounded text-[10px] font-black ${utilidad >= 0 ? 'bg-green-600/20 text-green-500' : 'bg-red-600/20 text-red-600'}">
-									${utilidad >= 0 ? 'RENTABLE' : 'ALERTA'}
-								</span>
-							</td>
+							<td class="p-4"><span class="${utilidad >= 0 ? 'text-green-500' : 'text-red-500'} font-bold">$${utilidad.toLocaleString()}</span><div class="text-[10px] text-white/40">${margen}% margen</div></td>
+							<td class="p-4 text-right"><span class="px-2 py-1 rounded text-[10px] font-black ${utilidad >= 0 ? 'bg-green-600/20 text-green-500' : 'bg-red-600/20 text-red-600'}">${utilidad >= 0 ? 'RENTABLE' : 'ALERTA'}</span></td>
 						</tr>
 					`;
 				}
 			});
 
-			// 3. Actualización de KPIs
 			document.getElementById('renta-total-compra').innerText = `$${totalesGeneral.inversion.toLocaleString()}`;
 			document.getElementById('renta-total-venta').innerText = `$${totalesGeneral.recaudacion.toLocaleString()}`;
 			const totalUtilidad = totalesGeneral.recaudacion - totalesGeneral.inversion;
@@ -5283,7 +5259,7 @@ if (editorForm) {
 			rentaUtilidadEl.innerText = `$${totalUtilidad.toLocaleString()}`;
 			rentaUtilidadEl.className = `text-4xl font-black ${totalUtilidad >= 0 ? 'text-white' : 'text-red-500'} italic tracking-tight`;
 
-			// 4. Llamada al dashboard para renderizar los 4 gráficos
+			// Pasamos el stock completo a la función para que filtre internamente igual que en el dashboard
 			actualizarDashboard(movimientos, stock);
 		}
 
@@ -5313,32 +5289,36 @@ if (editorForm) {
 				return acc;
 			}, {});
 
-			// 3. REPOSICIÓN NECESARIA (Minimalista)
+			// 3. REPOSICIÓN NECESARIA (Ajustada al estándar del dashboard: stock <= 5)
 			const listaReponer = document.getElementById('listaReponer');
 			if (listaReponer) {
-				listaReponer.innerHTML = stock
-					.filter(p => p.stock_actual <= p.stock_minimo)
-					.map(p => `<li class="flex justify-between items-center bg-white/5 p-2 rounded-lg border border-orange-500/20">
-									<span class="text-white text-xs font-bold">${p.nombre_producto}</span>
-									<span class="text-orange-500 font-black text-xs">${p.stock_actual}</span>
-							</li>`)
-					.join('') || '<li class="text-white/40 italic text-center py-4">Todo en orden.</li>';
+				const lowStock = stock.filter(p => parseFloat(p.stock_actual) <= 5).sort((a, b) => a.stock_actual - b.stock_actual);
+				
+				listaReponer.innerHTML = lowStock.length > 0 
+					? lowStock.map(p => `
+						<li class="flex justify-between items-center bg-white/[0.03] p-3 rounded-xl border border-orange-500/20">
+							<span class="text-white text-xs font-black uppercase italic">${p.nombre_producto}</span>
+							<span class="text-orange-500 font-black text-sm">${p.stock_actual}</span>
+						</li>`)
+					.join('') 
+					: '<li class="text-white/40 italic text-center text-xs py-4">Todo en orden.</li>';
 			}
 
-			// 4. DESTRUCCIÓN SEGURA
+			// 4. DESTRUCCIÓN SEGURA DE GRÁFICOS PREVIOS
 			['chartVentas', 'rentabilidadChart', 'chartCategorias'].forEach(id => {
 				const canvas = document.getElementById(id);
 				if (canvas && canvas.chart instanceof Chart) canvas.chart.destroy();
 			});
 
 			// 5. RENDERIZADO DE GRÁFICOS
-			
-			// A. Ventas Diarias (Línea)
+			const commonOptions = { responsive: true, maintainAspectRatio: false };
+
+			// A. Ventas Diarias
 			const ctxV = document.getElementById('chartVentas').getContext('2d');
 			ctxV.canvas.chart = new Chart(ctxV, {
 				type: 'line',
 				data: { labels: Object.keys(ventasPorDia), datasets: [{ label: 'Ventas ($)', data: Object.values(ventasPorDia), borderColor: '#22c55e', backgroundColor: 'rgba(34, 197, 94, 0.1)', fill: true, tension: 0.3 }] },
-				options: { responsive: true, maintainAspectRatio: false }
+				options: commonOptions
 			});
 
 			// B. Rentabilidad Mixta (Barra + Línea Cantidad encima)
@@ -5348,26 +5328,12 @@ if (editorForm) {
 				data: {
 					labels: datosProd.map(d => d.nombre),
 					datasets: [
-						{ 
-							label: 'Utilidad ($)', 
-							data: datosProd.map(d => d.utilidad), 
-							backgroundColor: '#ef4444', 
-							order: 2 
-						},
-						{ 
-							label: 'Cant. Vendida', 
-							data: datosProd.map(d => d.cantidad), 
-							borderColor: '#ffffff', 
-							type: 'line', 
-							yAxisID: 'y1', 
-							tension: 0.4, 
-							borderWidth: 3, 
-							order: 1 
-						}
+						{ label: 'Utilidad ($)', data: datosProd.map(d => d.utilidad), backgroundColor: '#ef4444', order: 2 },
+						{ label: 'Cant. Vendida', data: datosProd.map(d => d.cantidad), borderColor: '#ffffff', type: 'line', yAxisID: 'y1', tension: 0.4, borderWidth: 3, order: 1 }
 					]
 				},
 				options: { 
-					responsive: true, maintainAspectRatio: false, 
+					...commonOptions, 
 					scales: { 
 						y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.05)' } }, 
 						y1: { position: 'right', beginAtZero: true, grid: { drawOnChartArea: false } } 
@@ -5375,15 +5341,12 @@ if (editorForm) {
 				}
 			});
 
-			// C. Categorías más vendidas (Horizontal Bar)
+			// C. Categorías más vendidas
 			const ctxC = document.getElementById('chartCategorias').getContext('2d');
 			ctxC.canvas.chart = new Chart(ctxC, {
 				type: 'bar',
-				data: { 
-					labels: Object.keys(ventasPorCat), 
-					datasets: [{ label: 'Unidades Vendidas', data: Object.values(ventasPorCat), backgroundColor: '#3b82f6' }] 
-				},
-				options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false }
+				data: { labels: Object.keys(ventasPorCat), datasets: [{ label: 'Unidades Vendidas', data: Object.values(ventasPorCat), backgroundColor: '#3b82f6' }] },
+				options: { ...commonOptions, indexAxis: 'y' }
 			});
 		}
 
