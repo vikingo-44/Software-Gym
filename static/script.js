@@ -5313,16 +5313,16 @@ if (editorForm) {
 				return acc;
 			}, {});
 
-			// 3. REPOSICIÓN NECESARIA
+			// 3. REPOSICIÓN NECESARIA (Minimalista)
 			const listaReponer = document.getElementById('listaReponer');
 			if (listaReponer) {
 				listaReponer.innerHTML = stock
 					.filter(p => p.stock_actual <= p.stock_minimo)
-					.map(p => `<li class="flex justify-between items-center bg-white/5 p-2 rounded-lg border border-red-500/20">
-									<span class="text-white font-bold">${p.nombre_producto}</span>
-									<span class="text-red-500 font-black">${p.stock_actual} un.</span>
+					.map(p => `<li class="flex justify-between items-center bg-white/5 p-2 rounded-lg border border-orange-500/20">
+									<span class="text-white text-xs font-bold">${p.nombre_producto}</span>
+									<span class="text-orange-500 font-black text-xs">${p.stock_actual}</span>
 							</li>`)
-					.join('') || '<li class="text-white/40 italic">Todo en orden.</li>';
+					.join('') || '<li class="text-white/40 italic text-center py-4">Todo en orden.</li>';
 			}
 
 			// 4. DESTRUCCIÓN SEGURA
@@ -5332,29 +5332,44 @@ if (editorForm) {
 			});
 
 			// 5. RENDERIZADO DE GRÁFICOS
+			
 			// A. Ventas Diarias (Línea)
 			const ctxV = document.getElementById('chartVentas').getContext('2d');
 			ctxV.canvas.chart = new Chart(ctxV, {
 				type: 'line',
-				data: { labels: Object.keys(ventasPorDia), datasets: [{ label: 'Ventas ($)', data: Object.values(ventasPorDia), borderColor: '#22c55e', fill: true, tension: 0.3 }] },
+				data: { labels: Object.keys(ventasPorDia), datasets: [{ label: 'Ventas ($)', data: Object.values(ventasPorDia), borderColor: '#22c55e', backgroundColor: 'rgba(34, 197, 94, 0.1)', fill: true, tension: 0.3 }] },
 				options: { responsive: true, maintainAspectRatio: false }
 			});
 
-			// B. Rentabilidad Mixta (Barra + Línea Cantidad)
+			// B. Rentabilidad Mixta (Barra + Línea Cantidad encima)
 			const ctxR = document.getElementById('rentabilidadChart').getContext('2d');
 			ctxR.canvas.chart = new Chart(ctxR, {
 				type: 'bar',
 				data: {
 					labels: datosProd.map(d => d.nombre),
 					datasets: [
-						{ label: 'Utilidad ($)', data: datosProd.map(d => d.utilidad), backgroundColor: '#ef4444', type: 'bar' },
-						{ label: 'Cant. Vendida', data: datosProd.map(d => d.cantidad), borderColor: '#ffffff', type: 'line', yAxisID: 'y1', tension: 0 }
+						{ 
+							label: 'Utilidad ($)', 
+							data: datosProd.map(d => d.utilidad), 
+							backgroundColor: '#ef4444', 
+							order: 2 
+						},
+						{ 
+							label: 'Cant. Vendida', 
+							data: datosProd.map(d => d.cantidad), 
+							borderColor: '#ffffff', 
+							type: 'line', 
+							yAxisID: 'y1', 
+							tension: 0.4, 
+							borderWidth: 3, 
+							order: 1 
+						}
 					]
 				},
 				options: { 
 					responsive: true, maintainAspectRatio: false, 
 					scales: { 
-						y: { beginAtZero: true }, 
+						y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.05)' } }, 
 						y1: { position: 'right', beginAtZero: true, grid: { drawOnChartArea: false } } 
 					} 
 				}
