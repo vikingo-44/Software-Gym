@@ -1,6 +1,6 @@
 /* =================================================================
-    ESTILOS ORIGINALES (MANTENIDOS AL 100% - RESPETO TOTAL)
-    ================================================================= */
+   ESTILOS ORIGINALES (MANTENIDOS AL 100% - RESPETO TOTAL)
+   ================================================================= */
     body {
         font-family: 'Inter', sans-serif;
         background-color: #000000;
@@ -14,11 +14,11 @@
         -webkit-text-size-adjust: 100%; /* Evita que iOS cambie el tamaño de letra al rotar */
     }
 
-    /*.bebas-neue-regular {
+    /* .bebas-neue-regular {
         font-family: "Bebas Neue", sans-serif;
         font-weight: 400;
         font-style: normal;
-        }*/
+        } */
             
     .viking-red { color: #FF0000; }
     .viking-bg-red { background-color: #FF0000; }
@@ -523,4 +523,40 @@
 
     @media (min-width: 1025px) {
         .mobile-menu-trigger { display: none !important; }
+    }
+
+    /* =================================================================
+    MEJORA: MODO CLARO (LIGHT MODE)
+    Añadir la clase .light-mode al body para activar
+    ================================================================= */
+    body.light-mode {
+        background-color: #f0f0f0;
+        background-image: none; /* Quitamos el fondo oscuro */
+        color: #000000;
+    }
+
+    body.light-mode .glass-sidebar {
+        background: rgba(240, 240, 240, 0.95);
+        border-right: 1px solid rgba(0, 0, 0, 0.1);
+    }
+
+    body.light-mode .glass-card {
+        background: rgba(255, 255, 255, 0.8);
+        border: 1px solid rgba(0, 0, 0, 0.1);
+    }
+
+    body.light-mode .viking-input {
+        background: rgba(255, 255, 255, 0.9);
+        border: 1px solid rgba(0, 0, 0, 0.1);
+        color: #000;
+    }
+
+    body.light-mode .calendar-container,
+    body.light-mode .cal-header {
+        background: #ffffff !important;
+        border: 1px solid #ddd;
+    }
+
+    body.light-mode .viking-table-row {
+        border-bottom: 1px solid rgba(0, 0, 0, 0.1);
     }

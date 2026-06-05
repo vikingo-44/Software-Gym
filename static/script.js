@@ -1769,16 +1769,47 @@ async function loadMusculacionMetadata() {
     }
 }
 
+/* =================================================================
+   FUNCIÓN DE CAMBIO DE TEMA (CORREGIDA PARA TU CSS)
+   ================================================================= */
+
 function toggleTheme() {
-    const theme = document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
-    document.documentElement.setAttribute('data-theme', theme);
-    localStorage.setItem('viking-theme', theme);
+    // 1. Alternamos la clase .light-mode en el body
+    const isLight = document.body.classList.toggle('light-mode');
+    
+    // 2. Guardamos la preferencia en localStorage
+    localStorage.setItem('viking-theme', isLight ? 'light' : 'dark');
+    
+    // 3. Actualizamos el icono si existe
+    const themeIcon = document.getElementById('theme-icon');
+    if (themeIcon) {
+        themeIcon.setAttribute('data-lucide', isLight ? 'moon' : 'sun');
+        // Si usas Lucide, actualizamos el renderizado
+        if (typeof lucide !== 'undefined') {
+            lucide.createIcons();
+        }
+    }
 }
 
 // Al cargar la página aplica el tema guardado
 document.addEventListener('DOMContentLoaded', () => {
     const savedTheme = localStorage.getItem('viking-theme') || 'dark';
-    document.documentElement.setAttribute('data-theme', savedTheme);
+    
+    // Aplicamos la clase si el tema guardado es light
+    if (savedTheme === 'light') {
+        document.body.classList.add('light-mode');
+    } else {
+        document.body.classList.remove('light-mode');
+    }
+
+    // Aseguramos que el icono coincida con el estado inicial
+    const themeIcon = document.getElementById('theme-icon');
+    if (themeIcon) {
+        themeIcon.setAttribute('data-lucide', savedTheme === 'light' ? 'moon' : 'sun');
+        if (typeof lucide !== 'undefined') {
+            lucide.createIcons();
+        }
+    }
 });
 
 /**
