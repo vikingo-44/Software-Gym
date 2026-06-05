@@ -209,8 +209,6 @@
         z-index: 20;
         transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
         overflow: hidden;
-        /* MEJORA: Asegurar que no se rompa el layout */
-        box-sizing: border-box;
     }
     .class-badge:hover { 
         transform: translateY(-2px) scale(0.98); 
@@ -528,22 +526,21 @@
     }
 
     /* =================================================================
-    MEJORA: MODO CLARO (LIGHT MODE) FORZADO
-    Añadir la clase .light-mode al body para activar
+    MEJORA: MODO CLARO (LIGHT MODE) FORZADO 100%
     ================================================================= */
     body.light-mode {
         background-color: #f0f0f0;
-        /* AQUI ESTA LA MAGIA: Mantenemos tu wallpaper, pero aclaramos el filtro oscuro a uno claro */
+        /* Mantenemos el wallpaper pero con un velo blanco para hacerlo modo claro */
         background-image: linear-gradient(rgba(245, 245, 245, 0.88), rgba(245, 245, 245, 0.88)), url('https://raw.githubusercontent.com/vikingo-44/Software-Gym/main/wallpaper.png') !important;
         color: #000000 !important;
     }
 
-    /* Forzamos que todo el texto dentro del modo claro sea oscuro para que no se pierda */
+    /* Forzamos texto general a negro en light mode */
     body.light-mode * {
         color: #000000;
     }
     
-    /* Excepciones sagradas: lo que debe mantenerse blanco o rojo sí o sí */
+    /* EXCEPCIONES: Textos que DEBEN mantenerse rojos o blancos */
     body.light-mode .viking-red, 
     body.light-mode .whatsapp-float,
     body.light-mode .metodo-chip.active,
@@ -552,45 +549,95 @@
     body.light-mode .nav-item.active {
         color: #FF0000 !important;
     }
-    body.light-mode .class-badge {
+    body.light-mode .class-badge,
+    body.light-mode .whatsapp-float,
+    body.light-mode .filter-btn.active {
         color: #ffffff !important; 
     }
-    body.light-mode .whatsapp-float {
+
+    /* CORRECCIÓN: FILTROS (Alumnos / Activos / Inactivos) */
+    body.light-mode .filter-btn {
+        background: rgba(0, 0, 0, 0.05) !important;
+        border: 1px solid rgba(0, 0, 0, 0.2) !important;
+        color: #555555 !important;
+    }
+    body.light-mode .filter-btn.active {
+        background: #FF0000 !important;
+        border-color: #FF0000 !important;
         color: #ffffff !important;
     }
 
+    /* CORRECCIÓN: FILTRO DE SUCURSALES (Los option de los selects) */
+    body.light-mode select option,
+    body.light-mode #filtro-clases-sucursal option {
+        background-color: #ffffff !important;
+        color: #000000 !important;
+    }
+
+    /* CORRECCIÓN: RUTINAS DE MUSCULACIÓN */
+    body.light-mode .rutina-dia-card {
+        background: rgba(255, 255, 255, 0.8) !important;
+        border: 1px solid rgba(0, 0, 0, 0.15) !important;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+    }
+    
+    /* MULTI-SELECTORES (Días de la semana, etc) */
+    body.light-mode .multi-select-container {
+        background: rgba(0, 0, 0, 0.05) !important;
+    }
+    body.light-mode .multi-option {
+        background: rgba(255, 255, 255, 0.8) !important;
+        border: 1px solid rgba(0, 0, 0, 0.2) !important;
+    }
+    body.light-mode .multi-option:has(input:checked) {
+        background: rgba(255, 0, 0, 0.1) !important;
+        border-color: #FF0000 !important;
+        color: #FF0000 !important;
+    }
+    body.light-mode .multi-option:has(input:checked) * {
+        color: #FF0000 !important;
+    }
+
+    /* PESTAÑAS Y BOTONES DE PAGO */
+    body.light-mode .payment-method-btn {
+        background: rgba(255, 255, 255, 0.8) !important;
+        border: 1px solid rgba(0, 0, 0, 0.2) !important;
+    }
+    body.light-mode .cobrar-tab {
+        color: #555555 !important;
+    }
+    body.light-mode .cobrar-tab.active {
+        color: #FF0000 !important;
+        border-bottom-color: #FF0000 !important;
+    }
+
+    /* ESTRUCTURA GENERAL MODO CLARO */
     body.light-mode .glass-sidebar {
         background: rgba(240, 240, 240, 0.95) !important;
         border-right: 1px solid rgba(0, 0, 0, 0.1) !important;
     }
-
     body.light-mode .glass-card {
         background: rgba(255, 255, 255, 0.85) !important;
         border: 1px solid rgba(0, 0, 0, 0.1) !important;
     }
-
     body.light-mode .viking-input {
-        background: rgba(255, 255, 255, 0.9) !important;
+        background: #ffffff !important;
         border: 1px solid rgba(0, 0, 0, 0.2) !important;
         color: #000000 !important;
     }
-
     body.light-mode .calendar-container,
     body.light-mode .cal-header {
         background: #ffffff !important;
         border: 1px solid rgba(0, 0, 0, 0.1) !important;
     }
-    
     body.light-mode .cal-cell {
         border-right: 1px solid rgba(0,0,0,0.05) !important; 
         border-bottom: 1px solid rgba(0,0,0,0.05) !important;
     }
-
     body.light-mode .viking-table-row {
         border-bottom: 1px solid rgba(0, 0, 0, 0.1) !important;
+        background: rgba(255, 255, 255, 0.5) !important;
     }
-    
-    body.light-mode .rutina-dia-card {
-        background: rgba(255, 255, 255, 0.6) !important;
-        border: 1px solid rgba(0, 0, 0, 0.1) !important;
+    body.light-mode .viking-table-row:hover {
+        background: rgba(0, 0, 0, 0.05) !important;
     }
