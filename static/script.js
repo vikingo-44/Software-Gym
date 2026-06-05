@@ -6340,7 +6340,7 @@ if (editorForm) {
 			const enviados = JSON.parse(localStorage.getItem('wa_enviados_viking') || "[]");
 
 			const listaFiltrada = state.alumnos.filter(a => {
-				// 1. FILTRO DE TELÉFONO OBLIGATORIO
+				// 1. Filtro de teléfono obligatorio
 				if (!a.telefono || a.telefono.trim() === "") return false;
 
 				// 2. Filtro por buscador
@@ -6353,27 +6353,32 @@ if (editorForm) {
 					return a.fecha_vencimiento && new Date(a.fecha_vencimiento) <= hoy;
 				}
 
-				// 4. Filtro "NUEVOS" (Basado en fecha_alta real)
+				// 4. Filtro NUEVOS (Fecha creación)
 				if (filtro === "nuevos") {
 					if (!a.fecha_creacion) return false;
-					const creacion = new Date(a.fecha_creacion);
-					const diffTime = Math.abs(hoy - creacion);
+					const alta = new Date(a.fecha_creacion);
+					const diffTime = Math.abs(hoy - alta);
 					const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 					return diffDays <= 7;
 				}
 
-				// 5. Filtro "TODOS"
+				// 5. Filtro TODOS
 				if (filtro === "todos") return true;
 
-				// 6. Filtro Ausencia (Basado en la fecha que inyectamos desde el backend)
+				// 6. Filtro Ausencia (La parte que no te funciona)
 				if (!a.ultima_asistencia) return false;
 
+				// FORZAMOS LA CREACIÓN DEL OBJETO FECHA
+				// Si a.ultima_asistencia es "2026-05-10", esto lo convierte correctamente
 				const ultima = new Date(a.ultima_asistencia);
-				const diffDays = Math.floor((hoy - ultima) / (1000 * 60 * 60 * 24));
 				
-				console.log(`🔍 Auditoría: ${a.nombre_completo} | Asistió hace: ${diffDays} días`);
+				// Calculamos la diferencia en días
+				const diffTime = hoy - ultima;
+				const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+				
+				console.log(`Auditoría: ${a.nombre_completo} | Asistencia: ${a.ultima_asistencia} | Días ausente: ${diffDays}`);
 
-				// Lógica de rangos excluyentes
+				// Aplicamos los rangos de manera excluyente
 				if (filtro === "7") return diffDays >= 7 && diffDays < 15;
 				if (filtro === "15") return diffDays >= 15 && diffDays < 30;
 				if (filtro === "30") return diffDays >= 30;
