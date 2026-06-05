@@ -497,7 +497,6 @@
 			</div>
 
 			<div id="view-rentabilidad" class="view-content hidden p-6 space-y-8">
-				<!-- CABECERA -->
 				<div class="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6">
 					<div>
 						<h2 class="text-5xl font-black text-white italic uppercase tracking-tighter">Rentabilidad</h2>
@@ -516,22 +515,32 @@
 					</div>
 				</div>
 
-				<!-- KPIs -->
 				<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-					<div class="bg-black/40 border border-white/5 p-8 rounded-3xl"><p class="text-white/30 text-[10px] uppercase tracking-widest">Inversión</p><h3 id="renta-total-compra" class="text-3xl font-black text-red-500 italic">$0</h3></div>
-					<div class="bg-black/40 border border-white/5 p-8 rounded-3xl"><p class="text-white/30 text-[10px] uppercase tracking-widest">Recaudación</p><h3 id="renta-total-venta" class="text-3xl font-black text-green-500 italic">$0</h3></div>
-					<div class="bg-black/40 border border-white/5 p-8 rounded-3xl border-l-4 border-l-white"><p class="text-white/30 text-[10px] uppercase tracking-widest">Ganancia Neta</p><h3 id="renta-utilidad" class="text-3xl font-black text-white italic">$0</h3></div>
+					<div class="bg-black/40 border border-white/5 p-8 rounded-3xl">
+						<p class="text-white/30 text-[10px] uppercase tracking-widest">Inversión</p>
+						<h3 id="renta-total-compra" class="text-3xl font-black text-red-500 italic">$0</h3>
+					</div>
+					<div class="bg-black/40 border border-white/5 p-8 rounded-3xl">
+						<p class="text-white/30 text-[10px] uppercase tracking-widest">Recaudación</p>
+						<h3 id="renta-total-venta" class="text-3xl font-black text-green-500 italic">$0</h3>
+					</div>
+					<div class="bg-black/40 border border-white/5 p-8 rounded-3xl border-l-4 border-l-white">
+						<p class="text-white/30 text-[10px] uppercase tracking-widest">Ganancia Neta</p>
+						<h3 id="renta-utilidad" class="text-3xl font-black text-white italic">$0</h3>
+					</div>
 				</div>
 
-				<!-- TABLA DE RENTABILIDAD Y STOCK CRÍTICO LADO A LADO -->
 				<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-					<!-- TABLA (OCUPA 2 COLUMNAS) -->
 					<div class="lg:col-span-2 bg-black/40 border border-white/5 rounded-3xl overflow-hidden shadow-2xl">
 						<div class="overflow-x-auto">
 							<table class="w-full text-left border-collapse">
 								<thead>
 									<tr class="bg-white/5 text-white/30 text-[10px] font-black uppercase tracking-[0.2em]">
-										<th class="p-6">Producto</th><th class="p-6">Inversión</th><th class="p-6">Ventas</th><th class="p-6">Diferencia</th><th class="p-6 text-right">Estado</th>
+										<th class="p-6">Producto</th>
+										<th class="p-6">Inversión</th>
+										<th class="p-6">Ventas</th>
+										<th class="p-6">Diferencia</th>
+										<th class="p-6 text-right">Estado</th>
 									</tr>
 								</thead>
 								<tbody id="tabla-rentabilidad-body" class="divide-y divide-white/5"></tbody>
@@ -539,36 +548,31 @@
 						</div>
 					</div>
 
-					<!-- REPOSICIÓN A LA DERECHA -->
 					<div class="bg-black/40 border border-white/5 p-6 rounded-3xl flex flex-col h-[500px]">
 						<div class="flex items-center justify-between mb-4">
 							<h4 class="text-[10px] font-black uppercase text-orange-500 italic tracking-widest">Stock Crítico</h4>
 							<i data-lucide="package" class="w-4 h-4 text-white/20"></i>
 						</div>
 						<ul id="listaReponer" class="flex-1 overflow-y-auto custom-scrollbar space-y-2 pr-2">
-							<!-- Se llena dinámicamente -->
-						</ul>
+							</ul>
 						<button onclick="switchView('caja')" class="mt-4 w-full py-3 bg-white/5 hover:bg-white/10 text-[9px] font-black uppercase italic text-white/50 rounded-xl transition-all">
 							Gestionar Stock
 						</button>
 					</div>
 				</div>
 
-				<!-- GRÁFICOS ABAJO -->
 				<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-					<!-- VENTAS DIARIAS (ANCHO COMPLETO) -->
-					<div class="md:col-span-2 glass-card p-6 rounded-[2.5rem] bg-black/40 border border-white/5 h-[350px]">
+					<div class="md:col-span-2 glass-card p-6 rounded-[2.5rem] bg-black/40 border border-white/5 h-[400px]">
 						<p class="text-[10px] font-black uppercase text-white/30 mb-4 text-center tracking-widest">Ventas Diarias</p>
 						<div class="flex-1 min-h-0"><canvas id="chartVentas"></canvas></div>
 					</div>
 
-					<!-- RENTABILIDAD Y CATEGORÍAS -->
-					<div class="glass-card p-6 rounded-[2.5rem] bg-black/40 border border-white/5 h-[300px]">
+					<div class="glass-card p-6 rounded-[2.5rem] bg-black/40 border border-white/5 h-[400px]">
 						<p class="text-[10px] font-black uppercase text-white/30 mb-4 text-center tracking-widest">Rentabilidad Producto</p>
 						<div class="flex-1 min-h-0"><canvas id="rentabilidadChart"></canvas></div>
 					</div>
 
-					<div class="glass-card p-6 rounded-[2.5rem] bg-black/40 border border-white/5 h-[300px]">
+					<div class="glass-card p-6 rounded-[2.5rem] bg-black/40 border border-white/5 h-[400px]">
 						<p class="text-[10px] font-black uppercase text-white/30 mb-4 text-center tracking-widest">Categorías</p>
 						<div class="flex-1 min-h-0"><canvas id="chartCategorias"></canvas></div>
 					</div>

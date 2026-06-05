@@ -5268,7 +5268,7 @@ if (editorForm) {
 		 * Procesa movimientos y stock para renderizar los 4 gráficos y alertas.
 		 */
 		function actualizarDashboard(movimientos, stock) {
-			// 1. VENTAS POR DÍA (Agrupado por día YYYY-MM-DD)
+			// 1. VENTAS POR DÍA
 			const ventasPorDia = {};
 			movimientos.filter(m => m.tipo && m.tipo.toLowerCase() === 'ingreso').forEach(mov => {
 				const fecha = mov.fecha ? mov.fecha.split(' ')[0].split('T')[0] : 'Sin fecha';
@@ -5281,6 +5281,7 @@ if (editorForm) {
 				const inv = hist.filter(m => m.tipo.toLowerCase() === 'egreso').reduce((a, b) => a + parseFloat(b.monto || 0), 0);
 				const rec = hist.filter(m => m.tipo.toLowerCase() === 'ingreso').reduce((a, b) => a + parseFloat(b.monto || 0), 0);
 				const cantV = hist.filter(m => m.tipo.toLowerCase() === 'ingreso').reduce((a, b) => a + parseInt(b.cantidad || 0), 0);
+				
 				return { 
 					nombre: p.nombre_producto, 
 					categoria: p.categoria || 'Otros', 
@@ -5297,22 +5298,24 @@ if (editorForm) {
 			// 3. REPOSICIÓN NECESARIA
 			const listaReponer = document.getElementById('listaReponer');
 			if (listaReponer) {
-				const lowStock = stock.filter(p => parseFloat(p.stock_actual) <= 5).sort((a, b) => a.stock_actual - b.stock_actual);
+				const lowStock = stock.filter(p => parseFloat(p.stock_actual) <= 5)
+									.sort((a, b) => a.stock_actual - b.stock_actual);
 				
 				listaReponer.innerHTML = lowStock.length > 0 
 					? lowStock.map(p => `
 						<li class="flex justify-between items-center bg-white/[0.03] p-3 rounded-xl border border-orange-500/20">
 							<span class="text-white text-xs font-black uppercase italic">${p.nombre_producto}</span>
 							<span class="text-orange-500 font-black text-sm">${p.stock_actual}</span>
-						</li>`)
-					.join('') 
+						</li>`).join('') 
 					: '<li class="text-white/40 italic text-center text-xs py-4">Todo en orden.</li>';
 			}
 
-			// 4. DESTRUCCIÓN SEGURA DE GRÁFICOS PREVIOS
+			// 4. DESTRUCCIÓN SEGURA
 			['chartVentas', 'rentabilidadChart', 'chartCategorias'].forEach(id => {
 				const canvas = document.getElementById(id);
-				if (canvas && canvas.chart instanceof Chart) canvas.chart.destroy();
+				if (canvas && canvas.chart instanceof Chart) {
+					canvas.chart.destroy();
+				}
 			});
 
 			// 5. RENDERIZADO DE GRÁFICOS
@@ -5367,20 +5370,13 @@ if (editorForm) {
 				options: { 
 					...commonOptions, 
 					scales: { 
-						y: { 
-							beginAtZero: true, 
-							grid: { color: 'rgba(255,255,255,0.05)' } 
-						}, 
-						y1: { 
-							position: 'right', 
-							beginAtZero: true, 
-							grid: { drawOnChartArea: false } 
-						} 
+						y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.05)' } }, 
+						y1: { position: 'right', beginAtZero: true, grid: { drawOnChartArea: false } } 
 					} 
 				}
 			});
 
-			// C. Categorías más vendidas
+			// C. Categorías (Corregido: validación para evitar gráfico roto)
 			const ctxC = document.getElementById('chartCategorias').getContext('2d');
 			ctxC.canvas.chart = new Chart(ctxC, {
 				type: 'bar',
@@ -5394,7 +5390,10 @@ if (editorForm) {
 				},
 				options: { 
 					...commonOptions, 
-					indexAxis: 'y' 
+					indexAxis: 'y',
+					scales: {
+						x: { beginAtZero: true, ticks: { precision: 0 } }
+					}
 				}
 			});
 		}
