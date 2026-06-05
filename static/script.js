@@ -1814,6 +1814,18 @@ document.addEventListener('DOMContentLoaded', () => {
     updateIcon(savedTheme);
 });
 
+function toggleLightMode() {
+    const body = document.body;
+    body.classList.toggle('light-mode');
+    
+    // Forzado extra: refrescamos el estilo si fuera necesario
+    if (body.classList.contains('light-mode')) {
+        document.documentElement.style.setProperty('--bg-image', 'none');
+    } else {
+        document.documentElement.style.setProperty('--bg-image', "linear-gradient(rgba(0, 0, 0, 0.94), rgba(0, 0, 0, 0.94)), url('https://raw.githubusercontent.com/vikingo-44/Software-Gym/main/wallpaper.png')");
+    }
+}
+
 /**
  * 2. FICHA TÉCNICA (Visualización de Rutina)
  */

@@ -528,37 +528,69 @@
     }
 
     /* =================================================================
-    MEJORA: MODO CLARO (LIGHT MODE)
+    MEJORA: MODO CLARO (LIGHT MODE) FORZADO
     Añadir la clase .light-mode al body para activar
     ================================================================= */
     body.light-mode {
         background-color: #f0f0f0;
-        background-image: none; /* Quitamos el fondo oscuro */
+        /* AQUI ESTA LA MAGIA: Mantenemos tu wallpaper, pero aclaramos el filtro oscuro a uno claro */
+        background-image: linear-gradient(rgba(245, 245, 245, 0.88), rgba(245, 245, 245, 0.88)), url('https://raw.githubusercontent.com/vikingo-44/Software-Gym/main/wallpaper.png') !important;
+        color: #000000 !important;
+    }
+
+    /* Forzamos que todo el texto dentro del modo claro sea oscuro para que no se pierda */
+    body.light-mode * {
         color: #000000;
+    }
+    
+    /* Excepciones sagradas: lo que debe mantenerse blanco o rojo sí o sí */
+    body.light-mode .viking-red, 
+    body.light-mode .whatsapp-float,
+    body.light-mode .metodo-chip.active,
+    body.light-mode .payment-method-btn.active,
+    body.light-mode .nav-item:hover,
+    body.light-mode .nav-item.active {
+        color: #FF0000 !important;
+    }
+    body.light-mode .class-badge {
+        color: #ffffff !important; 
+    }
+    body.light-mode .whatsapp-float {
+        color: #ffffff !important;
     }
 
     body.light-mode .glass-sidebar {
-        background: rgba(240, 240, 240, 0.95);
-        border-right: 1px solid rgba(0, 0, 0, 0.1);
+        background: rgba(240, 240, 240, 0.95) !important;
+        border-right: 1px solid rgba(0, 0, 0, 0.1) !important;
     }
 
     body.light-mode .glass-card {
-        background: rgba(255, 255, 255, 0.8);
-        border: 1px solid rgba(0, 0, 0, 0.1);
+        background: rgba(255, 255, 255, 0.85) !important;
+        border: 1px solid rgba(0, 0, 0, 0.1) !important;
     }
 
     body.light-mode .viking-input {
-        background: rgba(255, 255, 255, 0.9);
-        border: 1px solid rgba(0, 0, 0, 0.1);
-        color: #000;
+        background: rgba(255, 255, 255, 0.9) !important;
+        border: 1px solid rgba(0, 0, 0, 0.2) !important;
+        color: #000000 !important;
     }
 
     body.light-mode .calendar-container,
     body.light-mode .cal-header {
         background: #ffffff !important;
-        border: 1px solid #ddd;
+        border: 1px solid rgba(0, 0, 0, 0.1) !important;
+    }
+    
+    body.light-mode .cal-cell {
+        border-right: 1px solid rgba(0,0,0,0.05) !important; 
+        border-bottom: 1px solid rgba(0,0,0,0.05) !important;
     }
 
     body.light-mode .viking-table-row {
-        border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+        border-bottom: 1px solid rgba(0, 0, 0, 0.1) !important;
+    }
+    
+    body.light-mode .rutina-dia-card {
+        background: rgba(255, 255, 255, 0.6) !important;
+        border: 1px solid rgba(0, 0, 0, 0.1) !important;
     }
