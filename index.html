@@ -503,7 +503,7 @@
 						<p class="text-white/40 text-[10px] font-bold uppercase tracking-[0.3em] ml-1">Análisis Financiero GYMFIT PRO</p>
 					</div>
 					
-					<div class="flex flex-wrap items-center gap-3 bg-black/40 backdrop-blur-md p-2 rounded-2xl border border-white/10 shadow-xl">
+					<div class="flex flex-wrap items-center gap-3 bg-white/[0.03] backdrop-blur-md p-2 rounded-2xl border border-white/10 shadow-xl">
 						<select id="filtro-sucursal" class="bg-transparent text-[11px] text-white/70 border-r border-white/10 px-4 py-2 focus:outline-none uppercase font-bold cursor-pointer">
 							<option value="0">Toda Sucursal</option>
 						</select>
@@ -516,22 +516,22 @@
 				</div>
 
 				<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-					<div class="glass-card p-8 rounded-[2.5rem] bg-black/60 border border-white/10 backdrop-blur-md">
+					<div class="bg-white/[0.03] hover:bg-black/60 transition-all border border-white/10 backdrop-blur-md p-8 rounded-[2.5rem]">
 						<p class="text-white/30 text-[10px] uppercase tracking-widest">Inversión</p>
 						<h3 id="renta-total-compra" class="text-3xl font-black text-red-500 italic">$0</h3>
 					</div>
-					<div class="glass-card p-8 rounded-[2.5rem] bg-black/60 border border-white/10 backdrop-blur-md">
+					<div class="bg-white/[0.03] hover:bg-black/60 transition-all border border-white/10 backdrop-blur-md p-8 rounded-[2.5rem]">
 						<p class="text-white/30 text-[10px] uppercase tracking-widest">Recaudación</p>
 						<h3 id="renta-total-venta" class="text-3xl font-black text-green-500 italic">$0</h3>
 					</div>
-					<div class="glass-card p-8 rounded-[2.5rem] bg-black/60 border-l-4 border-l-white border-white/10 backdrop-blur-md">
+					<div class="bg-white/[0.03] hover:bg-black/60 transition-all border-l-4 border-l-white border border-white/10 backdrop-blur-md p-8 rounded-[2.5rem]">
 						<p class="text-white/30 text-[10px] uppercase tracking-widest">Ganancia Neta</p>
 						<h3 id="renta-utilidad" class="text-3xl font-black text-white italic">$0</h3>
 					</div>
 				</div>
 
 				<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-					<div class="lg:col-span-2 glass-card rounded-[2.5rem] bg-black/60 border border-white/10 backdrop-blur-md overflow-hidden shadow-2xl">
+					<div class="lg:col-span-2 bg-white/[0.03] hover:bg-black/60 transition-all border border-white/10 backdrop-blur-md rounded-[2.5rem] overflow-hidden shadow-2xl">
 						<div class="overflow-x-auto">
 							<table class="w-full text-left border-collapse">
 								<thead>
@@ -548,7 +548,7 @@
 						</div>
 					</div>
 
-					<div class="glass-card p-8 rounded-[2.5rem] bg-black/60 border border-orange-500/20 backdrop-blur-md flex flex-col h-[500px]">
+					<div class="bg-white/[0.03] hover:bg-black/60 transition-all border border-orange-500/20 backdrop-blur-md p-8 rounded-[2.5rem] flex flex-col h-[500px]">
 						<div class="flex justify-between items-center mb-6 border-b border-white/5 pb-4">
 							<div>
 								<h4 class="text-sm font-black uppercase italic text-orange-500 tracking-widest">
@@ -566,22 +566,23 @@
 				</div>
 
 				<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-					<div class="md:col-span-2 glass-card p-8 rounded-[2.5rem] bg-black/60 border border-white/10 backdrop-blur-md h-[400px]">
+					<div class="md:col-span-2 bg-white/[0.03] hover:bg-black/60 transition-all border border-white/10 backdrop-blur-md p-8 rounded-[2.5rem] h-[400px]">
 						<p class="text-[10px] font-black uppercase text-white/30 mb-6 text-center tracking-widest">Ventas Diarias</p>
 						<div class="flex-1 min-h-0"><canvas id="chartVentas"></canvas></div>
 					</div>
 
-					<div class="glass-card p-8 rounded-[2.5rem] bg-black/60 border border-white/10 backdrop-blur-md h-[400px]">
+					<div class="bg-white/[0.03] hover:bg-black/60 transition-all border border-white/10 backdrop-blur-md p-8 rounded-[2.5rem] h-[400px]">
 						<p class="text-[10px] font-black uppercase text-white/30 mb-6 text-center tracking-widest">Rentabilidad Producto</p>
 						<div class="flex-1 min-h-0"><canvas id="rentabilidadChart"></canvas></div>
 					</div>
 
-					<div class="glass-card p-8 rounded-[2.5rem] bg-black/60 border border-white/10 backdrop-blur-md h-[400px]">
+					<div class="bg-white/[0.03] hover:bg-black/60 transition-all border border-white/10 backdrop-blur-md p-8 rounded-[2.5rem] h-[400px]">
 						<p class="text-[10px] font-black uppercase text-white/30 mb-6 text-center tracking-widest">Categorías</p>
 						<div class="flex-1 min-h-0"><canvas id="chartCategorias"></canvas></div>
 					</div>
 				</div>
 			</div>
+			
             <div id="view-cobrar" class="view-content hidden">
 				<div class="grid grid-cols-1 lg:grid-cols-3 gap-10 h-full">
 					
