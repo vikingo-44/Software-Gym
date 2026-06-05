@@ -6205,6 +6205,8 @@ if (editorForm) {
 
 		// ⚔️ 1. ABRIR CENTRAL DE WHATSAPP
 		function openWhatsAppCentral() {
+			console.log("Iniciando openWhatsAppCentral...");
+
 			// El ID wa-alumno-select ahora es un DIV, lo usamos como contenedor
 			const contenedor = document.getElementById('wa-alumno-select');
 			const alumnosConTel = state.alumnos.filter(a => a.telefono && a.telefono.trim() !== "");
@@ -6217,7 +6219,7 @@ if (editorForm) {
 			// Agregamos la clase 'wa-alumno-check' para que las otras funciones puedan encontrarlos
 			contenedor.innerHTML = alumnosConTel.map(a => 
 				`<label class="flex items-center gap-3 py-2 px-2 hover:bg-white/5 rounded-xl cursor-pointer">
-					<input type="checkbox" class="wa-alumno-check accent-green-600 w-4 h-4" value="${a.telefono}" data-nombre="${a.nombre_completo}">
+					<input type="checkbox" class="wa-alumno-check accent-green-600 w-4 h-4" value="${a.telefono}" data-nombre="${a.nombre_completo}" data-dni="${a.dni}">
 					<span class="text-xs font-bold text-white uppercase">${a.nombre_completo.toUpperCase()}</span>
 					<span class="ml-auto text-[9px] text-white/30">${a.telefono}</span>
 				</label>`
@@ -6238,18 +6240,21 @@ if (editorForm) {
 
 		// ⚔️ 2. ACTUALIZAR TEXTO AL ELEGIR PREDEFINIDO
 		function updateWAMessage(val) {
+			console.log("Actualizando mensaje...");
 			const textarea = document.getElementById('wa-mensaje-texto');
 			// Buscamos todos los checkboxes tildados
 			const checkboxes = document.querySelectorAll('.wa-alumno-check:checked');
 			
 			// Si hay exactamente 1 alumno seleccionado, tomamos su nombre. 
-			// Si hay más o ninguno, ponemos "Vikingo" (o el genérico que prefieras)
+			// Si hay más o ninguno, ponemos "Vikingo" (o el genérico que preferís)
 			let nombreAlumno = "Vikingo";
 			if (checkboxes.length === 1) {
 				nombreAlumno = checkboxes[0].getAttribute('data-nombre') || "Vikingo";
 			} else if (checkboxes.length > 1) {
-				nombreAlumno = "Vikingo"; // O podrías poner "Guerrero" si preferís
+				nombreAlumno = "Vikingo";
 			}
+
+			console.log("Nombre detectado para el mensaje:", nombreAlumno);
 
 			if (!val) {
 				textarea.value = "";
@@ -6263,20 +6268,28 @@ if (editorForm) {
 
 		// ⚔️ 3. EL DISPARO FINAL
 		function sendVikingWhatsApp() {
+			console.log("Iniciando envío de WhatsApp...");
+			
 			// Buscamos todos los checkboxes tildados
 			const checkboxes = document.querySelectorAll('.wa-alumno-check:checked');
 			const mensaje = document.getElementById('wa-mensaje-texto').value;
 			const trigger = document.getElementById('whatsapp-trigger');
 
 			if (checkboxes.length === 0 || !mensaje) {
+				console.warn("Faltan datos para el envío.");
 				return showVikingToast("Falta seleccionar alumnos o escribir mensaje", true);
 			}
+
+			console.log(`Se detectaron ${checkboxes.length} alumnos para contactar.`);
 
 			// Recorremos cada checkbox tildado
 			checkboxes.forEach((cb, index) => {
 				const telefono = cb.value;
 				const nombreAlumno = cb.getAttribute('data-nombre') || "Vikingo";
+				const dni = cb.getAttribute('data-dni');
 				
+				console.log(`Procesando alumno: ${nombreAlumno} (DNI: ${dni})`);
+
 				// Limpiamos el teléfono
 				let telLimpio = telefono.replace(/\D/g, '');
 				
@@ -6286,11 +6299,12 @@ if (editorForm) {
 					mensajePersonalizado = mensaje.replace(/¡Hola .*?! 👋/, `¡Hola ${nombreAlumno.split(' ')[0]}! 👋`);
 				}
 
-				const dni = cb.getAttribute('data-dni');
+				// Registro de contacto en localStorage
 				let enviados = JSON.parse(localStorage.getItem('wa_enviados_viking') || "[]");
-				if (!enviados.includes(dni)) {
+				if (dni && !enviados.includes(dni)) {
 					enviados.push(dni);
 					localStorage.setItem('wa_enviados_viking', JSON.stringify(enviados));
+					console.log(`DNI ${dni} guardado como contactado.`);
 				}
 
 				// Generamos la URL
@@ -6298,6 +6312,7 @@ if (editorForm) {
 
 				// Disparamos el trigger con un pequeño delay para que no se bloqueen las pestañas
 				setTimeout(() => {
+					console.log(`Abriendo chat para: ${nombreAlumno}`);
 					trigger.href = url;
 					trigger.click();
 				}, index * 800);
@@ -6319,43 +6334,33 @@ if (editorForm) {
 			const enviados = JSON.parse(localStorage.getItem('wa_enviados_viking') || "[]");
 
 			const listaFiltrada = state.alumnos.filter(a => {
+				// 1. Validaciones básicas
 				if (!a.telefono || a.telefono.trim() === "") return false;
 
+				// 2. Filtro por buscador
 				const coincide = a.nombre_completo.toLowerCase().includes(inputBusqueda) || 
 								(a.dni && a.dni.toString().includes(inputBusqueda));
 				if (!coincide) return false;
 
+				// 3. Filtro por estado
 				if (filtro === "todos") return true;
 
 				if (filtro === "vencidos") {
-					if (!a.fecha_vencimiento) return false;
-					return new Date(a.fecha_vencimiento) <= hoy;
+					return a.fecha_vencimiento && new Date(a.fecha_vencimiento) <= hoy;
 				}
 
-				if (!a.ultima_asistencia) return true; // Nuevos sin historial
+				// 4. Filtro por ausencia (con auditoría)
+				if (!a.ultima_asistencia) return false; // Excluimos si no hay registro para no ensuciar
 
 				const ultima = new Date(a.ultima_asistencia);
-				// Calculamos días de diferencia
 				const diffDays = Math.floor((hoy - ultima) / (1000 * 60 * 60 * 24));
-				console.log(`Auditoría: ${a.nombre_completo} | Días: ${diffDays}`);
+				
+				// Log de auditoría para detectar errores
+				console.log(`Auditoría: ${a.nombre_completo} | Días ausente: ${diffDays}`);
 
-				// --- CAJA NEGRA DE AUDITORÍA ---
-				console.log(`Alumno: ${a.nombre_completo} | Última: ${a.ultima_asistencia} | Días ausente: ${diffDays}`);
-				// -------------------------------
-
-				// LOGICA DE RANGOS ESTRICTOS
-				if (filtro === "7") {
-					// Solo alumnos que no vienen hace 7 a 14 días
-					return diffDays >= 7 && diffDays < 15;
-				}
-				if (filtro === "15") {
-					// Solo alumnos que no vienen hace 15 a 30 días
-					return diffDays >= 15 && diffDays < 30;
-				}
-				if (filtro === "30") {
-					// Solo alumnos que no vienen hace más de 30 días
-					return diffDays >= 30;
-				}
+				if (filtro === "7") return diffDays >= 7 && diffDays < 15;
+				if (filtro === "15") return diffDays >= 15 && diffDays < 30;
+				if (filtro === "30") return diffDays >= 30;
 				
 				return false;
 			});
@@ -6369,14 +6374,12 @@ if (editorForm) {
 			`;
 
 			html += listaFiltrada.map(a => {
-				// Verificamos si este DNI está en la lista de enviados
-				const yaContactado = enviados.includes(a.dni.toString());
+				const yaContactado = enviados.includes(a.dni ? a.dni.toString() : "");
 				
 				return `
 					<label class="flex items-center gap-3 py-2 px-2 hover:bg-white/5 rounded-xl cursor-pointer">
 						<input type="checkbox" class="wa-alumno-check accent-green-600 w-4 h-4" value="${a.telefono}" data-nombre="${a.nombre_completo}" data-dni="${a.dni}">
 						
-						<!-- El puntito verde si ya fue contactado -->
 						<span class="${yaContactado ? 'text-green-500' : 'text-transparent'} text-[10px]">●</span>
 						
 						<span class="text-xs font-bold text-white uppercase">${a.nombre_completo.toUpperCase()}</span>
