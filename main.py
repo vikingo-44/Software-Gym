@@ -963,8 +963,8 @@ def get_alumnos(db: Session = Depends(database.get_db)):
                 # ⚔️ FECHA DE CREACIÓN PARA EL FILTRO NUEVOS
                 "fecha_creacion": al.fecha_creacion.isoformat() if getattr(al, 'fecha_creacion', None) else None,
                 
-                # FECHA DE ÚLTIMA ASISTENCIA REAL (Inyectada desde el historial)
-                "ultima_asistencia": ultima_fecha.isoformat() if ultima_fecha else None,
+                # FECHA DE ÚLTIMA ASISTENCIA REAL (Inyectada desde el historial - formateada como fecha pura)
+                "ultima_asistencia": ultima_fecha.date().isoformat() if ultima_fecha else None,
                 
                 "fecha_ultima_renovacion": al.fecha_ultima_renovacion.isoformat() if getattr(al, 'fecha_ultima_renovacion', None) else None,
                 
