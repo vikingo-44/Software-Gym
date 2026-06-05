@@ -1773,18 +1773,26 @@ async function loadMusculacionMetadata() {
    FUNCIÓN DE CAMBIO DE TEMA (CORREGIDA PARA TU CSS)
    ================================================================= */
 
+// Función para cambiar el tema
 function toggleTheme() {
+    console.log("Cambiando tema..."); // Esto te dirá si el botón realmente está llamando a la función
+    
     // 1. Alternamos la clase .light-mode en el body
     const isLight = document.body.classList.toggle('light-mode');
     
     // 2. Guardamos la preferencia en localStorage
     localStorage.setItem('viking-theme', isLight ? 'light' : 'dark');
     
-    // 3. Actualizamos el icono si existe
+    // 3. Actualizamos el icono
+    updateIcon(isLight ? 'light' : 'dark');
+}
+
+// Función auxiliar para actualizar el icono
+function updateIcon(theme) {
     const themeIcon = document.getElementById('theme-icon');
     if (themeIcon) {
-        themeIcon.setAttribute('data-lucide', isLight ? 'moon' : 'sun');
-        // Si usas Lucide, actualizamos el renderizado
+        themeIcon.setAttribute('data-lucide', theme === 'light' ? 'moon' : 'sun');
+        // Re-renderizamos iconos de Lucide
         if (typeof lucide !== 'undefined') {
             lucide.createIcons();
         }
@@ -1795,21 +1803,15 @@ function toggleTheme() {
 document.addEventListener('DOMContentLoaded', () => {
     const savedTheme = localStorage.getItem('viking-theme') || 'dark';
     
-    // Aplicamos la clase si el tema guardado es light
+    // Aplicamos clase inicial
     if (savedTheme === 'light') {
         document.body.classList.add('light-mode');
     } else {
         document.body.classList.remove('light-mode');
     }
 
-    // Aseguramos que el icono coincida con el estado inicial
-    const themeIcon = document.getElementById('theme-icon');
-    if (themeIcon) {
-        themeIcon.setAttribute('data-lucide', savedTheme === 'light' ? 'moon' : 'sun');
-        if (typeof lucide !== 'undefined') {
-            lucide.createIcons();
-        }
-    }
+    // Aplicamos icono inicial
+    updateIcon(savedTheme);
 });
 
 /**
