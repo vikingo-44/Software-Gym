@@ -1840,7 +1840,7 @@ window.openFichaTecnica = async function(alumnoId) {
         rutinaContainer.innerHTML = `
             <div class="col-span-2 py-16 flex flex-col items-center justify-center space-y-4">
                 <div class="w-10 h-10 border-2 border-red-600 border-t-transparent rounded-full animate-spin"></div>
-                <p class="text-[10px] text-white/20 italic uppercase tracking-[0.3em] animate-pulse text-center">Sincronizando Arsenal...</p>
+                <p class="text-[10px] text-black/40 dark:text-white/20 italic uppercase tracking-[0.3em] animate-pulse text-center">Sincronizando Arsenal...</p>
             </div>
         `;
     }
@@ -1873,20 +1873,19 @@ window.openFichaTecnica = async function(alumnoId) {
         // --- LÓGICA DE SEMANAS DINÁMICAS ---
         let tabsHTML = '';
         if (esProg) {
-            // Buscamos cuál es la semana más alta que tiene cargada esta rutina
             const todasLasSemanas = (rutinaActiva.dias || []).flatMap(d => 
                 (d.ejercicios || []).map(ex => ex.semana_id)
             );
             const maxSemana = todasLasSemanas.length > 0 ? Math.max(...todasLasSemanas) : 1;
 
             tabsHTML = `
-                <div class="flex gap-2 mb-8 bg-black/40 p-2 rounded-2xl border border-white/5 overflow-x-auto no-scrollbar">
+                <div class="flex gap-2 mb-8 bg-black/5 dark:bg-black/40 p-2 rounded-2xl border border-black/5 dark:border-white/5 overflow-x-auto no-scrollbar">
                     ${Array.from({length: maxSemana}).map((_, i) => {
                         const id = i + 1;
                         return `
                         <button onclick="window.changeFichaSemana(${id}, ${alumnoId})"
                             class="flex-1 min-w-[100px] py-3 rounded-xl font-black italic uppercase text-[10px] transition-all
-                            ${semIdActivo === id ? 'bg-red-600 text-black shadow-[0_0_20px_rgba(255,0,0,0.3)]' : 'bg-white/5 text-white/30 border border-white/10'}">
+                            ${semIdActivo === id ? 'bg-red-600 text-white shadow-[0_0_20px_rgba(255,0,0,0.3)]' : 'bg-black/5 dark:bg-white/5 text-black/50 dark:text-white/30 border border-black/10 dark:border-white/10'}">
                             Semana ${id}
                         </button>`;
                     }).join('')}
@@ -1905,41 +1904,40 @@ window.openFichaTecnica = async function(alumnoId) {
             if (esProg && ejerciciosFiltrados.length === 0) return ''; 
 
             return `
-            <div class="bg-white/2 rounded-[2rem] border border-white/5 overflow-hidden mb-4 transition-all">
+            <div class="bg-black/5 dark:bg-white/5 rounded-[2rem] border border-black/5 dark:border-white/5 overflow-hidden mb-4 transition-all">
                 <button onclick="window.toggleFichaElement('${diaId}')" class="w-full flex items-center justify-between p-6 group text-left">
                     <div class="flex items-center gap-4">
-                        <div class="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center font-black italic text-red-600">
+                        <div class="w-12 h-12 rounded-2xl bg-black/5 dark:bg-white/5 flex items-center justify-center font-black italic text-red-600">
                             ${d.nombre_dia.charAt(0).toUpperCase()}
                         </div>
                         <div>
-                            <span class="text-[13px] font-black italic uppercase text-white group-hover:text-red-500">${d.nombre_dia}</span>
-                            <p class="text-[9px] text-white/30 font-bold uppercase tracking-widest">${ejerciciosFiltrados.length} Ejercicios</p>
+                            <span class="text-[13px] font-black italic uppercase text-black dark:text-white group-hover:text-red-500">${d.nombre_dia}</span>
+                            <p class="text-[9px] text-black/50 dark:text-white/30 font-bold uppercase tracking-widest">${ejerciciosFiltrados.length} Ejercicios</p>
                         </div>
                     </div>
-                    <i data-lucide="chevron-down" class="w-5 h-5 text-white/20 transition-transform ${isOpen ? 'rotate-180' : ''}"></i>
+                    <i data-lucide="chevron-down" class="w-5 h-5 text-black/20 dark:text-white/20 transition-transform ${isOpen ? 'rotate-180' : ''}"></i>
                 </button>
-                <div id="${diaId}" class="${isOpen ? '' : 'hidden'} p-6 space-y-6 bg-black/40 border-t border-white/5">
+                <div id="${diaId}" class="${isOpen ? '' : 'hidden'} p-6 space-y-6 bg-black/5 dark:bg-black/40 border-t border-black/5 dark:border-white/5">
                     ${ejerciciosFiltrados.map(ex => {
                         const cleanName = (ex.ejercicio_obj?.nombre || "Ejercicio").trim();
                         const series = ex.series_detalle || [];
-                        // Intentamos captar de ambos campos por las dudas de la DB
                         const notaTexto = ex.comentario || ex.comentarios || "";
 
                         return `
                             <div class="flex flex-col border-l-2 border-red-600/30 pl-6 relative">
-                                <p class="text-[14px] font-black uppercase italic text-white mb-4">${cleanName}</p>
+                                <p class="text-[14px] font-black uppercase italic text-black dark:text-white mb-4">${cleanName}</p>
                                 <div class="flex flex-col gap-2">
                                     ${series.map(s => `
-                                        <div class="grid grid-cols-4 items-center bg-white/[0.03] px-5 py-3 rounded-2xl border border-white/5 text-center">
+                                        <div class="grid grid-cols-4 items-center bg-black/5 dark:bg-white/[0.03] px-5 py-3 rounded-2xl border border-black/5 dark:border-white/5 text-center">
                                             <span class="text-[10px] font-black text-red-600">#${s.numero_serie}</span>
-                                            <span class="text-[11px] font-black text-white">${s.repeticiones} Reps</span>
-                                            <span class="text-[11px] font-black text-white">${s.peso}kg</span>
-                                            <span class="text-[9px] text-white/40 italic">${s.descanso}</span>
+                                            <span class="text-[11px] font-black text-black dark:text-white">${s.repeticiones} Reps</span>
+                                            <span class="text-[11px] font-black text-black dark:text-white">${s.peso}kg</span>
+                                            <span class="text-[9px] text-black/40 dark:text-white/40 italic">${s.descanso}</span>
                                         </div>
                                     `).join('')}
                                 </div>
-                                ${notaTexto ? `<div class="mt-3 p-3 bg-red-600/5 rounded-xl border border-red-600/10">
-                                    <p class="text-[9px] text-white/60 italic font-medium"><span class="text-red-600 font-black not-italic mr-1">CONSIGNA:</span> ${notaTexto}</p>
+                                ${notaTexto ? `<div class="mt-3 p-3 bg-red-600/10 rounded-xl border border-red-600/10">
+                                    <p class="text-[9px] text-black/60 dark:text-white/60 italic font-medium"><span class="text-red-600 font-black not-italic mr-1">CONSIGNA:</span> ${notaTexto}</p>
                                 </div>` : ''}
                             </div>`;
                     }).join('')}
@@ -1950,14 +1948,14 @@ window.openFichaTecnica = async function(alumnoId) {
         // --- RENDER FINAL CON VENCIMIENTO ---
         rutinaContainer.innerHTML = `
         <div class="col-span-2 mb-8 animate-in fade-in slide-in-from-bottom-4">
-            <div class="bg-zinc-900/50 border border-white/10 rounded-[2.5rem] overflow-hidden shadow-2xl">
+            <div class="bg-zinc-100 dark:bg-zinc-900/50 border border-black/10 dark:border-white/10 rounded-[2.5rem] overflow-hidden shadow-2xl">
                 <div class="flex items-center justify-between p-8">
                     <div class="flex items-center gap-6 cursor-pointer" onclick="window.toggleFichaElement('${objetivoId}')">
-                        <div class="w-1.5 h-12 viking-bg-red rounded-full"></div>
+                        <div class="w-1.5 h-12 bg-red-600 rounded-full"></div>
                         <div class="text-left">
-                            <h5 class="text-xl font-black italic uppercase text-white leading-none">${rutinaActiva.nombre_grupo || 'Rutina Actual'}</h5>
+                            <h5 class="text-xl font-black italic uppercase text-black dark:text-white leading-none">${rutinaActiva.nombre_grupo || 'Rutina Actual'}</h5>
                             <div class="flex flex-col gap-1 mt-2">
-                                <p class="text-[9px] text-white/40 font-bold italic uppercase tracking-widest">OBJETIVO: ${rutinaActiva.descripcion || 'General'}</p>
+                                <p class="text-[9px] text-black/40 dark:text-white/40 font-bold italic uppercase tracking-widest">OBJETIVO: ${rutinaActiva.descripcion || 'General'}</p>
                                 <p class="text-[9px] text-red-600 font-black uppercase tracking-widest flex items-center gap-1">
                                     <i data-lucide="calendar" class="w-3 h-3"></i> 
                                     VENCE EL: ${rutinaActiva.fecha_vencimiento ? new Date(rutinaActiva.fecha_vencimiento).toLocaleDateString('es-AR') : 'S/D'}
@@ -1967,10 +1965,10 @@ window.openFichaTecnica = async function(alumnoId) {
                     </div>
                     <div class="flex items-center gap-4">
                         ${isStaff ? `<button onclick="closeModal('modal-ficha-tecnica'); window.openRoutineEditor(${alumnoId}, true)" class="bg-amber-600 hover:bg-amber-500 text-white px-5 py-2.5 rounded-xl text-[10px] font-black uppercase transition-colors">EDITAR</button>` : ''}
-                        <i data-lucide="chevron-down" class="w-6 h-6 text-white/20 cursor-pointer" onclick="window.toggleFichaElement('${objetivoId}')"></i>
+                        <i data-lucide="chevron-down" class="w-6 h-6 text-black/20 dark:text-white/20 cursor-pointer" onclick="window.toggleFichaElement('${objetivoId}')"></i>
                     </div>
                 </div>
-                <div id="${objetivoId}" class="p-8 bg-black/30 border-t border-white/5">
+                <div id="${objetivoId}" class="p-8 bg-black/5 dark:bg-black/30 border-t border-black/5 dark:border-white/5">
                     ${tabsHTML}
                     ${diasHTML}
                 </div>
@@ -1978,8 +1976,8 @@ window.openFichaTecnica = async function(alumnoId) {
         </div>`;
     } else {
         rutinaContainer.innerHTML = `
-            <div class="col-span-2 p-20 text-center border-2 border-dashed border-white/5 rounded-[3rem]">
-                <p class="opacity-20 font-black uppercase italic tracking-[0.4em] text-sm">Sin Arsenal Asignado</p>
+            <div class="col-span-2 p-20 text-center border-2 border-dashed border-black/10 dark:border-white/5 rounded-[3rem]">
+                <p class="opacity-30 font-black uppercase italic tracking-[0.4em] text-sm text-black dark:text-white">Sin Arsenal Asignado</p>
             </div>`;
     }
 
