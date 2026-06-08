@@ -2153,12 +2153,12 @@ window.renderWizardStep = function() {
         const data = state.routineWizard.config[currentKey] || { label: `JORNADA ${state.routineWizard.diaActivoWizard}`, objetivo_dia: '', exercises: [] };
 
         body.innerHTML = `
-            <div class="flex h-full w-full overflow-hidden ${isLight ? 'bg-white' : 'bg-zinc-950'}">
-                <div class="w-[320px] border-r ${isLight ? 'border-black/10 bg-black/5' : 'border-white/5 bg-black/40'} flex flex-col shrink-0">
-                    <div class="p-6 border-b ${isLight ? 'border-black/10 bg-black/5' : 'border-white/5 bg-black/20'} space-y-4">
+            <div class="flex h-full w-full overflow-hidden bg-white dark:bg-zinc-950">
+                <div class="w-[320px] border-r border-black/10 dark:border-white/5 flex flex-col bg-black/5 dark:bg-black/40 shrink-0">
+                    <div class="p-6 border-b border-black/10 dark:border-white/5 space-y-4">
                         <label class="text-[9px] font-black text-red-600 uppercase tracking-[0.3em] block italic">Arsenal Disponible</label>
                         <input type="text" placeholder="BUSCAR EJERCICIO..." 
-                            class="viking-input h-12 text-[10px] font-black italic ${isLight ? 'border-black/20 bg-white text-black' : 'border-white/10 bg-black/40 text-white'} focus:border-red-600" 
+                            class="viking-input h-12 text-[10px] font-black italic bg-white dark:bg-black/40 border-black/20 dark:border-white/10 text-black dark:text-white focus:border-red-600" 
                             oninput="window.renderWizardLib(this.value)">
                     </div>
                     <div class="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar" id="wizard-lib-results"></div>
@@ -2166,7 +2166,7 @@ window.renderWizardStep = function() {
 
                 <div class="flex-1 flex flex-col min-w-0">
                     ${isProg ? `
-                    <div class="px-8 py-4 ${isLight ? 'bg-black/10 border-black/10' : 'bg-black/60 border-white/5'} border-b flex gap-3 overflow-x-auto no-scrollbar shrink-0">
+                    <div class="px-8 py-4 bg-black/10 dark:bg-black/60 border-b border-black/10 dark:border-white/5 flex gap-3 overflow-x-auto no-scrollbar shrink-0">
                         ${Array.from({length: numSemanas}).map((_, i) => {
                             const w = i + 1;
                             const activa = state.routineWizard.semanaActivaWizard === w;
@@ -2176,7 +2176,7 @@ window.renderWizardStep = function() {
                         }).join('')}
                     </div>` : ''}
 
-                    <div class="px-8 py-4 ${isLight ? 'bg-black/5 border-black/10' : 'bg-zinc-900 border-white/5'} border-b flex gap-3 overflow-x-auto no-scrollbar shrink-0">
+                    <div class="px-8 py-4 bg-black/5 dark:bg-zinc-900 border-b border-black/10 dark:border-white/5 flex gap-3 overflow-x-auto no-scrollbar shrink-0">
                         ${Array.from({length: state.routineWizard.cantDias}).map((_, i) => {
                             const d = i + 1;
                             const activa = state.routineWizard.diaActivoWizard === d;
@@ -2186,23 +2186,23 @@ window.renderWizardStep = function() {
                         }).join('')}
                     </div>
 
-                    <div id="wizard-main-scroll-area" class="flex-1 overflow-y-auto p-8 lg:p-12 custom-scrollbar bg-gradient-to-b from-transparent ${isLight ? 'to-black/10' : 'to-black/20'}">
+                    <div id="wizard-main-scroll-area" class="flex-1 overflow-y-auto p-8 lg:p-12 custom-scrollbar bg-gradient-to-b from-transparent to-black/10 dark:to-black/20">
                         <div class="w-full max-w-[1200px] mx-auto space-y-8 animate-in fade-in duration-500">
-                            <div class="flex flex-col gap-6 ${isLight ? 'bg-black/5 border-black/10' : 'bg-white/5 border-white/10'} p-8 rounded-[2.5rem] border relative overflow-hidden">
+                            <div class="flex flex-col gap-6 bg-black/5 dark:bg-white/5 p-8 rounded-[2.5rem] border border-black/10 dark:border-white/10 relative overflow-hidden">
                                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 relative z-10">
                                     <div class="space-y-2">
-                                        <label class="text-[10px] font-black ${isLight ? 'text-black/40' : 'text-white/20'} uppercase tracking-widest">Título de la Jornada</label>
+                                        <label class="text-[10px] font-black text-black/40 dark:text-white/20 uppercase tracking-widest">Título de la Jornada</label>
                                         <input type="text" value="${data.label}" oninput="window.updateSessionData('${currentKey}', 'label', this.value)" 
-                                            class="viking-input !text-black dark:!text-white !bg-white dark:!bg-black/40 !h-14 !text-sm font-black uppercase italic ${isLight ? 'border-black/20' : 'border-white/10'}">
+                                            class="viking-input !h-14 !text-sm font-black uppercase italic !text-black dark:!text-white !bg-white dark:!bg-black/40 border-black/20 dark:border-white/10">
                                     </div>
                                     <div class="space-y-2">
-                                        <label class="text-[10px] font-black ${isLight ? 'text-black/40' : 'text-white/20'} uppercase tracking-widest">Objetivo del Día</label>
+                                        <label class="text-[10px] font-black text-black/40 dark:text-white/20 uppercase tracking-widest">Objetivo del Día</label>
                                         <input type="text" value="${data.objetivo_dia || ''}" oninput="window.updateSessionData('${currentKey}', 'objetivo_dia', this.value)" 
-                                            class="viking-input !text-black dark:!text-white !bg-white dark:!bg-black/40 !h-14 !text-sm font-medium ${isLight ? 'border-black/20' : 'border-white/10'}">
+                                            class="viking-input !h-14 !text-sm font-medium !text-black dark:!text-white !bg-white dark:!bg-black/40 border-black/20 dark:border-white/10">
                                     </div>
                                 </div>
                                 ${isProg && state.routineWizard.semanaActivaWizard > 1 ? `
-                                <div class="flex justify-end pt-4 border-t ${isLight ? 'border-black/10' : 'border-white/5'} relative z-10">
+                                <div class="flex justify-end pt-4 border-t border-black/10 dark:border-white/5 relative z-10">
                                     <button onclick="window.clonePrevWeekDay(${state.routineWizard.diaActivoWizard})" 
                                         class="bg-amber-600/20 text-amber-600 border border-amber-600/30 px-6 py-3 rounded-2xl text-[10px] font-black uppercase italic hover:bg-amber-600 hover:text-black transition-all shadow-xl flex items-center gap-2">
                                         <i data-lucide="copy" class="w-4 h-4"></i> CLONAR SEMANA ANTERIOR
@@ -2211,7 +2211,7 @@ window.renderWizardStep = function() {
                             </div>
                             <div class="space-y-4" id="wizard-exercises-list">
                                 ${data.exercises.map((ex, exIdx) => window.renderExerciseItemWizard(currentKey, ex, exIdx)).join('')}
-                                ${data.exercises.length === 0 ? `<div class="py-20 border-2 border-dashed ${isLight ? 'border-black/10' : 'border-white/5'} rounded-[2.5rem] text-center opacity-20 font-black uppercase italic tracking-[0.3em]">Arsenal Vacío</div>` : ''}
+                                ${data.exercises.length === 0 ? `<div class="py-20 border-2 border-dashed border-black/10 dark:border-white/5 rounded-[2.5rem] text-center opacity-20 font-black uppercase italic tracking-[0.3em]">Arsenal Vacío</div>` : ''}
                             </div>
                         </div>
                     </div>
