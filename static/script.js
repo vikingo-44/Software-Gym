@@ -4602,58 +4602,51 @@ if (editorForm) {
 				selectedContent.classList.remove('hidden');
 			}
 
-			// 3. Resetear estilos de los botones (Todos opacos y sin borde)
+			// 3. Resetear estilos de los botones
+			// Cambiamos 'text-white/20' por 'opacity-50' para que el CSS maneje el tono automáticamente
 			document.querySelectorAll('.alumno-tab-btn').forEach(btn => {
-				btn.classList.remove('border-red-600', 'text-white');
-				btn.classList.add('border-transparent', 'text-white/20');
+				btn.classList.remove('border-red-600', 'opacity-100');
+				btn.classList.add('border-transparent', 'opacity-50');
 			});
 
-			// 4. Resaltar el botón activo (Buscamos por ID)
+			// 4. Resaltar el botón activo
 			const activeBtn = document.getElementById('btn-tab-' + tab);
 			if (activeBtn) {
-				activeBtn.classList.remove('border-transparent', 'text-white/20');
-				activeBtn.classList.add('border-red-600', 'text-white');
+				activeBtn.classList.remove('border-transparent', 'opacity-50');
+				activeBtn.classList.add('border-red-600', 'opacity-100');
 			}
 
-			// Obtenemos el ID del alumno del input oculto del modal
+			// Obtenemos el ID del alumno
 			const alId = document.getElementById('al-id').value;
-			if (!alId) return; // Si es un alumno nuevo, no cargamos historiales
+			if (!alId) return;
 
 			// 5. Lógica específica para la pestaña de Suscripción/Pagos
-			// 5. Lógica específica para la pestaña de Suscripción/Pagos
-            if (tab === 'suscripcion') {
-                const al = state.alumnos.find(x => x.id == alId);
-                
-                if (al) {
-                    // ⚔️ CONTROL DE EXTRACTO VIKINGO: Buscamos el plan por el nuevo objeto anidado o por plan_id si existiera
-                    const idDelPlan = al.plan_id || (al.plan ? al.plan.id : null);
-                    const planActual = state.planes.find(p => p.id == idDelPlan);
-                    
-                    // Si el plan existe en state.planes tiene la propiedad 'tipo', sino intentamos leer de la data viva del alumno
-                    const nombreMembresia = (planActual && planActual.tipo) ? planActual.tipo.nombre : "MEMBRESÍA";
-                    
-                    // Si no encuentra el plan en la lista global, usamos el objeto directo inyectado en el alumno
-                    const textoNombrePlan = planActual ? planActual.nombre : (al.plan ? al.plan.nombre : "SIN PLAN ASIGNADO");
-                    
-                    // Actualizamos los textos en el modal
-                    const elTipo = document.getElementById('info-plan-tipo');
-                    const elNombre = document.getElementById('info-plan-nombre');
-                    const elVence = document.getElementById('info-plan-vence');
+			if (tab === 'suscripcion') {
+				const al = state.alumnos.find(x => x.id == alId);
+				
+				if (al) {
+					const idDelPlan = al.plan_id || (al.plan ? al.plan.id : null);
+					const planActual = state.planes.find(p => p.id == idDelPlan);
+					
+					const nombreMembresia = (planActual && planActual.tipo) ? planActual.tipo.nombre : "MEMBRESÍA";
+					const textoNombrePlan = planActual ? planActual.nombre : (al.plan ? al.plan.nombre : "SIN PLAN ASIGNADO");
+					
+					const elTipo = document.getElementById('info-plan-tipo');
+					const elNombre = document.getElementById('info-plan-nombre');
+					const elVence = document.getElementById('info-plan-vence');
 
-                    if(elTipo) elTipo.innerText = nombreMembresia.toUpperCase();
-                    if(elNombre) elNombre.innerText = textoNombrePlan.toUpperCase();
-                    if(elVence) elVence.innerText = al.fecha_vencimiento || "---";
-                    
-                    // Cargamos el historial de pagos de caja desde la API
-                    if (typeof loadAlumnoHistorial === 'function') {
-                        loadAlumnoHistorial(alId);
-                    }
-                }
-            }
+					if(elTipo) elTipo.innerText = nombreMembresia.toUpperCase();
+					if(elNombre) elNombre.innerText = textoNombrePlan.toUpperCase();
+					if(elVence) elVence.innerText = al.fecha_vencimiento || "---";
+					
+					if (typeof loadAlumnoHistorial === 'function') {
+						loadAlumnoHistorial(alId);
+					}
+				}
+			}
 
-			// ⚔️ 6. Lógica específica para la pestaña de COMPROBANTES (NUEVA)
+			// 6. Lógica específica para la pestaña de COMPROBANTES
 			if (tab === 'comprobantes') {
-				// Llamamos a la función que busca las Facturas A en la tabla 'comprobantes'
 				if (typeof loadComprobantesAlumno === 'function') {
 					loadComprobantesAlumno(alId);
 				} else {
@@ -4824,6 +4817,7 @@ if (editorForm) {
 				showVikingToast("Error al procesar el mensaje", true);
 			}
 		};
+		
         document.getElementById('form-alumno').onsubmit = async (e) => {
 			e.preventDefault(); 
 			
