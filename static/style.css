@@ -530,6 +530,9 @@
     /* =================================================================
    MEJORA: MODO CLARO (LIGHT MODE) - SOLUCIÓN DEFINITIVA A CAJAS NEGRAS
    ================================================================= */
+    /* =================================================================
+   MEJORA: MODO CLARO (LIGHT MODE) - SOLUCIÓN DEFINITIVA A CAJAS NEGRAS
+   ================================================================= */
     body.light-mode {
         background-color: #f0f0f0;
         background-image: linear-gradient(rgba(245, 245, 245, 0.88), rgba(245, 245, 245, 0.88)), url('https://raw.githubusercontent.com/vikingo-44/Software-Gym/main/wallpaper.png') !important;
@@ -670,4 +673,24 @@
     }
     body.light-mode .viking-table-row:hover {
         background: rgba(0, 0, 0, 0.05) !important;
+    }
+
+    /* =================================================================
+       MARTILLO PARA CAJAS NEGRAS (Solución Final a `image_a6300a.png`)
+       ================================================================= */
+    body.light-mode div[class*="bg-zinc-"], 
+    body.light-mode div[class*="bg-black"], 
+    body.light-mode div[class*="bg-neutral-"],
+    body.light-mode div[class*="bg-white/5"] {
+        background-color: #ffffff !important;
+        border: 1px solid #e5e7eb !important;
+        color: #000000 !important;
+    }
+    
+    /* Forzar tarjetas de ejercicio específicas que se ven en la foto */
+    body.light-mode .bg-black\/60,
+    body.light-mode .bg-zinc-900\/50,
+    body.light-mode .bg-black\/30 {
+        background-color: #ffffff !important;
+        border: 1px solid #cccccc !important;
     }
