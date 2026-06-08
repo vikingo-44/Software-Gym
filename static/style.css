@@ -528,20 +528,20 @@
     }
 
     /* =================================================================
-   MEJORA: MODO CLARO (LIGHT MODE) - SOLUCIÓN DEFINITIVA A CAJAS NEGRAS
-   ================================================================= */
+       MEJORA: MODO CLARO (LIGHT MODE) - SOLUCIÓN DEFINITIVA A CAJAS NEGRAS
+       ================================================================= */
     body.light-mode {
         background-color: #f0f0f0;
         background-image: linear-gradient(rgba(245, 245, 245, 0.88), rgba(245, 245, 245, 0.88)), url('https://raw.githubusercontent.com/vikingo-44/Software-Gym/main/wallpaper.png') !important;
         color: #000000 !important;
     }
 
-    /* Forzamos TODO el texto a negro de base */
-    body.light-mode * {
-        color: #000000;
+    /* MANTENEMOS EL TEXTO NEGRO, PERO CUIDANDO EXCEPCIONES */
+    body.light-mode *:not(.viking-red):not(.filter-btn.active):not(.nav-item.active):not(.nav-item.active i):not(.class-badge):not(.class-badge *) {
+        color: #000000 !important;
     }
-    
-    /* EXCEPCIONES: Cosas que tienen que ser blancas o rojas */
+
+    /* EXCEPCIONES DE COLOR */
     body.light-mode .viking-red, 
     body.light-mode .whatsapp-float,
     body.light-mode .whatsapp-float i,
@@ -563,41 +563,20 @@
         color: #ffffff !important; 
     }
 
-    /* FORZAR CLASES TAILWIND OSCURAS AL MODO CLARO (El problema de las imágenes) */
-    /* Esto pisa los fondos negros y bordes de las cajas de "Pecho", "Espalda", modales, etc. */
-    body.light-mode .bg-black,
-    body.light-mode .bg-zinc-950,
-    body.light-mode .bg-zinc-900,
-    body.light-mode .bg-neutral-900 {
+    /* MARTILLO DEFINITIVO PARA CAJAS NEGRAS (WIZARD, TARJETAS, MODALES) */
+    body.light-mode #rutina-editor-body,
+    body.light-mode .rutina-dia-card,
+    body.light-mode .viking-modal > div,
+    body.light-mode [class*="bg-zinc-"], 
+    body.light-mode [class*="bg-black"], 
+    body.light-mode [class*="bg-neutral-"],
+    body.light-mode [class*="bg-white/5"] {
         background-color: #ffffff !important;
-        color: #000000 !important;
-        border-color: rgba(0,0,0,0.15) !important;
-    }
-    
-    body.light-mode .bg-zinc-800,
-    body.light-mode .bg-neutral-800 {
-        background-color: #f4f4f4 !important;
-        color: #000000 !important;
-        border-color: rgba(0,0,0,0.15) !important;
-    }
-
-    /* SOLUCIÓN ESPECÍFICA WIZARD DE RUTINAS */
-    body.light-mode #modal-rutina-editor,
-    body.light-mode #modal-rutina-editor .bg-zinc-900,
-    body.light-mode #modal-rutina-editor .bg-black\/40,
-    body.light-mode #modal-rutina-editor .bg-black\/60 {
-        background-color: #ffffff !important;
-        border-color: rgba(0,0,0,0.1) !important;
+        border: 1px solid #cccccc !important;
         color: #000000 !important;
     }
 
-    body.light-mode #wizard-exercises-list .bg-black\/60,
-    body.light-mode #wizard-exercises-list .bg-white\/002 {
-        background-color: #f9f9f9 !important;
-        border: 1px solid rgba(0,0,0,0.1) !important;
-    }
-
-    /* FILTROS Y SELECTS (El problema de Sucursales y Alumnos) */
+    /* FILTROS Y SELECTS */
     body.light-mode select,
     body.light-mode select option,
     body.light-mode #filtro-clases-sucursal,
@@ -618,95 +597,58 @@
         color: #ffffff !important;
     }
 
-    /* CALENDARIO (Solución a lo que se veía negro en la imagen) */
-    body.light-mode .calendar-container {
-        background: #ffffff !important;
-        border: 1px solid #ddd !important;
+    /* CALENDARIO */
+    body.light-mode .calendar-container { 
+        background: #ffffff !important; 
+        border: 1px solid #ddd !important; 
     }
-    body.light-mode .cal-header {
-        background: #f8f8f8 !important;
-        border-right: 1px solid #ddd !important;
-        border-bottom: 3px solid #FF0000 !important;
-        color: #000000 !important;
+    body.light-mode .cal-header { 
+        background: #f8f8f8 !important; 
+        border-right: 1px solid #ddd !important; 
+        border-bottom: 3px solid #FF0000 !important; 
+        color: #000000 !important; 
     }
     body.light-mode .cal-cell {
-        border-right: 1px solid #eee !important;
-        border-bottom: 1px solid #eee !important;
-        background: #ffffff !important;
-    }
-    body.light-mode .cal-cell-closed {
-        background: repeating-linear-gradient(45deg, #f0f0f0, #f0f0f0 10px, #e8e8e8 10px, #e8e8e8 20px) !important;
-        opacity: 0.6 !important;
+         border-right: 1px solid #eee !important;
+         border-bottom: 1px solid #eee !important; 
+         background: #ffffff !important; 
     }
 
-    /* MODALES GENERALES E INPUTS */
-    body.light-mode .viking-modal > div {
-        background: #ffffff !important;
-        border: 1px solid rgba(0, 0, 0, 0.1) !important;
-        box-shadow: 0 10px 40px rgba(0,0,0,0.15) !important;
-    }
-    
+    /* INPUTS */
     body.light-mode .viking-input,
     body.light-mode input[type="text"],
     body.light-mode input[type="date"],
     body.light-mode textarea {
         background-color: #ffffff !important;
-        border: 1px solid rgba(0, 0, 0, 0.2) !important;
-        color: #000000 !important;
-    }
-
-    /* ESTRUCTURA GENERAL MODO CLARO */
-    body.light-mode .glass-sidebar {
-        background: rgba(240, 240, 240, 0.95) !important;
-        border-right: 1px solid rgba(0, 0, 0, 0.1) !important;
-    }
-    body.light-mode .glass-card {
-        background: rgba(255, 255, 255, 0.85) !important;
-        border: 1px solid rgba(0, 0, 0, 0.1) !important;
-    }
-    body.light-mode .viking-table-row {
-        border-bottom: 1px solid rgba(0, 0, 0, 0.1) !important;
-        background: rgba(255, 255, 255, 0.5) !important;
-    }
-    body.light-mode .viking-table-row:hover {
-        background: rgba(0, 0, 0, 0.05) !important;
-    }
-
-    /* Corrección de tipografía forzada en Light Mode */
-    body.light-mode .glass-card h4,
-    body.light-mode .glass-card p,
-    body.light-mode .glass-card i {
-        color: #000000 !important;
-    }
-
-    /* Mejora de botones en Light Mode */
-    body.light-mode .glass-card button {
-        background: #f4f4f4 !important;
         border: 1px solid #cccccc !important;
         color: #000000 !important;
     }
-    body.light-mode .glass-card button:hover {
-        background: #e5e5e5 !important;
-        color: #FF0000 !important;
-        border-color: #FF0000 !important;
+
+    /* ESTRUCTURA */
+    body.light-mode .glass-sidebar { 
+        background: rgba(240, 240, 240, 0.95) !important; 
+        border-right: 1px solid #cccccc !important; 
+    }
+    body.light-mode .glass-card { 
+        background: rgba(255, 255, 255, 0.85) !important; 
+        border: 1px solid #cccccc !important; 
+    }
+    body.light-mode .viking-table-row { 
+        border-bottom: 1px solid #cccccc !important; 
+        background: #ffffff !important; 
+    }
+    body.light-mode .viking-table-row:hover { 
+        background: #f0f0f0 !important; 
     }
 
-    /* =================================================================
-       MARTILLO PARA CAJAS NEGRAS (Solución Final a `image_a6300a.png`)
-       ================================================================= */
-    body.light-mode div[class*="bg-zinc-"], 
-    body.light-mode div[class*="bg-black"], 
-    body.light-mode div[class*="bg-neutral-"],
-    body.light-mode div[class*="bg-white/5"] {
-        background-color: #ffffff !important;
-        border: 1px solid #e5e7eb !important;
-        color: #000000 !important;
+    /* BOTONES */
+    body.light-mode .glass-card button { 
+        background: #f4f4f4 !important; 
+        border: 1px solid #cccccc !important; 
+        color: #000000 !important; 
     }
-    
-    /* Forzar tarjetas de ejercicio específicas que se ven en la foto */
-    body.light-mode .bg-black\/60,
-    body.light-mode .bg-zinc-900\/50,
-    body.light-mode .bg-black\/30 {
-        background-color: #ffffff !important;
-        border: 1px solid #cccccc !important;
+    body.light-mode .glass-card button:hover { 
+        background: #e5e5e5 !important; 
+        color: #FF0000 !important; 
+        border-color: #FF0000 !important; 
     }

@@ -2064,15 +2064,14 @@ window.renderWizardStep = function() {
     const body = document.getElementById('rutina-editor-body');
     const isLight = document.body.classList.contains('light-mode');
     
-    if (body) {
-        body.classList.toggle('text-black', isLight);
-        body.classList.toggle('text-white', !isLight);
-    }
+    // Si estamos en modo claro, quitamos las clases oscuras que Tailwind inyecta
+    const bgClass = isLight ? '!bg-white' : 'dark:!bg-black/50';
+    const textClass = isLight ? '!text-black' : 'dark:!text-white';
+
     const label = document.getElementById('rutina-editor-step-label');
     const fill = document.getElementById('editor-progress-fill');
     if (!body || !label) return;
 
-    // 🛡️ CAPTURAR SCROLL DERECHO ANTES DE BORRAR EL HTML
     const scrollContainer = document.getElementById('wizard-main-scroll-area');
     const currentScroll = scrollContainer ? scrollContainer.scrollTop : 0;
 
@@ -2086,12 +2085,12 @@ window.renderWizardStep = function() {
                 <div class="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-12 text-left">
                     <div class="col-span-full space-y-2">
                         <label class="text-[10px] font-black text-red-600 uppercase tracking-widest italic ml-2">Nombre del Plan</label>
-                        <input type="text" value="${state.routineWizard.nombre_grupo}" oninput="state.routineWizard.nombre_grupo = this.value" class="viking-input !h-16 text-2xl font-black italic uppercase !text-black dark:!text-white !bg-white dark:!bg-black/50">
+                        <input type="text" value="${state.routineWizard.nombre_grupo}" oninput="state.routineWizard.nombre_grupo = this.value" class="viking-input !h-16 text-2xl font-black italic uppercase ${textClass} ${bgClass}">
                     </div>
-
+					
                     <div class="col-span-full space-y-2">
-                        <label class="text-[10px] font-black ${isLight ? 'text-black/60' : 'text-white/30'} uppercase tracking-widest italic ml-2">Objetivo Técnico</label>
-                        <textarea oninput="state.routineWizard.objetivo = this.value" class="viking-input h-32 py-5 text-sm font-medium !text-black dark:!text-white !bg-white dark:!bg-black/50">${state.routineWizard.objetivo || ''}</textarea>
+                        <label class="text-[10px] font-black uppercase tracking-widest italic ml-2">Objetivo Técnico</label>
+                        <textarea oninput="state.routineWizard.objetivo = this.value" class="viking-input h-32 py-5 text-sm font-medium ${textClass} ${bgClass}">${state.routineWizard.objetivo || ''}</textarea>
                     </div>
 
                     <div class="space-y-2">
