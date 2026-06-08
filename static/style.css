@@ -652,3 +652,34 @@
         color: #FF0000 !important; 
         border-color: #FF0000 !important; 
     }
+
+    /* =================================================================
+       AJUSTE ESPECÍFICO PARA MODAL ALUMNOS (LIGHT MODE)
+       ================================================================= */
+    body.light-mode #modal-alumno .glass-card {
+        background: #ffffff !important;
+        border: 1px solid #cccccc !important;
+        color: #000000 !important;
+    }
+
+    body.light-mode #modal-alumno h3,
+    body.light-mode #modal-alumno p,
+    body.light-mode #modal-alumno span {
+        color: #000000 !important;
+    }
+
+    /* Ajuste para el fondo interno del formulario */
+    body.light-mode #modal-alumno .bg-zinc-950\/50,
+    body.light-mode #modal-alumno .bg-zinc-900 {
+        background-color: #f9f9f9 !important;
+        border: 1px solid #eeeeee !important;
+    }
+
+    /* Ajuste para los botones de las pestañas */
+    body.light-mode #modal-alumno .alumno-tab-btn {
+        color: #999999 !important; /* Color gris para pestañas inactivas */
+    }
+    body.light-mode #modal-alumno .alumno-tab-btn.border-red-600 {
+        color: #FF0000 !important; /* Color rojo para pestaña activa */
+        border-color: #FF0000 !important;
+    }
