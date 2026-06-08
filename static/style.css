@@ -530,9 +530,6 @@
     /* =================================================================
    MEJORA: MODO CLARO (LIGHT MODE) - SOLUCIÓN DEFINITIVA A CAJAS NEGRAS
    ================================================================= */
-    /* =================================================================
-   MEJORA: MODO CLARO (LIGHT MODE) - SOLUCIÓN DEFINITIVA A CAJAS NEGRAS
-   ================================================================= */
     body.light-mode {
         background-color: #f0f0f0;
         background-image: linear-gradient(rgba(245, 245, 245, 0.88), rgba(245, 245, 245, 0.88)), url('https://raw.githubusercontent.com/vikingo-44/Software-Gym/main/wallpaper.png') !important;
@@ -673,6 +670,25 @@
     }
     body.light-mode .viking-table-row:hover {
         background: rgba(0, 0, 0, 0.05) !important;
+    }
+
+    /* Corrección de tipografía forzada en Light Mode */
+    body.light-mode .glass-card h4,
+    body.light-mode .glass-card p,
+    body.light-mode .glass-card i {
+        color: #000000 !important;
+    }
+
+    /* Mejora de botones en Light Mode */
+    body.light-mode .glass-card button {
+        background: #f4f4f4 !important;
+        border: 1px solid #cccccc !important;
+        color: #000000 !important;
+    }
+    body.light-mode .glass-card button:hover {
+        background: #e5e5e5 !important;
+        color: #FF0000 !important;
+        border-color: #FF0000 !important;
     }
 
     /* =================================================================

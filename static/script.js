@@ -4452,78 +4452,78 @@ if (editorForm) {
 		}
 
         async function loadClases() {
-			const data = await apiFetch('/clases'); 
-			const todasLasClases = Array.isArray(data) ? data : [];
+            const data = await apiFetch('/clases'); 
+            const todasLasClases = Array.isArray(data) ? data : [];
 
-			// Capturamos el filtro seleccionado en la interfaz
-			const filtroSede = document.getElementById('filtro-clases-sucursal')?.value || 'todas';
-			const rol = (state.user.rol_nombre || "").toLowerCase().trim();
+            // Capturamos el filtro seleccionado en la interfaz
+            const filtroSede = document.getElementById('filtro-clases-sucursal')?.value || 'todas';
+            const rol = (state.user.rol_nombre || "").toLowerCase().trim();
 
-			// ⚔️ ROLES AUTORIZADOS PARA VER MULTI-SEDE
-			const rolesConPermisoVista = ["administrador", "supervisor", "staff", "administrativo", "administracion", "alumno"];
+            // ⚔️ ROLES AUTORIZADOS PARA VER MULTI-SEDE
+            const rolesConPermisoVista = ["administrador", "supervisor", "staff", "administrativo", "administracion", "alumno"];
 
-			// FILTRO DE VISIBILIDAD COMBINADO
-			state.clases = todasLasClases.filter(c => {
-				// 🛡️ REGLA 1: Si el rol NO está en la lista blanca, queda bloqueado a su sucursal_id
-				if (!rolesConPermisoVista.includes(rol)) {
-					return c.sucursal_id === state.user.sucursal_id;
-				}
-				
-				// 👑 REGLA 2: Si el rol está autorizado, responde dinámicamente al selector
-				if (filtroSede === 'todas') return true;
-				return c.sucursal_id == filtroSede;
-			});
+            // FILTRO DE VISIBILIDAD COMBINADO
+            state.clases = todasLasClases.filter(c => {
+                // 🛡️ REGLA 1: Si el rol NO está en la lista blanca, queda bloqueado a su sucursal_id
+                if (!rolesConPermisoVista.includes(rol)) {
+                    return c.sucursal_id === state.user.sucursal_id;
+                }
+                
+                // 👑 REGLA 2: Si el rol está autorizado, responde dinámicamente al selector
+                if (filtroSede === 'todas') return true;
+                return c.sucursal_id == filtroSede;
+            });
 
-			const container = document.getElementById('clases-container');
-			if (!container) return;
+            const container = document.getElementById('clases-container');
+            if (!container) return;
 
-			if (state.clases.length === 0) {
-				container.innerHTML = `
-					<div class="col-span-full p-16 border border-dashed border-white/10 rounded-[3rem] text-center bg-white/2">
-						<i data-lucide="calendar-x-2" class="w-12 h-12 mx-auto mb-4 text-white/10"></i>
-						<p class="text-[12px] text-gray-600 font-black uppercase italic tracking-[0.2em]">No hay clases en esta sede</p>
-						<p class="text-[10px] text-gray-700 mt-2 font-bold">Cambia el filtro o usa "Alta de Clase".</p>
-					</div>`;
-			} else {
-				const canEdit = (rol === "administrador" || rol === "supervisor");
-				
-				container.innerHTML = state.clases.map(c => `
-					<div class="glass-card p-6 rounded-[2.5rem] border border-white/5 flex flex-col justify-between hover:border-red-600/20 transition-all group">
-						<div>
-							<div class="flex items-center gap-4 mb-6">
-								<div class="w-12 h-12 rounded-2xl flex items-center justify-center font-black text-black text-sm italic shadow-lg" style="background-color: ${c.color || '#FF0000'}">
-									${c.nombre ? c.nombre[0].toUpperCase() : '?'}
-								</div>
-								<div>
-									<h4 class="text-sm font-black uppercase italic text-white group-hover:text-red-500 transition-colors">${c.nombre}</h4>
-									<p class="text-[10px] text-white-500 font-bold uppercase tracking-wider flex items-center gap-1">
-										<i data-lucide="user" class="w-3 h-3"></i> ${c.coach || 'Sin Coach'}
-									</p>
-								</div>
-							</div>
-						</div>
+            if (state.clases.length === 0) {
+                container.innerHTML = `
+                    <div class="col-span-full p-16 border border-dashed border-black/10 dark:border-white/10 rounded-[3rem] text-center bg-black/5 dark:bg-white/2">
+                        <i data-lucide="calendar-x-2" class="w-12 h-12 mx-auto mb-4 text-black/10 dark:text-white/10"></i>
+                        <p class="text-[12px] text-black/60 dark:text-gray-600 font-black uppercase italic tracking-[0.2em]">No hay clases en esta sede</p>
+                        <p class="text-[10px] text-black/70 dark:text-gray-700 mt-2 font-bold">Cambia el filtro o usa "Alta de Clase".</p>
+                    </div>`;
+            } else {
+                const canEdit = (rol === "administrador" || rol === "supervisor");
+                
+                container.innerHTML = state.clases.map(c => `
+                    <div class="glass-card p-6 rounded-[2.5rem] border border-black/10 dark:border-white/5 flex flex-col justify-between hover:border-red-600/50 transition-all group">
+                        <div>
+                            <div class="flex items-center gap-4 mb-6">
+                                <div class="w-12 h-12 rounded-2xl flex items-center justify-center font-black text-black text-sm italic shadow-lg" style="background-color: ${c.color || '#FF0000'}">
+                                    ${c.nombre ? c.nombre[0].toUpperCase() : '?'}
+                                </div>
+                                <div>
+                                    <h4 class="text-sm font-black uppercase italic text-black dark:text-white group-hover:text-red-500 transition-colors">${c.nombre}</h4>
+                                    <p class="text-[10px] text-black/50 dark:text-white/50 font-bold uppercase tracking-wider flex items-center gap-1">
+                                        <i data-lucide="user" class="w-3 h-3"></i> ${c.coach || 'Sin Coach'}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
 
-						${canEdit ? `
-						<button onclick="openEditClase(${c.id})" class="w-full py-4 bg-white/5 text-white rounded-2xl text-[10px] font-black uppercase italic hover:bg-white/10 hover:text-red-600 transition-all flex items-center justify-center gap-2 border border-white/5">
-							<i data-lucide="settings-2" class="w-3.5 h-3.5"></i>
-							Configuración Técnica
-						</button>
-						` : '<p class="text-[9px] text-gray-700 italic text-center">Solo lectura</p>'}
-					</div>
-				`).join('');
-			}
+                        ${canEdit ? `
+                        <button onclick="openEditClase(${c.id})" class="w-full py-4 bg-black/5 dark:bg-white/5 text-black dark:text-white rounded-2xl text-[10px] font-black uppercase italic hover:bg-black/10 dark:hover:bg-white/10 hover:text-red-600 transition-all flex items-center justify-center gap-2 border border-black/10 dark:border-white/5">
+                            <i data-lucide="settings-2" class="w-3.5 h-3.5"></i>
+                            Configuración Técnica
+                        </button>
+                        ` : '<p class="text-[9px] text-black/50 dark:text-gray-700 italic text-center">Solo lectura</p>'}
+                    </div>
+                `).join('');
+            }
 
-			// Refrescar iconos
-			if (window.lucide) lucide.createIcons();
-			
-			// Si estamos viendo el calendario, lo sincronizamos
-			if(document.getElementById('view-calendario')?.classList.contains('active')) {
-				renderCalendar();
-			}
-			
-			// Aplicamos permisos de UI adicionales
-			if (typeof applyPermissions === 'function') applyPermissions();
-		}
+            // Refrescar iconos
+            if (window.lucide) lucide.createIcons();
+            
+            // Si estamos viendo el calendario, lo sincronizamos
+            if(document.getElementById('view-calendario')?.classList.contains('active')) {
+                renderCalendar();
+            }
+            
+            // Aplicamos permisos de UI adicionales
+            if (typeof applyPermissions === 'function') applyPermissions();
+        }
 		
 		async function loadProfesores() {
 			// Esta función llena la memoria con los profesores para usarlos en el select de turnos
