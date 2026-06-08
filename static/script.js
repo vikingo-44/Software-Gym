@@ -2088,21 +2088,21 @@ window.renderWizardStep = function() {
                     </div>
 
                     <div class="col-span-full space-y-2">
-                        <label class="text-[10px] font-black text-white/30 uppercase tracking-widest italic ml-2">Objetivo Técnico</label>
+                        <label class="text-[10px] font-black text-black/40 dark:text-white/30 uppercase tracking-widest italic ml-2">Objetivo Técnico</label>
                         <textarea oninput="state.routineWizard.objetivo = this.value" class="viking-input h-32 py-5 text-sm font-medium">${state.routineWizard.objetivo || ''}</textarea>
                     </div>
 
                     <div class="space-y-2">
-                        <label class="text-[10px] font-black text-white/30 uppercase tracking-widest italic ml-2">Metodología</label>
+                        <label class="text-[10px] font-black text-black/40 dark:text-white/30 uppercase tracking-widest italic ml-2">Metodología</label>
                         <div class="flex gap-4">
                             <button onclick="state.routineWizard.tipo = 'normal'; state.routineWizard.tipo_id = 1; window.renderWizardStep();" 
                                 class="flex-1 h-14 rounded-2xl border-2 font-black text-[10px] transition-all 
-                                ${state.routineWizard.tipo_id === 1 ? 'bg-red-600 text-black border-red-600' : 'bg-white/5 border-white/5 text-white/30'}">
+                                ${state.routineWizard.tipo_id === 1 ? 'bg-red-600 text-black border-red-600' : 'bg-black/5 dark:bg-white/5 border-black/10 dark:border-white/5 text-black/40 dark:text-white/30'}">
                                 ESTÁNDAR
                             </button>
                             <button onclick="state.routineWizard.tipo = 'progresiva'; state.routineWizard.tipo_id = 2; state.routineWizard.cantSemanas = state.routineWizard.cantSemanas || 4; window.updateRoutineVencimiento(); window.renderWizardStep();" 
                                 class="flex-1 h-14 rounded-2xl border-2 font-black text-[10px] transition-all
-                                ${state.routineWizard.tipo_id === 2 ? 'bg-amber-600 text-black border-amber-600' : 'bg-white/5 border-white/5 text-white/30'}">
+                                ${state.routineWizard.tipo_id === 2 ? 'bg-amber-600 text-black border-amber-600' : 'bg-black/5 dark:bg-white/5 border-black/10 dark:border-white/5 text-black/40 dark:text-white/30'}">
                                 PROGRESIVA
                             </button>
                         </div>
@@ -2114,7 +2114,7 @@ window.renderWizardStep = function() {
                             ${[2,4,6,8].map(sw => `
                                 <button onclick="state.routineWizard.cantSemanas = ${sw}; window.updateRoutineVencimiento(); window.renderWizardStep();" 
                                     class="h-14 rounded-2xl border-2 font-black transition-all text-xs
-                                    ${state.routineWizard.cantSemanas === sw ? 'bg-amber-600 text-black border-amber-600' : 'bg-white/5 border-white/5 text-white/20'}">
+                                    ${state.routineWizard.cantSemanas === sw ? 'bg-amber-600 text-black border-amber-600' : 'bg-black/5 dark:bg-white/5 border-black/10 dark:border-white/5 text-black/40 dark:text-white/20'}">
                                     ${sw}
                                 </button>
                             `).join('')}
@@ -2122,17 +2122,17 @@ window.renderWizardStep = function() {
                     </div>
 
                     <div class="space-y-2">
-                        <label class="text-[10px] font-black text-white/30 uppercase tracking-widest italic ml-2">Vencimiento</label>
+                        <label class="text-[10px] font-black text-black/40 dark:text-white/30 uppercase tracking-widest italic ml-2">Vencimiento</label>
                         <input type="date" id="wizard-vencimiento" value="${state.routineWizard.vencimiento}" oninput="state.routineWizard.vencimiento = this.value" class="viking-input !h-14">
                     </div>
 
                     <div class="space-y-2">
-                        <label class="text-[10px] font-black text-white/30 uppercase tracking-widest italic ml-2">Días por Semana</label>
+                        <label class="text-[10px] font-black text-black/40 dark:text-white/30 uppercase tracking-widest italic ml-2">Días por Semana</label>
                         <div class="grid grid-cols-6 gap-2">
                             ${[1,2,3,4,5,6].map(n => `
                                 <button onclick="state.routineWizard.cantDias = ${n}; window.renderWizardStep();" 
                                     class="h-14 rounded-2xl border-2 font-black transition-all
-                                    ${state.routineWizard.cantDias === n ? 'bg-red-600 text-black border-red-600' : 'bg-white/5 border-white/5 text-white/20'}">
+                                    ${state.routineWizard.cantDias === n ? 'bg-red-600 text-black border-red-600' : 'bg-black/5 dark:bg-white/5 border-black/10 dark:border-white/5 text-black/40 dark:text-white/20'}">
                                     ${n}
                                 </button>`).join('')}
                         </div>
@@ -2154,12 +2154,12 @@ window.renderWizardStep = function() {
         const data = state.routineWizard.config[currentKey] || { label: `JORNADA ${state.routineWizard.diaActivoWizard}`, objetivo_dia: '', exercises: [] };
 
         body.innerHTML = `
-            <div class="flex h-full w-full overflow-hidden bg-zinc-950">
-                <div class="w-[320px] border-r border-white/5 flex flex-col bg-black/40 shrink-0">
-                    <div class="p-6 border-b border-white/5 bg-black/20 space-y-4">
+            <div class="flex h-full w-full overflow-hidden bg-white dark:bg-zinc-950">
+                <div class="w-[320px] border-r border-black/10 dark:border-white/5 flex flex-col bg-black/5 dark:bg-black/40 shrink-0">
+                    <div class="p-6 border-b border-black/10 dark:border-white/5 bg-black/5 dark:bg-black/20 space-y-4">
                         <label class="text-[9px] font-black text-red-600 uppercase tracking-[0.3em] block italic">Arsenal Disponible</label>
                         <input type="text" placeholder="BUSCAR EJERCICIO..." 
-                            class="viking-input h-12 text-[10px] font-black italic border-white/10 focus:border-red-600" 
+                            class="viking-input h-12 text-[10px] font-black italic border-black/10 dark:border-white/10 focus:border-red-600" 
                             oninput="window.renderWizardLib(this.value)">
                     </div>
                     <div class="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar" id="wizard-lib-results"></div>
@@ -2167,66 +2167,60 @@ window.renderWizardStep = function() {
 
                 <div class="flex-1 flex flex-col min-w-0">
                     ${isProg ? `
-                    <div class="px-8 py-4 bg-black/60 border-b border-white/5 flex gap-3 overflow-x-auto no-scrollbar shrink-0">
+                    <div class="px-8 py-4 bg-black/10 dark:bg-black/60 border-b border-black/10 dark:border-white/5 flex gap-3 overflow-x-auto no-scrollbar shrink-0">
                         ${Array.from({length: numSemanas}).map((_, i) => {
                             const w = i + 1;
                             const activa = state.routineWizard.semanaActivaWizard === w;
                             return `<button onclick="state.routineWizard.semanaActivaWizard = ${w}; window.renderWizardStep();" 
                                 class="px-6 py-3 rounded-xl font-black italic text-[10px] transition-all border-2
-                                ${activa ? 'bg-amber-600 text-black border-amber-600 shadow-lg' : 'bg-white/5 text-white/30 border-transparent'}">SEMANA ${w}</button>`;
+                                ${activa ? 'bg-amber-600 text-black border-amber-600 shadow-lg' : 'bg-black/5 dark:bg-white/5 text-black/30 dark:text-white/30 border-transparent'}">SEMANA ${w}</button>`;
                         }).join('')}
                     </div>` : ''}
 
-                    <div class="px-8 py-4 bg-zinc-900 border-b border-white/5 flex gap-3 overflow-x-auto no-scrollbar shrink-0">
+                    <div class="px-8 py-4 bg-black/5 dark:bg-zinc-900 border-b border-black/10 dark:border-white/5 flex gap-3 overflow-x-auto no-scrollbar shrink-0">
                         ${Array.from({length: state.routineWizard.cantDias}).map((_, i) => {
                             const d = i + 1;
                             const activa = state.routineWizard.diaActivoWizard === d;
                             return `<button onclick="state.routineWizard.diaActivoWizard = ${d}; window.renderWizardStep();" 
                                 class="px-6 py-3 rounded-xl font-black italic text-[10px] transition-all border-2
-                                ${activa ? 'bg-red-600 text-black border-red-600 shadow-lg' : 'bg-white/5 text-white/30 border-transparent'}">JORNADA ${d}</button>`;
+                                ${activa ? 'bg-red-600 text-black border-red-600 shadow-lg' : 'bg-black/5 dark:bg-white/5 text-black/30 dark:text-white/30 border-transparent'}">JORNADA ${d}</button>`;
                         }).join('')}
                     </div>
 
-                    <div id="wizard-main-scroll-area" class="flex-1 overflow-y-auto p-8 lg:p-12 custom-scrollbar bg-gradient-to-b from-transparent to-black/20">
+                    <div id="wizard-main-scroll-area" class="flex-1 overflow-y-auto p-8 lg:p-12 custom-scrollbar bg-gradient-to-b from-transparent to-black/10 dark:to-black/20">
                         <div class="w-full max-w-[1200px] mx-auto space-y-8 animate-in fade-in duration-500">
-                            
-                            <div class="flex flex-col gap-6 bg-white/5 p-8 rounded-[2.5rem] border border-white/10 relative overflow-hidden">
+                            <div class="flex flex-col gap-6 bg-black/5 dark:bg-white/5 p-8 rounded-[2.5rem] border border-black/10 dark:border-white/10 relative overflow-hidden">
                                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 relative z-10">
                                     <div class="space-y-2">
-                                        <label class="text-[10px] font-black text-white/20 uppercase tracking-widest">Título de la Jornada</label>
+                                        <label class="text-[10px] font-black text-black/30 dark:text-white/20 uppercase tracking-widest">Título de la Jornada</label>
                                         <input type="text" value="${data.label}" oninput="window.updateSessionData('${currentKey}', 'label', this.value)" 
-                                            class="viking-input !bg-black/40 !h-14 !text-sm font-black uppercase italic border-white/10">
+                                            class="viking-input !bg-black/10 dark:!bg-black/40 !h-14 !text-sm font-black uppercase italic border-black/10 dark:border-white/10">
                                     </div>
                                     <div class="space-y-2">
-                                        <label class="text-[10px] font-black text-white/20 uppercase tracking-widest">Objetivo del Día</label>
+                                        <label class="text-[10px] font-black text-black/30 dark:text-white/20 uppercase tracking-widest">Objetivo del Día</label>
                                         <input type="text" value="${data.objetivo_dia || ''}" oninput="window.updateSessionData('${currentKey}', 'objetivo_dia', this.value)" 
-                                            class="viking-input !bg-black/40 !h-14 !text-sm font-medium border-white/10">
+                                            class="viking-input !bg-black/10 dark:!bg-black/40 !h-14 !text-sm font-medium border-black/10 dark:border-white/10">
                                     </div>
                                 </div>
-                                
-                                <!-- BOTÓN DE CLONACIÓN REINTEGRADO -->
                                 ${isProg && state.routineWizard.semanaActivaWizard > 1 ? `
-                                <div class="flex justify-end pt-4 border-t border-white/5 relative z-10">
+                                <div class="flex justify-end pt-4 border-t border-black/10 dark:border-white/5 relative z-10">
                                     <button onclick="window.clonePrevWeekDay(${state.routineWizard.diaActivoWizard})" 
-                                        class="bg-amber-600/20 text-amber-500 border border-amber-600/30 px-6 py-3 rounded-2xl text-[10px] font-black uppercase italic hover:bg-amber-600 hover:text-black transition-all shadow-xl flex items-center gap-2">
+                                        class="bg-amber-600/20 text-amber-600 border border-amber-600/30 px-6 py-3 rounded-2xl text-[10px] font-black uppercase italic hover:bg-amber-600 hover:text-black transition-all shadow-xl flex items-center gap-2">
                                         <i data-lucide="copy" class="w-4 h-4"></i> CLONAR SEMANA ANTERIOR
                                     </button>
                                 </div>` : ''}
                             </div>
-
                             <div class="space-y-4" id="wizard-exercises-list">
                                 ${data.exercises.map((ex, exIdx) => window.renderExerciseItemWizard(currentKey, ex, exIdx)).join('')}
-                                ${data.exercises.length === 0 ? `<div class="py-20 border-2 border-dashed border-white/5 rounded-[2.5rem] text-center opacity-20 font-black uppercase italic tracking-[0.3em]">Arsenal Vacío</div>` : ''}
+                                ${data.exercises.length === 0 ? `<div class="py-20 border-2 border-dashed border-black/10 dark:border-white/5 rounded-[2.5rem] text-center opacity-20 font-black uppercase italic tracking-[0.3em]">Arsenal Vacío</div>` : ''}
                             </div>
                         </div>
                     </div>
                 </div>
             </div>`;
 
-        // 🛡️ RESTAURAR SCROLL DERECHO
         const newScrollContainer = document.getElementById('wizard-main-scroll-area');
         if (newScrollContainer) newScrollContainer.scrollTop = currentScroll;
-
         window.renderWizardLib();
     }
     if (window.lucide) lucide.createIcons();
