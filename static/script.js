@@ -2064,6 +2064,10 @@ window.openRoutineEditor = async function(alumnoId, isEdit = false) {
 
 window.renderWizardStep = function() {
     const body = document.getElementById('rutina-editor-body');
+    if (body) {
+        body.classList.toggle('text-black', document.body.classList.contains('light-mode'));
+        body.classList.toggle('text-white', !document.body.classList.contains('light-mode'));
+    }
     const label = document.getElementById('rutina-editor-step-label');
     const fill = document.getElementById('editor-progress-fill');
     if (!body || !label) return;
