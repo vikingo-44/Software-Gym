@@ -4603,7 +4603,7 @@ if (editorForm) {
 			}
 
 			// 3. Resetear estilos de los botones
-			// Cambiamos 'text-white/20' por 'opacity-50' para que el CSS maneje el tono automáticamente
+			// Usamos 'opacity-50' y 'border-transparent' para un diseño limpio
 			document.querySelectorAll('.alumno-tab-btn').forEach(btn => {
 				btn.classList.remove('border-red-600', 'opacity-100');
 				btn.classList.add('border-transparent', 'opacity-50');
@@ -4616,21 +4616,23 @@ if (editorForm) {
 				activeBtn.classList.add('border-red-600', 'opacity-100');
 			}
 
-			// Obtenemos el ID del alumno
+			// Obtenemos el ID del alumno del input oculto del modal
 			const alId = document.getElementById('al-id').value;
-			if (!alId) return;
+			if (!alId) return; // Si es un alumno nuevo, no cargamos historiales
 
 			// 5. Lógica específica para la pestaña de Suscripción/Pagos
 			if (tab === 'suscripcion') {
 				const al = state.alumnos.find(x => x.id == alId);
 				
 				if (al) {
+					// CONTROL DE EXTRACTO VIKINGO
 					const idDelPlan = al.plan_id || (al.plan ? al.plan.id : null);
 					const planActual = state.planes.find(p => p.id == idDelPlan);
 					
 					const nombreMembresia = (planActual && planActual.tipo) ? planActual.tipo.nombre : "MEMBRESÍA";
 					const textoNombrePlan = planActual ? planActual.nombre : (al.plan ? al.plan.nombre : "SIN PLAN ASIGNADO");
 					
+					// Actualizamos los textos en el modal
 					const elTipo = document.getElementById('info-plan-tipo');
 					const elNombre = document.getElementById('info-plan-nombre');
 					const elVence = document.getElementById('info-plan-vence');
@@ -4639,6 +4641,7 @@ if (editorForm) {
 					if(elNombre) elNombre.innerText = textoNombrePlan.toUpperCase();
 					if(elVence) elVence.innerText = al.fecha_vencimiento || "---";
 					
+					// Cargamos el historial de pagos de caja desde la API
 					if (typeof loadAlumnoHistorial === 'function') {
 						loadAlumnoHistorial(alId);
 					}
@@ -4647,6 +4650,7 @@ if (editorForm) {
 
 			// 6. Lógica específica para la pestaña de COMPROBANTES
 			if (tab === 'comprobantes') {
+				// Llamamos a la función que busca las Facturas A en la tabla 'comprobantes'
 				if (typeof loadComprobantesAlumno === 'function') {
 					loadComprobantesAlumno(alId);
 				} else {

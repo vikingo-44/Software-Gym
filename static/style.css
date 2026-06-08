@@ -683,3 +683,25 @@
         color: #FF0000 !important; /* Color rojo para pestaña activa */
         border-color: #FF0000 !important;
     }
+
+    /* AJUSTE FINO DE PESTAÑAS (TABS) */
+    .alumno-tab-btn {
+        padding: 12px 20px !important;
+        border-radius: 16px !important;
+        transition: all 0.3s ease !important;
+        background: transparent !important;
+        border: 1px solid transparent !important;
+    }
+
+    /* Estado Inactivo */
+    .alumno-tab-btn.opacity-50 {
+        background: rgba(128, 128, 128, 0.1) !important;
+        color: #666666 !important;
+    }
+
+    /* Estado Activo */
+    .alumno-tab-btn.opacity-100 {
+        background: rgba(255, 0, 0, 0.1) !important;
+        border: 1px solid rgba(255, 0, 0, 0.3) !important;
+        color: #FF0000 !important;
+    }
