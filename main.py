@@ -661,15 +661,21 @@ async def serve_file(filename: str):
 # --- LOGIN (ACTUALIZADO CON METADATA DE VENCIMIENTO) ---
 @app.post("/api/login", response_model=TokenResponse, tags=["Autenticacion"])
 def login(data: UsuarioLogin, db: Session = Depends(database.get_db)):
-    # Query completa con joinedload para traer el plan y el perfil
-    user = db.query(models.Usuario).options(
-        joinedload(models.Usuario.perfil),
-        joinedload(models.Usuario.plan).joinedload(models.Plan.tipo)
-    ).filter(models.Usuario.dni == data.dni).first()
+    # 1. Búsqueda simple y directa (menos carga para la BD)
+    user = db.query(models.Usuario).filter(models.Usuario.dni == data.dni).first()
     
     if not user or not verify_password(data.password, user.password_hash):
         raise HTTPException(status_code=401, detail="Credenciales incorrectas")
     
+    # 2. Carga las relaciones necesarias explícitamente (si están cargadas, no pasa nada)
+    # Esto es mucho más seguro ante tiempos de espera de Render
+    if not user.perfil:
+        user.perfil = db.query(models.Perfil).filter(models.Perfil.id == user.perfil_id).first()
+    if user.plan_id and not user.plan:
+        user.plan = db.query(models.Plan).filter(models.Plan.id == user.plan_id).first()
+        if user.plan and not user.plan.tipo:
+            user.plan.tipo = db.query(models.TipoPlan).filter(models.TipoPlan.id == user.plan.tipo_plan_id).first()
+
     # Generar Token de Acceso
     token = create_access_token(data={"sub": user.dni})
 
@@ -681,9 +687,8 @@ def login(data: UsuarioLogin, db: Session = Depends(database.get_db)):
     if user.fecha_vencimiento:
         expired = user.fecha_vencimiento < hoy
         days_left = (user.fecha_vencimiento - hoy).days
-    # ----------------------------------------
     
-    # Devolver el payload completo que el frontend necesita para el QR y el perfil
+    # Devolver el payload exactamente igual para no romper nada en el frontend
     return {
         "access_token": token,
         "token_type": "bearer",
