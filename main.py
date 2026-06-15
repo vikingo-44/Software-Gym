@@ -1729,9 +1729,36 @@ def create_clase_feriado(data: ClaseFeriadoCreate, db: Session = Depends(databas
         raise HTTPException(status_code=400, detail=str(e))
 
 # 3. ELIMINAR FERIADO
-@app.delete("/api/feriados/{id}", tags=["Feriados"])
-def delete_feriado(id: int, db: Session = Depends(database.get_db)):
-    db.query(models.DiaEspecial).filter(models.DiaEspecial.id == id).delete()
+@app.delete("/api/feriados", tags=["Feriados"])
+def delete_feriado(
+    id: Optional[int] = None, 
+    fecha: Optional[str] = None, 
+    sucursal_id: Optional[int] = None, 
+    db: Session = Depends(database.get_db)
+):
+    # CASO A: Borrar por ID (Lo que usa tu Web)
+    if id:
+        db.query(models.DiaEspecial).filter(models.DiaEspecial.id == id).delete()
+    
+    # CASO B: Borrar por Fecha y Sucursal (Lo que necesita tu Mobile)
+    elif fecha and sucursal_id:
+        fecha_dt = datetime.strptime(fecha, "%Y-%m-%d").date()
+        
+        # Borramos las clases especiales asociadas
+        db.query(models.ClaseFeriado).filter(
+            models.ClaseFeriado.fecha == fecha_dt,
+            models.ClaseFeriado.sucursal_id == sucursal_id
+        ).delete()
+        
+        # Borramos el día especial
+        db.query(models.DiaEspecial).filter(
+            models.DiaEspecial.fecha == fecha_dt,
+            models.DiaEspecial.sucursal_id == sucursal_id
+        ).delete()
+    
+    else:
+        raise HTTPException(status_code=400, detail="Faltan parámetros de borrado")
+    
     db.commit()
     return {"status": "success"}
 
